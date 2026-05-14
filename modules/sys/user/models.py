@@ -29,6 +29,7 @@ class SysUser(Base):
     phone: Mapped[Optional[str]] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), comment='手机号')
     org_id: Mapped[Optional[str]] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), comment='所属组织ID')
     position_id: Mapped[Optional[str]] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), comment='所属职位ID')
+    group_id: Mapped[Optional[str]] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), comment='所属用户组ID')
     status: Mapped[Optional[str]] = mapped_column(VARCHAR(16, charset='utf8mb4', collation='utf8mb4_general_ci'), default="ACTIVE", comment='状态')
     last_login_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, comment='最后登录时间')
     last_login_ip: Mapped[Optional[str]] = mapped_column(VARCHAR(64, charset='utf8mb4', collation='utf8mb4_general_ci'), comment='最后登录IP')
@@ -53,17 +54,6 @@ class RelUserRole(Base):
     scope: Mapped[Optional[str]] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), server_default=None, comment='数据范围覆盖：ALL-全部，CUSTOM-自定义，ORG-本组织，ORG_AND_BELOW-本组织及以下，SELF-本人。为空则继承 ral_role_permission 的配置')
     custom_scope_group_ids: Mapped[Optional[str]] = mapped_column(Text(collation='utf8mb4_general_ci'), comment='自定义数据范围组ID列表(JSON数组)，scope=CUSTOM时生效')
 
-class RelUserGroup(Base):
-    __tablename__ = 'rel_user_group'
-    __table_args__ = (
-        Index('uk_user_group', 'user_id', 'group_id', unique=True),
-        Index('idx_group_id', 'group_id'),
-        {'comment': '用户-用户组关联'}
-    )
-
-    id: Mapped[str] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), primary_key=True, comment='主键')
-    user_id: Mapped[str] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), nullable=False, comment='用户ID')
-    group_id: Mapped[str] = mapped_column(VARCHAR(32, charset='utf8mb4', collation='utf8mb4_general_ci'), nullable=False, comment='用户组ID')
 class RelUserPermission(Base):
     __tablename__ = 'rel_user_permission'
     __table_args__ = (

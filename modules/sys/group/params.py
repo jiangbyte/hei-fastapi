@@ -17,6 +17,7 @@ class GroupVO(DateTimeValidatorMixin, BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     sort_code: Optional[int] = 0
+    org_names: Optional[List[str]] = None
     extra: Optional[str] = None
     created_at: Optional[datetime] = None
     created_by: Optional[str] = None

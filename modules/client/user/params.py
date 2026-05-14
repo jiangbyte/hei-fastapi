@@ -23,12 +23,33 @@ class ClientUserVO(DateTimeValidatorMixin, BaseModel):
     login_count: Optional[int] = 0
     created_at: Optional[datetime] = None
     created_by: Optional[str] = None
+    created_name: Optional[str] = None
     updated_at: Optional[datetime] = None
     updated_by: Optional[str] = None
+    updated_name: Optional[str] = None
 
 
 class ClientUserPageParam(PageBounds):
-    pass
+    keyword: Optional[str] = None
+    status: Optional[str] = None
+
+
+class UpdateProfileParam(BaseModel):
+    nickname: Optional[str] = None
+    motto: Optional[str] = None
+    gender: Optional[str] = None
+    birthday: Optional[date] = None
+    email: Optional[str] = None
+    github: Optional[str] = None
+
+
+class UpdateAvatarParam(BaseModel):
+    avatar: str
+
+
+class UpdatePasswordParam(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class ClientUserExportParam(BaseExportParam):

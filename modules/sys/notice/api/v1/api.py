@@ -92,7 +92,7 @@ async def detail(
 ):
     service = NoticeService(db)
     data = service.detail(IdParam(id=id))
-    return success(data.model_dump() if data else None)
+    return success(data if data else None)
 
 
 @router.get(

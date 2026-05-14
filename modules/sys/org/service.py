@@ -19,8 +19,10 @@ class OrgService(BaseCrudService):
 
     def page(self, param: OrgPageParam) -> dict:
         result = self.dao.find_page_by_filters(param)
+        records = [OrgVO.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]]
+        self._batch_enrich(records)
         return page_data(
-            records=[OrgVO.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]],
+            records=records,
             total=result[PageDataField.TOTAL],
             page=param.current,
             size=param.size

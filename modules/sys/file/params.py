@@ -24,6 +24,7 @@ class FileVO(DateTimeValidatorMixin,BaseModel):
     extra: Optional[str] = None
     created_at: Optional[datetime] = None
     created_by: Optional[str] = None
+    created_name: Optional[str] = None
 
 
 class FilePageParam(PageBounds):

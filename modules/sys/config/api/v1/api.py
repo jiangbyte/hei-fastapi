@@ -82,7 +82,7 @@ async def detail(
 ):
     service = ConfigService(db)
     data = service.detail(IdParam(id=id))
-    return success(data.model_dump() if data else None)
+    return success(data if data else None)
 
 
 @router.post("/api/v1/sys/config/edit-batch", summary="批量编辑配置")

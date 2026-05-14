@@ -3,9 +3,14 @@ from sqlalchemy.orm import Session
 from core.result import Result, PageData, success
 from core.pojo import IdParam, IdsParam
 from core.db import get_db
-from core.auth.decorator import HeiCheckPermission
+from core.auth.decorator import HeiClientCheckLogin, HeiCheckPermission
+from core.log import SysLog
+from core.auth.decorator import NoRepeat
 from core.utils.excel_utils import handle_import
-from ...params import ClientUserVO, ClientUserPageParam, ClientUserExportParam, ClientUserImportParam
+from ...params import (
+    ClientUserVO, ClientUserPageParam, ClientUserExportParam, ClientUserImportParam,
+    UpdateProfileParam, UpdateAvatarParam, UpdatePasswordParam,
+)
 from ...service import ClientUserService
 
 router = APIRouter()
@@ -87,7 +92,7 @@ async def detail(
 ):
     service = ClientUserService(db)
     data = service.detail(IdParam(id=id))
-    return success(data.model_dump() if data else None)
+    return success(data if data else None)
 
 
 @router.get(
@@ -127,3 +132,67 @@ async def import_data(
     db: Session = Depends(get_db)
 ):
     return await handle_import(file, ClientUserService, ClientUserVO, ClientUserImportParam, db, request)
+
+
+@router.get(
+    "/api/v1/client-user/current",
+    summary="获取当前C端用户信息",
+)
+@HeiClientCheckLogin
+async def get_current_user(request: Request, db: Session = Depends(get_db)):
+    service = ClientUserService(db)
+    data = await service.get_current_user(request)
+    return success(data)
+
+
+@router.post(
+    "/api/v1/client-user/update-profile",
+    summary="更新当前C端用户个人信息",
+    response_model=Result
+)
+@SysLog("C端用户更新个人信息")
+@HeiClientCheckLogin
+@NoRepeat(interval=3000)
+async def update_profile(
+    request: Request,
+    param: UpdateProfileParam,
+    db: Session = Depends(get_db)
+):
+    service = ClientUserService(db)
+    await service.update_profile(param, request)
+    return success()
+
+
+@router.post(
+    "/api/v1/client-user/update-avatar",
+    summary="更新当前C端用户头像（base64）",
+    response_model=Result
+)
+@SysLog("C端用户更新头像")
+@HeiClientCheckLogin
+async def update_avatar(
+    request: Request,
+    param: UpdateAvatarParam,
+    db: Session = Depends(get_db)
+):
+    service = ClientUserService(db)
+    await service.update_avatar(param, request)
+    return success()
+
+
+@router.post(
+    "/api/v1/client-user/update-password",
+    summary="修改当前C端用户密码",
+    response_model=Result
+)
+@SysLog("C端用户修改密码")
+@HeiClientCheckLogin
+@NoRepeat(interval=3000)
+async def update_password(
+    request: Request,
+    param: UpdatePasswordParam,
+    db: Session = Depends(get_db)
+):
+    service = ClientUserService(db)
+    await service.update_password(param, request)
+    return success()

@@ -21,16 +21,21 @@ class UserVO(DateTimeValidatorMixin, BaseModel):
     phone: Optional[str] = None
     org_id: Optional[str] = None
     position_id: Optional[str] = None
+    group_id: Optional[str] = None
+    org_names: Optional[List[str]] = None
+    group_names: Optional[List[str]] = None
+    position_name: Optional[str] = None
     status: Optional[str] = None
     last_login_at: Optional[datetime] = None
     last_login_ip: Optional[str] = None
     login_count: Optional[int] = 0
     created_at: Optional[datetime] = None
     created_by: Optional[str] = None
+    created_name: Optional[str] = None
     updated_at: Optional[datetime] = None
     updated_by: Optional[str] = None
+    updated_name: Optional[str] = None
     role_ids: Optional[List[str]] = None
-    group_ids: Optional[List[str]] = None
 
 
 class UserPageParam(PageBounds):
@@ -51,11 +56,6 @@ class GrantRoleParam(BaseModel):
     role_ids: List[str]
     scope: Optional[str] = None
     custom_scope_group_ids: Optional[str] = None
-
-
-class GrantGroupParam(BaseModel):
-    user_id: str
-    group_ids: List[str]
 
 
 class GrantUserPermissionParam(BaseModel):

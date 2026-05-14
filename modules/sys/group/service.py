@@ -29,12 +29,27 @@ class GroupService(BaseCrudService):
         if not param.parent_id and not param.org_id:
             return page_data(records=[], total=0, page=param.current, size=param.size)
         result = self.dao.find_page_by_filters(param)
+        records = [GroupVO.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]]
+        self._batch_enrich(records)
         return page_data(
-            records=[GroupVO.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]],
+            records=records,
             total=result[PageDataField.TOTAL],
             page=param.current,
             size=param.size
         )
+
+    def _enrich_vo(self, vo: dict) -> None:
+        super()._enrich_vo(vo)
+        from core.db.base_service import _resolve_name_path
+        from modules.sys.org.models import SysOrg
+        vo["org_names"] = _resolve_name_path(vo.get("org_id"), self.dao.db, SysOrg)
+
+    def _batch_enrich(self, vo_list: List[dict]) -> None:
+        super()._batch_enrich(vo_list)
+        from core.db.base_service import _resolve_name_path
+        from modules.sys.org.models import SysOrg
+        for vo in vo_list:
+            vo["org_names"] = _resolve_name_path(vo.get("org_id"), self.dao.db, SysOrg)
 
     def tree(self, param: GroupTreeParam) -> List[dict]:
         if not param.org_id:
@@ -162,20 +177,21 @@ class GroupService(BaseCrudService):
         return list(all_ids)
 
     def remove(self, param: IdsParam) -> None:
-        from sqlalchemy import func, select, delete as sa_delete, update as sa_update
-        from ..user.models import RelUserGroup
+        from sqlalchemy import func, select, update as sa_update
+        from ..user.models import SysUser
         from ..position.models import SysPosition
 
         all_ids = self._collect_descendant_ids(param.ids)
         db = self.dao.db
 
         if db.execute(
-            select(func.count()).select_from(RelUserGroup).where(RelUserGroup.group_id.in_(all_ids))
+            select(func.count()).select_from(SysUser).where(SysUser.group_id.in_(all_ids))
         ).scalar() > 0:
             raise BusinessException("用户组存在关联用户，无法删除")
 
-        db.execute(sa_delete(RelUserGroup).where(RelUserGroup.group_id.in_(all_ids)))
-
+        db.execute(
+            sa_update(SysUser).where(SysUser.group_id.in_(all_ids)).values(group_id=None)
+        )
         db.execute(
             sa_update(SysPosition).where(
                 SysPosition.group_id.in_(all_ids)

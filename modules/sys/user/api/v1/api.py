@@ -6,7 +6,7 @@ from core.db import get_db
 from core.auth.decorator import HeiCheckPermission, HeiCheckLogin, NoRepeat
 from core.log import SysLog
 from core.utils.excel_utils import handle_import
-from ...params import UserVO, UserPageParam, UserExportParam, UserImportParam, GrantRoleParam, GrantGroupParam, GrantUserPermissionParam, UpdateProfileParam, UpdateAvatarParam, UpdatePasswordParam
+from ...params import UserVO, UserPageParam, UserExportParam, UserImportParam, GrantRoleParam, GrantUserPermissionParam, UpdateProfileParam, UpdateAvatarParam, UpdatePasswordParam
 from ...service import UserService
 
 router = APIRouter()
@@ -92,7 +92,7 @@ async def detail(
 ):
     service = UserService(db)
     data = service.detail(IdParam(id=id))
-    return success(data.model_dump() if data else None)
+    return success(data if data else None)
 
 
 @router.get(
@@ -156,24 +156,6 @@ async def grant_role(
 
 
 @router.post(
-    "/api/v1/sys/user/grant-group",
-    summary="分配用户用户组",
-    response_model=Result
-)
-@SysLog("分配用户用户组")
-@HeiCheckPermission("sys:user:grant-group")
-@NoRepeat(interval=3000)
-async def grant_group(
-    request: Request,
-    param: GrantGroupParam,
-    db: Session = Depends(get_db)
-):
-    service = UserService(db)
-    await service.grant_groups(param, request)
-    return success()
-
-
-@router.post(
     "/api/v1/sys/user/grant-permission",
     summary="分配用户权限",
     response_model=Result
@@ -217,20 +199,6 @@ async def own_roles(
 ):
     service = UserService(db)
     return success(service.get_user_role_ids(user_id))
-
-
-@router.get(
-    "/api/v1/sys/user/own-groups",
-    summary="获取用户已分配的用户组ID列表"
-)
-@HeiCheckPermission("sys:user:own-groups")
-async def own_groups(
-    request: Request,
-    user_id: str = Query(...),
-    db: Session = Depends(get_db)
-):
-    service = UserService(db)
-    return success(service.get_user_group_ids(user_id))
 
 
 @router.get(

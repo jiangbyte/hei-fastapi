@@ -2,8 +2,8 @@ from __future__ import annotations
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import select, or_, delete as sa_delete
-from .models import SysUser, RelUserRole, RelUserGroup, RelUserPermission
+from sqlalchemy import select, or_, delete as sa_delete, update as sa_update
+from .models import SysUser, RelUserRole, RelUserPermission
 from .params import UserPageParam
 from core.db.base_dao import BaseDAO
 from core.db.query_wrapper import QueryWrapper
@@ -77,33 +77,25 @@ class UserDao(BaseDAO):
 
     # ---- RAL: User Groups ----
 
-    def get_group_ids_by_user_id(self, user_id: str) -> List[str]:
-        rows = self.db.execute(
-            select(RelUserGroup.group_id).where(RelUserGroup.user_id == user_id)
-        ).scalars().all()
-        return list(rows)
+    def get_group_id_by_user_id(self, user_id: str) -> Optional[str]:
+        return self.db.execute(
+            select(SysUser.group_id).where(SysUser.id == user_id)
+        ).scalar()
 
-    def get_group_ids_map_by_user_ids(self, user_ids: List[str]) -> Dict[str, List[str]]:
+    def get_group_id_map_by_user_ids(self, user_ids: List[str]) -> Dict[str, str]:
         if not user_ids:
             return {}
         rows = self.db.execute(
-            select(RelUserGroup.user_id, RelUserGroup.group_id).where(
-                RelUserGroup.user_id.in_(user_ids),
+            select(SysUser.id, SysUser.group_id).where(
+                SysUser.id.in_(user_ids),
             )
         ).all()
-        result: Dict[str, List[str]] = {uid: [] for uid in user_ids}
-        for uid, gid in rows:
-            result.setdefault(uid, []).append(gid)
-        return result
+        return {uid: gid for uid, gid in rows if gid}
 
-    def grant_groups(self, user_id: str, group_ids: List[str], created_by: Optional[str] = None):
-        self.db.execute(sa_delete(RelUserGroup).where(RelUserGroup.user_id == user_id))
-
-        for gid in group_ids:
-            rel = RelUserGroup(
-                id=generate_id(), user_id=user_id, group_id=gid,
-            )
-            self.db.add(rel)
+    def set_group(self, user_id: str, group_id: Optional[str]) -> None:
+        self.db.execute(
+            sa_update(SysUser).where(SysUser.id == user_id).values(group_id=group_id)
+        )
         self.db.commit()
 
     # ---- RAL: User Permissions (direct) ----

@@ -83,6 +83,7 @@ class ConfigService(BaseCrudService):
         records = result[PageDataField.RECORDS]
         total = result[PageDataField.TOTAL]
         vo_list = [ConfigVO.model_validate(r).model_dump() for r in records]
+        self._batch_enrich(vo_list)
         return page_data(records=vo_list, total=total, page=param.current, size=param.size)
 
     def list_by_category(self, param: ConfigListParam) -> List[dict]:

@@ -26,7 +26,32 @@ class PositionService(BaseCrudService):
     def page(self, param: PositionPageParam) -> dict:
         if not param.group_id:
             return page_data(records=[], total=0, page=param.current, size=param.size)
-        return super().page(param)
+        result = self.dao.find_page_by_filters(param)
+        records = [self.vo_class.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]]
+        self._batch_enrich(records)
+        return page_data(
+            records=records,
+            total=result[PageDataField.TOTAL],
+            page=param.current,
+            size=param.size,
+        )
+
+    def _enrich_vo(self, vo: dict) -> None:
+        super()._enrich_vo(vo)
+        from core.db.base_service import _resolve_name_path
+        from modules.sys.org.models import SysOrg
+        from modules.sys.group.models import SysGroup
+        vo["org_names"] = _resolve_name_path(vo.get("org_id"), self.dao.db, SysOrg)
+        vo["group_names"] = _resolve_name_path(vo.get("group_id"), self.dao.db, SysGroup)
+
+    def _batch_enrich(self, vo_list: List[dict]) -> None:
+        super()._batch_enrich(vo_list)
+        from core.db.base_service import _resolve_name_path
+        from modules.sys.org.models import SysOrg
+        from modules.sys.group.models import SysGroup
+        for vo in vo_list:
+            vo["org_names"] = _resolve_name_path(vo.get("org_id"), self.dao.db, SysOrg)
+            vo["group_names"] = _resolve_name_path(vo.get("group_id"), self.dao.db, SysGroup)
 
     def remove(self, param: IdsParam) -> None:
         from sqlalchemy import func, select

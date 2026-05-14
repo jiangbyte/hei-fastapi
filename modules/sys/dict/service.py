@@ -28,8 +28,10 @@ class DictService(BaseCrudService):
 
     def page(self, param: DictPageParam) -> dict:
         result = self.dao.find_page_by_filters(param)
+        records = [DictVO.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]]
+        self._batch_enrich(records)
         return page_data(
-            records=[DictVO.model_validate(r).model_dump() for r in result[PageDataField.RECORDS]],
+            records=records,
             total=result[PageDataField.TOTAL],
             page=param.current,
             size=param.size

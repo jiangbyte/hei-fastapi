@@ -32,6 +32,10 @@ CREATE TABLE `client_user`  (
   `birthday` date NULL DEFAULT NULL COMMENT '生日',
   `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '电子邮箱',
   `github` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'GitHub',
+  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '手机号',
+  `org_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属组织ID',
+  `position_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属职位ID',
+  `group_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属用户组ID',
   `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'ACTIVE' COMMENT '状态',
   `last_login_at` datetime NULL DEFAULT NULL COMMENT '最后登录时间',
   `last_login_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '最后登录IP',
@@ -44,11 +48,6 @@ CREATE TABLE `client_user`  (
   INDEX `idx_account`(`account` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = 'C端用户' ROW_FORMAT = DYNAMIC;
 
--- ----------------------------
--- Records of client_user
--- ----------------------------
-INSERT INTO `client_user` VALUES ('60001', 'test01', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '测试用户01', NULL, 'hello world', 'MALE', '1995-01-01', 'test01@example.com', NULL, 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `client_user` VALUES ('60002', 'test02', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '测试用户02', NULL, '你好世界', 'FEMALE', '1996-02-02', 'test02@example.com', NULL, 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 
 -- ----------------------------
 -- Table structure for gen_basic
@@ -281,12 +280,10 @@ INSERT INTO `rel_role_permission` VALUES ('2000000111', '40001', 'sys:role:templ
 INSERT INTO `rel_role_permission` VALUES ('2000000112', '40001', 'sys:user:create', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000113', '40001', 'sys:user:detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000114', '40001', 'sys:user:export', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000115', '40001', 'sys:user:grant-group', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000116', '40001', 'sys:user:grant-permission', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000117', '40001', 'sys:user:grant-role', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000118', '40001', 'sys:user:import', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000119', '40001', 'sys:user:modify', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000120', '40001', 'sys:user:own-groups', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000121', '40001', 'sys:user:own-permission-detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000122', '40001', 'sys:user:own-roles', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000123', '40001', 'sys:user:page', 'ALL', NULL, NULL);
@@ -394,12 +391,10 @@ INSERT INTO `rel_role_permission` VALUES ('2000000224', '40002', 'sys:role:templ
 INSERT INTO `rel_role_permission` VALUES ('2000000225', '40002', 'sys:user:create', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000226', '40002', 'sys:user:detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000227', '40002', 'sys:user:export', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000228', '40002', 'sys:user:grant-group', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000229', '40002', 'sys:user:grant-permission', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000230', '40002', 'sys:user:grant-role', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000231', '40002', 'sys:user:import', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000232', '40002', 'sys:user:modify', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000233', '40002', 'sys:user:own-groups', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000234', '40002', 'sys:user:own-permission-detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000235', '40002', 'sys:user:own-roles', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000236', '40002', 'sys:user:page', 'ALL', NULL, NULL);
@@ -536,7 +531,6 @@ INSERT INTO `rel_role_permission` VALUES ('2000000366', '40007', 'sys:position:p
 INSERT INTO `rel_role_permission` VALUES ('2000000367', '40007', 'sys:user:create', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000368', '40007', 'sys:user:detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000369', '40007', 'sys:user:export', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000370', '40007', 'sys:user:grant-group', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000371', '40007', 'sys:user:grant-role', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000372', '40007', 'sys:user:import', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000373', '40007', 'sys:user:modify', 'ALL', NULL, NULL);
@@ -951,30 +945,6 @@ INSERT INTO `rel_role_resource` VALUES ('3000000319', '40007', '80080');
 INSERT INTO `rel_role_resource` VALUES ('3000000320', '40007', '80100');
 INSERT INTO `rel_role_resource` VALUES ('3000000334', '40007', '80106');
 INSERT INTO `rel_role_resource` VALUES ('3000000351', '40007', '80108');
-
--- ----------------------------
--- Table structure for rel_user_group
--- ----------------------------
-DROP TABLE IF EXISTS `rel_user_group`;
-CREATE TABLE `rel_user_group`  (
-  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
-  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `group_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户组ID',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_user_group`(`user_id` ASC, `group_id` ASC) USING BTREE,
-  INDEX `idx_group_id`(`group_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户-用户组关联' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of rel_user_group
--- ----------------------------
-INSERT INTO `rel_user_group` VALUES ('130001', '50001', '30001');
-INSERT INTO `rel_user_group` VALUES ('130002', '50002', '30002');
-INSERT INTO `rel_user_group` VALUES ('130003', '50003', '30002');
-INSERT INTO `rel_user_group` VALUES ('130004', '50004', '30002');
-INSERT INTO `rel_user_group` VALUES ('130005', '50005', '30003');
-INSERT INTO `rel_user_group` VALUES ('130006', '50006', '30004');
-INSERT INTO `rel_user_group` VALUES ('130007', '50007', '30005');
 
 -- ----------------------------
 -- Table structure for rel_user_permission
@@ -1523,7 +1493,6 @@ INSERT INTO `sys_resource` VALUES ('80020', 'SYS_USER_DETAIL', '用户详情', '
 INSERT INTO `sys_resource` VALUES ('80021', 'SYS_USER_EXPORT', '用户导出', 'BACKEND_BUTTON', 'BUTTON', '导出用户数据', '80004', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:user:export\"}', 'ENABLED', 6, '2026-05-12 14:55:52', '50001', '2026-05-13 10:30:22', '50001');
 INSERT INTO `sys_resource` VALUES ('80022', 'SYS_USER_IMPORT', '用户导入', 'BACKEND_BUTTON', 'BUTTON', '导入用户数据', '80004', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:user:import\"}', 'ENABLED', 7, '2026-05-12 14:55:52', '50001', '2026-05-13 10:30:22', '50001');
 INSERT INTO `sys_resource` VALUES ('80023', 'SYS_USER_GRANT_ROLE', '分配角色', 'BACKEND_BUTTON', 'BUTTON', '给用户分配角色', '80004', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:user:grant-role\"}', 'ENABLED', 8, '2026-05-12 14:55:52', '50001', '2026-05-13 10:30:22', '50001');
-INSERT INTO `sys_resource` VALUES ('80024', 'SYS_USER_GRANT_GROUP', '分配组', 'BACKEND_BUTTON', 'BUTTON', '给用户分配组', '80004', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:user:grant-group\"}', 'ENABLED', 9, '2026-05-12 14:55:52', '50001', '2026-05-13 10:30:22', '50001');
 INSERT INTO `sys_resource` VALUES ('80025', 'SYS_ROLE_PAGE', '角色查询', 'BACKEND_BUTTON', 'BUTTON', '查询角色列表', '80005', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:role:page\"}', 'ENABLED', 1, '2026-05-12 14:55:52', '50001', '2026-05-13 10:31:02', '50001');
 INSERT INTO `sys_resource` VALUES ('80026', 'SYS_ROLE_CREATE', '角色新增', 'BACKEND_BUTTON', 'BUTTON', '新增角色', '80005', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:role:create\"}', 'ENABLED', 2, '2026-05-12 14:55:52', '50001', '2026-05-13 10:31:02', '50001');
 INSERT INTO `sys_resource` VALUES ('80027', 'SYS_ROLE_MODIFY', '角色修改', 'BACKEND_BUTTON', 'BUTTON', '修改角色', '80005', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:role:modify\"}', 'ENABLED', 3, '2026-05-12 14:55:52', '50001', '2026-05-13 10:31:02', '50001');
@@ -1681,6 +1650,7 @@ CREATE TABLE `sys_user`  (
   `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '手机号',
   `org_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属组织ID',
   `position_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属职位ID',
+  `group_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属用户组ID',
   `status` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'ACTIVE' COMMENT '状态',
   `last_login_at` datetime NULL DEFAULT NULL COMMENT '最后登录时间',
   `last_login_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '最后登录IP',
@@ -1696,15 +1666,15 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
-INSERT INTO `sys_user` VALUES ('50001', 'admin', '$2b$12$5t3Ey0kGLXaWgmUMYHh8aeh9hOTwpIcKI4M.txQi26Sd3jz4aeEm2', '管理员', NULL, '管理一切', 'MALE', '1990-01-01', 'admin@hei.com', NULL, '13800000001', '10001', '20001', 'ACTIVE', '2026-05-14 15:52:49', '127.0.0.1', 7, '2026-05-12 14:55:52', '50001', '2026-05-14 15:52:49', '50001');
-INSERT INTO `sys_user` VALUES ('50002', 'zhangsan', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '张三', NULL, '代码改变世界', 'MALE', '1995-05-15', 'zhangsan@hei.com', 'https://github.com/zhangsan', '13800000002', '10002', '20004', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50003', 'lisi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '李四', NULL, '学无止境', 'MALE', '1993-08-20', 'lisi@hei.com', NULL, '13800000003', '10002', '20004', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50004', 'wangwu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '王五', NULL, '追求卓越', 'MALE', '1994-03-10', 'wangwu@hei.com', NULL, '13800000004', '10002', '20003', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50005', 'zhaoliu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '赵六', NULL, '质量第一', 'FEMALE', '1996-11-25', 'zhaoliu@hei.com', NULL, '13800000005', '10002', '20005', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50006', 'sunqi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '孙七', NULL, '用户至上', 'MALE', '1991-07-07', 'sunqi@hei.com', NULL, '13800000006', '10003', '20006', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50007', 'zhouba', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '周八', NULL, '市场就是战场', 'FEMALE', '1992-02-14', 'zhouba@hei.com', NULL, '13800000007', '10003', '20007', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50008', 'wujiu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '吴九', NULL, '精打细算', 'MALE', '1988-09-09', 'wujiu@hei.com', NULL, '13800000008', '10004', '20008', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50009', 'zhengshi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '郑十', NULL, '以人为本', 'FEMALE', '1990-12-01', 'zhengshi@hei.com', NULL, '13800000009', '10005', '20009', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_user` VALUES ('50010', 'chen十一', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '陈十一', NULL, '稳定压倒一切', 'MALE', '1993-06-18', 'chen11@hei.com', NULL, '13800000010', '10007', '20011', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50001', 'admin', '$2b$12$5t3Ey0kGLXaWgmUMYHh8aeh9hOTwpIcKI4M.txQi26Sd3jz4aeEm2', '管理员', NULL, '管理一切', 'MALE', '1990-01-01', 'admin@hei.com', NULL, '13800000001', '10001', '20001', '30001', 'ACTIVE', '2026-05-14 15:52:49', '127.0.0.1', 7, '2026-05-12 14:55:52', '50001', '2026-05-14 15:52:49', '50001');
+INSERT INTO `sys_user` VALUES ('50002', 'zhangsan', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '张三', NULL, '代码改变世界', 'MALE', '1995-05-15', 'zhangsan@hei.com', 'https://github.com/zhangsan', '13800000002', '10002', '20004', '30002', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50003', 'lisi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '李四', NULL, '学无止境', 'MALE', '1993-08-20', 'lisi@hei.com', NULL, '13800000003', '10002', '20004', '30002', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50004', 'wangwu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '王五', NULL, '追求卓越', 'MALE', '1994-03-10', 'wangwu@hei.com', NULL, '13800000004', '10002', '20003', '30002', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50005', 'zhaoliu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '赵六', NULL, '质量第一', 'FEMALE', '1996-11-25', 'zhaoliu@hei.com', NULL, '13800000005', '10002', '20005', '30003', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50006', 'sunqi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '孙七', NULL, '用户至上', 'MALE', '1991-07-07', 'sunqi@hei.com', NULL, '13800000006', '10003', '20006', '30004', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50007', 'zhouba', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '周八', NULL, '市场就是战场', 'FEMALE', '1992-02-14', 'zhouba@hei.com', NULL, '13800000007', '10003', '20007', '30005', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50008', 'wujiu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '吴九', NULL, '精打细算', 'MALE', '1988-09-09', 'wujiu@hei.com', NULL, '13800000008', '10004', '20008', NULL, 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50009', 'zhengshi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '郑十', NULL, '以人为本', 'FEMALE', '1990-12-01', 'zhengshi@hei.com', NULL, '13800000009', '10005', '20009', NULL, 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_user` VALUES ('50010', 'chen十一', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '陈十一', NULL, '稳定压倒一切', 'MALE', '1993-06-18', 'chen11@hei.com', NULL, '13800000010', '10007', '20011', NULL, 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 
 SET FOREIGN_KEY_CHECKS = 1;

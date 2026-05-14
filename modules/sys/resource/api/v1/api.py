@@ -95,7 +95,7 @@ async def module_detail(
 ):
     service = ModuleService(db)
     data = service.detail(IdParam(id=id))
-    return success(data.model_dump() if data else None)
+    return success(data if data else None)
 
 
 @router.get(
@@ -236,7 +236,7 @@ async def resource_detail(
 ):
     service = ResourceService(db)
     data = service.detail(IdParam(id=id))
-    return success(data.model_dump() if data else None)
+    return success(data if data else None)
 
 
 @router.get(

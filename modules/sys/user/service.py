@@ -5,7 +5,7 @@ from core.utils import decrypt
 from sqlalchemy.orm import Session
 from fastapi import Request
 from .models import SysUser
-from .params import UserVO, UserPageParam, GrantRoleParam, GrantGroupParam, GrantUserPermissionParam, UpdateProfileParam, UpdateAvatarParam, UpdatePasswordParam
+from .params import UserVO, UserPageParam, GrantRoleParam, GrantUserPermissionParam, UpdateProfileParam, UpdateAvatarParam, UpdatePasswordParam
 from .dao import UserDao
 from core.pojo import IdParam, IdsParam
 from core.result import page_data, PageDataField
@@ -71,13 +71,14 @@ class UserService(BaseCrudService):
         records = result[PageDataField.RECORDS]
         user_ids = [r.id for r in records]
         role_map = self.dao.get_role_ids_map_by_user_ids(user_ids)
-        group_map = self.dao.get_group_ids_map_by_user_ids(user_ids)
+        group_map = self.dao.get_group_id_map_by_user_ids(user_ids)
         vo_list = []
         for r in records:
             vo = UserVO.model_validate(r).model_dump()
             vo["role_ids"] = role_map.get(r.id, [])
-            vo["group_ids"] = group_map.get(r.id, [])
+            vo["group_id"] = group_map.get(r.id)
             vo_list.append(vo)
+        self._batch_enrich(vo_list)
         return page_data(
             records=vo_list,
             total=result[PageDataField.TOTAL],
@@ -85,10 +86,62 @@ class UserService(BaseCrudService):
             size=param.size
         )
 
+    def _enrich_names(self, vo: dict) -> None:
+        """Resolve org/group/position names from IDs (single-VO, for detail())."""
+        from core.db.base_service import _resolve_name_path
+        db = self.dao.db
+        from modules.sys.org.models import SysOrg
+        vo["org_names"] = _resolve_name_path(vo.get("org_id"), db, SysOrg)
+        from modules.sys.group.models import SysGroup
+        vo["group_names"] = _resolve_name_path(vo.get("group_id"), db, SysGroup)
+        if vo.get("position_id"):
+            from modules.sys.position.models import SysPosition
+            pos = db.get(SysPosition, vo["position_id"])
+            vo["position_name"] = pos.name if pos else None
+
+    def _batch_enrich(self, vo_list: List[dict]) -> None:
+        """Batch-enrich org/group/position + creator/updater names — one query per model, no N+1."""
+        if not vo_list:
+            return
+        # Batch resolve creator/updater names first
+        super()._batch_enrich(vo_list)
+
+        db = self.dao.db
+        from sqlalchemy import select
+        from modules.sys.org.models import SysOrg
+        from modules.sys.group.models import SysGroup
+        from modules.sys.position.models import SysPosition
+        from core.db.base_service import _resolve_path_from_map
+
+        # Collect unique position IDs
+        position_ids = {vo["position_id"] for vo in vo_list if vo.get("position_id")}
+
+        # Batch resolve position names — one query
+        pos_name_map = {}
+        if position_ids:
+            rows = db.execute(
+                select(SysPosition.id, SysPosition.name).where(SysPosition.id.in_(position_ids))
+            ).all()
+            pos_name_map = {r.id: r.name for r in rows}
+
+        # Single loads for org/group hierarchies — each loads the full table once
+        org_rows = db.execute(select(SysOrg.id, SysOrg.name, SysOrg.parent_id)).all()
+        org_node_map = {r.id: {"name": r.name, "parent_id": r.parent_id} for r in org_rows}
+        group_rows = db.execute(select(SysGroup.id, SysGroup.name, SysGroup.parent_id)).all()
+        group_node_map = {r.id: {"name": r.name, "parent_id": r.parent_id} for r in group_rows}
+
+        for vo in vo_list:
+            vo["org_names"] = _resolve_path_from_map(vo.get("org_id"), org_node_map)
+            vo["group_names"] = _resolve_path_from_map(vo.get("group_id"), group_node_map)
+            vo["position_name"] = pos_name_map.get(vo["position_id"]) if vo.get("position_id") else None
+
     def _enrich_vo(self, user_id: str, vo: dict):
-        """Add relation IDs to VO (single-user, for detail())."""
+        """Add relation IDs + creator/updater names to VO (single-user, for detail())."""
         vo["role_ids"] = self.dao.get_role_ids_by_user_id(user_id)
-        vo["group_ids"] = self.dao.get_group_ids_by_user_id(user_id)
+        vo["group_id"] = self.dao.get_group_id_by_user_id(user_id)
+        self._enrich_names(vo)
+        from core.db.base_service import enrich_creator_updater
+        enrich_creator_updater(vo, self.dao.db)
 
     async def create(self, vo: UserVO, request: Optional[Request] = None) -> None:
         if vo.account and self.find_by_account(vo.account):
@@ -96,15 +149,15 @@ class UserService(BaseCrudService):
         if vo.email and self.find_by_email(vo.email):
             raise BusinessException("邮箱已存在")
 
-        entity = SysUser(**strip_system_fields(vo.model_dump(), extra_fields={'role_ids', 'group_ids'}))
+        entity = SysUser(**strip_system_fields(vo.model_dump(), extra_fields={'role_ids', 'group_id'}))
         user_id = await self._get_current_user_id(request)
         self.dao.insert(entity, user_id=user_id)
 
         # Grant roles/groups if provided
         if vo.role_ids:
             self.dao.grant_roles(entity.id, vo.role_ids, user_id)
-        if vo.group_ids:
-            self.dao.grant_groups(entity.id, vo.group_ids, user_id)
+        if vo.group_id:
+            self.dao.set_group(entity.id, vo.group_id)
 
     async def modify(self, vo: UserVO, request: Optional[Request] = None) -> None:
         entity = self.dao.find_by_id(vo.id)
@@ -112,7 +165,7 @@ class UserService(BaseCrudService):
             raise BusinessException("数据不存在")
 
         update_data = vo.model_dump(exclude_unset=True)
-        apply_update(entity, update_data, extra_protected={'password', 'role_ids', 'group_ids'})
+        apply_update(entity, update_data, extra_protected={'password', 'role_ids', 'group_id'})
 
         user_id = await self._get_current_user_id(request)
         self.dao.update(entity, user_id=user_id)
@@ -120,29 +173,28 @@ class UserService(BaseCrudService):
         # Sync role/group assignments if provided
         if vo.role_ids is not None:
             self.dao.grant_roles(vo.id, vo.role_ids, user_id)
-        if vo.group_ids is not None:
-            self.dao.grant_groups(vo.id, vo.group_ids, user_id)
+        if vo.group_id is not None:
+            self.dao.set_group(vo.id, vo.group_id)
 
     def remove(self, param: IdsParam) -> None:
         from sqlalchemy import delete as sa_delete
-        from .models import RelUserRole, RelUserGroup, RelUserPermission
+        from .models import RelUserRole, RelUserPermission
 
         ids = param.ids
         db = self.dao.db
 
-        for model in [RelUserRole, RelUserGroup, RelUserPermission]:
+        for model in [RelUserRole, RelUserPermission]:
             db.execute(sa_delete(model).where(model.user_id.in_(ids)))
 
         self.dao.delete_by_ids(ids)
 
-    def detail(self, param: IdParam) -> Optional[UserVO]:
+    def detail(self, param: IdParam) -> Optional[dict]:
         entity = self.dao.find_by_id(param.id)
         if not entity:
             return None
-        vo = UserVO.model_validate(entity)
-        vo_dict = vo.model_dump()
-        self._enrich_vo(param.id, vo_dict)
-        return UserVO(**vo_dict)
+        vo = UserVO.model_validate(entity).model_dump()
+        self._enrich_vo(param.id, vo)
+        return vo
 
     def download_template(self):
         return export_excel(
@@ -153,7 +205,7 @@ class UserService(BaseCrudService):
     async def import_data(self, param, request: Optional[Request] = None) -> dict:
         if not param.data:
             raise BusinessException("导入数据不能为空")
-        entities = [SysUser(**strip_system_fields(vo.model_dump(), extra_fields={'role_ids', 'group_ids'})) for vo in param.data]
+        entities = [SysUser(**strip_system_fields(vo.model_dump(), extra_fields={'role_ids', 'group_id'})) for vo in param.data]
         self.dao.insert_batch(entities, user_id=await self._get_current_user_id(request))
         return {"total": len(entities), "message": f"成功导入{len(entities)}条数据"}
 
@@ -162,10 +214,6 @@ class UserService(BaseCrudService):
     async def grant_roles(self, param: GrantRoleParam, request: Optional[Request] = None) -> None:
         created_by = await self._get_current_user_id(request)
         self.dao.grant_roles(param.user_id, param.role_ids, created_by, param.scope, param.custom_scope_group_ids)
-
-    async def grant_groups(self, param: GrantGroupParam, request: Optional[Request] = None) -> None:
-        created_by = await self._get_current_user_id(request)
-        self.dao.grant_groups(param.user_id, param.group_ids, created_by)
 
     async def grant_permissions(self, param: GrantUserPermissionParam, request: Optional[Request] = None) -> None:
         created_by = await self._get_current_user_id(request)
@@ -178,8 +226,8 @@ class UserService(BaseCrudService):
     def get_user_role_ids(self, user_id: str) -> List[str]:
         return self.dao.get_role_ids_by_user_id(user_id)
 
-    def get_user_group_ids(self, user_id: str) -> List[str]:
-        return self.dao.get_group_ids_by_user_id(user_id)
+    def get_user_group_id(self, user_id: str) -> Optional[str]:
+        return self.dao.get_group_id_by_user_id(user_id)
 
     # ---- Current user info for frontend ----
 
@@ -191,18 +239,18 @@ class UserService(BaseCrudService):
         if not entity:
             return None
 
-        org_name = None
         position_name = None
-        if entity.org_id:
-            from modules.sys.org.models import SysOrg
-            org = self.dao.db.get(SysOrg, entity.org_id)
-            if org:
-                org_name = org.name
         if entity.position_id:
             from modules.sys.position.models import SysPosition
             pos = self.dao.db.get(SysPosition, entity.position_id)
             if pos:
                 position_name = pos.name
+
+        from core.db.base_service import _resolve_name_path
+        from modules.sys.org.models import SysOrg
+        from modules.sys.group.models import SysGroup
+        org_names = _resolve_name_path(entity.org_id, self.dao.db, SysOrg)
+        group_names = _resolve_name_path(entity.group_id, self.dao.db, SysGroup)
 
         return {
             "id": entity.id,
@@ -216,7 +264,8 @@ class UserService(BaseCrudService):
             "github": entity.github,
             "phone": entity.phone,
             "status": entity.status,
-            "org_name": org_name,
+            "org_names": org_names,
+            "group_names": group_names,
             "position_name": position_name,
             "last_login_at": entity.last_login_at.strftime('%Y-%m-%d %H:%M:%S') if entity.last_login_at else None,
             "last_login_ip": entity.last_login_ip,
