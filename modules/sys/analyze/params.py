@@ -27,7 +27,6 @@ class DashboardStats(BaseModel):
 
 
 class SysInfo(BaseModel):
-    python_version: str = ""
     os_name: str = ""
     server_ip: str = ""
     run_time: str = ""

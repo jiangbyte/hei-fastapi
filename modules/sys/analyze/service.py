@@ -29,7 +29,6 @@ class AnalyzeService:
             run_time = f"{hours}小时 {minutes}分钟"
 
         return SysInfo(
-            python_version=platform.python_version(),
             os_name=platform.system() + " " + platform.release(),
             server_ip=ip,
             run_time=run_time,
