@@ -1,7 +1,7 @@
 import json
 import logging
 from typing import List, Optional, Union
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from core.db.mysql import SessionLocal
 from core.enums import LoginTypeEnum, DataScopeEnum
@@ -15,10 +15,9 @@ SUPER_ADMIN_CODE = "SUPER_ADMIN"
 class HeiPermissionInterface:
     """
     Runtime permission loader. Queries DB at request time.
-    Resolves permissions from three paths:
+    Resolves permissions from two paths:
       1. User → Role → RolePermission (permission_code)
       2. User → UserPermission (permission_code, direct grant)
-      3. User → Org → OrgRole → RolePermission (permission_code)
     Scope resolution: higher path priority (lower P value) wins.
     Same priority: most restrictive scope wins within each dimension (group/org).
     """
@@ -30,14 +29,6 @@ class HeiPermissionInterface:
         query = select(RelUserRole.role_id).where(RelUserRole.user_id == login_id)
         rows = db.scalars(query).all()
         role_ids.update(rows)
-
-        from modules.sys.org.models import RelOrgRole
-        from modules.sys.user.models import SysUser
-        user = db.get(SysUser, login_id)
-        if user and user.org_id:
-            query = select(RelOrgRole.role_id).where(RelOrgRole.org_id == user.org_id)
-            rows = db.scalars(query).all()
-            role_ids.update(rows)
 
         return list(role_ids)
 
@@ -166,8 +157,6 @@ class HeiPermissionInterface:
         from core.enums import PermissionPathEnum
         from modules.sys.user.models import RelUserRole, RelUserPermission
         from modules.sys.role.models import RelRolePermission
-        from modules.sys.org.models import RelOrgRole
-        from modules.sys.user.models import SysUser
 
         db = SessionLocal()
         try:
@@ -206,21 +195,6 @@ class HeiPermissionInterface:
             ).where(RelUserPermission.user_id == login_id)
             rows = db.execute(query).all()
             self._merge_scope(perm_scope, PermissionPathEnum.DIRECT, rows)
-
-            # Path 4 (P3): User → Org → Role → Permission
-            if login_type == LoginTypeEnum.BUSINESS:
-                user = db.get(SysUser, login_id)
-                if user and user.org_id:
-                    query = select(
-                        RelRolePermission.permission_code,
-                        func.coalesce(RelOrgRole.scope, RelRolePermission.scope),
-                        func.coalesce(RelOrgRole.custom_scope_group_ids, RelRolePermission.custom_scope_group_ids),
-                        func.coalesce(RelOrgRole.custom_scope_org_ids, RelRolePermission.custom_scope_org_ids),
-                    ).join(RelRolePermission, RelRolePermission.role_id == RelOrgRole.role_id).where(
-                        RelOrgRole.org_id == user.org_id,
-                    )
-                    rows = db.execute(query).all()
-                    self._merge_scope(perm_scope, PermissionPathEnum.ORG_ROLE, rows)
 
             return {k: {
                 "group_scope": v["group_scope"],

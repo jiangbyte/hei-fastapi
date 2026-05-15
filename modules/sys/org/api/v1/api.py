@@ -6,7 +6,7 @@ from core.db import get_db
 from core.auth.decorator import HeiCheckPermission, NoRepeat
 from core.log import SysLog
 from core.utils.excel_utils import handle_import
-from ...params import OrgVO, OrgPageParam, OrgTreeParam, OrgExportParam, OrgImportParam, GrantOrgRoleParam
+from ...params import OrgVO, OrgPageParam, OrgTreeParam, OrgExportParam, OrgImportParam
 from ...service import OrgService
 
 router = APIRouter()
@@ -152,33 +152,3 @@ async def import_data(
     return await handle_import(file, OrgService, OrgVO, OrgImportParam, db, request)
 
 
-@router.post(
-    "/api/v1/sys/org/grant-role",
-    summary="分配组织角色",
-    response_model=Result
-)
-@SysLog("分配组织角色")
-@HeiCheckPermission("sys:org:grant-role")
-@NoRepeat(interval=3000)
-async def grant_role(
-    request: Request,
-    param: GrantOrgRoleParam,
-    db: Session = Depends(get_db)
-):
-    service = OrgService(db)
-    await service.grant_roles(param, request)
-    return success()
-
-
-@router.get(
-    "/api/v1/sys/org/own-roles",
-    summary="获取组织已分配的角色ID列表"
-)
-@HeiCheckPermission("sys:org:own-roles")
-async def own_roles(
-    request: Request,
-    org_id: str = Query(...),
-    db: Session = Depends(get_db)
-):
-    service = OrgService(db)
-    return success(service.get_org_role_ids(org_id))

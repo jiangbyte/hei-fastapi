@@ -1,6 +1,6 @@
 from typing import Optional, List
 from fastapi import Request
-from .params import OrgVO, OrgPageParam, GrantOrgRoleParam, OrgTreeParam
+from .params import OrgVO, OrgPageParam, OrgTreeParam
 from .dao import OrgDao
 from .models import SysOrg
 from core.pojo import IdsParam
@@ -103,7 +103,6 @@ class OrgService(BaseCrudService):
         from ..user.models import SysUser
         from ..group.models import SysGroup
         from ..position.models import SysPosition
-        from .models import RelOrgRole
 
         all_ids = self._collect_descendant_ids(param.ids)
         db = self.dao.db
@@ -122,8 +121,6 @@ class OrgService(BaseCrudService):
         ).scalar() > 0:
             raise BusinessException("组织下存在用户组，无法删除")
 
-        db.execute(sa_delete(RelOrgRole).where(RelOrgRole.org_id.in_(all_ids)))
-
         db.execute(
             sa_update(SysPosition).where(
                 SysPosition.org_id.in_(all_ids)
@@ -131,10 +128,3 @@ class OrgService(BaseCrudService):
         )
 
         self.dao.delete_by_ids(all_ids)
-
-    async def grant_roles(self, param: GrantOrgRoleParam, request: Optional[Request] = None) -> None:
-        created_by = await self._get_current_user_id(request)
-        self.dao.grant_roles(param.org_id, param.role_ids, created_by, param.scope, param.custom_scope_group_ids)
-
-    def get_org_role_ids(self, org_id: str) -> List[str]:
-        return self.dao.get_role_ids_by_org_id(org_id)

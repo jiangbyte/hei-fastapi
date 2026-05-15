@@ -25,13 +25,6 @@ class OrgVO(DateTimeValidatorMixin, BaseModel):
     updated_name: Optional[str] = None
 
 
-class GrantOrgRoleParam(BaseModel):
-    org_id: str
-    role_ids: List[str]
-    scope: Optional[str] = None
-    custom_scope_group_ids: Optional[str] = None
-
-
 class OrgTreeVO(BaseModel):
     """Org tree node with children"""
     id: Optional[str] = None

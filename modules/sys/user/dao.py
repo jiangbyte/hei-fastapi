@@ -137,7 +137,7 @@ class UserDao(BaseDAO):
     # ---- Cross-table auth queries ----
 
     def get_user_role_ids_all_sources(self, user_id: str) -> List[str]:
-        """Get role IDs from direct assignment + org membership."""
+        """Get role IDs from direct role assignments."""
         role_ids: set[str] = set()
 
         # Direct role assignments (RelUserRole)
@@ -145,21 +145,6 @@ class UserDao(BaseDAO):
             select(RelUserRole.role_id).where(RelUserRole.user_id == user_id)
         ).scalars().all()
         role_ids.update(direct_rows)
-
-        # Via org (RelOrgRole)
-        from ..org.models import RelOrgRole as _RelOrgRole
-        org_id = self.db.execute(
-            select(SysUser.org_id).where(
-                SysUser.id == user_id,
-            )
-        ).scalar()
-        if org_id:
-            org_rows = self.db.execute(
-                select(_RelOrgRole.role_id).where(
-                    _RelOrgRole.org_id == org_id,
-                )
-            ).scalars().all()
-            role_ids.update(org_rows)
 
         return list(role_ids)
 

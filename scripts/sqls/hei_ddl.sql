@@ -124,30 +124,6 @@ CREATE TABLE `gen_config`  (
 -- ----------------------------
 
 -- ----------------------------
--- Table structure for rel_org_role
--- ----------------------------
-DROP TABLE IF EXISTS `rel_org_role`;
-CREATE TABLE `rel_org_role`  (
-  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
-  `org_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '组织ID',
-  `role_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色ID',
-  `scope` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '数据范围覆盖：ALL-全部，SELF-本人，ORG-本组织，ORG_AND_BELOW-本组织及以下，CUSTOM_ORG-自定义组织，GROUP-本用户组，GROUP_AND_BELOW-本用户组及以下，CUSTOM_GROUP-自定义用户组。为空则继承 rel_role_permission 的配置',
-  `custom_scope_group_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '自定义用户组ID列表(JSON数组)，scope=CUSTOM_GROUP时生效',
-  `custom_scope_org_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '自定义组织ID列表(JSON数组)，scope=CUSTOM_ORG时生效',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_org_role`(`org_id` ASC, `role_id` ASC) USING BTREE,
-  INDEX `idx_role_id`(`role_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '组织-角色关联' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of rel_org_role
--- ----------------------------
-INSERT INTO `rel_org_role` VALUES ('140001', '10002', '40003', NULL, NULL, NULL);
-INSERT INTO `rel_org_role` VALUES ('140002', '10003', '40005', NULL, NULL, NULL);
-INSERT INTO `rel_org_role` VALUES ('140003', '10004', '40006', NULL, NULL, NULL);
-INSERT INTO `rel_org_role` VALUES ('140004', '10005', '40007', NULL, NULL, NULL);
-
--- ----------------------------
 -- Table structure for rel_role_permission
 -- ----------------------------
 DROP TABLE IF EXISTS `rel_role_permission`;
@@ -238,10 +214,8 @@ INSERT INTO `rel_role_permission` VALUES ('2000000069', '40001', 'sys:notice:tem
 INSERT INTO `rel_role_permission` VALUES ('2000000070', '40001', 'sys:org:create', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000071', '40001', 'sys:org:detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000072', '40001', 'sys:org:export', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000073', '40001', 'sys:org:grant-role', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000074', '40001', 'sys:org:import', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000075', '40001', 'sys:org:modify', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000076', '40001', 'sys:org:own-roles', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000077', '40001', 'sys:org:page', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000078', '40001', 'sys:org:remove', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000079', '40001', 'sys:org:template', 'ALL', NULL, NULL);
@@ -349,10 +323,8 @@ INSERT INTO `rel_role_permission` VALUES ('2000000182', '40002', 'sys:notice:tem
 INSERT INTO `rel_role_permission` VALUES ('2000000183', '40002', 'sys:org:create', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000184', '40002', 'sys:org:detail', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000185', '40002', 'sys:org:export', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000186', '40002', 'sys:org:grant-role', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000187', '40002', 'sys:org:import', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000188', '40002', 'sys:org:modify', 'ALL', NULL, NULL);
-INSERT INTO `rel_role_permission` VALUES ('2000000189', '40002', 'sys:org:own-roles', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000190', '40002', 'sys:org:page', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000191', '40002', 'sys:org:remove', 'ALL', NULL, NULL);
 INSERT INTO `rel_role_permission` VALUES ('2000000192', '40002', 'sys:org:template', 'ALL', NULL, NULL);
@@ -1511,7 +1483,6 @@ INSERT INTO `sys_resource` VALUES ('80039', 'SYS_ORG_CREATE', '组织新增', 'B
 INSERT INTO `sys_resource` VALUES ('80040', 'SYS_ORG_MODIFY', '组织修改', 'BACKEND_BUTTON', 'BUTTON', '修改组织', '80007', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:org:modify\"}', 'ENABLED', 3, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_resource` VALUES ('80041', 'SYS_ORG_REMOVE', '组织删除', 'BACKEND_BUTTON', 'BUTTON', '删除组织', '80007', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:org:remove\"}', 'ENABLED', 4, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_resource` VALUES ('80042', 'SYS_ORG_DETAIL', '组织详情', 'BACKEND_BUTTON', 'BUTTON', '查看组织详情', '80007', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:org:detail\"}', 'ENABLED', 5, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
-INSERT INTO `sys_resource` VALUES ('80043', 'SYS_ORG_GRANT_ROLE', '分配角色', 'BACKEND_BUTTON', 'BUTTON', '给组织分配角色', '80007', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:org:grant-role\"}', 'ENABLED', 6, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_resource` VALUES ('80044', 'SYS_POSITION_PAGE', '职位查询', 'BACKEND_BUTTON', 'BUTTON', '查询职位列表', '80008', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:position:page\"}', 'ENABLED', 1, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_resource` VALUES ('80045', 'SYS_POSITION_CREATE', '职位新增', 'BACKEND_BUTTON', 'BUTTON', '新增职位', '80008', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:position:create\"}', 'ENABLED', 2, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_resource` VALUES ('80046', 'SYS_POSITION_MODIFY', '职位修改', 'BACKEND_BUTTON', 'BUTTON', '修改职位', '80008', NULL, NULL, NULL, NULL, NULL, 'YES', 'NO', 'NO', 'YES', NULL, '{\"permission_code\":\"sys:position:modify\"}', 'ENABLED', 3, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
