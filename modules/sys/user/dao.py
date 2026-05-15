@@ -121,16 +121,17 @@ class UserDao(BaseDAO):
             for r in rows
         ]
 
-    def grant_permissions(self, user_id: str, permissions: List[PermissionItem], created_by: Optional[str] = None):
+    def grant_permissions(self, user_id: str, permissions: Optional[List[PermissionItem]] = None, created_by: Optional[str] = None):
         self.db.execute(sa_delete(RelUserPermission).where(RelUserPermission.user_id == user_id))
 
-        for p in permissions:
-            rel = RelUserPermission(
-                id=generate_id(), user_id=user_id, permission_code=p.permission_code,
-                scope=p.scope, custom_scope_group_ids=p.custom_scope_group_ids,
-                custom_scope_org_ids=p.custom_scope_org_ids,
-            )
-            self.db.add(rel)
+        if permissions:
+            for p in permissions:
+                rel = RelUserPermission(
+                    id=generate_id(), user_id=user_id, permission_code=p.permission_code,
+                    scope=p.scope, custom_scope_group_ids=p.custom_scope_group_ids,
+                    custom_scope_org_ids=p.custom_scope_org_ids,
+                )
+                self.db.add(rel)
         self.db.commit()
 
     # ---- Cross-table auth queries ----

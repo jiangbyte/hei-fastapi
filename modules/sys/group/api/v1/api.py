@@ -165,5 +165,3 @@ async def import_data(
 ):
     return await handle_import(file, GroupService, GroupVO, GroupImportParam, db, request)
 
-
-# 用户组-角色关联已废弃（使用 ral_role_permission.scope 的 GROUP / CUSTOM_GROUP）

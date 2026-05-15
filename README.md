@@ -247,7 +247,6 @@ async def page(request: Request, db: Session = Depends(get_db)):
 
 ```
 User ──→ RelUserRole ──→ Role ──→ RelRolePermission ──→ Permission
-User ──→ RelUserGroup ──→ Group ──→ RelGroupRole ──→ Role ──→ ...
 User ──→ RelUserPermission ──→ Permission (直授)
 ```
 

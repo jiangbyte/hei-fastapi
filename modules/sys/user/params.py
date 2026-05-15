@@ -60,7 +60,7 @@ class GrantRoleParam(BaseModel):
 
 class GrantUserPermissionParam(BaseModel):
     user_id: str
-    permissions: List[PermissionItem]
+    permissions: Optional[List[PermissionItem]] = None
 
 
 class UpdateProfileParam(BaseModel):
