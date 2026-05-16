@@ -58,8 +58,11 @@ class OrgDao:
 
     def find_page_by_filters(self, param: OrgPageParam) -> Dict[str, Any]:
         filters = []
-        if param.parent_id:
-            filters.append(or_(SysOrg.parent_id == param.parent_id, SysOrg.id == param.parent_id))
+        if param.parent_id is not None:
+            if param.parent_id in ("", "0"):
+                filters.append(SysOrg.parent_id.is_(None))
+            else:
+                filters.append(or_(SysOrg.parent_id == param.parent_id, SysOrg.id == param.parent_id))
         if param.keyword:
             filters.append(SysOrg.name.like(f"%{param.keyword}%"))
 

@@ -165,6 +165,7 @@ class ResourceService:
         children_map: dict[str, list] = {}
         for n in nodes:
             pid = n.get("parent_id") or ""
+            pid = "" if pid == "0" else pid
             children_map.setdefault(pid, []).append(n)
 
         def build(pid: str) -> list:

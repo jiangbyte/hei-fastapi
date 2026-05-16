@@ -66,7 +66,7 @@ class DictService:
 
         for r_dict in node_map.values():
             pid = r_dict.get("parent_id")
-            if pid and pid in node_map:
+            if pid and pid != "0" and pid in node_map:
                 node_map[pid]["children"].append(r_dict)
             else:
                 roots.append(r_dict)
@@ -96,7 +96,7 @@ class DictService:
                 DictService._sort_tree(children)
 
     async def create(self, vo: DictVO, request: Optional[Request] = None) -> None:
-        parent_id = vo.parent_id or "0"
+        parent_id = None if not vo.parent_id or str(vo.parent_id) in ("", "0") else vo.parent_id
         self._check_duplicate(parent_id, vo.label, vo.value, None)
 
         entity_data = strip_system_fields(vo.model_dump(), extra_fields={'parent_id'})
@@ -119,10 +119,10 @@ class DictService:
         if not entity:
             raise BusinessException("数据不存在")
 
-        parent_id = vo.parent_id or "0"
+        parent_id = None if not vo.parent_id or str(vo.parent_id) in ("", "0") else vo.parent_id
         self._check_duplicate(parent_id, vo.label, vo.value, vo.id)
         if str(parent_id) != str(entity.parent_id):
-            self._check_circular_parent(vo.id, parent_id if parent_id != "0" else None)
+            self._check_circular_parent(vo.id, parent_id)
 
         update_data = vo.model_dump(exclude_unset=True)
         apply_update(entity, update_data)
@@ -225,7 +225,7 @@ class DictService:
 
         for r_dict in node_map.values():
             pid = r_dict.get("parent_id")
-            if pid and pid in node_map:
+            if pid and pid != "0" and pid in node_map:
                 node_map[pid]["children"].append(r_dict)
             else:
                 roots.append(r_dict)

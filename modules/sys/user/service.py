@@ -327,7 +327,7 @@ class UserService:
         tree = []
         for r in resources:
             node = resource_map[r.id]
-            if r.parent_id and r.parent_id in resource_map:
+            if r.parent_id and r.parent_id != "0" and r.parent_id in resource_map:
                 resource_map[r.parent_id]["children"].append(node)
             else:
                 tree.append(node)

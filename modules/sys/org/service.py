@@ -55,7 +55,7 @@ class OrgService:
 
         for r_dict in node_map.values():
             pid = r_dict.get("parent_id")
-            if pid and pid in node_map:
+            if pid and pid != "0" and pid in node_map:
                 node_map[pid]["children"].append(r_dict)
             else:
                 roots.append(r_dict)

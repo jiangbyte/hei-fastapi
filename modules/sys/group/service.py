@@ -81,7 +81,7 @@ class GroupService:
 
         for r_dict in node_map.values():
             pid = r_dict.get("parent_id")
-            if pid and pid in node_map:
+            if pid and pid != "0" and pid in node_map:
                 node_map[pid]["children"].append(r_dict)
             else:
                 roots.append(r_dict)
@@ -117,7 +117,7 @@ class GroupService:
 
         for gid, node in group_nodes.items():
             pid = node.get("parent_id")
-            if pid and pid in group_nodes:
+            if pid and pid != "0" and pid in group_nodes:
                 group_nodes[pid]["children"].append(node)
 
         orphan_groups: dict[str, list[dict]] = {}
@@ -134,7 +134,7 @@ class GroupService:
         roots: list[dict] = []
         for oid, node in org_nodes.items():
             pid = node.get("parent_id")
-            if pid and pid in org_nodes:
+            if pid and pid != "0" and pid in org_nodes:
                 org_nodes[pid]["children"].append(node)
             else:
                 roots.append(node)
