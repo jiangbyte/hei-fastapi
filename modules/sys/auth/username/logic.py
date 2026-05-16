@@ -30,59 +30,69 @@ async def do_login(param: UsernameLoginParam, request: Request) -> UsernameLogin
         raise BusinessException(str(e))
 
     user_info = _login_user_api.get_login_user_info_by_username(param.username)
-    if not user_info:
-        logger.warning(f"User not found: {param.username}")
-        raise BusinessException("用户名或密码错误")
-
-    if user_info.status == UserStatusEnum.LOCKED.value:
-        logger.warning(f"User account is locked: {param.username}")
-        raise BusinessException("账号已被锁定")
-    if user_info.status == UserStatusEnum.INACTIVE.value:
-        logger.warning(f"User account is inactive: {param.username}")
-        raise BusinessException("账号已停用")
-    if user_info.status != UserStatusEnum.ACTIVE.value:
-        logger.warning(f"User account status abnormal: {param.username}, status={user_info.status}")
-        raise BusinessException("账号状态异常")
 
     try:
-        raw_password = decrypt(param.password)
-        if not bcrypt.checkpw(raw_password.encode('utf-8'), user_info.password.encode('utf-8')):
-            logger.warning("Password verification failed")
+        if not user_info:
+            logger.warning(f"User not found: {param.username}")
             raise BusinessException("用户名或密码错误")
-    except BusinessException:
+
+        if user_info.status == UserStatusEnum.LOCKED.value:
+            logger.warning(f"User account is locked: {param.username}")
+            raise BusinessException("账号已被锁定")
+        if user_info.status == UserStatusEnum.INACTIVE.value:
+            logger.warning(f"User account is inactive: {param.username}")
+            raise BusinessException("账号已停用")
+        if user_info.status != UserStatusEnum.ACTIVE.value:
+            logger.warning(f"User account status abnormal: {param.username}, status={user_info.status}")
+            raise BusinessException("账号状态异常")
+
+        try:
+            raw_password = decrypt(param.password)
+            if not bcrypt.checkpw(raw_password.encode('utf-8'), user_info.password.encode('utf-8')):
+                logger.warning("Password verification failed")
+                raise BusinessException("用户名或密码错误")
+        except BusinessException:
+            raise
+        except Exception as e:
+            logger.warning(f"Password decryption failed: {e}")
+            raise BusinessException("用户名或密码错误")
+
+        extra = {
+            "username": user_info.username,
+            "nickname": user_info.nickname,
+            "status": user_info.status
+        }
+        # Auto-detect device type from User-Agent, device_id from frontend
+        user_agent = request.headers.get("User-Agent", "")
+        extra["device_type"] = get_browser(user_agent)
+        extra["device_id"] = param.device_id
+
+        token = await HeiAuthTool.login(user_info.id, request, extra)
+
+        # 记录登录信息
+        db = None
+        try:
+            db = SessionLocal()
+            from modules.sys.user.service import UserService
+            UserService(db).record_login(user_info.id, request)
+        except Exception as e:
+            logger.warning(f"Failed to record login info: {e}")
+        finally:
+            if db:
+                db.close()
+
+        # 记录登录日志
+        record_auth_log(request, "登录", "LOGIN", op_user=user_info.username)
+
+        return UsernameLoginResult(token=token)
+    except BusinessException as e:
+        record_auth_log(
+            request, "登录", "LOGIN",
+            exe_status="FAIL", exe_message=e.message,
+            op_user=user_info.username if user_info else param.username,
+        )
+        request.state._exception_logged = True
         raise
-    except Exception as e:
-        logger.warning(f"Password decryption failed: {e}")
-        raise BusinessException("用户名或密码错误")
-
-    extra = {
-        "username": user_info.username,
-        "nickname": user_info.nickname,
-        "status": user_info.status
-    }
-    # Auto-detect device type from User-Agent, device_id from frontend
-    user_agent = request.headers.get("User-Agent", "")
-    extra["device_type"] = get_browser(user_agent)
-    extra["device_id"] = param.device_id
-
-    token = await HeiAuthTool.login(user_info.id, request, extra)
-
-    # 记录登录信息
-    db = None
-    try:
-        db = SessionLocal()
-        from modules.sys.user.service import UserService
-        UserService(db).record_login(user_info.id, request)
-    except Exception as e:
-        logger.warning(f"Failed to record login info: {e}")
-    finally:
-        if db:
-            db.close()
-
-    # 记录登录日志
-    record_auth_log(request, "登录", "LOGIN", op_user=user_info.username)
-
-    return UsernameLoginResult(token=token)
 
 
 async def do_register(param: UsernameRegisterParam) -> UsernameRegisterResult:

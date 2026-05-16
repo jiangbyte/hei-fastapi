@@ -92,6 +92,7 @@ def sys_log(name: str = "未命名"):
                     result_json=None,
                     start_time=start_time,
                 )
+                request.state._exception_logged = True
                 raise
         return wrapper
     return decorator
@@ -150,6 +151,68 @@ async def _save_log(request: Request, func, name: str, category: str,
         db.commit()
     except Exception as e:
         logger.warning(f"Failed to save operation log: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+async def save_exception_log(request: Request, exc: Exception, name: Optional[str] = None) -> None:
+    """Save an unhandled exception to the database (sys_log table).
+
+    Designed to be called from global exception handlers so that ALL
+    exceptions are recorded in the database, even for handlers without
+    the @SysLog decorator.  Creates its own DB session so it is
+    independent of the request's transaction.
+    """
+    from modules.sys.log.service import LogService
+    from modules.sys.log.models import SysLog as LogModel
+    db = SessionLocal()
+    try:
+        now = datetime.now()
+        user_agent = request.headers.get("user-agent", "")
+        browser, os_name = parse_user_agent(user_agent)
+        op_user = await _get_op_user(request)
+        op_ip = get_client_ip(request)
+        log_name = name or f"{request.method} {request.url.path}"
+
+        entry = LogModel(
+            id=generate_id(),
+            category="EXCEPTION",
+            name=log_name,
+            exe_status="FAIL",
+            exe_message=str(exc)[:2000],
+            trace_id=get_trace_id(),
+            op_ip=op_ip,
+            op_address=get_city_info(op_ip),
+            op_browser=browser,
+            op_os=os_name,
+            class_name=type(exc).__module__,
+            method_name=type(exc).__qualname__,
+            req_method=request.method,
+            req_url=str(request.url),
+            param_json="",
+            result_json=None,
+            op_time=now,
+            op_user=op_user,
+            sign_data="",
+        )
+
+        sign_data = generate_log_signature({
+            "category": "EXCEPTION",
+            "name": log_name,
+            "exe_status": "FAIL",
+            "op_ip": entry.op_ip,
+            "op_time": now.isoformat(),
+            "op_user": op_user,
+            "trace_id": entry.trace_id,
+        })
+        entry.sign_data = sign_data
+
+        service = LogService(db)
+        service.dao.insert(entry)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to save exception log: {e}")
         db.rollback()
     finally:
         db.close()
