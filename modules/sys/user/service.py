@@ -190,7 +190,7 @@ class UserService:
 
     async def grant_roles(self, param: GrantRoleParam, request: Optional[Request] = None) -> None:
         created_by = await self._get_current_user_id(request)
-        self.dao.grant_roles(param.user_id, param.role_ids, created_by, param.scope, param.custom_scope_group_ids)
+        self.dao.grant_roles(param.user_id, param.role_ids, created_by)
 
     async def grant_permissions(self, param: GrantUserPermissionParam, request: Optional[Request] = None) -> None:
         created_by = await self._get_current_user_id(request)

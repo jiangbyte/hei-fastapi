@@ -11,7 +11,7 @@
  Target Server Version : 90600 (9.6.0)
  File Encoding         : 65001
 
- Date: 16/05/2026 12:53:58
+ Date: 16/05/2026 21:07:59
 */
 
 SET NAMES utf8mb4;
@@ -51,104 +51,6 @@ CREATE TABLE `client_user`  (
 -- ----------------------------
 -- Records of client_user
 -- ----------------------------
-
--- ----------------------------
--- Table structure for gen_basic
--- ----------------------------
-DROP TABLE IF EXISTS `gen_basic`;
-CREATE TABLE `gen_basic`  (
-  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
-  `db_table` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '主表名称',
-  `db_table_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '主表主键',
-  `module_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '模块名',
-  `table_prefix` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '移除表前缀',
-  `generate_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '生成方式',
-  `module` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '所属模块',
-  `menu_pid` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '上级目录',
-  `class_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '类名',
-  `form_layout` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '表单布局',
-  `grid_whether` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '使用栅格',
-  `package_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '包名',
-  `author_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '作者',
-  `gen_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'TABLE' COMMENT '生成类型（TABLE/TREE/LEFT_TREE_TABLE/MASTER_DETAIL）',
-  `tree_parent_field` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '树父级字段',
-  `tree_name_field` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '树显示名称字段',
-  `sub_db_table` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '子表名称',
-  `sub_db_table_key` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '子表主键',
-  `sub_foreign_key` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '子表外键',
-  `sub_class_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '子表类名',
-  `sub_function_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '子表功能名',
-  `sub_bus_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '子表业务名',
-  `sort_code` int NULL DEFAULT NULL COMMENT '排序',
-  `created_at` datetime NULL DEFAULT NULL COMMENT '创建时间',
-  `created_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '创建用户',
-  `updated_at` datetime NULL DEFAULT NULL COMMENT '更新时间',
-  `updated_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '更新用户',
-  PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '代码生成基础' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of gen_basic
--- ----------------------------
-
--- ----------------------------
--- Table structure for gen_config
--- ----------------------------
-DROP TABLE IF EXISTS `gen_config`;
-CREATE TABLE `gen_config`  (
-  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
-  `basic_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '基础ID',
-  `is_table_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'NO' COMMENT '是否主键',
-  `field_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段名',
-  `field_remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字段注释',
-  `field_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '数据库类型',
-  `field_language_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '语言数据类型',
-  `effect_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '作用类型（input/textarea/select/radio/checkbox/datepicker/etc）',
-  `dict_type_code` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '字典编码',
-  `whether_table` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'YES' COMMENT '列表显示',
-  `whether_retract` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'NO' COMMENT '列省略',
-  `whether_add_update` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'YES' COMMENT '是否增改',
-  `whether_required` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'NO' COMMENT '必填',
-  `whether_unique` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'NO' COMMENT '唯一',
-  `query_whether` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'NO' COMMENT '是否查询',
-  `query_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '查询方式',
-  `table_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'MAIN' COMMENT '所属表类型（MAIN/SUB）',
-  `sort_code` int NULL DEFAULT NULL COMMENT '排序',
-  `created_at` datetime NULL DEFAULT NULL COMMENT '创建时间',
-  `created_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '创建用户',
-  `updated_at` datetime NULL DEFAULT NULL COMMENT '更新时间',
-  `updated_by` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '更新用户',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_basic_id`(`basic_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '代码生成配置' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of gen_config
--- ----------------------------
-
--- ----------------------------
--- Table structure for rel_org_role
--- ----------------------------
-DROP TABLE IF EXISTS `rel_org_role`;
-CREATE TABLE `rel_org_role`  (
-  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
-  `org_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '组织ID',
-  `role_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色ID',
-  `scope` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '数据范围覆盖：ALL-全部，SELF-本人，ORG-本组织，ORG_AND_BELOW-本组织及以下，CUSTOM_ORG-自定义组织，GROUP-本用户组，GROUP_AND_BELOW-本用户组及以下，CUSTOM_GROUP-自定义用户组。为空则继承 rel_role_permission 的配置',
-  `custom_scope_group_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '自定义用户组ID列表(JSON数组)，scope=CUSTOM_GROUP时生效',
-  `custom_scope_org_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '自定义组织ID列表(JSON数组)，scope=CUSTOM_ORG时生效',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_org_role`(`org_id` ASC, `role_id` ASC) USING BTREE,
-  INDEX `idx_role_id`(`role_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '组织-角色关联' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of rel_org_role
--- ----------------------------
-INSERT INTO `rel_org_role` VALUES ('140001', '10002', '40003', NULL, NULL, NULL);
-INSERT INTO `rel_org_role` VALUES ('140002', '10003', '40005', NULL, NULL, NULL);
-INSERT INTO `rel_org_role` VALUES ('140003', '10004', '40006', NULL, NULL, NULL);
-INSERT INTO `rel_org_role` VALUES ('140004', '10005', '40007', NULL, NULL, NULL);
 
 -- ----------------------------
 -- Table structure for rel_role_permission
@@ -950,30 +852,6 @@ INSERT INTO `rel_role_resource` VALUES ('3000000334', '40007', '80106');
 INSERT INTO `rel_role_resource` VALUES ('3000000351', '40007', '80108');
 
 -- ----------------------------
--- Table structure for rel_user_group
--- ----------------------------
-DROP TABLE IF EXISTS `rel_user_group`;
-CREATE TABLE `rel_user_group`  (
-  `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
-  `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
-  `group_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户组ID',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_user_group`(`user_id` ASC, `group_id` ASC) USING BTREE,
-  INDEX `idx_group_id`(`group_id` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户-用户组关联' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of rel_user_group
--- ----------------------------
-INSERT INTO `rel_user_group` VALUES ('130001', '50001', '30001');
-INSERT INTO `rel_user_group` VALUES ('130002', '50002', '30002');
-INSERT INTO `rel_user_group` VALUES ('130003', '50003', '30002');
-INSERT INTO `rel_user_group` VALUES ('130004', '50004', '30002');
-INSERT INTO `rel_user_group` VALUES ('130005', '50005', '30003');
-INSERT INTO `rel_user_group` VALUES ('130006', '50006', '30004');
-INSERT INTO `rel_user_group` VALUES ('130007', '50007', '30005');
-
--- ----------------------------
 -- Table structure for rel_user_permission
 -- ----------------------------
 DROP TABLE IF EXISTS `rel_user_permission`;
@@ -1001,8 +879,6 @@ CREATE TABLE `rel_user_role`  (
   `id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '主键',
   `user_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户ID',
   `role_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色ID',
-  `scope` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '数据范围覆盖：ALL-全部，CUSTOM-自定义，ORG-本组织，ORG_AND_BELOW-本组织及以下，SELF-本人。为空则继承 rel_role_permission 的配置',
-  `custom_scope_group_ids` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '自定义数据范围组ID列表(JSON数组)，scope=CUSTOM时生效',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_user_role`(`user_id` ASC, `role_id` ASC) USING BTREE,
   INDEX `idx_role_id`(`role_id` ASC) USING BTREE
@@ -1011,15 +887,16 @@ CREATE TABLE `rel_user_role`  (
 -- ----------------------------
 -- Records of rel_user_role
 -- ----------------------------
-INSERT INTO `rel_user_role` VALUES ('120003', '50003', '40003', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('120004', '50004', '40003', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('120005', '50005', '40004', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('120006', '50006', '40005', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('120007', '50007', '40005', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('120008', '50008', '40006', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('120009', '50009', '40007', 'ALL', NULL);
-INSERT INTO `rel_user_role` VALUES ('2055208115296538624', '50001', '40001', '', '');
-INSERT INTO `rel_user_role` VALUES ('7460685574056185856', '50002', '40003', NULL, NULL);
+INSERT INTO `rel_user_role` VALUES ('7461356554885795840', '50001', '40001');
+INSERT INTO `rel_user_role` VALUES ('7461356554885795841', '50001', 'SUPER_ADMIN');
+INSERT INTO `rel_user_role` VALUES ('7460685574056185856', '50002', '40003');
+INSERT INTO `rel_user_role` VALUES ('120003', '50003', '40003');
+INSERT INTO `rel_user_role` VALUES ('120004', '50004', '40003');
+INSERT INTO `rel_user_role` VALUES ('120005', '50005', '40004');
+INSERT INTO `rel_user_role` VALUES ('120006', '50006', '40005');
+INSERT INTO `rel_user_role` VALUES ('120007', '50007', '40005');
+INSERT INTO `rel_user_role` VALUES ('120008', '50008', '40006');
+INSERT INTO `rel_user_role` VALUES ('120009', '50009', '40007');
 
 -- ----------------------------
 -- Table structure for sys_banner
@@ -1309,6 +1186,11 @@ INSERT INTO `sys_log` VALUES ('2055208115720163328', 'OPERATE', '编辑用户', 
 INSERT INTO `sys_log` VALUES ('2055208222150627328', 'OPERATE', '分配用户权限', 'SUCCESS', '', '127.0.0.1', NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', NULL, NULL, NULL, 'POST', 'http://localhost:18885/api/v1/sys/user/grant-permission', '{\"permissions\":[{\"custom_scope_group_ids\":null,\"custom_scope_org_ids\":null,\"permission_code\":\"sys:config:detail\",\"scope\":\"ALL\"}],\"user_id\":\"50001\"}', NULL, '2026-05-15 16:46:38', NULL, 'admin', NULL, '2026-05-15 16:46:39', '50001', '2026-05-15 16:46:39', NULL);
 INSERT INTO `sys_log` VALUES ('2055211201394118656', 'OPERATE', '分配用户权限', 'SUCCESS', '', '127.0.0.1', NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', NULL, NULL, NULL, 'POST', 'http://localhost:18885/api/v1/sys/user/grant-permission', '{\"permissions\":[],\"user_id\":\"50001\"}', NULL, '2026-05-15 16:58:28', NULL, 'admin', NULL, '2026-05-15 16:58:29', '50001', '2026-05-15 16:58:29', NULL);
 INSERT INTO `sys_log` VALUES ('2055212364050993152', 'OPERATE', '分配用户权限', 'SUCCESS', '', '127.0.0.1', NULL, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36', NULL, NULL, NULL, 'POST', 'http://localhost:18885/api/v1/sys/user/grant-permission', '{\"permissions\":[],\"user_id\":\"50001\"}', NULL, '2026-05-15 17:03:06', NULL, 'admin', NULL, '2026-05-15 17:03:06', '50001', '2026-05-15 17:03:06', NULL);
+INSERT INTO `sys_log` VALUES ('330981294018138112', 'LOGIN', '用户登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', NULL, NULL, 'POST', '/api/v1/public/b/login', '{\"username\":\"admin\"}', NULL, '2026-05-16 06:14:50', 'dee25992-6885-42b1-873d-465d36d6949c', 'admin', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_log` VALUES ('330982419869995008', 'LOGIN', '用户登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', NULL, NULL, 'POST', '/api/v1/public/b/login', '{\"username\":\"admin\"}', NULL, '2026-05-16 06:19:18', 'd127e90c-7459-4e06-9388-9b3ecb46ffae', 'admin', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_log` VALUES ('330982505018560512', 'LOGIN', '用户登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', NULL, NULL, 'POST', '/api/v1/public/b/login', '{\"username\":\"admin\"}', NULL, '2026-05-16 06:19:39', '5a63a5e1-6c66-4102-bd4c-1e6e0d0eaf00', 'admin', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_log` VALUES ('330983295846191104', 'OPERATE', '编辑用户', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', NULL, NULL, 'POST', '/api/v1/sys/user/modify', '{\"id\":\"50001\",\"username\":\"admin\",\"nickname\":\"管理员\",\"email\":\"admin@hei.com\",\"phone\":\"13800000001\",\"gender\":\"MALE\",\"org_id\":\"10001\",\"position_id\":\"20001\",\"group_id\":\"30001\",\"status\":\"ACTIVE\"}', NULL, '2026-05-16 06:22:47', 'c64ea28d-4088-44ed-8c29-7f351feb7f45', 'admin', NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_log` VALUES ('330983337768259584', 'OPERATE', '分配用户角色', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', NULL, NULL, 'POST', '/api/v1/sys/user/grant-role', '{\"user_id\":\"50001\",\"role_ids\":[\"40001\",\"SUPER_ADMIN\"]}', NULL, '2026-05-16 06:22:57', '416036a9-aaca-4828-8600-1ee96a30239c', 'admin', NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `sys_log` VALUES ('7460574111438213120', 'OPERATE', '编辑资源', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.resource.api.v1.api', 'resource_modify', 'POST', 'http://localhost:18885/api/v1/sys/resource/modify', '{\"vo\": \"id=\'80109\' code=\'SYS_LOG\' name=\'系统日志\' category=\'BACKEND_MENU\' type=\'DIRECTORY\' description=\'系统日志目录\' parent_id=\'0\' route_path=\'/sys/log\' component_path=None redirect_path=None icon=\'file-text\' color=None is_visible=\'YES\' is_cache=\'NO\' is_affix=\'NO\' is_breadcrumb=\'YES\' external_url=\'\' extra=None status=\'ENABLED\' sort_code=2 is_deleted=\'NO\' created_at=datetime.datetime(2026, 5, 14, 14, 55, 52) created_by=\'50001\' updated_at=datetime.datetime(2026, 5, 14, 8, 3, 25) updated_by=\'50001\'\"}', '{\"code\": 200, \"message\": \"请求成功\", \"data\": null, \"success\": true, \"trace_id\": \"df11249c5cd945788020ab26537e4ec8\"}', '2026-05-14 14:17:59', 'df11249c5cd945788020ab26537e4ec8', 'admin', '445077c3a6b814d61b2d98d0b1c4ac56949bdb7b68e61dd6c11f97249eb0b433', '2026-05-14 14:17:59', NULL, '2026-05-14 14:17:59', NULL);
 INSERT INTO `sys_log` VALUES ('7460574398982918144', 'LOGIN', '登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', '', '', 'POST', 'http://localhost:18885/api/v1/public/b/login', '', NULL, '2026-05-14 14:19:07', '2293dac2ab29494e938211701f27e0a8', 'admin', '65fb178023eb59fe90264872cf8489662df3db3784c8f1e0a250e054f59e46f3', '2026-05-14 14:19:07', NULL, '2026-05-14 14:19:07', NULL);
 INSERT INTO `sys_log` VALUES ('7460574547729715200', 'LOGOUT', '登出', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', '', '', 'POST', 'http://localhost:18885/api/v1/b/logout', '', NULL, '2026-05-14 14:19:43', '35ceae09d7fc47fa9a5c46d56d77591f', 'admin', 'd218c751edac72ac037f719b44aad00e8d43f5d154d56177aa0a5e2bc5e3dd45', '2026-05-14 14:19:43', NULL, '2026-05-14 14:19:43', NULL);
@@ -1328,6 +1210,13 @@ INSERT INTO `sys_log` VALUES ('7460712780069343232', 'OPERATE', '导出角色数
 INSERT INTO `sys_log` VALUES ('7460962143853088768', 'LOGOUT', '登出', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', '', '', 'POST', 'http://localhost:18885/api/v1/b/logout', '', NULL, '2026-05-15 15:59:53', '3dceb8a58f074fdebc3f4747f89b5f9f', 'admin', 'e781fc7be20f03d57b593e7e60f68b6d59e0eed0e9429338c8169025143a63a6', '2026-05-15 15:59:53', NULL, '2026-05-15 15:59:53', NULL);
 INSERT INTO `sys_log` VALUES ('7460962180389670912', 'LOGIN', '登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', '', '', 'POST', 'http://localhost:18885/api/v1/public/b/login', '', NULL, '2026-05-15 16:00:02', 'f5a912c287634383801f3b9fd7b69f15', 'admin', 'd92ed39ee8bfffc2d7911763f55fca12d8f19d2b8865fd147600e0e9c0598bff', '2026-05-15 16:00:02', NULL, '2026-05-15 16:00:02', NULL);
 INSERT INTO `sys_log` VALUES ('7461062297507598336', 'LOGIN', '登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', '', '', 'POST', 'http://localhost:18885/api/v1/public/b/login', '', NULL, '2026-05-15 22:37:52', '6bcf47b120764f60ba613db395b53731', 'admin', 'd76d7bd024a0418d909aa7ba44e1ee9d4b73f46ef9c3d660444fb292a103ebbd', '2026-05-15 22:37:52', NULL, '2026-05-15 22:37:52', NULL);
+INSERT INTO `sys_log` VALUES ('7461324007380357120', 'LOGIN', '登录', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', '', '', 'POST', 'http://localhost:18885/api/v1/public/b/login', '', NULL, '2026-05-16 15:57:48', 'd36c16e9916e49d380c3867d62eeca98', 'admin', '8da172f35af677460bf7dfe8e52ceb68c8561ee5f03c78d70e251e5f60e5cb44', '2026-05-16 15:57:48', NULL, '2026-05-16 15:57:48', NULL);
+INSERT INTO `sys_log` VALUES ('7461356524716167168', 'OPERATE', '查看职位列表', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.position.api.v1.api', 'page', 'GET', 'http://localhost:18885/api/v1/sys/position/page?group_id=30001&size=9999', '', '{\"code\": 200, \"message\": \"请求成功\", \"data\": {\"records\": [], \"total\": 0, \"page\": 1, \"size\": 9999, \"pages\": 0}, \"success\": true, \"trace_id\": \"8e52c34f05d3437685bb528ff4ae94e0\"}', '2026-05-16 18:07:01', '8e52c34f05d3437685bb528ff4ae94e0', 'admin', 'b0427ac5cb55d76fc648ee29e45e84791b6af837633a2c6a1e969869e60b83b6', '2026-05-16 18:07:01', NULL, '2026-05-16 18:07:01', NULL);
+INSERT INTO `sys_log` VALUES ('7461356535680077824', 'OPERATE', '编辑用户', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.user.api.v1.api', 'modify', 'POST', 'http://localhost:18885/api/v1/sys/user/modify', '{\"vo\": \"id=\'50001\' username=\'admin\' nickname=\'管理员\' avatar=None motto=\'管理一切\' gender=\'MALE\' birthday=datetime.date(1990, 1, 1) email=\'admin@hei.com\' github=None phone=\'13800000001\' org_id=\'10001\' position_id=\'20001\' group_id=\'30001\' org_names=[\'Hei集团\'] group_names=[\'管理组\'] position_name=\'总经理\' status=\'ACTIVE\' last_login_at=datetime.datetime(2026, 5, 16, 15, 57, 48) last_login_ip=\'127.0.0.1\' login_count=20 created_at=datetime.datetime(2026, 5, 12, 14, 55, 52) created_by=\'50001\' updated_at=datetime.datetime(2026, 5, 16, 15, 57, 48) updated_by=\'50001\' role_ids=[\'40001\', \'SUPER_ADMIN\']\"}', '{\"code\": 200, \"message\": \"请求成功\", \"data\": null, \"success\": true, \"trace_id\": \"2b878260fb50403a9a44f4b71bb21bdf\"}', '2026-05-16 18:07:03', '2b878260fb50403a9a44f4b71bb21bdf', 'admin', '7d6920f35c82427adea7c04a505dc3f4be1baa49962ae2a3f959477252991a98', '2026-05-16 18:07:03', NULL, '2026-05-16 18:07:03', NULL);
+INSERT INTO `sys_log` VALUES ('7461356554978070528', 'OPERATE', '分配用户角色', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.user.api.v1.api', 'grant_role', 'POST', 'http://localhost:18885/api/v1/sys/user/grant-role', '{\"param\": \"user_id=\'50001\' role_ids=[\'40001\', \'SUPER_ADMIN\'] scope=None custom_scope_group_ids=None\"}', '{\"code\": 200, \"message\": \"请求成功\", \"data\": null, \"success\": true, \"trace_id\": \"5e7a19286b09491990f42a4472c9d823\"}', '2026-05-16 18:07:08', '5e7a19286b09491990f42a4472c9d823', 'admin', '186097f96d4257cc66abda4440ee72595a81534b072ef64a788ee381f38be354', '2026-05-16 18:07:08', NULL, '2026-05-16 18:07:08', NULL);
+INSERT INTO `sys_log` VALUES ('7461356588771577856', 'OPERATE', '分配用户权限', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.user.api.v1.api', 'grant_permission', 'POST', 'http://localhost:18885/api/v1/sys/user/grant-permission', '{\"param\": \"user_id=\'50001\' permissions=[PermissionItem(permission_code=\'client:user:create\', scope=\'ALL\', custom_scope_group_ids=None, custom_scope_org_ids=None)]\"}', '{\"code\": 200, \"message\": \"请求成功\", \"data\": null, \"success\": true, \"trace_id\": \"d641f70324f04d8cae6fe71754ee4173\"}', '2026-05-16 18:07:16', 'd641f70324f04d8cae6fe71754ee4173', 'admin', '75d4abc304d7eea2a879f1c2dabfb073d2fc2597777e9546f175b0c26ae6f38f', '2026-05-16 18:07:16', NULL, '2026-05-16 18:07:16', NULL);
+INSERT INTO `sys_log` VALUES ('7461356619704569856', 'OPERATE', '分配用户权限', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.user.api.v1.api', 'grant_permission', 'POST', 'http://localhost:18885/api/v1/sys/user/grant-permission', '{\"param\": \"user_id=\'50001\' permissions=[]\"}', '{\"code\": 200, \"message\": \"请求成功\", \"data\": null, \"success\": true, \"trace_id\": \"2fdc90d8994b4898ae7df7a814a365b6\"}', '2026-05-16 18:07:23', '2fdc90d8994b4898ae7df7a814a365b6', 'admin', 'eb7e3a7ab40fa2bde5700d672584e6b555adbabb34d6870b79dae36373a8c445', '2026-05-16 18:07:23', NULL, '2026-05-16 18:07:23', NULL);
+INSERT INTO `sys_log` VALUES ('7461356692991643648', 'OPERATE', '编辑角色', 'SUCCESS', NULL, '127.0.0.1', '', 'Chrome', 'Windows', 'modules.sys.role.api.v1.api', 'modify', 'POST', 'http://localhost:18885/api/v1/sys/role/modify', '{\"vo\": \"id=\'40001\' code=\'SUPER_ADMIN\' name=\'超级管理员\' category=\'BACKEND\' description=\'系统超级管理员，拥有全部权限\' status=\'ENABLED\' sort_code=1 extra=None created_at=datetime.datetime(2026, 5, 12, 14, 55, 52) created_by=\'50001\' updated_at=datetime.datetime(2026, 5, 12, 14, 55, 52) updated_by=\'50001\'\"}', '{\"code\": 200, \"message\": \"请求成功\", \"data\": null, \"success\": true, \"trace_id\": \"62cb7254eb534133a5029394d2089fbe\"}', '2026-05-16 18:07:41', '62cb7254eb534133a5029394d2089fbe', 'admin', '3868bc58584c6c4f266836f7b144e3b840568c80c4238625c3a8ae545632c7a8', '2026-05-16 18:07:41', NULL, '2026-05-16 18:07:41', NULL);
 
 -- ----------------------------
 -- Table structure for sys_module
@@ -1681,7 +1570,7 @@ CREATE TABLE `sys_role`  (
 -- ----------------------------
 -- Records of sys_role
 -- ----------------------------
-INSERT INTO `sys_role` VALUES ('40001', 'SUPER_ADMIN', '超级管理员', 'BACKEND', '系统超级管理员，拥有全部权限', 'ENABLED', 1, NULL, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
+INSERT INTO `sys_role` VALUES ('40001', 'SUPER_ADMIN', '超级管理员', 'BACKEND', '系统超级管理员，拥有全部权限', 'ENABLED', 1, NULL, '2026-05-12 14:55:52', '50001', '2026-05-16 18:07:41', '50001');
 INSERT INTO `sys_role` VALUES ('40002', 'ADMIN', '系统管理员', 'BACKEND', '系统管理员', 'ENABLED', 2, NULL, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_role` VALUES ('40003', 'DEV', '开发人员', 'BACKEND', '开发人员角色', 'ENABLED', 3, NULL, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_role` VALUES ('40004', 'TEST', '测试人员', 'BACKEND', '测试人员角色', 'ENABLED', 4, NULL, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
@@ -1723,7 +1612,7 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
-INSERT INTO `sys_user` VALUES ('50001', 'admin', '$2b$12$5t3Ey0kGLXaWgmUMYHh8aeh9hOTwpIcKI4M.txQi26Sd3jz4aeEm2', '管理员', NULL, '管理一切', 'MALE', '1990-01-01', 'admin@hei.com', NULL, '13800000001', '10001', '20001', '30001', 'ACTIVE', '2026-05-15 22:37:52', '127.0.0.1', 16, '2026-05-12 14:55:52', '50001', '2026-05-15 22:37:52', '50001');
+INSERT INTO `sys_user` VALUES ('50001', 'admin', '$2b$12$5t3Ey0kGLXaWgmUMYHh8aeh9hOTwpIcKI4M.txQi26Sd3jz4aeEm2', '管理员', NULL, '管理一切', 'MALE', '1990-01-01', 'admin@hei.com', NULL, '13800000001', '10001', '20001', '30001', 'ACTIVE', '2026-05-16 15:57:48', '127.0.0.1', 20, '2026-05-12 14:55:52', '50001', '2026-05-16 18:07:03', '50001');
 INSERT INTO `sys_user` VALUES ('50002', 'zhangsan', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '张三', NULL, '代码改变世界', 'MALE', '1995-05-15', 'zhangsan@hei.com', 'https://github.com/zhangsan', '13800000002', '10002', '20004', '30002', 'ACTIVE', '2026-05-14 21:41:20', '127.0.0.1', 1, '2026-05-12 14:55:52', '50001', '2026-05-14 21:41:20', '50001');
 INSERT INTO `sys_user` VALUES ('50003', 'lisi', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '李四', NULL, '学无止境', 'MALE', '1993-08-20', 'lisi@hei.com', NULL, '13800000003', '10002', '20004', '30002', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');
 INSERT INTO `sys_user` VALUES ('50004', 'wangwu', '$2b$12$UQFzAxtCkfwFwgrJy0XYm.rO860SX5NIH6zOEm/4SsUdgMA9SkuVC', '王五', NULL, '追求卓越', 'MALE', '1994-03-10', 'wangwu@hei.com', NULL, '13800000004', '10002', '20003', '30002', 'ACTIVE', NULL, NULL, 0, '2026-05-12 14:55:52', '50001', '2026-05-12 14:55:52', '50001');

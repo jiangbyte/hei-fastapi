@@ -14,7 +14,6 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title=settings.app.name,
-        description="Hei FastAPI Application",
         version=settings.app.version,
         lifespan=lifespan,
     )

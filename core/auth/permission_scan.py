@@ -8,14 +8,13 @@ Only RELATIONSHIPS (grants) are persisted to MySQL — never the definitions.
 import logging
 from typing import Set, Tuple
 
-from core.enums import LoginTypeEnum, PermissionCategoryEnum
 from core.constants import PERMISSION_CACHE_KEY
 
 logger = logging.getLogger(__name__)
 
 
-def collect_permissions_from_routes(app) -> Set[Tuple[str, str, str, str]]:
-    """Collect all (permission_code, module, category, name) tuples from route endpoints.
+def collect_permissions_from_routes(app) -> Set[Tuple[str, str, str]]:
+    """Collect all (permission_code, module, name) tuples from route endpoints.
     The name is extracted from the route's summary (FastAPI route summary text).
     """
     permissions = set()
@@ -29,7 +28,6 @@ def collect_permissions_from_routes(app) -> Set[Tuple[str, str, str, str]]:
         if not permission:
             continue
 
-        login_type = getattr(endpoint, "_hei_login_type", LoginTypeEnum.BUSINESS)
         name = getattr(route, "summary", None) or ""
 
         if isinstance(permission, str):
@@ -39,8 +37,7 @@ def collect_permissions_from_routes(app) -> Set[Tuple[str, str, str, str]]:
 
         for perm in perm_list:
             module = _get_module_from_code(perm)
-            category = PermissionCategoryEnum.BACKEND if login_type == LoginTypeEnum.BUSINESS else PermissionCategoryEnum.FRONTEND
-            permissions.add((perm, module, category, name))
+            permissions.add((perm, module, name))
 
     logger.info(f"Discovered {len(permissions)} permission codes from route decorators")
     return permissions
@@ -51,22 +48,21 @@ def _get_module_from_code(code: str) -> str:
     return ":".join(parts[:-1]) if len(parts) > 1 else code
 
 
-def _build_module_tree(permissions: Set[Tuple[str, str, str, str]]) -> dict:
+def _build_module_tree(permissions: Set[Tuple[str, str, str]]) -> dict:
     """Build a module-grouped dict from scanned permissions."""
     tree: dict = {}
-    for code, module, category, name in permissions:
+    for code, module, name in permissions:
         if module not in tree:
             tree[module] = {}
         tree[module][code] = {
             "code": code,
             "module": module,
-            "category": category,
             "name": name,
         }
     return tree
 
 
-async def sync_to_redis(permissions: Set[Tuple[str, str, str, str]]):
+async def sync_to_redis(permissions: Set[Tuple[str, str, str]]):
     """Store scanned permissions grouped by module into Redis."""
     from core.db.redis import get_client
 

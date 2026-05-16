@@ -45,8 +45,6 @@ class UserPageParam(BaseModel):
 class GrantRoleParam(BaseModel):
     user_id: str
     role_ids: List[str]
-    scope: Optional[str] = None
-    custom_scope_group_ids: Optional[str] = None
 
 
 class GrantUserPermissionParam(BaseModel):

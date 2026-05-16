@@ -108,14 +108,12 @@ class UserDao:
             result.setdefault(uid, []).append(rid)
         return result
 
-    def grant_roles(self, user_id: str, role_ids: List[str], created_by: Optional[str] = None,
-                    scope: Optional[str] = None, custom_scope_group_ids: Optional[str] = None):
+    def grant_roles(self, user_id: str, role_ids: List[str], created_by: Optional[str] = None):
         self.db.execute(sa_delete(RelUserRole).where(RelUserRole.user_id == user_id))
 
         for rid in role_ids:
             rel = RelUserRole(
                 id=generate_id(), user_id=user_id, role_id=rid,
-                scope=scope, custom_scope_group_ids=custom_scope_group_ids,
             )
             self.db.add(rel)
         self.db.commit()

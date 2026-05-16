@@ -2,7 +2,6 @@ import json
 import logging
 from typing import Any, Optional, Tuple
 from fastapi import Request
-from core.utils import get_client_ip
 from core.utils.sm2_crypto_util import hash_with_salt
 from core.utils.trace_utils import get_trace_id
 

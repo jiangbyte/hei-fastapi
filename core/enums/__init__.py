@@ -1,11 +1,7 @@
-from .status_enum import StatusEnum
-from .user_status_enum import UserStatusEnum
-from .login_type_enum import LoginTypeEnum
-from .check_mode_enum import CheckModeEnum
-from .permission_enum import PermissionCategoryEnum, PermissionScopeEnum
+from .status_enum import StatusEnum, UserStatusEnum
+from .permission_enum import PermissionCategoryEnum, PermissionScopeEnum, DataScopeEnum, PermissionPathEnum, \
+    CheckModeEnum, LoginTypeEnum
 from .resource_enum import ResourceCategoryEnum, ResourceTypeEnum
-from .data_scope_enum import DataScopeEnum
-from .permission_path_enum import PermissionPathEnum
 
 from .page_data_field_enum import PageDataField
 
