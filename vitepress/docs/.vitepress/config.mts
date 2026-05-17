@@ -4,7 +4,7 @@ export default defineConfig({
   lang: 'zh-CN',
   title: 'Hei FastAPI',
   description: 'Hei FastAPI - 基于 FastAPI + SQLAlchemy 的 Python 快速开发框架官方文档',
-  base: '/',
+  base: '/hei-fastapi',
 
   head: [['link', { rel: 'icon', href: 'https://jiangbyte.github.io/hei-docs/favicon.ico' }]],
 
