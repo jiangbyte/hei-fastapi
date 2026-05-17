@@ -2,7 +2,7 @@
 
 # Hei FastAPI
 
-<img width="120" src="https://jiangbyte.github.io/hei-docs/logo.svg">
+<img width="120" src="vitepress/docs/public/logo.svg">
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.10+-orange.svg)

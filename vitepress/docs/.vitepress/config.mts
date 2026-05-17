@@ -6,10 +6,10 @@ export default defineConfig({
   description: 'Hei FastAPI - 基于 FastAPI + SQLAlchemy 的 Python 快速开发框架官方文档',
   base: '/hei-fastapi',
 
-  head: [['link', { rel: 'icon', href: 'https://jiangbyte.github.io/hei-docs/favicon.ico' }]],
+  head: [['link', { rel: 'icon', href: '/logo.svg' }]],
 
   themeConfig: {
-    logo: 'https://jiangbyte.github.io/hei-docs/logo.svg',
+    logo: '/logo.svg',
 
     nav: [
       { text: '首页', link: '/' },
