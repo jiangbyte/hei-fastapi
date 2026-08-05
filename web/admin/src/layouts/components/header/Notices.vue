@@ -2,12 +2,12 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { messageApi } from '@/api'
 import MessageDetailModal from '@/components/message/MessageDetailModal.vue'
-import ChatModalPane from '@/components/message/ChatModalPane.vue'
 import { formatDateTime, resolveFileUrl } from '@/utils'
 import { NAvatar } from 'naive-ui'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 import NoticeList, { type NoticeItem } from '../common/NoticeList.vue'
 import { useWebSocket } from '../../../views/message/use-websocket'
+import { useImCenterStore } from '@/stores'
 
 const pageSize = 8
 
@@ -48,10 +48,15 @@ const tabStates = reactive<Record<NoticeTab, NoticeTabState>>({
   0: createTabState(),
   1: createTabState(),
 })
-const unreadCounts = reactive({ notification: 0, message: 0 })
+const unreadCounts = reactive({
+  notification: 0,
+  message: 0,
+  friendRequest: 0,
+  joinRequest: 0,
+})
 const currentTab = ref<NoticeTab>(0)
 const detailModalRef = ref<InstanceType<typeof MessageDetailModal> | null>(null)
-const chatModalRef = ref<InstanceType<typeof ChatModalPane> | null>(null)
+const imCenterStore = useImCenterStore()
 
 const groups = computed(() => ({
   0: tabStates[0].records.map(toNoticeItem),
@@ -63,7 +68,13 @@ const hasMore = computed(() => ({
   1: tabStates[1].records.length < tabStates[1].total,
 }))
 
-const unreadTotal = computed(() => unreadCounts.notification + unreadCounts.message)
+const unreadTotal = computed(
+  () =>
+    unreadCounts.notification +
+    unreadCounts.message +
+    unreadCounts.friendRequest +
+    unreadCounts.joinRequest,
+)
 
 onMounted(() => {
   refresh()
@@ -73,20 +84,30 @@ onMounted(() => {
 /* ---- WebSocket 实时更新 ---- */
 
 let wsRefreshTimer: ReturnType<typeof setTimeout> | null = null
-function scheduleWsRefresh() {
-  if (wsRefreshTimer) return
+function scheduleWsRefresh(delay = 400) {
+  if (wsRefreshTimer) clearTimeout(wsRefreshTimer)
   wsRefreshTimer = setTimeout(() => {
     wsRefreshTimer = null
     refresh()
-  }, 2000)
+  }, delay)
 }
 
 const ws = useWebSocket({
   onNewMessage() {
+    unreadCounts.message += 1
     scheduleWsRefresh()
   },
   onNewNotification() {
+    unreadCounts.notification += 1
     scheduleWsRefresh()
+  },
+  onNewFriendRequest() {
+    unreadCounts.friendRequest += 1
+    scheduleWsRefresh(200)
+  },
+  onNewJoinRequest() {
+    unreadCounts.joinRequest += 1
+    scheduleWsRefresh(200)
   },
 })
 
@@ -111,6 +132,20 @@ async function refreshUnreadCounts() {
       (s: number, c: any) => s + (c.unread_count ?? 0),
       0,
     )
+  } catch {
+    /* ignore */
+  }
+  try {
+    const fRes = await messageApi.myFriendRequestCount()
+    const raw = fRes.data
+    unreadCounts.friendRequest =
+      typeof raw === 'number' ? raw : Number(raw?.pending_count ?? 0)
+  } catch {
+    /* ignore */
+  }
+  try {
+    const jRes = await messageApi.pendingJoinRequestCount()
+    unreadCounts.joinRequest = Number(jRes.data ?? 0)
   } catch {
     /* ignore */
   }
@@ -157,14 +192,14 @@ async function handleOpen(id: string) {
   const item = findNotice(id)
   if (!item) return
   if (item.sourceType === 'message') {
-    await chatModalRef.value?.open(item.sourceId, {
-      title: item.title,
-      avatar: item.avatar,
-      conversationType: item.conversationType,
-    })
+    imCenterStore.open({ conversationId: item.sourceId, section: 'chat' })
     return
   }
   await detailModalRef.value?.open({ ...item, id: item.sourceId, is_read: item.isRead })
+}
+
+function openMessageCenter() {
+  imCenterStore.open({ section: currentTab.value === 1 ? 'chat' : 'notice' })
 }
 
 function findNotice(id: string) {
@@ -349,7 +384,9 @@ function toNoticeItem(item: NoticeSource): NoticeItem {
         </n-scrollbar>
       </n-tab-pane>
     </n-tabs>
+    <div class="border-t border-gray-100 px-3 py-2">
+      <n-button block tertiary size="small" @click="openMessageCenter"> 打开消息中心 </n-button>
+    </div>
   </n-popover>
   <MessageDetailModal ref="detailModalRef" @changed="handleDetailChanged" />
-  <ChatModalPane ref="chatModalRef" @changed="handleDetailChanged" />
 </template>

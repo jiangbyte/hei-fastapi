@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
@@ -10,13 +10,16 @@ from app.core.schema.base import Id, IdQuery, IdsRequest
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.codegen.schema import (
-    CodegenType,
+    CodegenFieldsQuery,
     CodegenFieldsUpdateBatchRequest,
     CodegenParentResourceOption,
+    CodegenParentResourcesQuery,
     CodegenPlanCreateRequest,
     CodegenPlanPageQuery,
     CodegenPlanUpdateRequest,
     CodegenPreviewSchema,
+    CodegenTableColumnsQuery,
+    CodegenType,
     DatabaseColumnSchema,
     DatabaseTableSchema,
     SysCodegenFieldSchema,
@@ -84,10 +87,10 @@ async def delete(
     response_model=ApiResponse[SysCodegenPlanSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysCodegenPlanSchema]:
-    return success(await CodegenService(db).detail(IdQuery(id=id)))
+    return success(await CodegenService(db).detail(query))
 
 
 @router.get(
@@ -99,19 +102,9 @@ async def detail(
     response_model=ApiResponse[PageData[SysCodegenPlanSchema]],
 )
 async def page(
+    query: Annotated[CodegenPlanPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    name: str | None = Query(default=None, max_length=128),
-    main_table: str | None = Query(default=None, max_length=128),
-    gen_type: CodegenType | None = Query(default=None),
 ) -> ApiResponse[PageData[SysCodegenPlanSchema]]:
-    query = CodegenPlanPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        name=name,
-        main_table=main_table,
-        gen_type=gen_type,  # type: ignore[arg-type]
-    )
     return success(await CodegenService(db).page_admin(query))
 
 
@@ -139,9 +132,9 @@ async def tables(
 )
 async def table_columns(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    table_name: str = Query(min_length=1, max_length=128),
+    query: Annotated[CodegenTableColumnsQuery, Depends()],
 ) -> ApiResponse[list[DatabaseColumnSchema]]:
-    return success(await CodegenService(db).table_columns(table_name))
+    return success(await CodegenService(db).table_columns(query))
 
 
 @router.get(
@@ -154,10 +147,9 @@ async def table_columns(
 )
 async def fields(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    plan_id: str = Query(min_length=1, max_length=64),
-    table_role: str | None = Query(default=None, max_length=16),
+    query: Annotated[CodegenFieldsQuery, Depends()],
 ) -> ApiResponse[list[SysCodegenFieldSchema]]:
-    return success(await CodegenService(db).fields(plan_id, table_role))
+    return success(await CodegenService(db).fields(query))
 
 
 @router.post(
@@ -186,9 +178,9 @@ async def update_fields_batch(
 )
 async def parent_resources(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    module_id: str | None = Query(default=None, max_length=64),
+    query: Annotated[CodegenParentResourcesQuery, Depends()],
 ) -> ApiResponse[list[CodegenParentResourceOption]]:
-    return success(await CodegenService(db).parent_resources(module_id))
+    return success(await CodegenService(db).parent_resources(query))
 
 
 @router.get(
@@ -200,10 +192,10 @@ async def parent_resources(
     response_model=ApiResponse[CodegenPreviewSchema],
 )
 async def preview(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[CodegenPreviewSchema]:
-    return success(await CodegenService(db).preview(IdQuery(id=id)))
+    return success(await CodegenService(db).preview(query))
 
 
 @router.get(
@@ -214,10 +206,10 @@ async def preview(
     ],
 )
 async def download(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> Response:
-    content, filename = await CodegenService(db).download(IdQuery(id=id))
+    content, filename = await CodegenService(db).download(query)
     return Response(
         content=content,
         media_type="application/zip",

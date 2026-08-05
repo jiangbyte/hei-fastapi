@@ -23,7 +23,7 @@ class MsgConversationCreateRequest(ApiSchema):
     status: str
     last_message_id: str | None = None
     last_message_at: datetime | None = None
-    last_message: str | None = None
+    # last_message 仅为读模型展示字段，不入库
     extra: dict[str, Any]
 
 
@@ -31,8 +31,7 @@ class MsgConversationUpdateRequest(MsgConversationCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgConversationAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgConversationAdminPageQuery(PageQuery):
     title: str | None = None
     status: str | None = None
 

@@ -47,6 +47,10 @@ class IdsRequest(ApiSchema):
     ids: list[Id] = Field(min_length=1)
 
 
+class KeywordQuery(ApiSchema):
+    keyword: str | None = None
+
+
 def to_schema(schema_cls: type[SchemaT], item: object) -> SchemaT:
     """Convert ORM/entity objects to API schemas through Pydantic attributes mode."""
     normalize_orm_datetimes(item)

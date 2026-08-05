@@ -35,8 +35,7 @@ class DictIdsRequest(ApiSchema):
     ids: list[DictId] = Field(min_length=1)
 
 
-class DictAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class DictAdminPageQuery(PageQuery):
     code: str | None = Field(default=None, max_length=50, pattern=r"^[A-Z0-9_]+$")
     category: SysBizCategory | None = None
     parent_id: str | None = Field(default=None, max_length=32)

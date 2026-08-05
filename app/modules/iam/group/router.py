@@ -89,11 +89,11 @@ async def delete(
     response_model=ApiResponse[SysGroupSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysGroupSchema]:
-    return success(await GroupService(db).detail(IdQuery(id=id), session))
+    return success(await GroupService(db).detail(query, session))
 
 
 @router.get(
@@ -105,18 +105,10 @@ async def detail(
     response_model=ApiResponse[PageData[SysGroupSchema]],
 )
 async def page(
+    query: Annotated[GroupAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
-    name: str | None = Query(default=None, max_length=64),
-    status: str | None = Query(default=None, max_length=32),
 ) -> ApiResponse[PageData[SysGroupSchema]]:
-    query = GroupAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        name=name,
-        status=status,
-    )
     return success(await GroupService(db).page_admin(query, session))
 
 
@@ -146,11 +138,11 @@ async def assign_group_role(
     summary="获取用户组成员授权",
 )
 async def own_user(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[GroupOwnUserResponse]:
-    return success(await GroupService(db).own_user(IdQuery(id=id), session))
+    return success(await GroupService(db).own_user(query, session))
 
 
 @router.post(
@@ -181,11 +173,11 @@ async def grant_user(
     summary="获取用户组角色授权",
 )
 async def own_role(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[GroupOwnRoleResponse]:
-    return success(await GroupService(db).own_role(IdQuery(id=id), session))
+    return success(await GroupService(db).own_role(query, session))
 
 
 @router.post(
@@ -216,11 +208,11 @@ async def grant_role(
     summary="获取用户组资源授权",
 )
 async def own_resource(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[GroupOwnResourceResponse]:
-    return success(await GroupService(db).own_resource(IdQuery(id=id), session))
+    return success(await GroupService(db).own_resource(query, session))
 
 
 @router.post(

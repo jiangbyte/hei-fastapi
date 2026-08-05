@@ -1,16 +1,17 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.schema.base import ApiSchema
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.config.schema import (
+    CategoryQuery,
     ConfigAdminPageQuery,
     ConfigBatchSaveRequest,
     ConfigCreateRequest,
@@ -85,10 +86,10 @@ async def delete(
     response_model=ApiResponse[SysConfigSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysConfigSchema]:
-    return success(await ConfigService(db).detail(IdQuery(id=id)))
+    return success(await ConfigService(db).detail(query))
 
 
 @router.get(
@@ -100,17 +101,9 @@ async def detail(
     response_model=ApiResponse[PageData[SysConfigSchema]],
 )
 async def page(
+    query: Annotated[ConfigAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    config_key: str | None = Query(default=None, max_length=255),
-    category: str | None = Query(default=None, max_length=255),
 ) -> ApiResponse[PageData[SysConfigSchema]]:
-    query = ConfigAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        config_key=config_key,
-        category=category,
-    )
     return success(await ConfigService(db).page_admin(query))
 
 
@@ -124,9 +117,9 @@ async def page(
 )
 async def list_config(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    category: str | None = Query(default=None, max_length=255),
+    query: Annotated[CategoryQuery, Depends()],
 ) -> ApiResponse[list[SysConfigSchema]]:
-    return success(await ConfigService(db).list_by_category(category))
+    return success(await ConfigService(db).list_by_category(query))
 
 
 @router.post(

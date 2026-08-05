@@ -25,15 +25,14 @@ class MsgFeedbackUpdateRequest(ApiSchema):
     reply: str | None = None
 
 
-class MsgFeedbackAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgFeedbackAdminPageQuery(PageQuery):
     content: str | None = None
     category: str | None = None
     status: str | None = None
 
 
-class MyFeedbackPageQuery(ApiSchema):
-    pagination: PageQuery
+class MyFeedbackPageQuery(PageQuery):
+    pass
 
 
 class MsgFeedbackSchema(ApiSchema):

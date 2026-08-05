@@ -1,10 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
@@ -45,21 +45,9 @@ async def analysis(
     response_model=ApiResponse[PageData[SessionAccountItem]],
 )
 async def page(
+    query: Annotated[SessionPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    account_type: AccountType | None = None,
-    account_id: str | None = Query(default=None, max_length=64),
-    account: str | None = Query(default=None, max_length=128),
-    ip: str | None = Query(default=None, max_length=64),
 ) -> ApiResponse[PageData[SessionAccountItem]]:
-    query = SessionPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        account_type=account_type,
-        account_id=account_id,
-        account=account,
-        ip=ip,
-    )
     return success(await SessionAdminService(db).page(query))
 
 
@@ -72,15 +60,10 @@ async def page(
     response_model=ApiResponse[list[SessionTokenInfo]],
 )
 async def tokens(
+    query: Annotated[SessionTokensQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    account_type: AccountType,
-    account_id: str = Query(min_length=1, max_length=64),
 ) -> ApiResponse[list[SessionTokenInfo]]:
-    return success(
-        await SessionAdminService(db).tokens(
-            SessionTokensQuery(account_type=account_type, account_id=account_id)
-        )
-    )
+    return success(await SessionAdminService(db).tokens(query))
 
 
 @router.post(

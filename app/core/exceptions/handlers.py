@@ -18,14 +18,17 @@ logger = logging.getLogger(__name__)
 
 def _build_cors_headers(request: Request) -> dict[str, str]:
     origin = request.headers.get("origin")
-    if not origin or origin not in settings.cors.allow_origins:
+    allow_all = "*" in settings.cors.allow_origins
+    if not origin:
+        return {"Access-Control-Allow-Origin": "*"} if allow_all else {}
+    if not allow_all and origin not in settings.cors.allow_origins:
         return {}
 
     headers = {
-        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Origin": "*" if allow_all else origin,
         "Vary": "Origin",
     }
-    if settings.cors.allow_credentials:
+    if settings.cors.allow_credentials and not allow_all:
         headers["Access-Control-Allow-Credentials"] = "true"
     return headers
 

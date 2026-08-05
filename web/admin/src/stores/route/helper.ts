@@ -100,7 +100,9 @@ export function generateCacheRoutes(resources: AppRoute.RowRoute[]) {
  */
 export function getActiveMenuPath(resources: AppRoute.RowRoute[], path: string) {
   const routeResources = resources.filter(isRouteResource)
-  const current = routeResources.find((resource) => resource.path === path)
+  const current =
+    routeResources.find((resource) => resource.path === path) ??
+    routeResources.find((resource) => matchResourcePath(resource.path, path))
 
   if (!current) {
     return path
@@ -125,6 +127,18 @@ export function getActiveMenuPath(resources: AppRoute.RowRoute[], path: string) 
   }
 
   return current.path ?? path
+}
+
+/** Match `/biz/foo/edit/:id` style resource paths against a concrete URL. */
+function matchResourcePath(pattern: string | null | undefined, path: string) {
+  if (!pattern || !pattern.includes(':')) {
+    return false
+  }
+  const escaped = pattern
+    .split('/')
+    .map((segment) => (segment.startsWith(':') ? '[^/]+' : segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    .join('/')
+  return new RegExp(`^${escaped}$`).test(path)
 }
 
 /**
@@ -194,7 +208,36 @@ function buildRoutes(resources: AppRoute.RowRoute[]) {
     }
   })
 
-  return arrayToTree(routes)
+  // MENU/PAGE that already render a leaf page must not nest other pages as vue-router
+  // children — otherwise create/edit/sub-pages stay stuck on the parent CRUD view.
+  return hoistLeafPageChildren(arrayToTree(routes))
+}
+
+/**
+ * Hoist nested page routes out from under leaf MENU/PAGE parents.
+ *
+ * Vue Router nests by tree shape. A parent with its own component needs a
+ * `<router-view>` for children; our list pages don't have one, so hidden form /
+ * child-table routes must be siblings instead. parent_id is unchanged so menu
+ * highlighting via getActiveMenuPath still works.
+ */
+function hoistLeafPageChildren(routes: AppRoute.Route[]): AppRoute.Route[] {
+  const result: AppRoute.Route[] = []
+  for (const route of routes) {
+    if (route.children?.length) {
+      route.children = hoistLeafPageChildren(route.children)
+    }
+    const hasLeafComponent = Boolean(route.component) && isClickableResource(route.meta.resource_type)
+    if (hasLeafComponent && route.children?.length) {
+      const nested = route.children
+      route.children = undefined
+      result.push(route)
+      result.push(...nested)
+      continue
+    }
+    result.push(route)
+  }
+  return result
 }
 
 function createRouteName(resource: AppRoute.RowRoute) {

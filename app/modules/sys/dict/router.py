@@ -1,17 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
 from app.deps.auth import require_permission, require_account_type
 from app.deps.db import get_db_session
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
     DictCreateRequest,
-    DictId,
     DictIdQuery,
     DictIdsRequest,
     DictTreeQuery,
@@ -81,10 +80,10 @@ async def delete(
     response_model=ApiResponse[SysDictSchema],
 )
 async def get(
+    query: Annotated[DictIdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[DictId, Query()],
 ) -> ApiResponse[SysDictSchema]:
-    return success(await DictService(db).get(DictIdQuery(id=id)))
+    return success(await DictService(db).get(query))
 
 
 @router.get(
@@ -96,21 +95,9 @@ async def get(
     response_model=ApiResponse[PageData[SysDictSchema]],
 )
 async def page(
+    query: Annotated[DictAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    code: str | None = Query(default=None, max_length=50),
-    category: str | None = Query(default=None, max_length=64),
-    parent_id: str | None = Query(default=None, max_length=32),
-    status: str | None = Query(default=None, max_length=16),
 ) -> ApiResponse[PageData[SysDictSchema]]:
-    query = DictAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        code=code,
-        category=category,
-        parent_id=parent_id,
-        status=status,
-    )
     return success(await DictService(db).page_admin(query))
 
 
@@ -123,7 +110,7 @@ async def page(
     response_model=ApiResponse[list[SysDictTreeNode]],
 )
 async def tree(
+    query: Annotated[DictTreeQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    category: str | None = Query(default=None, max_length=64),
 ) -> ApiResponse[list[SysDictTreeNode]]:
-    return success(await DictService(db).list_tree(DictTreeQuery(category=category)))
+    return success(await DictService(db).list_tree(query))

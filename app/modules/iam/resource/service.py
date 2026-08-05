@@ -23,9 +23,11 @@ from app.modules.iam.resource.schema import (
     ResourceModuleAdminPageQuery,
     ResourceModuleCreateRequest,
     ResourceModuleSelectorOption,
+    ResourceModuleSelectorQuery,
     ResourceModuleUpdateRequest,
     ResourcePermissionBindRequest,
     ResourceTreeNode,
+    ResourceTreeQuery,
     ResourceUpdateRequest,
     SysResourceModuleSchema,
     SysResourcePermissionRelSchema,
@@ -144,10 +146,13 @@ class ResourceService:
     async def list_resource_tree(
         self,
         session: SessionPayload,
-        module_id: str | None = None,
-        module_client: ResourceModuleClient | None = None,
+        query: ResourceTreeQuery,
     ) -> list[ResourceTreeNode]:
-        resources = await self._list_visible_resources(session, module_id, module_client)
+        resources = await self._list_visible_resources(
+            session,
+            module_id=query.module_id,
+            module_client=query.module_client,
+        )
         resources = [
             resource
             for resource in resources
@@ -367,12 +372,13 @@ class ResourceModuleService:
 
     async def selector(
         self,
-        client: ResourceModuleClient | None = None,
+        query: ResourceModuleSelectorQuery,
     ) -> list[ResourceModuleSelectorOption]:
-       return to_schema_list(
-           ResourceModuleSelectorOption,
-           await self.repo.list_enabled_modules(client),
-       )
+        return to_schema_list(
+            ResourceModuleSelectorOption,
+            await self.repo.list_enabled_modules(query.client),
+        )
+
 
 def _build_resource_tree_nodes(
     resources: list[SysResource],

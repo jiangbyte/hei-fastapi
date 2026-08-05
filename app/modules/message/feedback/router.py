@@ -5,13 +5,13 @@ Author: jiangbyte
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
@@ -20,6 +20,7 @@ from app.modules.message.feedback.schema import (
     MsgFeedbackSchema,
     MsgFeedbackUpdateRequest,
     MsgFeedbackAdminPageQuery,
+    MyFeedbackPageQuery,
 )
 from app.modules.message.feedback.service import MsgFeedbackService
 
@@ -38,19 +39,9 @@ portal_router = APIRouter()
     response_model=ApiResponse[PageData[MsgFeedbackSchema]],
 )
 async def page(
+    query: Annotated[MsgFeedbackAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    content: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-    status: str | None = Query(default=None),
 ) -> ApiResponse[PageData[MsgFeedbackSchema]]:
-    query = MsgFeedbackAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        content=content,
-        category=category,
-        status=status,
-    )
     return success(await MsgFeedbackService(db).page_admin(query))
 
 
@@ -63,10 +54,10 @@ async def page(
     response_model=ApiResponse[MsgFeedbackSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[MsgFeedbackSchema]:
-    return success(await MsgFeedbackService(db).detail(IdQuery(id=id)))
+    return success(await MsgFeedbackService(db).detail(query))
 
 
 @admin_router.post(
@@ -124,15 +115,10 @@ async def submit(
     response_model=ApiResponse[PageData[MsgFeedbackSchema]],
 )
 async def my_page(
+    query: Annotated[MyFeedbackPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
 ) -> ApiResponse[PageData[MsgFeedbackSchema]]:
-    from app.modules.message.feedback.schema import MyFeedbackPageQuery
-    query = MyFeedbackPageQuery(
-        pagination=PageQuery(current=current, size=size),
-    )
     return success(await MsgFeedbackService(db).page_my(query, session))
 
 
@@ -142,8 +128,8 @@ async def my_page(
     response_model=ApiResponse[MsgFeedbackSchema],
 )
 async def my_detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[MsgFeedbackSchema]:
-    return success(await MsgFeedbackService(db).detail(IdQuery(id=id)))
+    return success(await MsgFeedbackService(db).detail(query))

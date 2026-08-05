@@ -3,7 +3,7 @@ set -e
 
 echo "Starting development infrastructure..."
 
-for container in dev-postgres dev-minio dev-redis rabbitmq; do
+for container in dev-postgres dev-minio dev-redis; do
   if docker start "$container" >/dev/null 2>&1; then
     echo "  $container  started"
   else

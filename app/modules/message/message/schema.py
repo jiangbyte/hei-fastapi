@@ -32,8 +32,11 @@ class MessageAttachmentInput(ApiSchema):
     extra: dict = Field(default_factory=dict)
 
 
-class MessagePageQuery(ApiSchema):
-    pagination: PageQuery
+class MessagePageQuery(PageQuery):
+    conversation_id: str = Field(min_length=1, max_length=64)
+
+
+class MessageUnreadCountQuery(ApiSchema):
     conversation_id: str = Field(min_length=1, max_length=64)
 
 

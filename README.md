@@ -3,14 +3,13 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.116%2B-009688?logo=fastapi&logoColor=white)
 ![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)
-![Nuxt](https://img.shields.io/badge/Nuxt-4-00DC82?logo=nuxt&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)
-![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?logo=rabbitmq&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，包含 FastAPI 异步后端、Vue 3 管理端、Nuxt 4 门户端和 uni-app 管理端。
+HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，包含 FastAPI 异步后端、Vue 3 管理端、React 门户端和 uni-app 管理端。
 
 项目核心目标是提供一套可直接二次开发的基础工程：IAM/RBAC、系统配置、文件存储、消息通知、代码生成、任务调度、数据库迁移和可观测性都已经内置，业务模块通过 `ModuleSpec` 插件式装配，尽量减少对框架主体的侵入。
 
@@ -25,8 +24,8 @@ HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，�
 - 系统能力：字典、配置、文件、Banner、审计、代码生成
 - 消息能力：站内消息、通知、公告、反馈、WebSocket
 - 文件存储：Local / MinIO / S3 / OSS
-- 前端应用：Vue 3 管理端、Nuxt 4 门户端、uni-app 管理端
-- 工程能力：Alembic、Celery、RedBeat、Docker、Prometheus、OpenTelemetry
+- 前端应用：Vue 3 管理端、React 门户端、uni-app 管理端
+- 工程能力：Alembic、Celery（Redis broker）、RedBeat、Docker、Prometheus、OpenTelemetry
 
 ---
 
@@ -49,10 +48,10 @@ HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，�
 | 后端 | FastAPI / SQLAlchemy Async / Pydantic v2 / Gunicorn / Uvicorn |
 | 数据库 | PostgreSQL / MySQL / SQLite / Alembic |
 | 缓存会话 | Redis |
-| 任务队列 | Celery / celery-redbeat / RabbitMQ |
+| 任务队列 | Celery / celery-redbeat / Redis（broker + beat） |
 | 存储 | Local / MinIO / S3 / OSS |
 | 管理端 | Vue 3 / Naive UI / Vite / TypeScript |
-| 门户端 | Nuxt 4 / @nuxt/ui |
+| 门户端 | React 19 / Ant Design / Vite / TypeScript |
 | 移动端 | uni-app |
 
 ---
@@ -65,14 +64,14 @@ app/
   deps/          FastAPI 依赖注入
   middleware/    中间件
   modules/       业务模块，自动发现并装配
-  platform/      DB、Redis、Storage、MQ、Celery、模块加载等基础设施
+  platform/      DB、Redis、Storage、Celery、模块加载等基础设施
   worker/        Celery 入口
 migrations/      Alembic 迁移
 scripts/         开发、迁移、seed 辅助脚本
 tests/           测试
 web/
   admin/         Vue 管理端
-  portal/        Nuxt 门户端
+  portal/        React 门户端
   admin-uniapp/  uni-app 管理端
 ```
 
@@ -91,6 +90,7 @@ cp .env.example .env
 # 编辑 .env：DB__URL、REDIS__URL、CELERY__BROKER_URL、APP__CONFIG_CRYPTO_KEY
 
 python scripts/db/migrate.py
+python scripts/db/load_bootstrap_sql.py   # 可选：字典 / 配置 / 存储配置基线
 python scripts/seed/seed_super_admin.py
 ./entrypoint.sh
 ```
@@ -129,7 +129,7 @@ pnpm dev:h5
 
 ## 配置边界
 
-`.env` 只放部署和基础设施配置，例如应用监听、数据库、Redis、RabbitMQ、CORS、加密 key。
+`.env` 只放部署和基础设施配置，例如应用监听、数据库、Redis、Celery、CORS、加密 key。
 
 运行态业务配置放在数据库中：
 
@@ -165,7 +165,7 @@ HEI_ENABLED_MODULES=some.module
 
 ## Docker
 
-单机单 Docker：一个项目容器内运行 API、worker、beat，PostgreSQL、Redis、RabbitMQ 由外部基础设施提供。
+单机单 Docker：一个项目容器内运行 API、worker、beat，PostgreSQL、Redis 由外部基础设施提供。
 
 ```bash
 docker compose run --rm hei migrate
@@ -212,6 +212,8 @@ docker run -d -e BACKEND_URL="http://host.docker.internal:8000" -p 8081:81 hei-f
 python scripts/db/makemigration.py "describe schema change"
 python scripts/db/check_migration.py
 python scripts/db/migrate.py
+python scripts/db/load_bootstrap_sql.py
+python scripts/db/export_bootstrap_sql.py
 
 python -m ruff check app tests
 python -m pytest

@@ -76,7 +76,7 @@ class MsgAnnouncementRepository:
         self,
         query: MyAnnouncementPageQuery,
         account_type: str,
-        account_id: str,
+        account_id: str | None = None,
     ) -> tuple[list[MsgAnnouncement], int, set[str]]:
         now = datetime.now(timezone.utc)
         stmt: Select[tuple[MsgAnnouncement]] = select(MsgAnnouncement).where(
@@ -111,7 +111,7 @@ class MsgAnnouncementRepository:
         total = (await self.db.execute(count_stmt)).scalar_one()
 
         read_id_set: set[str] = set()
-        if items:
+        if items and account_id:
             announcement_ids = [item.id for item in items]
             read_stmt = select(MsgAnnouncementRead.announcement_id).where(
                 MsgAnnouncementRead.announcement_id.in_(announcement_ids),

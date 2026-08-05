@@ -6,23 +6,20 @@ Generated at: 2026-07-23 16:28:54
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData, PageQuery
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_account_type, require_permission
+from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.message.conversation.schema import (
     ConversationMemberSchema,
     CreateDirectConversationRequest,
-    MsgConversationAdminPageQuery,
-    MsgConversationCreateRequest,
     MsgConversationSchema,
-    MsgConversationUpdateRequest,
     MuteConversationRequest,
     PinConversationRequest,
 )
@@ -32,95 +29,6 @@ from app.modules.message.conversation.service import (
 
 admin_router = APIRouter()
 portal_router = APIRouter()
-
-
-# ── Admin routes ──────────────────────────────────────────────────────────────
-
-
-@admin_router.post(
-    "/message/conversations/create",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:conversation:create")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def create(
-    payload: MsgConversationCreateRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgConversationService(db).create(payload)
-    return success()
-
-
-@admin_router.post(
-    "/message/conversations/update",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:conversation:update")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def update(
-    payload: MsgConversationUpdateRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgConversationService(db).update(payload)
-    return success()
-
-
-@admin_router.post(
-    "/message/conversations/delete",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:conversation:delete")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def delete(
-    payload: IdsRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgConversationService(db).delete(payload)
-    return success()
-
-
-@admin_router.get(
-    "/message/conversations/detail",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:conversation:detail")),
-    ],
-    response_model=ApiResponse[MsgConversationSchema],
-)
-async def detail(
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
-) -> ApiResponse[MsgConversationSchema]:
-    return success(await MsgConversationService(db).detail(IdQuery(id=id)))
-
-
-@admin_router.get(
-    "/message/conversations/page",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:conversation:page")),
-    ],
-    response_model=ApiResponse[PageData[MsgConversationSchema]],
-)
-async def page(
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    title: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-) -> ApiResponse[PageData[MsgConversationSchema]]:
-    query = MsgConversationAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        title=title,
-        status=status,
-    )
-    return success(await MsgConversationService(db).page_admin(query))
 
 
 # ── Portal / current-user routes ──────────────────────────────────────────────
@@ -136,12 +44,11 @@ async def page(
     response_model=ApiResponse[PageData[MsgConversationSchema]],
 )
 async def my_list(
+    query: Annotated[PageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
 ) -> ApiResponse[PageData[MsgConversationSchema]]:
-    return success(await MsgConversationService(db).my_list(session, PageQuery(current=current, size=size)))
+    return success(await MsgConversationService(db).my_list(session, query))
 
 
 @admin_router.get(
@@ -154,11 +61,11 @@ async def my_list(
     response_model=ApiResponse[MsgConversationSchema],
 )
 async def portal_detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[MsgConversationSchema]:
-    return success(await MsgConversationService(db).detail(IdQuery(id=id), session))
+    return success(await MsgConversationService(db).detail(query, session))
 
 
 @admin_router.post(
@@ -228,7 +135,7 @@ async def leave(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
-    await MsgConversationService(db).leave(payload.id, session)
+    await MsgConversationService(db).leave(payload, session)
     return success()
 
 
@@ -246,5 +153,5 @@ async def mark_read(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
-    await MsgConversationService(db).mark_read(payload.id, session)
+    await MsgConversationService(db).mark_read(payload, session)
     return success()

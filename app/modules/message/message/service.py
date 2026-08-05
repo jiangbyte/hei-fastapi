@@ -16,6 +16,7 @@ from app.modules.message.message.schema import (
     MessageReadRequest,
     MessageSchema,
     MessageAttachmentSchema,
+    MessageUnreadCountQuery,
     RevokeMessageRequest,
     SendMessageRequest,
     UnreadCountResponse,
@@ -221,8 +222,8 @@ class MessageService:
                 payload.conversation_id, str(session.account_type), session.account_id
             )
 
-    async def unread_count(self, conversation_id: str, session: SessionPayload) -> UnreadCountResponse:
-        count = await self.repo.count_unread(conversation_id, str(session.account_type), session.account_id)
+    async def unread_count(self, query: MessageUnreadCountQuery, session: SessionPayload) -> UnreadCountResponse:
+        count = await self.repo.count_unread(query.conversation_id, str(session.account_type), session.account_id)
         return UnreadCountResponse(unread_count=count)
 
 
@@ -253,15 +254,24 @@ async def _push_new_message(
         if member.account_type == sender_account_type and member.account_id == sender_account_id:
             continue
 
-        # Push via WS (local + Redis cross-worker)
+        # Push via WS（本机 + Redis 跨 worker）
         try:
             await on_new_message(member.account_type, member.account_id, payload)
         except Exception:
-            pass
+            import logging
 
-        # Write offline queue ONLY when the user is truly unreachable:
-        # not online locally AND Redis is unavailable (cross-worker can't deliver).
-        if not ws_manager.is_online(member.account_type, member.account_id) and not ws_manager.has_redis():
+            logging.getLogger(__name__).warning(
+                "WS push failed for %s/%s",
+                member.account_type,
+                member.account_id,
+                exc_info=True,
+            )
+
+        # 全局不在线时写入离线队列（前端按 message.id 去重）
+        globally_online = await ws_manager.is_globally_online(
+            member.account_type, member.account_id
+        )
+        if not globally_online:
             offline = MsgOfflineQueue(
                 message_id=message.id,
                 conversation_id=conversation_id,

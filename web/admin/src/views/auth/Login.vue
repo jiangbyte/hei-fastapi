@@ -16,25 +16,10 @@ const captchaRef = ref<InstanceType<typeof CaptchaInput> | null>(null)
 const loading = ref(false)
 const activeType = ref<LoginType>('ACCOUNT')
 
-const loginTypes: Array<{ key: LoginType; label: string; icon: string; placeholder: string }> = [
-  {
-    key: 'ACCOUNT',
-    label: '账号',
-    icon: 'icon-park-outline:user',
-    placeholder: '请输入管理员账号',
-  },
-  {
-    key: 'EMAIL',
-    label: '邮箱',
-    icon: 'icon-park-outline:mail',
-    placeholder: '请输入登录邮箱',
-  },
-  {
-    key: 'PHONE',
-    label: '手机号',
-    icon: 'icon-park-outline:phone',
-    placeholder: '请输入登录手机号',
-  },
+const loginTypes: Array<{ key: LoginType; label: string; placeholder: string }> = [
+  { key: 'ACCOUNT', label: '账号', placeholder: '请输入管理员账号' },
+  { key: 'EMAIL', label: '邮箱', placeholder: '请输入登录邮箱' },
+  { key: 'PHONE', label: '手机号', placeholder: '请输入登录手机号' },
 ]
 
 const form = reactive({
@@ -47,7 +32,7 @@ const form = reactive({
   remember: true,
 })
 
-const currentLogin = computed(() => loginTypes.find((item) => item.key === activeType.value)!)
+const currentLogin = computed(() => loginTypes.find(item => item.key === activeType.value)!)
 const activeField = computed(() => activeType.value.toLowerCase() as 'account' | 'email' | 'phone')
 
 function validateLoginIdentity(_rule: FormItemRule, value: string) {
@@ -87,7 +72,8 @@ const rules = computed<FormRules>(() => ({
 async function handleSubmit() {
   try {
     await formRef.value?.validate()
-  } catch {
+  }
+  catch {
     return
   }
 
@@ -108,43 +94,48 @@ async function handleSubmit() {
       },
     )
     window.$message.success('登录成功')
-  } catch {
+  }
+  catch {
     await captchaRef.value?.refresh()
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
 </script>
 
 <template>
-  <AuthLayout :title="'登录管理端控制台'" :subtitle="'请选择管理员登录身份。'">
-    <n-form ref="formRef" :model="form" :rules="rules" size="large" @submit.prevent="handleSubmit">
-      <n-tabs v-model:value="activeType" type="segment" animated class="auth-login-tabs">
+  <AuthLayout title="登录">
+    <n-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      size="large"
+      :show-label="false"
+      @submit.prevent="handleSubmit"
+    >
+      <n-tabs v-model:value="activeType" type="line" animated class="auth-login-tabs">
         <n-tab-pane v-for="item in loginTypes" :key="item.key" :name="item.key" :tab="item.label">
-          <n-form-item :path="activeField" :label="item.label">
-            <n-input v-model:value="form[activeField]" :placeholder="item.placeholder" clearable>
-              <template #prefix>
-                <NovaIcon :icon="item.icon" />
-              </template>
-            </n-input>
+          <n-form-item :path="activeField">
+            <n-input
+              v-model:value="form[activeField]"
+              :placeholder="item.placeholder"
+              clearable
+            />
           </n-form-item>
         </n-tab-pane>
       </n-tabs>
 
-      <n-form-item path="password" :label="'密码'">
+      <n-form-item path="password">
         <n-input
           v-model:value="form.password"
           type="password"
           show-password-on="click"
-          :placeholder="'请输入密码'"
-        >
-          <template #prefix>
-            <NovaIcon icon="icon-park-outline:lock" />
-          </template>
-        </n-input>
+          placeholder="请输入密码"
+        />
       </n-form-item>
 
-      <n-form-item path="captcha_value" :label="'验证码'">
+      <n-form-item path="captcha_value">
         <CaptchaInput
           ref="captchaRef"
           v-model:captcha-id="form.captcha_id"
@@ -153,8 +144,12 @@ async function handleSubmit() {
       </n-form-item>
 
       <div class="auth-form-row">
-        <n-checkbox v-model:checked="form.remember"> 记住我 </n-checkbox>
-        <RouterLink to="/auth/forgot-password"> 忘记密码？ </RouterLink>
+        <n-checkbox v-model:checked="form.remember">
+          记住我
+        </n-checkbox>
+        <RouterLink to="/auth/forgot-password">
+          已有账号，忘记密码？
+        </RouterLink>
       </div>
 
       <n-button
@@ -180,6 +175,10 @@ async function handleSubmit() {
   overflow: visible;
 }
 
+.auth-login-tabs :deep(.n-tabs-nav) {
+  margin-bottom: 16px;
+}
+
 .auth-form-row {
   display: flex;
   align-items: center;
@@ -190,7 +189,7 @@ async function handleSubmit() {
 }
 
 .auth-form-row a {
-  color: var(--n-primary-color, #2563eb);
+  color: var(--n-primary-color, #18a058);
   text-decoration: none;
 }
 

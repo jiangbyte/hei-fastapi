@@ -38,8 +38,7 @@ class MsgNotificationUpdateRequest(MsgNotificationCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgNotificationAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgNotificationAdminPageQuery(PageQuery):
     title: str | None = None
     category: str | None = None
     status: str | None = None
@@ -78,6 +77,5 @@ class NotificationReadRequest(ApiSchema):
     ids: list[Id] = Field(min_length=1)
 
 
-class MyNotificationPageQuery(ApiSchema):
-    pagination: PageQuery
+class MyNotificationPageQuery(PageQuery):
     category: str | None = None

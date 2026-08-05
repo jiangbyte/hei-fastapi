@@ -66,7 +66,7 @@ async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
         uploaded = upload_response.json()["data"]
         assert uploaded["original_name"] == "report.png"
         assert uploaded["content_type"] == "image/png"
-        assert uploaded["url"] == f"/api/v1/files/{uploaded['object_name']}"
+        assert uploaded["url"] == f"/api/v1/files?object_name={uploaded['object_name']}"
         assert (tmp_path / uploaded["object_name"]).exists()
 
         page_response = await client.get(

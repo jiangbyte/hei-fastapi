@@ -7,6 +7,10 @@ from app.core.security.transport import CaptchaMixin, PasswordKeyMixin
 from app.modules.iam.enums import AccountIdentityType
 
 
+class CaptchaFormatQuery(ApiSchema):
+    image_format: str = Field(default="svg", alias="format", pattern="^(svg|png)$")
+
+
 class LoginRequest(CaptchaMixin, PasswordKeyMixin):
     account: str = Field(min_length=3, max_length=128)
     password: str = Field(min_length=1, max_length=512)
@@ -38,7 +42,7 @@ class RegisterRequest(CaptchaMixin, PasswordKeyMixin):
     account: str = Field(min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=512)
     name: str | None = Field(default=None, max_length=64)
-    nickname: str = Field(min_length=1, max_length=64)
+    nickname: str | None = Field(default=None, max_length=64)
     email: str = Field(min_length=3, max_length=128)
 
 

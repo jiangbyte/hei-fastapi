@@ -29,7 +29,10 @@ class MsgConversationRepository:
     # ── Generated CRUD ─────────────────────────────────────────────────────────
 
     async def create(self, payload: MsgConversationCreateRequest) -> MsgConversation:
-        entity = MsgConversation(**payload.model_dump())
+        # 仅写入模型列，避免响应态字段（如 last_message）进入构造参数
+        cols = MsgConversation.__table__.columns.keys()
+        data = {k: v for k, v in payload.model_dump().items() if k in cols}
+        entity = MsgConversation(**data)
         self.db.add(entity)
         await self.db.flush()
         return entity
@@ -46,6 +49,8 @@ class MsgConversationRepository:
     async def update(self, payload: MsgConversationUpdateRequest) -> None:
         entity = await self.get_required(payload.id)
         for key, value in payload.model_dump(exclude={"id"}).items():
+            if key not in MsgConversation.__table__.columns:
+                continue
             setattr(entity, key, value)
         await self.db.flush()
 

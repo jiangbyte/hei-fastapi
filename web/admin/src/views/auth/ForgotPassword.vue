@@ -91,10 +91,12 @@ async function sendLink() {
       window.$message.warning('请输入验证码')
       return
     }
-  } else {
+  }
+  else {
     try {
       await formRef.value?.validate()
-    } catch {
+    }
+    catch {
       return
     }
   }
@@ -107,9 +109,11 @@ async function sendLink() {
     })
     window.$message.success('密码重置链接已发送')
     await captchaRef.value?.refresh()
-  } catch {
+  }
+  catch {
     await captchaRef.value?.refresh()
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -117,7 +121,8 @@ async function sendLink() {
 async function resetPassword() {
   try {
     await formRef.value?.validate()
-  } catch {
+  }
+  catch {
     return
   }
   loading.value = true
@@ -133,9 +138,11 @@ async function resetPassword() {
     })
     window.$message.success('密码已重置，请重新登录')
     router.push('/auth/login')
-  } catch {
+  }
+  catch {
     await captchaRef.value?.refresh()
-  } finally {
+  }
+  finally {
     loading.value = false
   }
 }
@@ -143,39 +150,40 @@ async function resetPassword() {
 
 <template>
   <AuthLayout
-    :title="isResetMode ? '重置管理端密码' : '找回管理端密码'"
-    :subtitle="
-      isResetMode ? '使用邮件重置链接设置新密码。' : '向已启用的管理端登录邮箱发送密码重置链接。'
+    variant="center"
+    :title="isResetMode ? '重置密码' : '找回密码'"
+    :description="
+      isResetMode
+        ? '请设置新密码。重置链接在过期前仅可使用一次。'
+        : '请输入已启用管理端登录的邮箱，系统将发送密码重置链接。'
     "
   >
-    <n-alert class="auth-alert" type="info" :bordered="false">
-      {{
-        isResetMode
-          ? '该重置链接在过期前仅可使用一次。'
-          : '仅当该邮箱已启用管理端登录时，系统才会发送重置链接。'
-      }}
-    </n-alert>
-
-    <n-form ref="formRef" :model="form" :rules="rules" size="large">
-      <n-form-item path="email" :label="'登录邮箱'">
-        <n-input v-model:value="form.email" clearable>
-          <template #prefix>
-            <NovaIcon icon="icon-park-outline:mail" />
-          </template>
-        </n-input>
+    <n-form ref="formRef" :model="form" :rules="rules" size="large" :show-label="false">
+      <n-form-item path="email">
+        <n-input v-model:value="form.email" clearable placeholder="登录邮箱" />
       </n-form-item>
 
       <template v-if="isResetMode">
-        <n-form-item path="password" :label="'新密码'">
-          <n-input v-model:value="form.password" type="password" show-password-on="click" />
+        <n-form-item path="password">
+          <n-input
+            v-model:value="form.password"
+            type="password"
+            show-password-on="click"
+            placeholder="新密码（至少 8 位）"
+          />
         </n-form-item>
         <PasswordStrengthBar :password="form.password" />
-        <n-form-item path="confirmPassword" :label="'确认密码'">
-          <n-input v-model:value="form.confirmPassword" type="password" show-password-on="click" />
+        <n-form-item path="confirmPassword">
+          <n-input
+            v-model:value="form.confirmPassword"
+            type="password"
+            show-password-on="click"
+            placeholder="确认新密码"
+          />
         </n-form-item>
       </template>
 
-      <n-form-item path="captcha_value" :label="'验证码'">
+      <n-form-item path="captcha_value">
         <CaptchaInput
           ref="captchaRef"
           v-model:captcha-id="form.captcha_id"
@@ -193,30 +201,14 @@ async function resetPassword() {
         {{ isResetMode ? '重置密码' : '发送重置链接' }}
       </n-button>
 
-      <div class="auth-links">
-        <RouterLink to="/auth/login"> 返回登录 </RouterLink>
-        <n-button v-if="isResetMode" text type="primary" @click="sendLink"> 发送新链接 </n-button>
+      <div class="auth-center__links">
+        <RouterLink to="/auth/login">
+          返回登录
+        </RouterLink>
+        <n-button v-if="isResetMode" text type="primary" @click="sendLink">
+          发送新链接
+        </n-button>
       </div>
     </n-form>
   </AuthLayout>
 </template>
-
-<style scoped>
-.auth-alert {
-  margin-bottom: 22px;
-}
-
-.auth-links {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 22px;
-  font-size: 14px;
-}
-
-.auth-links a {
-  color: var(--n-primary-color, #2563eb);
-  text-decoration: none;
-}
-</style>

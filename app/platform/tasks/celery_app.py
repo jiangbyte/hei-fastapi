@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from celery import Celery
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__)
 celery_app = Celery(
     "hei-fastapi",
     broker=settings.celery.broker_url,
-    backend=settings.redis.url,
+    backend=settings.celery.result_backend or settings.redis.url,
     include=["app.worker.tasks"],
 )
 celery_app.conf.task_default_queue = "default"
@@ -19,7 +18,17 @@ celery_app.conf.worker_enable_remote_control = settings.celery.worker_remote_con
 celery_app.conf.worker_cancel_long_running_tasks_on_connection_loss = (
     settings.celery.worker_cancel_long_running_tasks_on_connection_loss
 )
+# Redis broker: visibility_timeout must exceed longest task wall time or tasks redeliver mid-run.
+# Do NOT put these into redbeat_redis_options — redis-py rejects visibility_timeout.
+celery_app.conf.broker_transport_options = {
+    "visibility_timeout": settings.celery.broker_visibility_timeout,
+}
+celery_app.conf.broker_connection_retry_on_startup = True
+celery_app.conf.task_compression = "gzip"
+celery_app.conf.result_expires = settings.celery.broker_visibility_timeout
 celery_app.conf.redbeat_redis_url = settings.redis.url
+# Explicit options so RedBeat does not inherit broker_transport_options.
+celery_app.conf.redbeat_redis_options = {"decode_responses": True}
 celery_app.conf.redbeat_lock_key = "redbeat:lock"
 
 from app.platform.tasks.redbeat_scheduler import sync_to_redbeat  # noqa: E402
@@ -29,8 +38,12 @@ sync_to_redbeat(celery_app)
 
 @worker_process_init.connect
 def _worker_process_init(**_: object) -> None:
+    # Must share WorkerAsyncRunner's loop: asyncio.run() would bind Redis/DB
+    # connections to a temporary loop that is closed before tasks run.
     try:
-        asyncio.run(_startup_worker_infra())
+        from app.platform.tasks.async_runner import worker_async_runner
+
+        worker_async_runner.run(_startup_worker_infra())
     except Exception:
         logger.exception("Failed to initialize worker infrastructure")
         raise
@@ -39,7 +52,10 @@ def _worker_process_init(**_: object) -> None:
 @worker_process_shutdown.connect
 def _worker_process_shutdown(**_: object) -> None:
     try:
-        asyncio.run(_shutdown_worker_infra())
+        from app.platform.tasks.async_runner import worker_async_runner
+
+        worker_async_runner.run(_shutdown_worker_infra())
+        worker_async_runner.close()
     except Exception:
         logger.warning("Failed to shutdown worker infrastructure", exc_info=True)
 

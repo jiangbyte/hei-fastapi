@@ -24,8 +24,7 @@ class GroupUpdateRequest(GroupCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class GroupAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class GroupAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=32)
 

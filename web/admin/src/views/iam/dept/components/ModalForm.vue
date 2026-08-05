@@ -236,8 +236,10 @@ defineExpose({ openModal })
               <NButton
                 v-if="state.formModel.master_id"
                 @click="
-                  state.formModel.master_id = null
-                  state.formModel.master_name = ''
+                  () => {
+                    state.formModel.master_id = null
+                    state.formModel.master_name = ''
+                  }
                 "
               >
                 <template #icon>
@@ -261,8 +263,10 @@ defineExpose({ openModal })
               <NButton
                 v-if="state.formModel.deputy_master_id"
                 @click="
-                  state.formModel.deputy_master_id = null
-                  state.formModel.deputy_master_name = ''
+                  () => {
+                    state.formModel.deputy_master_id = null
+                    state.formModel.deputy_master_name = ''
+                  }
                 "
               >
                 <template #icon>

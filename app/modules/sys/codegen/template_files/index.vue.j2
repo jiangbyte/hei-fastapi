@@ -429,7 +429,7 @@ async function fetchChildPage() {
     const response = await {{ plan.main_entity_name | ts_api_name }}.childPage({
       current: state.childPage,
       size: state.childPageSize,
-      master_id: state.selectedMasterId,
+      {{ plan.sub_foreign_key }}: state.selectedMasterId,
       ...state.childSearchValues,
     })
     const data = response.data ?? {}

@@ -14,6 +14,7 @@ from app.modules.iam.enums import AccountIdentityBindStatus
 from app.modules.user.portal.schema import (
     PortalProfileResponse,
     PortalPublicProfileResponse,
+    PortalPublicSpaceQuery,
     PortalUserCenterAvatarUpdateResponse,
     PortalUserCenterEmailUpdateRequest,
     PortalUserCenterPasswordUpdateRequest,
@@ -180,14 +181,14 @@ async def update_user_center_email(
 
 
 @router.get(
-    "/spaces/{account_id}",
+    "/spaces/detail",
     response_model=ApiResponse[PortalPublicProfileResponse],
 )
 async def get_public_space(
-    account_id: str,
+    query: Annotated[PortalPublicSpaceQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PortalPublicProfileResponse]:
-    return success(await PortalUserProfileService(db).get_public_profile(account_id))
+    return success(await PortalUserProfileService(db).get_public_profile(query))
 
 
 def _identity_login_enabled(identity) -> bool:

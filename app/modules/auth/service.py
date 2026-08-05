@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 from urllib.parse import urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -130,6 +131,7 @@ class AuthService:
         return session_payload
 
     async def register_portal(self, payload: RegisterRequest) -> RegisterResponse:
+        nickname = (payload.nickname or "").strip() or f"user-{uuid4().hex[:8]}"
         async with transactional(self.db):
             account_payload = AccountCreateRequest(
                 account=payload.account,
@@ -137,7 +139,7 @@ class AuthService:
                 account_type=AccountType.PORTAL,
                 account_status=AccountStatusEnum.ENABLED,
                 name=payload.name,
-                nickname=payload.nickname,
+                nickname=nickname,
                 email=payload.email,
                 email_login_enabled=True,
                 email_identity_verified=bool(payload.email),
@@ -160,7 +162,7 @@ class AuthService:
                 PortalProfileUpsertPayload(
                     account_id=account.id,
                     name=payload.name,
-                    nickname=payload.nickname,
+                    nickname=nickname,
                     phone=None,
                     email=payload.email,
                     avatar=None,

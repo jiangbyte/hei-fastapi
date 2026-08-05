@@ -36,7 +36,20 @@ class MsgAnnouncementService:
 
     async def create(self, payload: MsgAnnouncementCreateRequest) -> None:
         async with transactional(self.db):
-            await self.repo.create(payload)
+            data = payload.model_dump()
+            status = str(data.get("status") or AnnouncementStatus.DRAFT.value).upper()
+            if status in {"ENABLED", "ENABLE"}:
+                status = AnnouncementStatus.DRAFT.value
+            if status not in {
+                AnnouncementStatus.DRAFT.value,
+                AnnouncementStatus.PUBLISHED.value,
+                AnnouncementStatus.REVOKED.value,
+            }:
+                status = AnnouncementStatus.DRAFT.value
+            data["status"] = status
+            if status == AnnouncementStatus.PUBLISHED.value and not data.get("publish_at"):
+                data["publish_at"] = datetime.now(timezone.utc)
+            await self.repo.create(MsgAnnouncementCreateRequest(**data))
 
     async def update(self, payload: MsgAnnouncementUpdateRequest) -> None:
         async with transactional(self.db):
@@ -97,6 +110,25 @@ class MsgAnnouncementService:
             _build_announcement_schema(item, read_id_set)
             for item in items
         ]
+        return build_page(query.pagination, total, schemas)
+
+    async def page_portal_list(
+        self,
+        query: MyAnnouncementPageQuery,
+        session: SessionPayload | None = None,
+    ) -> PageData[MsgAnnouncementSchema]:
+        """Portal 公开已发布列表；可选登录以填充 is_read。"""
+        account_type = AccountType.PORTAL.value
+        account_id: str | None = None
+        if session and str(session.account_type) == AccountType.PORTAL.value:
+            account_type = str(session.account_type)
+            account_id = session.account_id
+        items, total, read_id_set = await self.repo.page_my_announcements(
+            query,
+            account_type,
+            account_id,
+        )
+        schemas = [_build_announcement_schema(item, read_id_set) for item in items]
         return build_page(query.pagination, total, schemas)
 
     async def my_detail(self, query: IdQuery, session: SessionPayload) -> MsgAnnouncementSchema:

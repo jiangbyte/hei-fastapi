@@ -11,7 +11,12 @@ const totalUnreadCount = computed(() =>
 )
 const requestBadgeCount = computed(
   () =>
-    data.friendRequests.filter((r: any) => r.status === 'PENDING').length +
+    data.friendRequests.filter(
+      (r: any) =>
+        r.status === 'PENDING' &&
+        r.recipient_type === data.profile?.account_type &&
+        r.recipient_id === data.profile?.account_id,
+    ).length +
     data.groupJoinRequests.filter((r: any) => r.status === 'PENDING').length +
     data.pendingGroupJoinRequests.length,
 )

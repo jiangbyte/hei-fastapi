@@ -10,12 +10,15 @@ from app.modules.sys.codegen.model import SysCodegenPlan
 from app.modules.sys.codegen.repository import CodegenRepository
 from app.modules.sys.codegen.schema import (
     CodegenFieldUpdateItem,
+    CodegenFieldsQuery,
     CodegenFieldsUpdateBatchRequest,
     CodegenParentResourceOption,
+    CodegenParentResourcesQuery,
     CodegenPlanCreateRequest,
     CodegenPlanPageQuery,
     CodegenPlanUpdateRequest,
     CodegenPreviewSchema,
+    CodegenTableColumnsQuery,
     DatabaseColumnSchema,
     DatabaseTableSchema,
     SysCodegenFieldSchema,
@@ -57,21 +60,21 @@ class CodegenService:
     async def tables(self) -> list[DatabaseTableSchema]:
         return [DatabaseTableSchema(**item) for item in await self.repo.list_database_tables()]
 
-    async def table_columns(self, table_name: str) -> list[DatabaseColumnSchema]:
+    async def table_columns(self, query: CodegenTableColumnsQuery) -> list[DatabaseColumnSchema]:
         return [
             DatabaseColumnSchema(**_column_schema_data(item))
-            for item in await self.repo.list_database_columns(table_name)
+            for item in await self.repo.list_database_columns(query.table_name)
         ]
 
-    async def fields(self, plan_id: str, table_role: str | None = None) -> list[SysCodegenFieldSchema]:
-        return to_schema_list(SysCodegenFieldSchema, await self.repo.list_fields(plan_id, table_role))
+    async def fields(self, query: CodegenFieldsQuery) -> list[SysCodegenFieldSchema]:
+        return to_schema_list(SysCodegenFieldSchema, await self.repo.list_fields(query.plan_id, query.table_role))
 
     async def update_fields_batch(self, payload: CodegenFieldsUpdateBatchRequest) -> None:
         async with transactional(self.db):
             await self.repo.replace_fields(payload.plan_id, payload.fields)
 
-    async def parent_resources(self, module_id: str | None = None) -> list[CodegenParentResourceOption]:
-        return _build_resource_options(await self.repo.list_resource_options(module_id))
+    async def parent_resources(self, query: CodegenParentResourcesQuery) -> list[CodegenParentResourceOption]:
+        return _build_resource_options(await self.repo.list_resource_options(query.module_id))
 
     async def preview(self, query: IdQuery) -> CodegenPreviewSchema:
         plan = await self.repo.get_required(query.id)

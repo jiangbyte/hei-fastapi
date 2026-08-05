@@ -35,8 +35,7 @@ class BannerUpdateRequest(BannerCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class BannerAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class BannerAdminPageQuery(PageQuery):
     display_scope: BannerDisplayScope | None = None
     category: BannerCategory | None = None
     type: BannerType | None = None

@@ -157,11 +157,6 @@ celerybeat.pid
 *.aof
 *.pid
 
-# RabbitMQ
-mnesia/
-rabbitmq/
-rabbitmq-data/
-
 # ActiveMQ
 activemq-data/
 
@@ -254,3 +249,5 @@ web1/**/coverage/
 # Auto-generated type stubs from Vite plugins
 web/admin/src/typing/components.d.ts
 web/portal/src/typing/components.d.ts
+
+.worktrees/

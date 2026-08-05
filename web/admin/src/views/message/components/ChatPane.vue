@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, inject, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
 import { useThemeVars } from 'naive-ui'
 import { formatDateTime, isImageFile, resolveFileUrl } from '@/utils'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
@@ -60,23 +60,36 @@ const conversationMessages = computed(
   () => data.messagesByConversation[props.conversation.id] ?? [],
 )
 
-let isMounted = false
-onMounted(() => {
-  isMounted = true
+let alive = true
+onUnmounted(() => {
+  alive = false
+  if (syncTimer) {
+    clearTimeout(syncTimer)
+    syncTimer = null
+  }
 })
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null
-function scheduleSync() {
-  if (!isMounted) return
+function scheduleSync(scrollBottom = false) {
+  if (!alive) return
   if (syncTimer) clearTimeout(syncTimer)
-  syncTimer = setTimeout(() => syncVisibleMessages(), 100)
+  syncTimer = setTimeout(() => {
+    if (!alive) return
+    syncVisibleMessages()
+    if (scrollBottom) void nextTick(() => scrollMessagesToBottom())
+  }, 50)
 }
 
 function syncVisibleMessages() {
   if (!props.conversation) return
   const history = conversationMessages.value
-  messageState.visibleStart = Math.max(0, history.length - 20)
-  messageState.visibleMessages = history.slice(messageState.visibleStart)
+  // 已加载更早历史时保持从头部展示；否则只保留最近窗口
+  if (messageState.visibleStart === 0 && messageState.visibleMessages.length > 20) {
+    messageState.visibleMessages = history.slice()
+  } else {
+    messageState.visibleStart = Math.max(0, history.length - 20)
+    messageState.visibleMessages = history.slice(messageState.visibleStart)
+  }
 }
 
 async function loadOlderMessages() {
@@ -237,7 +250,7 @@ async function sendMessage() {
   try {
     const res = await messageApi.sendMessage({
       conversation_id: convId,
-      content,
+      content: content || ' ',
       attachments: selectedAttachments.value.length
         ? selectedAttachments.value.map((a: any) => ({
             file_id: a.file_id,
@@ -250,14 +263,15 @@ async function sendMessage() {
     })
     if (res?.data) {
       const history = conversationMessages.value
-      history.push(res.data)
-      data.messagesByConversation[convId] = history
+      if (!history.some((m) => m.id === res.data.id)) {
+        data.messagesByConversation[convId] = [...history, res.data]
+      }
       const conv = data.conversations.find((c) => c.id === convId)
       if (conv) {
         conv.last_message_id = res.data.id
         conv.last_message_at = res.data.created_at
       }
-      scheduleSync()
+      scheduleSync(true)
     }
   } catch {
     window.$message?.error?.('发送失败')
@@ -276,10 +290,21 @@ watch(
   { immediate: true },
 )
 
-// 当 conversationMessages 数组变化（WS 收到新消息等）时自动刷新 visible
-watch(conversationMessages, () => {
-  scheduleSync()
-})
+// 同引用 push 不会触发浅 watch；监听 length + 尾部 id。仅尾部变化时滚到底
+watch(
+  () => {
+    const id = props.conversation?.id ?? ''
+    const list = data.messagesByConversation[id] ?? []
+    const last = list.length ? list[list.length - 1] : null
+    return { convId: id, len: list.length, lastId: last?.id ?? '' }
+  },
+  (cur, prev) => {
+    if (!cur.convId) return
+    const sameConv = Boolean(prev && prev.convId === cur.convId)
+    const newTail = sameConv && Boolean(cur.lastId) && cur.lastId !== prev!.lastId
+    scheduleSync(newTail)
+  },
+)
 </script>
 
 <template>

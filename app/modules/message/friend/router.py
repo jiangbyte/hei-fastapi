@@ -6,26 +6,21 @@ Generated at: 2026-07-23 16:28:53
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_account_type, require_permission
+from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.message.friend.schema import (
     ApplyFriendRequest,
     FriendRequestSchema,
     FriendSchema,
+    FriendSearchQuery,
     HandleFriendRequest,
     MyRequestCountSchema,
-    MsgFriendAdminPageQuery,
-    MsgFriendCreateRequest,
-    MsgFriendSchema,
-    MsgFriendUpdateRequest,
     RemoveFriendRequest,
     SearchUserSchema,
     SetRemarkRequest,
@@ -36,92 +31,6 @@ from app.modules.message.friend.service import (
 
 admin_router = APIRouter()
 portal_router = APIRouter()
-
-
-# ── Admin-only CRUD (legacy codegen) ────────────────────────────────────────
-
-@admin_router.post(
-    "/message/friends/create",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:friend:create")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def create(
-    payload: MsgFriendCreateRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgFriendService(db).create(payload)
-    return success()
-
-
-@admin_router.post(
-    "/message/friends/update",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:friend:update")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def update(
-    payload: MsgFriendUpdateRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgFriendService(db).update(payload)
-    return success()
-
-
-@admin_router.post(
-    "/message/friends/delete",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:friend:delete")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def delete(
-    payload: IdsRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgFriendService(db).delete(payload)
-    return success()
-
-
-@admin_router.get(
-    "/message/friends/detail",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:friend:detail")),
-    ],
-    response_model=ApiResponse[MsgFriendSchema],
-)
-async def detail(
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
-) -> ApiResponse[MsgFriendSchema]:
-    return success(await MsgFriendService(db).detail(IdQuery(id=id)))
-
-
-@admin_router.get(
-    "/message/friends/page",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:friend:page")),
-    ],
-    response_model=ApiResponse[PageData[MsgFriendSchema]],
-)
-async def page(
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    status: str | None = Query(default=None),
-) -> ApiResponse[PageData[MsgFriendSchema]]:
-    query = MsgFriendAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        status=status,
-    )
-    return success(await MsgFriendService(db).page_admin(query))
 
 
 # ── Current-user routes (admin + portal) ────────────────────────────────────
@@ -157,9 +66,9 @@ async def my_list(
 async def search(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    keyword: str = Query(min_length=1),
+    query: Annotated[FriendSearchQuery, Depends()],
 ) -> ApiResponse[list[SearchUserSchema]]:
-    return success(await MsgFriendService(db).search(keyword, session))
+    return success(await MsgFriendService(db).search(query, session))
 
 
 @admin_router.post(

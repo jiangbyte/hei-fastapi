@@ -22,8 +22,7 @@ class PositionUpdateRequest(PositionCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class PositionAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class PositionAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     category: str | None = Field(default=None, max_length=32)
     status: str | None = Field(default=None, max_length=32)

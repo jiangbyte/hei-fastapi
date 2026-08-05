@@ -43,6 +43,19 @@ async def get_current_session(
     return session
 
 
+async def get_optional_session(
+    request: Request,
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+) -> SessionPayload | None:
+    """可选登录会话：无 token 或无效 token 时返回 None（不抛错）。"""
+    if not authorization or not authorization.strip():
+        return None
+    try:
+        return await get_current_session(request, authorization)
+    except AuthenticationError:
+        return None
+
+
 async def get_current_account(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],

@@ -12,9 +12,11 @@ const show = defineModel<boolean>('show', { required: true })
 
 const createGroupName = ref('')
 const createGroupDesc = ref('')
+/** friendship_id keys of invitees */
 const createGroupInvitees = ref<string[]>([])
 const showInviteFriendModal = ref(false)
 const inviteSearchText = ref('')
+const creating = ref(false)
 
 const filteredInviteFriends = computed(() => {
   const keyword = inviteSearchText.value.trim().toLowerCase()
@@ -22,9 +24,18 @@ const filteredInviteFriends = computed(() => {
   return data.friends.filter(
     (f) =>
       (f.name ?? '').toLowerCase().includes(keyword) ||
-      (f.nickname ?? '').toLowerCase().includes(keyword),
+      (f.nickname ?? '').toLowerCase().includes(keyword) ||
+      (f.friend_account_type ?? '').toLowerCase().includes(keyword),
   )
 })
+
+function friendLabel(friendshipId: string) {
+  const f = data.friends.find((x) => x.friendship_id === friendshipId)
+  if (!f) return friendshipId
+  const name = f.name || f.nickname || f.friend_account_id
+  const tag = f.friend_account_type === 'PORTAL' ? '学生' : '管理员'
+  return `${name}（${tag}）`
+}
 
 function toggleGroupInvitee(friendId: string) {
   const idx = createGroupInvitees.value.indexOf(friendId)
@@ -47,24 +58,39 @@ function closeCreateGroup() {
 
 async function handleCreateGroup() {
   const name = createGroupName.value.trim()
-  if (!name) return
+  if (!name || creating.value) return
 
+  creating.value = true
   try {
     const groupRes = await messageApi.createGroup({
       name,
       description: createGroupDesc.value.trim() || undefined,
     })
-    // Reload groups
+    const newGroup = groupRes?.data
+    const invitees = createGroupInvitees.value
+      .map((fid) => data.friends.find((f) => f.friendship_id === fid))
+      .filter(Boolean)
+      .map((f) => ({
+        account_type: f!.friend_account_type,
+        account_id: f!.friend_account_id,
+      }))
+
+    if (newGroup?.id && invitees.length) {
+      await messageApi.addGroupMembers({
+        group_id: newGroup.id,
+        members: invitees,
+      })
+    }
+
     const groupsRes = await messageApi.groupList()
     if (groupsRes?.data) data.groups = groupsRes.data
-    // Reload conversations (backend now auto-creates conversation with member)
     const convRes = await messageApi.conversationList()
     if (convRes?.data?.records) data.conversations = convRes.data.records
     closeCreateGroup()
-    window.$message?.success?.('群聊创建成功')
+    window.$message?.success?.(
+      invitees.length ? `群聊创建成功，已邀请 ${invitees.length} 人` : '群聊创建成功',
+    )
 
-    // Navigate to the new conversation
-    const newGroup = groupRes?.data
     if (newGroup?.id) {
       const groupConv = data.conversations.find((c: any) => c.group_id === newGroup.id)
       if (groupConv) {
@@ -73,6 +99,8 @@ async function handleCreateGroup() {
     }
   } catch {
     window.$message?.error?.('创建群聊失败')
+  } finally {
+    creating.value = false
   }
 }
 </script>
@@ -82,21 +110,14 @@ async function handleCreateGroup() {
     v-model:show="show"
     preset="card"
     :bordered="false"
-    draggable
     title="创建群聊"
     :mask-closable="false"
     style="width: min(480px, calc(100vw - 24px))"
+    @after-leave="closeCreateGroup"
   >
     <div class="flex flex-col gap-4">
-      <div class="flex items-center gap-4">
-        <NAvatar
-          round
-          :size="56"
-          class="shrink-0 border-2 border-dashed"
-          :style="{ borderColor: 'var(--border-color)' }"
-        >
-          {{ (createGroupName || '群').charAt(0) }}
-        </NAvatar>
+      <div class="flex items-center gap-3">
+        <NAvatar round :size="48">群</NAvatar>
         <div class="min-w-0 flex-1">
           <NInput v-model:value="createGroupName" placeholder="群聊名称（必填）" size="large" />
         </div>
@@ -127,12 +148,17 @@ async function handleCreateGroup() {
           size="small"
           @close="removeGroupInvitee(id)"
         >
-          {{ data.friends.find((f) => f.friendship_id === id)?.name || id }}
+          {{ friendLabel(id) }}
         </NTag>
       </div>
       <div class="flex justify-end gap-3 pt-2">
         <NButton @click="closeCreateGroup"> 取消 </NButton>
-        <NButton type="primary" :disabled="!createGroupName.trim()" @click="handleCreateGroup">
+        <NButton
+          type="primary"
+          :loading="creating"
+          :disabled="!createGroupName.trim()"
+          @click="handleCreateGroup"
+        >
           创建
         </NButton>
       </div>
@@ -177,6 +203,9 @@ async function handleCreateGroup() {
               <div class="min-w-0 flex-1">
                 <div class="message-ellipsis text-sm font-500">
                   {{ friend.name || friend.nickname }}
+                  <NTag size="tiny" :bordered="false" class="ml-1">
+                    {{ friend.friend_account_type === 'PORTAL' ? '学生' : '管理员' }}
+                  </NTag>
                 </div>
                 <div class="message-ellipsis text-xs" style="color: var(--text-color-3)">
                   {{ friend.signature || '-' }}

@@ -82,11 +82,11 @@ async def delete(
     response_model=ApiResponse[SysDeptSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysDeptSchema]:
-    return success(await DeptService(db).detail(IdQuery(id=id), session))
+    return success(await DeptService(db).detail(query, session))
 
 
 @router.get(
@@ -98,24 +98,10 @@ async def detail(
     response_model=ApiResponse[PageData[SysDeptSchema]],
 )
 async def page(
+    query: Annotated[DeptAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
-    name: str | None = Query(default=None, max_length=64),
-    code: str | None = Query(default=None, max_length=64),
-    category: str | None = Query(default=None, max_length=64),
-    parent_id: str | None = Query(default=None, max_length=64),
-    status: str | None = Query(default=None, max_length=32),
 ) -> ApiResponse[PageData[SysDeptSchema]]:
-    query = DeptAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        name=name,
-        code=code,
-        category=category,
-        parent_id=parent_id,
-        status=status,
-    )
     return success(await DeptService(db).page_admin(query, session))
 
 

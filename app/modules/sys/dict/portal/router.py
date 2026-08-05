@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.response.schema import ApiResponse, success
@@ -17,6 +17,6 @@ router = APIRouter()
 )
 async def tree(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    category: str | None = Query(default=None, max_length=64),
+    query: Annotated[DictTreeQuery, Depends()],
 ) -> ApiResponse[list[SysDictTreeNode]]:
-    return success(await DictService(db).list_tree(DictTreeQuery(category=category)))
+    return success(await DictService(db).list_tree(query))

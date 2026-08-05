@@ -1,12 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
@@ -14,6 +13,7 @@ from app.modules.message.message.schema import (
     MessagePageQuery,
     MessageReadRequest,
     MessageSchema,
+    MessageUnreadCountQuery,
     RevokeMessageRequest,
     SendMessageRequest,
     UnreadCountResponse,
@@ -63,25 +63,19 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
 
     @router.get("/message/messages/page", dependencies=deps, response_model=ApiResponse[PageData[MessageSchema]])
     async def page(
+        query: Annotated[MessagePageQuery, Depends()],
         session: Annotated[SessionPayload, Depends(get_current_session)],
         db: Annotated[AsyncSession, Depends(get_db_session)],
-        conversation_id: str = Query(min_length=1),
-        current: Current = 1,
-        size: Size = 20,
     ) -> ApiResponse[PageData[MessageSchema]]:
-        query = MessagePageQuery(
-            pagination=PageQuery(current=current, size=size),
-            conversation_id=conversation_id,
-        )
         return success(await MessageService(db).page_messages(query, session))
 
     @router.get("/message/messages/unread-count", dependencies=deps, response_model=ApiResponse[UnreadCountResponse])
     async def unread_count(
+        query: Annotated[MessageUnreadCountQuery, Depends()],
         session: Annotated[SessionPayload, Depends(get_current_session)],
         db: Annotated[AsyncSession, Depends(get_db_session)],
-        conversation_id: str = Query(min_length=1),
     ) -> ApiResponse[UnreadCountResponse]:
-        return success(await MessageService(db).unread_count(conversation_id, session))
+        return success(await MessageService(db).unread_count(query, session))
 
 
 register_current_user_routes(admin_router, AccountType.ADMIN)

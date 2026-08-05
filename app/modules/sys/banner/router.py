@@ -1,13 +1,12 @@
-from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.deps.auth import require_permission, require_account_type
 from app.deps.db import get_db_session
 from app.modules.sys.banner.schema import (
@@ -78,10 +77,10 @@ async def delete(
     response_model=ApiResponse[SysBannerSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysBannerSchema]:
-    return success(await BannerService(db).detail(IdQuery(id=id)))
+    return success(await BannerService(db).detail(query))
 
 
 @router.get(
@@ -93,21 +92,7 @@ async def detail(
     response_model=ApiResponse[PageData[SysBannerSchema]],
 )
 async def page(
+    query: Annotated[BannerAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    display_scope: str | None = Query(default=None, max_length=32),
-    category: str | None = Query(default=None, max_length=32),
-    type: str | None = Query(default=None, max_length=32),
-    position: str | None = Query(default=None, max_length=32),
-    status: str | None = Query(default=None, max_length=32),
 ) -> ApiResponse[PageData[SysBannerSchema]]:
-    query = BannerAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        display_scope=display_scope,
-        category=category,
-        type=type,
-        position=position,
-        status=status,
-    )
     return success(await BannerService(db).page_admin(query))

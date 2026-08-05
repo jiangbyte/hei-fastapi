@@ -5,7 +5,7 @@ from app.core.config.settings import settings
 from app.core.schema.datetime import format_utc_iso8601
 from app.core.security.session import SessionPayload
 from app.modules.sys.file.model import SysFile
-from app.modules.sys.file.schema import FileUploadRequest
+from app.modules.sys.file.schema import FileUploadRequest, ObjectNameQuery
 from app.modules.sys.file.service import FileService
 from app.modules.user.admin.model import AdminUserProfile
 from app.modules.user.admin.service import AdminUserProfileService
@@ -30,10 +30,10 @@ async def test_file_service_upload_and_url(tmp_path, db_session):
         await db_session.commit()
         assert entity.object_name.startswith("uploads/")
         assert entity.object_name.endswith(".png")
-        assert entity.url == f"/api/v1/files/{entity.object_name}"
+        assert entity.url == f"/api/v1/files?object_name={entity.object_name}"
         assert str(tmp_path) not in entity.url
         assert format_utc_iso8601(entity.created_at).endswith("Z")
-        assert await service.get_url(entity.object_name) == entity.url
+        assert await service.get_url(ObjectNameQuery(object_name=entity.object_name)) == entity.url
         stored = (
             await db_session.execute(select(SysFile).where(SysFile.id == entity.id))
         ).scalar_one()

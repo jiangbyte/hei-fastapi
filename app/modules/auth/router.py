@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Request
+from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
@@ -23,6 +23,7 @@ from app.modules.auth.schema import (
     CancelAccountApiResponse,
     CancelAccountRequest,
     CancelAccountResponse,
+    CaptchaFormatQuery,
     ForgotPasswordRequest,
     LoginApiResponse,
     LoginPayload,
@@ -43,9 +44,9 @@ portal_router = APIRouter()
 @admin_router.get("/captcha", response_model=CaptchaApiResponse)
 @portal_router.get("/captcha", response_model=CaptchaApiResponse)
 async def captcha(
-    image_format: str = Query(default="svg", alias="format", pattern="^(svg|png)$"),
+    query: Annotated[CaptchaFormatQuery, Depends()],
 ) -> CaptchaApiResponse:
-    return success(await create_captcha(image_format))
+    return success(await create_captcha(query.image_format))
 
 
 @admin_router.get("/password-key", response_model=PasswordKeyApiResponse)

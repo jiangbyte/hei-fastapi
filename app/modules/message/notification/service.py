@@ -109,13 +109,13 @@ class MsgNotificationService:
             schema_item.is_read = schema_item.id in read_id_set
         return build_page(query.pagination, total, schemas)
 
-    async def my_detail(self, nid: str, session) -> MsgNotificationSchema:
+    async def my_detail(self, query: IdQuery, session) -> MsgNotificationSchema:
         account_type = session.account_type
         account_id = session.account_id
-        notification = await self.repo.get_required(nid)
+        notification = await self.repo.get_required(query.id)
         schema_item = to_schema(MsgNotificationSchema, notification)
         stmt = select(MsgNotificationRead.notification_id).where(
-            MsgNotificationRead.notification_id == nid,
+            MsgNotificationRead.notification_id == query.id,
             MsgNotificationRead.account_type == account_type,
             MsgNotificationRead.account_id == account_id,
         )

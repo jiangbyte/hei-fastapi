@@ -17,6 +17,7 @@ export interface WsHandlers {
   }) => void
   onOfflineMessages?: (messages: any[]) => void
   onNewNotification?: (data: any) => void
+  onNewFriendRequest?: (data: any) => void
   onNewJoinRequest?: (data: any) => void
   onJoinRequestHandled?: (data: {
     request_id: string
@@ -84,6 +85,9 @@ function handleMessage(msg: WsMessage) {
       case 'new_notification':
         handlers.onNewNotification?.(msg.data)
         break
+      case 'new_friend_request':
+        handlers.onNewFriendRequest?.(msg.data)
+        break
       case 'new_join_request':
         handlers.onNewJoinRequest?.(msg.data)
         break
@@ -111,8 +115,13 @@ function connect() {
     return
   }
   const baseURL = import.meta.env.VITE_API_URL || ''
-  const wsBase = baseURL.replace(/^http/, 'ws')
-  const url = `${wsBase}/api/v1/admin/message/ws?token=${encodeURIComponent(token)}`
+  let url: string
+  if (baseURL.startsWith('http')) {
+    url = `${baseURL.replace(/^http/, 'ws')}/api/v1/admin/message/ws?token=${encodeURIComponent(token)}`
+  } else {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    url = `${proto}//${window.location.host}/api/v1/admin/message/ws?token=${encodeURIComponent(token)}`
+  }
 
   connectionState.value = 'connecting'
 
@@ -195,8 +204,22 @@ function markConversationRead(conversationId: string, lastReadMessageId: string)
 
 export function useWebSocket(handlers: WsHandlers) {
   const key = Symbol()
-  subscriberMap.set(key, handlers)
+  // 对象引用保持最新闭包，避免 setup 内 handlers 过期
+  const live = handlers
+  const proxy: WsHandlers = {
+    onNewMessage: (d) => live.onNewMessage?.(d),
+    onTyping: (d) => live.onTyping?.(d),
+    onOfflineMessages: (m) => live.onOfflineMessages?.(m),
+    onNewNotification: (d) => live.onNewNotification?.(d),
+    onNewFriendRequest: (d) => live.onNewFriendRequest?.(d),
+    onNewJoinRequest: (d) => live.onNewJoinRequest?.(d),
+    onJoinRequestHandled: (d) => live.onJoinRequestHandled?.(d),
+  }
+
+  subscriberMap.set(key, proxy)
   subscriberCount++
+  if (closed) closed = false
+  void connect()
 
   onUnmounted(() => {
     subscriberMap.delete(key)

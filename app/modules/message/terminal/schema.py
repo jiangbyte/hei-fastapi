@@ -32,8 +32,7 @@ class MsgTerminalUpdateRequest(MsgTerminalCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgTerminalAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgTerminalAdminPageQuery(PageQuery):
     keyword: str | None = None
 
 

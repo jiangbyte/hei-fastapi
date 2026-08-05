@@ -30,15 +30,36 @@ class ConnectionManager:
         self._lock = asyncio.Lock()
         self._instance_id = str(uuid.uuid4())[:8]  # unique per-process
 
+    # 在线标记 TTL：崩溃残留实例 ID 会过期；正常连接靠 heartbeat 续期
+    _ONLINE_TTL_SECONDS = 120
+
+    @staticmethod
+    def _online_key(account_type: str, account_id: str) -> str:
+        return f"ws:online:{account_type}:{account_id}"
+
+    async def touch_online(self, account_type: str, account_id: str) -> None:
+        """标记本实例上该用户在线，并刷新 TTL，避免 worker 崩溃后假在线。"""
+        await self._ensure_pubsub()
+        if self._redis is None:
+            return
+        try:
+            key = self._online_key(account_type, account_id)
+            await self._redis.sadd(key, self._instance_id)
+            await self._redis.expire(key, self._ONLINE_TTL_SECONDS)
+        except Exception:
+            logger.warning("Failed to mark WS online in Redis for %s/%s", account_type, account_id, exc_info=True)
+
     async def connect(self, account_type: str, account_id: str, terminal_id: str, ws: WebSocket) -> None:
         await ws.accept()
         async with self._lock:
             self._connections.setdefault(account_type, {}).setdefault(account_id, {})[terminal_id] = ws
         num = self._count_account_connections(account_type, account_id)
         logger.info("WS connect: %s/%s terminal=%s, total=%d connections for user", account_type, account_id, terminal_id, num)
+        await self._ensure_pubsub()
         if self._redis is None:
             logger.warning("Redis not available — cross-worker WS routing disabled")
-        await self._ensure_pubsub()
+        else:
+            await self.touch_online(account_type, account_id)
 
     async def disconnect(self, account_type: str, account_id: str, terminal_id: str) -> None:
         async with self._lock:
@@ -48,6 +69,15 @@ class ConnectionManager:
                 self._connections.get(account_type, {}).pop(account_id, None)
         num = self._count_account_connections(account_type, account_id)
         logger.info("WS disconnect: %s/%s terminal=%s, remaining=%d", account_type, account_id, terminal_id, num)
+        # 本进程已无该用户连接时，从全局在线集合移除本实例
+        if num == 0 and self._redis is not None:
+            try:
+                key = self._online_key(account_type, account_id)
+                await self._redis.srem(key, self._instance_id)
+                if not await self._redis.scard(key):
+                    await self._redis.delete(key)
+            except Exception:
+                logger.warning("Failed to clear WS online in Redis for %s/%s", account_type, account_id, exc_info=True)
         # Stop pubsub if no connections left on this instance
         if not self._connections:
             await self._stop_pubsub()
@@ -57,6 +87,19 @@ class ConnectionManager:
 
     def is_online(self, account_type: str, account_id: str) -> bool:
         return self._count_account_connections(account_type, account_id) > 0
+
+    async def is_globally_online(self, account_type: str, account_id: str) -> bool:
+        """本机或任一 worker 是否在线（Redis 集合）。"""
+        if self.is_online(account_type, account_id):
+            return True
+        await self._ensure_pubsub()
+        if self._redis is None:
+            return False
+        try:
+            count = await self._redis.scard(self._online_key(account_type, account_id))
+            return int(count or 0) > 0
+        except Exception:
+            return False
 
     def has_redis(self) -> bool:
         """Whether Redis is available for cross-worker routing."""
@@ -77,7 +120,9 @@ class ConnectionManager:
         """Route message to user: local delivery + cross-worker via Redis Pub/Sub."""
         # Local delivery first
         await self.send_to_user(account_type, account_id, message)
-        # Cross-worker via Redis
+        # Cross-worker via Redis（懒加载，避免启动时序导致 _redis 一直为 None）
+        if self._redis is None:
+            await self._ensure_pubsub()
         if self._redis:
             try:
                 channel = f"ws:user:{account_type}:{account_id}"

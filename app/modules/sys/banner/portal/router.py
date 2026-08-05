@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.response.schema import ApiResponse, success
@@ -18,11 +18,8 @@ router = APIRouter()
 @router.get("/sys/banners/list", response_model=ApiResponse[list[SysBannerSchema]])
 async def list_public_banners(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    position: Annotated[str, Query(min_length=1, max_length=32)],
-    category: str | None = Query(default=None, max_length=32),
-    type: str | None = Query(default=None, max_length=32),
+    query: Annotated[BannerPublicListQuery, Depends()],
 ) -> ApiResponse[list[SysBannerSchema]]:
-    query = BannerPublicListQuery(position=position, category=category, type=type)
     return success(await BannerService(db).list_public(query))
 
 

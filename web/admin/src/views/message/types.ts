@@ -109,6 +109,8 @@ export interface Group {
   created_by: string | null
   updated_at: string
   updated_by: string | null
+  is_member?: boolean
+  has_pending_request?: boolean
 }
 
 export interface GroupMember {
@@ -186,6 +188,7 @@ export interface SearchUser {
   avatar: string | null
   signature: string | null
   is_friend: boolean
+  has_pending_request?: boolean
 }
 
 export interface FriendRequest {

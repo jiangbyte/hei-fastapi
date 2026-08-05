@@ -94,10 +94,10 @@ async def update(
     response_model=ApiResponse[SysFileSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysFileSchema]:
-    return success(await FileService(db).detail(IdQuery(id=id)))
+    return success(await FileService(db).detail(query))
 
 
 @router.post(
@@ -124,10 +124,10 @@ async def list_by_ids(
     response_class=Response,
 )
 async def download(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> Response:
-    return await FileService(db).download_by_id(IdQuery(id=id))
+    return await FileService(db).download_by_id(query)
 
 
 @router.post(
@@ -145,7 +145,7 @@ async def url(
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
-            url=await FileService(db).get_url(payload.object_name),
+            url=await FileService(db).get_url(payload),
         )
     )
 
@@ -165,7 +165,7 @@ async def presigned_url(
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
-            url=await FileService(db).get_presigned_url(payload.object_name),
+            url=await FileService(db).get_presigned_url(payload),
         )
     )
 
@@ -179,22 +179,8 @@ async def presigned_url(
     response_model=ApiResponse[PageData[SysFileSchema]],
 )
 async def page(
+    query: Annotated[FileAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
-    original_name: str | None = Query(default=None, max_length=255),
-    object_name: str | None = Query(default=None, max_length=255),
-    storage_config_id: str | None = Query(default=None, max_length=64),
-    storage_provider: Annotated[StorageProvider | None, Query()] = None,
-    content_type: str | None = Query(default=None, max_length=128),
 ) -> ApiResponse[PageData[SysFileSchema]]:
-    query = FileAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        original_name=original_name,
-        object_name=object_name,
-        storage_config_id=storage_config_id,
-        storage_provider=storage_provider,
-        content_type=content_type,
-    )
     return success(await FileService(db).page(query, session))

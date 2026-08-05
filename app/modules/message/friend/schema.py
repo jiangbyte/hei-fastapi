@@ -29,8 +29,7 @@ class MsgFriendUpdateRequest(MsgFriendCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgFriendAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgFriendAdminPageQuery(PageQuery):
     status: str | None = None
 
 
@@ -107,6 +106,7 @@ class SearchUserSchema(ApiSchema):
     avatar: str | None = None
     signature: str | None = None
     is_friend: bool = False
+    has_pending_request: bool = False
 
 
 class FriendSchema(ApiSchema):
@@ -127,3 +127,7 @@ class FriendSchema(ApiSchema):
 class MyRequestCountSchema(ApiSchema):
     """待处理好友申请数量"""
     pending_count: int
+
+
+class FriendSearchQuery(ApiSchema):
+    keyword: str = Field(min_length=1)

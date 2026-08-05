@@ -25,8 +25,7 @@ class {{ main.entity_name }}UpdateRequest({{ main.entity_name }}CreateRequest):
     {{ main.pk_name }}: str = Field(min_length=1, max_length=64)
 
 
-class {{ main.entity_name }}AdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class {{ main.entity_name }}AdminPageQuery(PageQuery):
 {% for field in main.query_fields %}
     {{ field.name }}: {{ field.query_schema_type }} = None
 {% else %}
@@ -66,12 +65,10 @@ class {{ sub.entity_name }}UpdateRequest({{ sub.entity_name }}CreateRequest):
     {{ sub.pk_name }}: str = Field(min_length=1, max_length=64)
 
 
-class {{ sub.entity_name }}AdminPageQuery(ApiSchema):
-    pagination: PageQuery
-{% for field in sub.query_fields %}
+class {{ sub.entity_name }}AdminPageQuery(PageQuery):
+    {{ plan.sub_foreign_key }}: str | None = Field(default=None, max_length=64)
+{% for field in sub.query_fields if field.name != plan.sub_foreign_key %}
     {{ field.name }}: {{ field.query_schema_type }} = None
-{% else %}
-    keyword: str | None = None
 {% endfor %}
 
 

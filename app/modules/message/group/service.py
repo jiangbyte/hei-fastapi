@@ -38,6 +38,7 @@ from app.modules.message.group.schema import (
     GroupMemberListRequest,
     GroupMemberRemoveRequest,
     GroupMemberSchema,
+    GroupSearchQuery,
     GroupUpdateRequest,
     GroupDetailRequest,
     SetMemberRoleRequest,
@@ -124,8 +125,9 @@ class MsgGroupService:
             )
         return to_schema(MsgGroupSchema, group)
 
-    async def dissolve(self, group_id: str, session: SessionPayload) -> None:
+    async def dissolve(self, payload: GroupDetailRequest, session: SessionPayload) -> None:
         """Dissolve a group. Only the owner can dissolve."""
+        group_id = payload.id
         async with transactional(self.db):
             if not await self.repo.is_owner(
                 group_id, str(session.account_type), session.account_id
@@ -138,8 +140,9 @@ class MsgGroupService:
             # Mark conversation as disabled
             await self._disable_group_conversation(group_id)
 
-    async def leave(self, group_id: str, session: SessionPayload) -> None:
+    async def leave(self, payload: GroupDetailRequest, session: SessionPayload) -> None:
         """Leave a group. The owner cannot leave."""
+        group_id = payload.id
         account_type = str(session.account_type)
         account_id = session.account_id
 
@@ -165,18 +168,32 @@ class MsgGroupService:
         return schemas
 
     async def search_groups(
-        self, keyword: str, session: SessionPayload
+        self, query: GroupSearchQuery, session: SessionPayload
     ) -> list[MsgGroupSchema]:
-        """Search groups by name, excluding groups the user is already a member of."""
+        """Search groups by name; mark membership / pending apply for UI states."""
+        keyword = query.keyword
         account_type = str(session.account_type)
         account_id = session.account_id
         my_groups = await self.repo.list_my_groups(account_type, account_id)
-        exclude_ids = [g.id for g in my_groups]
-        groups = await self.repo.search_groups(keyword, exclude_ids)
-        return to_schema_list(MsgGroupSchema, groups)
+        member_ids = {g.id for g in my_groups}
+        my_reqs = await self.repo.list_my_join_requests(account_type, account_id)
+        pending_ids = {
+            r.group_id
+            for r in my_reqs
+            if r.status == GroupJoinRequestStatus.PENDING.value
+        }
+        groups = await self.repo.search_groups(keyword, exclude_group_ids=[])
+        result: list[MsgGroupSchema] = []
+        for g in groups:
+            schema = to_schema(MsgGroupSchema, g)
+            schema.is_member = g.id in member_ids
+            schema.has_pending_request = g.id in pending_ids
+            result.append(schema)
+        return result
 
-    async def group_detail(self, group_id: str, session: SessionPayload) -> MsgGroupSchema:
+    async def group_detail(self, query: IdQuery, session: SessionPayload) -> MsgGroupSchema:
         """Get group detail. Verifies the user is a member."""
+        group_id = query.id
         account_type = str(session.account_type)
         account_id = session.account_id
 
@@ -189,9 +206,10 @@ class MsgGroupService:
     # ==================== Group Members ====================
 
     async def list_members(
-        self, group_id: str, session: SessionPayload
+        self, query: IdQuery, session: SessionPayload
     ) -> list[GroupMemberSchema]:
         """List group members with profile info (name/avatar). Batch load profiles."""
+        group_id = query.id
         members = await self.repo.list_members(group_id)
         if not members:
             return []
@@ -299,7 +317,7 @@ class MsgGroupService:
     async def apply_join(
         self, payload: GroupJoinRequestCreate, session: SessionPayload
     ) -> None:
-        """Apply to join a group. Checks: not already a member, no duplicate pending."""
+        """Apply to join a group（已是成员 / 已有待处理申请时幂等成功）。"""
         group = await self.repo.get_required(payload.group_id)
         if group.status == GroupStatus.DISSOLVED.value:
             raise BusinessError("Group has been dissolved")
@@ -307,35 +325,53 @@ class MsgGroupService:
         account_type = str(session.account_type)
         account_id = session.account_id
 
-        # Check not already a member
         existing_member = await self.repo.get_member(
             payload.group_id, account_type, account_id
         )
         if existing_member is not None:
-            raise BusinessError("You are already a member of this group")
+            return
 
-        # Check no duplicate pending
-        existing_request = await self.repo.get_pending_join_request(
+        existing_pending = await self.repo.get_pending_join_request(
             payload.group_id, account_type, account_id
         )
-        if existing_request is not None:
-            raise BusinessError("You already have a pending join request for this group")
+        if existing_pending is not None:
+            return
+
+        created_or_reactivated = False
+        request = None
 
         async with transactional(self.db):
-            request = await self.repo.create_join_request(
-                group_id=payload.group_id,
-                applicant_type=account_type,
-                applicant_id=account_id,
-                message=payload.message,
+            existing_any = await self.repo.get_any_join_request(
+                payload.group_id, account_type, account_id
             )
+            if existing_any is not None:
+                if existing_any.status == GroupJoinRequestStatus.ACCEPTED.value:
+                    return
+                # REJECTED → 允许重新申请
+                existing_any.status = GroupJoinRequestStatus.PENDING.value
+                existing_any.message = payload.message
+                existing_any.handled_by_type = None
+                existing_any.handled_by_id = None
+                existing_any.handled_at = None
+                await self.db.flush()
+                request = existing_any
+                created_or_reactivated = True
+            else:
+                request = await self.repo.create_join_request(
+                    group_id=payload.group_id,
+                    applicant_type=account_type,
+                    applicant_id=account_id,
+                    message=payload.message,
+                )
+                created_or_reactivated = True
 
-        # Push WS notification to group owners/admins
-        try:
-            await self._push_join_request_created(
-                request, payload, account_type, account_id, group.name,
-            )
-        except Exception:
-            pass
+        if created_or_reactivated and request is not None:
+            try:
+                await self._push_join_request_created(
+                    request, payload, account_type, account_id, group.name,
+                )
+            except Exception:
+                pass
 
     async def handle_join_request(
         self, payload: GroupJoinRequestHandle, session: SessionPayload

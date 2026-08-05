@@ -1,0 +1,20 @@
+.avatar-trigger {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  line-height: 0;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.avatar-trigger:hover,
+.avatar-trigger:focus-visible {
+  box-shadow:
+    0 0 0 3px var(--ant-color-bg-container),
+    0 0 0 5px var(--ant-color-primary-border-hover);
+  transform: translateY(-1px);
+  outline: none;
+}

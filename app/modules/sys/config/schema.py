@@ -20,8 +20,7 @@ class ConfigUpdateRequest(ConfigCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class ConfigAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class ConfigAdminPageQuery(PageQuery):
     config_key: str | None = Field(default=None, max_length=255)
     category: str | None = Field(default=None, max_length=255)
 
@@ -48,3 +47,7 @@ class ConfigBatchItem(ApiSchema):
 
 class ConfigBatchSaveRequest(ApiSchema):
     items: list[ConfigBatchItem]
+
+
+class CategoryQuery(ApiSchema):
+    category: str | None = Field(default=None, max_length=255)

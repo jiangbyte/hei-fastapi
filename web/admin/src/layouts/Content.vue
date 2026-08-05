@@ -10,7 +10,11 @@ const routeStore = useRouteStore()
     <router-view v-slot="{ Component, route }">
       <transition name="fade-slide" mode="out-in">
         <keep-alive :include="routeStore.cacheRoutes">
-          <component :is="Component" v-if="appStore.loadFlag" :key="route.fullPath" />
+          <component
+            :is="Component"
+            v-if="appStore.loadFlag"
+            :key="`${route.path}::${String(route.query.id ?? route.params.id ?? '')}`"
+          />
         </keep-alive>
       </transition>
     </router-view>

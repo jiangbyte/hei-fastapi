@@ -46,7 +46,7 @@ def test_resolve_storage_config_uses_snapshot_config_id_and_provider(monkeypatch
 
     storage = storage_manager.get_storage("local-archive", allow_settings_fallback=False)
     assert storage.root == (tmp_path / "archive").resolve()
-    assert storage.get_object_url("a/b.txt") == "/files/local-archive/a/b.txt"
+    assert storage.get_object_url("a/b.txt") == "/files/local-archive?object_name=a/b.txt"
 
 
 def test_storage_cache_is_versioned_by_config_snapshot(monkeypatch, tmp_path):

@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions.business import AuthenticationError
 from app.core.security.session import session_store as redis_session_store
-from app.platform.cache.redis import get_redis
 from app.platform.db.session import get_session_factory
 from app.modules.message.terminal.repository import MsgTerminalRepository
 from app.modules.message.websocket.manager import ConnectionManager
@@ -21,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Singleton manager instance per process
-manager = ConnectionManager(redis_client=get_redis())
+# Singleton manager — Redis 在进程启动后由 ConnectionManager 懒加载绑定
+manager = ConnectionManager(redis_client=None)
 
 HEARTBEAT_INTERVAL = 30  # server sends pong every 30s
 HEARTBEAT_TIMEOUT = 90   # disconnect if no message for 90s
@@ -100,6 +99,7 @@ async def _process_message(msg: dict, account_type: str, account_id: str, termin
     msg_type = msg.get("type", "")
 
     if msg_type == "ping":
+        await manager.touch_online(account_type, account_id)
         await manager.send_to_user(account_type, account_id, {"type": "pong"})
 
     elif msg_type == "read_conversation":
@@ -154,44 +154,52 @@ async def _broadcast_typing(conversation_id: str, account_type: str, account_id:
 async def _send_offline_messages(account_type: str, account_id: str) -> None:
     """Pull and deliver pending offline messages for this user."""
     from app.platform.db.session import get_session_factory
-    async with get_session_factory()() as db:
-        from sqlalchemy import select
-        from app.modules.message.message.model import MsgMessage
-        from app.modules.message.offline.model import MsgOfflineQueue
+    try:
+        async with get_session_factory()() as db:
+            from sqlalchemy import select
+            from app.modules.message.message.model import MsgMessage
+            from app.modules.message.offline.model import MsgOfflineQueue
 
-        stmt = select(MsgOfflineQueue).where(
-            MsgOfflineQueue.target_account_type == account_type,
-            MsgOfflineQueue.target_account_id == account_id,
-            MsgOfflineQueue.status == "PENDING",
-        ).order_by(MsgOfflineQueue.created_at.asc()).limit(100)
+            stmt = select(MsgOfflineQueue).where(
+                MsgOfflineQueue.target_account_type == account_type,
+                MsgOfflineQueue.target_account_id == account_id,
+                MsgOfflineQueue.status == "PENDING",
+            ).order_by(MsgOfflineQueue.created_at.asc()).limit(100)
 
-        items = list((await db.execute(stmt)).scalars().all())
-        if not items:
-            return
+            items = list((await db.execute(stmt)).scalars().all())
+            if not items:
+                return
 
-        messages: list[dict] = []
-        for item in items:
-            if item.event_type == "NEW_MESSAGE":
-                msg = await db.get(MsgMessage, item.message_id)
-                if msg and not msg.is_revoked:
-                    # event_payload 格式: {"type": "new_message", "data": {完整消息schema}}
-                    # 提取 data 作为消息体直接返回给前端
-                    event_data = (item.event_payload or {}).get("data") or {}
-                    event_data["__offline_message_id"] = item.id
-                    messages.append(event_data)
+            messages: list[dict] = []
+            for item in items:
+                if item.event_type == "NEW_MESSAGE":
+                    msg = await db.get(MsgMessage, item.message_id)
+                    if msg and not msg.is_revoked:
+                        # event_payload 格式: {"type": "new_message", "data": {完整消息schema}}
+                        # 提取 data 作为消息体直接返回给前端
+                        event_data = (item.event_payload or {}).get("data") or {}
+                        event_data["__offline_message_id"] = item.id
+                        messages.append(event_data)
 
-        if messages:
-            await manager.send_to_user(account_type, account_id, {
-                "type": "offline_messages",
-                "data": {"messages": messages},
-            })
+            if messages:
+                await manager.send_to_user(account_type, account_id, {
+                    "type": "offline_messages",
+                    "data": {"messages": messages},
+                })
 
-        # Mark delivered
-        now = datetime.now(timezone.utc)
-        for item in items:
-            item.status = "DELIVERED"
-            item.delivered_at = now
-        await db.commit()
+            # Mark delivered
+            now = datetime.now(timezone.utc)
+            for item in items:
+                item.status = "DELIVERED"
+                item.delivered_at = now
+            await db.commit()
+    except Exception:
+        logger.warning(
+            "pull_offline failed for %s/%s (table missing or DB error)",
+            account_type,
+            account_id,
+            exc_info=True,
+        )
 
 
 async def _set_offline(account_type: str, account_id: str, terminal_id: str) -> None:

@@ -1,75 +1,33 @@
-# Nuxt Minimal Starter
+# HEI Portal (React)
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Vite + React + TypeScript + Ant Design + UnoCSS 门户脚手架。
 
-## Setup
-
-Make sure to install dependencies:
+## 开发
 
 ```bash
-# npm
-npm install
-
-# pnpm
 pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
 pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+默认端口见 `.env` 的 `VITE_PORT`（5174）。若被占用，Vite 会自动换端口。
 
-Build the application for production:
+## 脚本
 
-```bash
-# npm
-npm run build
+- `pnpm dev` / `build` / `preview`
+- `pnpm lint` / `lint:fix`
+- `pnpm format` / `format:check`
 
-# pnpm
-pnpm build
+## 目录
 
-# yarn
-yarn build
+- `src/api` 接口（auth / message / sys）
+- `src/utils/axios` HTTP 解包与拦截器
+- `src/stores` Zustand
+- `src/router` 路由与守卫
+- `src/layouts` / `src/pages` / `src/components`
 
-# bun
-bun run build
-```
+## 已包含页面
 
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+- 首页、登录 / 注册 / 找回密码
+- 个人主页、账号中心
+- 站内消息（IM）
+- 公告列表与详情

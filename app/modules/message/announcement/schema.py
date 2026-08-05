@@ -40,8 +40,7 @@ class MsgAnnouncementUpdateRequest(MsgAnnouncementCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgAnnouncementAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgAnnouncementAdminPageQuery(PageQuery):
     title: str | None = None
     status: str | None = None
 
@@ -50,9 +49,8 @@ class AnnouncementReadRequest(ApiSchema):
     ids: list[Id] = Field(min_length=1)
 
 
-class MyAnnouncementPageQuery(ApiSchema):
-    pagination: PageQuery
-
+class MyAnnouncementPageQuery(PageQuery):
+    pass
 
 class PinAnnouncementRequest(ApiSchema):
     id: Id

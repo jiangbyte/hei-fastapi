@@ -109,7 +109,7 @@ const avatarUrl = computed(() => resolveFileUrl(props.request?.applicant_avatar)
                     ? '已通过'
                     : request?.status === 'REJECTED'
                       ? '已拒绝'
-                      : '待处理'
+                      : '等待对方处理'
                 }}
               </NTag>
             </NFlex>

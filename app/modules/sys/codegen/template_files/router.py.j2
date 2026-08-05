@@ -6,13 +6,19 @@ Generated at: {{ ctx.generated_at }}
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import (
+    IdQuery,
+    IdsRequest,
+{% if has_tree %}
+    KeywordQuery,
+{% endif %}
+)
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from {{ ctx.module_import }}.schema import (
@@ -97,10 +103,10 @@ async def delete(
     response_model=ApiResponse[{{ main.entity_name }}Schema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[{{ main.entity_name }}Schema]:
-    return success(await {{ main.entity_name }}Service(db).detail(IdQuery(id=id)))
+    return success(await {{ main.entity_name }}Service(db).detail(query))
 
 
 @router.get(
@@ -112,23 +118,9 @@ async def detail(
     response_model=ApiResponse[PageData[{{ main.entity_name }}Schema]],
 )
 async def page(
+    query: Annotated[{{ main.entity_name }}AdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-{% for field in main.query_fields %}
-    {{ field.name }}: str | None = Query(default=None),
-{% else %}
-    keyword: str | None = Query(default=None),
-{% endfor %}
 ) -> ApiResponse[PageData[{{ main.entity_name }}Schema]]:
-    query = {{ main.entity_name }}AdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-{% for field in main.query_fields %}
-        {{ field.name }}={{ field.name }},
-{% else %}
-        keyword=keyword,
-{% endfor %}
-    )
     return success(await {{ main.entity_name }}Service(db).page_admin(query))
 {% if has_tree %}
 
@@ -142,10 +134,10 @@ async def page(
     response_model=ApiResponse[list[{{ main.entity_name }}TreeNode]],
 )
 async def tree(
+    query: Annotated[KeywordQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    keyword: str | None = Query(default=None),
 ) -> ApiResponse[list[{{ main.entity_name }}TreeNode]]:
-    return success(await {{ main.entity_name }}Service(db).tree(keyword=keyword))
+    return success(await {{ main.entity_name }}Service(db).tree(query))
 {% endif %}
 {% if has_sub and sub %}
 
@@ -207,10 +199,10 @@ async def delete_child(
     response_model=ApiResponse[{{ sub.entity_name }}Schema],
 )
 async def child_detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[{{ sub.entity_name }}Schema]:
-    return success(await {{ sub.entity_name }}Service(db).detail(IdQuery(id=id)))
+    return success(await {{ sub.entity_name }}Service(db).detail(query))
 
 
 @router.get(
@@ -222,23 +214,8 @@ async def child_detail(
     response_model=ApiResponse[PageData[{{ sub.entity_name }}Schema]],
 )
 async def child_page(
+    query: Annotated[{{ sub.entity_name }}AdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    master_id: str | None = Query(default=None),
-{% for field in sub.query_fields %}
-    {{ field.name }}: str | None = Query(default=None),
-{% else %}
-    keyword: str | None = Query(default=None),
-{% endfor %}
 ) -> ApiResponse[PageData[{{ sub.entity_name }}Schema]]:
-    query = {{ sub.entity_name }}AdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-{% for field in sub.query_fields %}
-        {{ field.name }}={{ field.name }},
-{% else %}
-        keyword=keyword,
-{% endfor %}
-    )
-    return success(await {{ sub.entity_name }}Service(db).page_admin(query, master_id))
+    return success(await {{ sub.entity_name }}Service(db).page_admin(query))
 {% endif %}

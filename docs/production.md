@@ -2,7 +2,9 @@
 
 ## 部署形态
 
-单机单 Docker：一个项目容器内运行 API、worker、beat，PostgreSQL、Redis、RabbitMQ 由外部基础设施提供。
+前端：Vue 3 管理端、React 门户端（Vite）；Celery broker / RedBeat 仅使用 Redis。
+
+单机单 Docker：一个项目容器内运行 API、worker、beat，PostgreSQL、Redis 由外部基础设施提供。
 
 ```bash
 docker compose run --rm hei migrate
@@ -24,7 +26,7 @@ docker compose -f docker-compose.multi.yml up -d --build --scale api=2 --scale w
 docker compose -f docker-compose.multi.yml --profile seed run --rm seed
 ```
 
-多机多节点：面向 Docker Swarm 或等价编排环境，应用节点接入外部 PostgreSQL、Redis、RabbitMQ，API/worker 按副本数横向扩展，beat 固定单副本。
+多机多节点：面向 Docker Swarm 或等价编排环境，应用节点接入外部 PostgreSQL、Redis，API/worker 按副本数横向扩展，beat 固定单副本。
 
 ```bash
 docker build -t hei-fastapi-backend:latest .
@@ -40,7 +42,7 @@ docker compose -f docker-compose.distributed.yml config | docker stack deploy -c
 export APP__CONFIG_CRYPTO_KEY="..."
 export DB__URL="postgresql+asyncpg://user:password@postgres.example:5432/hei_fastapi"
 export REDIS__URL="redis://redis.example:6379/0"
-export CELERY__BROKER_URL="amqp://user:password@rabbitmq.example:5672//"
+export CELERY__BROKER_URL="redis://redis.example:6379/1"
 ```
 
 API 和 worker 可以横向扩容；beat 只运行一个实例。Celery 定时任务使用 RedBeat，仍建议在编排层保证 beat 单副本，避免 Redis 锁异常时重复调度。

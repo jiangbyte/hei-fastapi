@@ -1,13 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StorageProvider
 from app.core.config.settings import settings
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.deps.auth import require_account_type
 from app.deps.db import get_db_session
 from app.modules.sys.file.schema import (
@@ -54,9 +54,9 @@ async def upload(
 )
 async def detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
+    query: Annotated[IdQuery, Depends()],
 ) -> ApiResponse[SysFileSchema]:
-    return success(await FileService(db).detail(IdQuery(id=id)))
+    return success(await FileService(db).detail(query))
 
 
 @router.post(
@@ -78,9 +78,9 @@ async def list_by_ids(
 )
 async def download(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
+    query: Annotated[IdQuery, Depends()],
 ) -> Response:
-    return await FileService(db).download_by_id(IdQuery(id=id))
+    return await FileService(db).download_by_id(query)
 
 
 @router.post(
@@ -95,7 +95,7 @@ async def url(
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
-            url=await FileService(db).get_url(payload.object_name),
+            url=await FileService(db).get_url(payload),
         )
     )
 
@@ -112,6 +112,6 @@ async def presigned_url(
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
-            url=await FileService(db).get_presigned_url(payload.object_name),
+            url=await FileService(db).get_presigned_url(payload),
         )
     )

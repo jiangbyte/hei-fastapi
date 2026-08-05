@@ -31,6 +31,7 @@ export interface MessageActions {
   continueChatFromContact: () => void
   handleRemoveFriend: () => void
   handleLeaveGroup: () => void
+  handleDissolveGroup: () => void
 }
 
 export interface MessageUIState {
@@ -43,6 +44,8 @@ export interface MessageUIState {
   searchScope: Ref<string>
   contactTab: Ref<string>
   noticeTab: Ref<string>
+  selectedNoticeId: Ref<string | null>
+  selectedPendingRequestId: Ref<string | null>
 }
 
 export const MESSAGE_ACTIONS_KEY: InjectionKey<MessageActions> = Symbol('message-actions')

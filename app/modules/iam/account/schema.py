@@ -83,8 +83,7 @@ class AccountCancelPayload(ApiSchema):
     cancel_reason: str | None = None
 
 
-class AccountAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class AccountAdminPageQuery(PageQuery):
     account: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
     phone: str | None = Field(default=None, max_length=32)

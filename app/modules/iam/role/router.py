@@ -85,11 +85,11 @@ async def delete(
     response_model=ApiResponse[SysRoleSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysRoleSchema]:
-    return success(await RoleService(db).detail(IdQuery(id=id), session))
+    return success(await RoleService(db).detail(query, session))
 
 
 @router.get(
@@ -101,24 +101,10 @@ async def detail(
     response_model=ApiResponse[PageData[SysRoleSchema]],
 )
 async def page(
+    query: Annotated[RoleAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
-    code: str | None = Query(default=None, max_length=64),
-    name: str | None = Query(default=None, max_length=64),
-    category: str | None = Query(default=None, max_length=64),
-    scope_type: str | None = Query(default=None, max_length=32),
-    status: str | None = Query(default=None, max_length=32),
 ) -> ApiResponse[PageData[SysRoleSchema]]:
-    query = RoleAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        code=code,
-        name=name,
-        category=category,
-        scope_type=scope_type,
-        status=status,
-    )
     return success(await RoleService(db).page_admin(query, session))
 
 
@@ -132,11 +118,11 @@ async def page(
     summary="获取角色拥有资源",
 )
 async def own_resource(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[RoleOwnResourceResponse]:
-    return success(await RoleService(db).own_resource(IdQuery(id=id), session))
+    return success(await RoleService(db).own_resource(query, session))
 
 
 @router.post(
@@ -167,11 +153,11 @@ async def grant_resource(
     summary="获取角色拥有用户",
 )
 async def own_user(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[RoleOwnUserResponse]:
-    return success(await RoleService(db).own_user(IdQuery(id=id), session))
+    return success(await RoleService(db).own_user(query, session))
 
 
 @router.post(

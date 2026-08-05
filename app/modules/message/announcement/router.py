@@ -6,15 +6,15 @@ Generated at: 2026-07-23 16:28:51
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_account_type, require_permission
+from app.deps.auth import get_current_session, get_optional_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.message.announcement.schema import (
     AnnouncementReadRequest,
@@ -31,6 +31,18 @@ from app.modules.message.announcement.service import (
 
 admin_router = APIRouter()
 portal_router = APIRouter()
+
+
+@portal_router.get(
+    "/message/announcements/list",
+    response_model=ApiResponse[PageData[MsgAnnouncementSchema]],
+)
+async def portal_announcement_list(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    query: Annotated[MyAnnouncementPageQuery, Depends()],
+    session: Annotated[SessionPayload | None, Depends(get_optional_session)] = None,
+) -> ApiResponse[PageData[MsgAnnouncementSchema]]:
+    return success(await MsgAnnouncementService(db).page_portal_list(query, session))
 
 
 # ==================== Admin CRUD ====================
@@ -92,10 +104,10 @@ async def delete(
     response_model=ApiResponse[MsgAnnouncementSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[MsgAnnouncementSchema]:
-    return success(await MsgAnnouncementService(db).detail(IdQuery(id=id)))
+    return success(await MsgAnnouncementService(db).detail(query))
 
 
 @admin_router.get(
@@ -107,17 +119,9 @@ async def detail(
     response_model=ApiResponse[PageData[MsgAnnouncementSchema]],
 )
 async def page(
+    query: Annotated[MsgAnnouncementAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    title: str | None = Query(default=None),
-    status: str | None = Query(default=None),
 ) -> ApiResponse[PageData[MsgAnnouncementSchema]]:
-    query = MsgAnnouncementAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        title=title,
-        status=status,
-    )
     return success(await MsgAnnouncementService(db).page_admin(query))
 
 
@@ -190,12 +194,8 @@ def register_current_user_routes():
     async def my_page(
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        current: Current = 1,
-        size: Size = 20,
+        query: Annotated[MyAnnouncementPageQuery, Depends()],
     ) -> ApiResponse[PageData[MsgAnnouncementSchema]]:
-        query = MyAnnouncementPageQuery(
-            pagination=PageQuery(current=current, size=size),
-        )
         return success(await MsgAnnouncementService(db).page_my_announcements(query, session))
 
     @admin_router.get(
@@ -209,11 +209,11 @@ def register_current_user_routes():
         response_model=ApiResponse[MsgAnnouncementSchema],
     )
     async def my_detail(
+        query: Annotated[IdQuery, Depends()],
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        id: Annotated[Id, Query()],
     ) -> ApiResponse[MsgAnnouncementSchema]:
-        return success(await MsgAnnouncementService(db).my_detail(IdQuery(id=id), session))
+        return success(await MsgAnnouncementService(db).my_detail(query, session))
 
     @admin_router.get(
         "/message/announcements/unread-count",

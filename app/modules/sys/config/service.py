@@ -4,6 +4,7 @@ from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.modules.sys.config.repository import ConfigRepository
 from app.modules.sys.config.schema import (
+    CategoryQuery,
     ConfigAdminPageQuery,
     ConfigBatchSaveRequest,
     ConfigCreateRequest,
@@ -44,8 +45,8 @@ class ConfigService:
         schema.config_value = decrypt_config_value(schema.config_key, schema.config_value) or ""
         return schema
 
-    async def list_by_category(self, category: str | None = None) -> list[SysConfigSchema]:
-        items = await self.repo.list_by_category(category)
+    async def list_by_category(self, query: CategoryQuery) -> list[SysConfigSchema]:
+        items = await self.repo.list_by_category(query.category)
         schemas = to_schema_list(SysConfigSchema, items)
         for s in schemas:
             s.config_value = decrypt_config_value(s.config_key, s.config_value) or ""

@@ -17,10 +17,15 @@ const addMode = ref<AddMode>(props.initialMode)
 const addSearchText = ref('')
 const addSearchResults = ref<any[]>([])
 const addSearchLoading = ref(false)
+const applyingKeys = ref<Set<string>>(new Set())
 
 const addSearchPlaceholder = computed(() =>
   addMode.value === 'friend' ? '搜索用户' : '搜索群组名称',
 )
+
+function userKey(user: any) {
+  return `${user.account_type}-${user.account_id}`
+}
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(
@@ -54,7 +59,23 @@ watch([addSearchText, addMode], () => {
   }, 300)
 })
 
+function patchUser(key: string, patch: Record<string, any>) {
+  addSearchResults.value = addSearchResults.value.map((u) =>
+    userKey(u) === key ? { ...u, ...patch } : u,
+  )
+}
+
+function patchGroup(id: string, patch: Record<string, any>) {
+  addSearchResults.value = addSearchResults.value.map((g) =>
+    g.id === id ? { ...g, ...patch } : g,
+  )
+}
+
 async function applyForUser(user: any) {
+  if (user.is_friend || user.has_pending_request) return
+  const key = userKey(user)
+  patchUser(key, { has_pending_request: true })
+  applyingKeys.value = new Set(applyingKeys.value).add(key)
   try {
     await messageApi.applyFriend({
       applicant_type: data.profile.account_type,
@@ -64,15 +85,23 @@ async function applyForUser(user: any) {
     })
     window.$message?.success?.('好友申请已发送')
   } catch {
+    patchUser(key, { has_pending_request: false })
     window.$message?.error?.('好友申请发送失败')
+  } finally {
+    const next = new Set(applyingKeys.value)
+    next.delete(key)
+    applyingKeys.value = next
   }
 }
 
 async function applyJoinGroup(group: any) {
+  if (group.is_member || group.has_pending_request) return
+  patchGroup(group.id, { has_pending_request: true })
   try {
     await messageApi.applyJoinGroup({ group_id: group.id })
     window.$message?.success?.('入群申请已发送')
   } catch {
+    patchGroup(group.id, { has_pending_request: false })
     window.$message?.error?.('入群申请发送失败')
   }
 }
@@ -81,6 +110,7 @@ function closeModal() {
   show.value = false
   addSearchText.value = ''
   addSearchResults.value = []
+  applyingKeys.value = new Set()
 }
 </script>
 
@@ -139,9 +169,18 @@ function closeModal() {
                   </div>
                 </div>
                 <NTag v-if="user.is_friend" :bordered="false" size="small" type="success">
-                  已添加
+                  已是好友
                 </NTag>
-                <NButton v-else size="small" tertiary @click="applyForUser(user)">
+                <NTag v-else-if="user.has_pending_request" :bordered="false" size="small">
+                  已申请
+                </NTag>
+                <NButton
+                  v-else
+                  size="small"
+                  tertiary
+                  :loading="applyingKeys.has(userKey(user))"
+                  @click="applyForUser(user)"
+                >
                   申请好友
                 </NButton>
               </div>
@@ -182,7 +221,15 @@ function closeModal() {
                     {{ group.member_count || 0 }} 人 · {{ group.description || '-' }}
                   </div>
                 </div>
-                <NButton size="small" tertiary @click="applyJoinGroup(group)"> 加入群聊 </NButton>
+                <NTag v-if="group.is_member" :bordered="false" size="small" type="success">
+                  已加入
+                </NTag>
+                <NTag v-else-if="group.has_pending_request" :bordered="false" size="small">
+                  已申请
+                </NTag>
+                <NButton v-else size="small" tertiary @click="applyJoinGroup(group)">
+                  加入群聊
+                </NButton>
               </div>
             </NListItem>
           </NList>

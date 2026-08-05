@@ -12,7 +12,7 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 |---|---|
 | `sys_account` | 统一账号表，存储密码哈希、状态、登录追踪等通用属性 |
 | `sys_account_identity` | 登录身份表，一个账号可绑定多个身份（用户名、邮箱、手机号） |
-| 账号类型 | `ADMIN`（管理端）和 `PORTAL`（门户端），独立登录入口 |
+| 账号类型 | `ADMIN`（管理端）和 `PORTAL`（门户 API / React 门户客户端），独立登录入口 |
 | 密码策略 | 复杂度要求（大小写/数字/特殊字符）、过期天数、历史检查（最近 5 次）、常见密码黑名单 |
 
 账号状态：正常、锁定、禁用、已注销。注销的账号有定时清理任务。
@@ -115,9 +115,10 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 
 | 维度 | 管理端 (ADMIN) | 门户端 (PORTAL) |
 |---|---|---|
+| 典型客户端 | Vue 3 管理端 | React 门户 / 其他门户 API 客户端 |
 | 登录入口 | `/api/v1/admin/auth/*` | `/api/v1/portal/auth/*` |
 | 用户资料表 | `admin_user_profile` | `portal_user_profile` |
 | 注册方式 | 默认不开放 | 可配置开放注册 |
 | 功能范围 | 系统管理、IAM、业务管理 | 个人门户、消息、空间 |
 
-两个端共享统一的账号表（`sys_account`），但通过 `account_type` 字段隔离，各自拥有独立的登录身份和会话上下文。
+两个端共享统一的账号表（`sys_account`），但通过 `account_type` 字段隔离，各自拥有独立的登录身份和会话上下文。`PORTAL` 面向门户 API 客户端（含 React 门户），与管理端路由和会话上下文分离。

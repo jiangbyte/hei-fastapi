@@ -30,6 +30,7 @@ from app.modules.message.friend.schema import (
     ApplyFriendRequest,
     FriendRequestSchema,
     FriendSchema,
+    FriendSearchQuery,
     HandleFriendRequest,
     MyRequestCountSchema,
     MsgFriendAdminPageQuery,
@@ -152,7 +153,7 @@ class MsgFriendService:
     # ── Apply friend request ────────────────────────────────────────────────
 
     async def apply(self, payload: ApplyFriendRequest, session: SessionPayload) -> None:
-        """发送好友申请"""
+        """发送好友申请（已好友 / 已有待处理申请时幂等成功）"""
         # 不能加自己
         if (
             payload.applicant_type == payload.recipient_type
@@ -167,6 +168,9 @@ class MsgFriendService:
         ):
             raise BusinessError("Applicant must be the current user")
 
+        created_or_reactivated = False
+        request_id: str | None = None
+
         async with transactional(self.db):
             # 检查是否已经是好友
             existing = await self.repo.find_friendship(
@@ -176,7 +180,7 @@ class MsgFriendService:
                 payload.recipient_id,
             )
             if existing is not None:
-                raise BusinessError("Already friends")
+                return
 
             # 检查是否有已存在的好友申请（任意状态）
             existing_req = await self.repo.find_any_request(
@@ -187,25 +191,37 @@ class MsgFriendService:
             )
             if existing_req is not None:
                 if existing_req.status == "PENDING":
-                    raise BusinessError("A pending friend request already exists")
-                if existing_req.status == "ACCEPTED":
-                    raise BusinessError("Already friends")
-                # REJECTED → 允许重新申请，更新已有记录为 PENDING
+                    return
+                # ACCEPTED 但上面已确认非好友（已删好友）→ 允许重新申请
+                # REJECTED → 允许重新申请
                 existing_req.status = "PENDING"
                 existing_req.message = payload.message
                 existing_req.handled_at = None
                 existing_req.updated_at = datetime.now(timezone.utc)
-                return
+                created_or_reactivated = True
+                request_id = existing_req.id
+            else:
+                entity = await self.repo.create_friend_request(
+                    {
+                        "applicant_type": payload.applicant_type,
+                        "applicant_id": payload.applicant_id,
+                        "recipient_type": payload.recipient_type,
+                        "recipient_id": payload.recipient_id,
+                        "message": payload.message,
+                        "status": "PENDING",
+                    }
+                )
+                created_or_reactivated = True
+                request_id = entity.id
 
-            await self.repo.create_friend_request(
-                {
-                    "applicant_type": payload.applicant_type,
-                    "applicant_id": payload.applicant_id,
-                    "recipient_type": payload.recipient_type,
-                    "recipient_id": payload.recipient_id,
-                    "message": payload.message,
-                    "status": "PENDING",
-                }
+        if created_or_reactivated and request_id:
+            await self._push_friend_request_created(
+                request_id=request_id,
+                applicant_type=payload.applicant_type,
+                applicant_id=payload.applicant_id,
+                recipient_type=payload.recipient_type,
+                recipient_id=payload.recipient_id,
+                message=payload.message,
             )
 
     # ── Handle friend request ───────────────────────────────────────────────
@@ -213,40 +229,48 @@ class MsgFriendService:
     async def handle_request(
         self, payload: HandleFriendRequest, session: SessionPayload
     ) -> None:
-        """处理好友申请：接受或拒绝"""
+        """处理好友申请：接受或拒绝。
+
+        私聊会话必须在好友事务提交后再创建：create_direct 内部也有
+        transactional，若嵌套在同一事务中失败会 rollback 整单，
+        导致接口成功但申请仍停留在 PENDING。
+        """
+        peer_type: str | None = None
+        peer_id: str | None = None
+
         async with transactional(self.db):
             req = await self.repo.get_friend_request_required(payload.request_id)
 
             if req.status != "PENDING":
                 raise BusinessError("This request has already been handled")
 
-            # 只有接收人才能处理
+            # 只有接收人才能处理（统一转 str，避免枚举/字符串比较偏差）
             if (
-                req.recipient_type != session.account_type
-                or req.recipient_id != session.account_id
+                str(req.recipient_type) != str(session.account_type)
+                or str(req.recipient_id) != str(session.account_id)
             ):
                 raise BusinessError("Only the recipient can handle this request")
 
             if payload.action == "ACCEPT":
                 _accept_friend_request(self.repo, req, payload.request_id)
-                # Auto-create direct conversation for accepted friend request
-                try:
-                    conv_service = MsgConversationService(self.db)
-                    await conv_service.create_direct(
-                        CreateDirectConversationRequest(
-                            account_type=req.applicant_type,
-                            account_id=req.applicant_id,
-                        ),
-                        session,
-                    )
-                except Exception:
-                    pass
+                peer_type = req.applicant_type
+                peer_id = req.applicant_id
             elif payload.action == "REJECT":
                 req.status = "REJECTED"
                 req.handled_at = datetime.now(timezone.utc)
 
-        async with transactional(self.db):
-            pass  # already flushed in inner block
+        if payload.action == "ACCEPT" and peer_type and peer_id:
+            try:
+                await MsgConversationService(self.db).create_direct(
+                    CreateDirectConversationRequest(
+                        account_type=peer_type,
+                        account_id=peer_id,
+                    ),
+                    session,
+                )
+            except Exception:
+                # 好友关系已落库；会话可稍后由用户手动打开时再创建
+                pass
 
     # ── Remove friend ───────────────────────────────────────────────────────
 
@@ -315,23 +339,31 @@ class MsgFriendService:
     # ── Search users ────────────────────────────────────────────────────────
 
     async def search(
-        self, keyword: str, session: SessionPayload
+        self, query: FriendSearchQuery, session: SessionPayload
     ) -> list[SearchUserSchema]:
         """搜索用户（非自己、非好友），通过 profile 的 name/nickname 和登录用户名匹配"""
         from app.modules.iam.account.model import SysAccount, SysAccountIdentity
         from app.modules.iam.enums import AccountIdentityType
 
+        keyword = query.keyword
         keyword_like = f"%{keyword}%"
         results: list[SearchUserSchema] = []
         seen: set[tuple[str, str]] = set()
 
-        # 获取我的好友 ID 列表
+        # 获取我的好友 / 待处理申请，用于标记状态（仍排除自己）
         my_friends = await self.repo.list_my_friends(
             session.account_type, session.account_id
         )
-        exclude_ids = {(f.friend_account_type, f.friend_account_id) for f in my_friends}
-        # 也把自己排除
-        exclude_ids.add((session.account_type, session.account_id))
+        friend_ids = {(f.friend_account_type, f.friend_account_id) for f in my_friends}
+        pending_out = await self.repo.find_friend_requests_by_applicant(
+            session.account_type, session.account_id
+        )
+        pending_ids = {
+            (r.recipient_type, r.recipient_id)
+            for r in pending_out
+            if r.status == "PENDING"
+        }
+        self_key = (session.account_type, session.account_id)
 
         for account_type in (AccountType.ADMIN.value, AccountType.PORTAL.value):
             profile_model = _pick_profile_model(account_type)
@@ -349,7 +381,7 @@ class MsgFriendService:
             )
             for p in (await self.db.execute(stmt)).scalars().all():
                 key = (account_type, p.account_id)
-                if key in exclude_ids or key in seen:
+                if key == self_key or key in seen:
                     continue
                 seen.add(key)
                 results.append(
@@ -360,7 +392,8 @@ class MsgFriendService:
                         nickname=getattr(p, "nickname", None),
                         avatar=resolve_file_url(getattr(p, "avatar", None)),
                         signature=getattr(p, "signature", None),
-                        is_friend=False,
+                        is_friend=key in friend_ids,
+                        has_pending_request=key in pending_ids,
                     )
                 )
 
@@ -378,7 +411,7 @@ class MsgFriendService:
             for row in (await self.db.execute(id_stmt)).all():
                 acct_id, username = row
                 key = (account_type, acct_id)
-                if key in exclude_ids or key in seen:
+                if key == self_key or key in seen:
                     continue
                 seen.add(key)
                 profile = await self.db.get(profile_model, acct_id)
@@ -391,7 +424,8 @@ class MsgFriendService:
                         nickname=getattr(profile, "nickname", None) if profile else None,
                         avatar=resolve_file_url(getattr(profile, "avatar", None)) if profile else None,
                         signature=getattr(profile, "signature", None) if profile else None,
-                        is_friend=False,
+                        is_friend=key in friend_ids,
+                        has_pending_request=key in pending_ids,
                     )
                 )
 
@@ -484,6 +518,43 @@ class MsgFriendService:
             session.account_type, session.account_id
         )
         return MyRequestCountSchema(pending_count=count)
+
+    async def _push_friend_request_created(
+        self,
+        *,
+        request_id: str,
+        applicant_type: str,
+        applicant_id: str,
+        recipient_type: str,
+        recipient_id: str,
+        message: str | None,
+    ) -> None:
+        """推送新好友申请给接收方（铃铛 / 申请列表实时刷新）"""
+        try:
+            from app.modules.message.websocket.handler import manager as ws_manager
+
+            profile = await _get_profile(self.db, applicant_type, applicant_id)
+            ws_payload = {
+                "type": "new_friend_request",
+                "data": {
+                    "id": request_id,
+                    "applicant_type": applicant_type,
+                    "applicant_id": applicant_id,
+                    "applicant_name": getattr(profile, "name", None) if profile else None,
+                    "applicant_avatar": resolve_file_url(
+                        getattr(profile, "avatar", None)
+                    )
+                    if profile
+                    else None,
+                    "recipient_type": recipient_type,
+                    "recipient_id": recipient_id,
+                    "message": message,
+                    "status": "PENDING",
+                },
+            }
+            await ws_manager.route_to_user(recipient_type, recipient_id, ws_payload)
+        except Exception:
+            pass
 
 
 def _accept_friend_request(

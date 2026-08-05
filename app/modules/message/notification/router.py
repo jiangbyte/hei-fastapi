@@ -6,13 +6,13 @@ Generated at: 2026-07-23 16:28:50
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
@@ -92,10 +92,10 @@ async def delete(
     response_model=ApiResponse[MsgNotificationSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[MsgNotificationSchema]:
-    return success(await MsgNotificationService(db).detail(IdQuery(id=id)))
+    return success(await MsgNotificationService(db).detail(query))
 
 
 @admin_router.get(
@@ -107,19 +107,9 @@ async def detail(
     response_model=ApiResponse[PageData[MsgNotificationSchema]],
 )
 async def page(
+    query: Annotated[MsgNotificationAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    title: str | None = Query(default=None),
-    category: str | None = Query(default=None),
-    status: str | None = Query(default=None),
 ) -> ApiResponse[PageData[MsgNotificationSchema]]:
-    query = MsgNotificationAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        title=title,
-        category=category,
-        status=status,
-    )
     return success(await MsgNotificationService(db).page_admin(query))
 
 
@@ -166,16 +156,10 @@ def register_current_user_routes(router: APIRouter) -> None:
         response_model=ApiResponse[PageData[MsgNotificationSchema]],
     )
     async def my_page(
+        query: Annotated[MyNotificationPageQuery, Depends()],
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        current: Current = 1,
-        size: Size = 20,
-        category: str | None = Query(default=None),
     ) -> ApiResponse[PageData[MsgNotificationSchema]]:
-        query = MyNotificationPageQuery(
-            pagination=PageQuery(current=current, size=size),
-            category=category,
-        )
         return success(await MsgNotificationService(db).page_my_notifications(query, session))
 
     @router.get(
@@ -183,11 +167,11 @@ def register_current_user_routes(router: APIRouter) -> None:
         response_model=ApiResponse[MsgNotificationSchema],
     )
     async def my_detail(
+        query: Annotated[IdQuery, Depends()],
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        id: Annotated[Id, Query()],
     ) -> ApiResponse[MsgNotificationSchema]:
-        return success(await MsgNotificationService(db).my_detail(id, session))
+        return success(await MsgNotificationService(db).my_detail(query, session))
 
     @router.get(
         "/message/notifications/unread-count",

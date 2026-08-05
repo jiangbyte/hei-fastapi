@@ -6,15 +6,15 @@ Generated at: 2026-07-23 16:28:52
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_account_type, require_permission
+from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.message.group.schema import (
     GroupCreateRequest,
@@ -26,12 +26,10 @@ from app.modules.message.group.schema import (
     GroupMemberListRequest,
     GroupMemberRemoveRequest,
     GroupMemberSchema,
+    GroupSearchQuery,
     GroupUpdateRequest,
     SetMemberRoleRequest,
-    MsgGroupAdminPageQuery,
-    MsgGroupCreateRequest,
     MsgGroupSchema,
-    MsgGroupUpdateRequest,
 )
 from app.modules.message.group.service import (
     MsgGroupService,
@@ -39,94 +37,6 @@ from app.modules.message.group.service import (
 
 admin_router = APIRouter()
 portal_router = APIRouter()
-
-
-# ==================== Admin CRUD ====================
-
-@admin_router.post(
-    "/message/groups/admin/create",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:group:create")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def admin_create(
-    payload: MsgGroupCreateRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgGroupService(db).create(payload)
-    return success()
-
-
-@admin_router.post(
-    "/message/groups/admin/update",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:group:update")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def admin_update(
-    payload: MsgGroupUpdateRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgGroupService(db).update(payload)
-    return success()
-
-
-@admin_router.post(
-    "/message/groups/admin/delete",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:group:delete")),
-    ],
-    response_model=ApiResponse[None],
-)
-async def admin_delete(
-    payload: IdsRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await MsgGroupService(db).delete(payload)
-    return success()
-
-
-@admin_router.get(
-    "/message/groups/admin/detail",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:group:detail")),
-    ],
-    response_model=ApiResponse[MsgGroupSchema],
-)
-async def admin_detail(
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
-) -> ApiResponse[MsgGroupSchema]:
-    return success(await MsgGroupService(db).detail(IdQuery(id=id)))
-
-
-@admin_router.get(
-    "/message/groups/admin/page",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:group:page")),
-    ],
-    response_model=ApiResponse[PageData[MsgGroupSchema]],
-)
-async def admin_page(
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    current: Current = 1,
-    size: Size = 20,
-    name: str | None = Query(default=None),
-    status: str | None = Query(default=None),
-) -> ApiResponse[PageData[MsgGroupSchema]]:
-    query = MsgGroupAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        name=name,
-        status=status,
-    )
-    return success(await MsgGroupService(db).page_admin(query))
 
 
 # ==================== Current-User Routes ====================
@@ -183,7 +93,7 @@ def register_current_user_routes():
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[None]:
-        await MsgGroupService(db).dissolve(payload.id, session)
+        await MsgGroupService(db).dissolve(payload, session)
         return success()
 
     @admin_router.post(
@@ -201,7 +111,7 @@ def register_current_user_routes():
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[None]:
-        await MsgGroupService(db).leave(payload.id, session)
+        await MsgGroupService(db).leave(payload, session)
         return success()
 
     @admin_router.get(
@@ -233,9 +143,9 @@ def register_current_user_routes():
     async def search_groups(
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        keyword: str = Query(min_length=1),
+        query: Annotated[GroupSearchQuery, Depends()],
     ) -> ApiResponse[list[MsgGroupSchema]]:
-        return success(await MsgGroupService(db).search_groups(keyword, session))
+        return success(await MsgGroupService(db).search_groups(query, session))
 
     @admin_router.get(
         "/message/groups/detail",
@@ -250,9 +160,9 @@ def register_current_user_routes():
     async def group_detail(
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        id: Annotated[Id, Query()],
+        query: Annotated[IdQuery, Depends()],
     ) -> ApiResponse[MsgGroupSchema]:
-        return success(await MsgGroupService(db).group_detail(id, session))
+        return success(await MsgGroupService(db).group_detail(query, session))
 
     # ==================== Members ====================
 
@@ -323,9 +233,9 @@ def register_current_user_routes():
     async def list_members(
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-        id: Annotated[Id, Query()],
+        query: Annotated[IdQuery, Depends()],
     ) -> ApiResponse[list[GroupMemberSchema]]:
-        return success(await MsgGroupService(db).list_members(id, session))
+        return success(await MsgGroupService(db).list_members(query, session))
 
     # ==================== Join Requests ====================
 

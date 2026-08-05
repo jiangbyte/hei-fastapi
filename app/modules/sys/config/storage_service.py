@@ -1,7 +1,7 @@
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.schema.base import IdsRequest, to_schema, to_schema_list
+from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.modules.sys.config.storage_repository import StorageConfigRepository
 from app.modules.sys.config.storage_schema import (
     StorageConfigCreateRequest,
@@ -70,10 +70,10 @@ class StorageConfigService:
             await self.repo.delete_many(payload.ids)
         await reload_and_publish("sys_storage_config.delete")
 
-    async def detail(self, config_id: str) -> SysStorageConfigSchema:
+    async def detail(self, query: IdQuery) -> SysStorageConfigSchema:
         schema = to_schema(
             SysStorageConfigSchema,
-            await self.repo.get_required(config_id),
+            await self.repo.get_required(query.id),
         )
         schema.access_key = decrypt_storage_value("access_key", schema.access_key) or ""
         schema.secret_key = decrypt_storage_value("secret_key", schema.secret_key) or ""

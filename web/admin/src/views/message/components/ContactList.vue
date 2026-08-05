@@ -40,6 +40,9 @@ const ui = inject(MESSAGE_UI_STATE_KEY)!
                     <span class="message-ellipsis flex-1 text-sm font-600">{{
                       friend.name || friend.nickname || '未知'
                     }}</span>
+                    <NTag size="tiny" :bordered="false">
+                      {{ friend.friend_account_type === 'PORTAL' ? '学生' : '管理员' }}
+                    </NTag>
                   </div>
                   <span
                     class="message-ellipsis mt-1 text-xs"

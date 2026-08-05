@@ -34,8 +34,7 @@ class ResourceUpdateRequest(ResourceCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class ResourceAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class ResourceAdminPageQuery(PageQuery):
     code: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
     resource_type: ResourceType | None = None
@@ -45,8 +44,7 @@ class ResourceAdminPageQuery(ApiSchema):
     status: str | None = Field(default=None, max_length=32)
 
 
-class ResourceButtonPageQuery(ApiSchema):
-    pagination: PageQuery
+class ResourceButtonPageQuery(PageQuery):
     parent_id: str = Field(min_length=1, max_length=64)
     code: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
@@ -139,6 +137,15 @@ class ResourceTreeNode(SysResourceSchema):
     children: list["ResourceTreeNode"] = Field(default_factory=list)
 
 
+class ResourceTreeQuery(ApiSchema):
+    module_id: str | None = Field(default=None, max_length=64)
+    module_client: ResourceModuleClient | None = None
+
+
+class ResourceModuleSelectorQuery(ApiSchema):
+    client: ResourceModuleClient | None = None
+
+
 class ResourceModuleCreateRequest(ApiSchema):
     name: str = Field(min_length=1, max_length=64)
     code: str = Field(min_length=1, max_length=64)
@@ -155,8 +162,7 @@ class ResourceModuleUpdateRequest(ResourceModuleCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class ResourceModuleAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class ResourceModuleAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     code: str | None = Field(default=None, max_length=64)
     client: ResourceModuleClient | None = None

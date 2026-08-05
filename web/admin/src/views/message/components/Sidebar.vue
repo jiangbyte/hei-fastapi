@@ -12,7 +12,12 @@ const totalUnreadCount = computed(() =>
 )
 const requestBadgeCount = computed(
   () =>
-    data.friendRequests.filter((r: any) => r.status === 'PENDING').length +
+    data.friendRequests.filter(
+      (r: any) =>
+        r.status === 'PENDING' &&
+        r.recipient_type === data.profile?.account_type &&
+        r.recipient_id === data.profile?.account_id,
+    ).length +
     data.groupJoinRequests.filter((r: any) => r.status === 'PENDING').length +
     data.pendingGroupJoinRequests.length,
 )
@@ -25,7 +30,7 @@ const avatarUrl = computed(() => resolveFileUrl(data.profile?.avatar))
 
 <template>
   <aside
-    class="hidden h-full min-h-0 flex-col items-center py-3 md:flex"
+    class="flex h-full min-h-0 flex-col items-center py-3"
     style="background-color: #2b2b2b"
   >
     <NAvatar

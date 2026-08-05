@@ -30,8 +30,7 @@ class MsgGroupUpdateRequest(MsgGroupCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgGroupAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class MsgGroupAdminPageQuery(PageQuery):
     name: str | None = None
     status: str | None = None
 
@@ -52,6 +51,8 @@ class MsgGroupSchema(ApiSchema):
     created_by: str | None = None
     updated_at: datetime
     updated_by: str | None = None
+    is_member: bool = False
+    has_pending_request: bool = False
 
 
 # ==================== Group Create (current-user) ====================
@@ -116,6 +117,10 @@ class SetMemberRoleRequest(ApiSchema):
 
 class GroupMemberListRequest(ApiSchema):
     group_id: str = Field(min_length=1, max_length=64)
+
+
+class GroupSearchQuery(ApiSchema):
+    keyword: str = Field(min_length=1)
 
 
 # ==================== Group Join Request ====================

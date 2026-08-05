@@ -20,6 +20,11 @@ class PageQuery(ApiSchema):
     def offset(self) -> int:
         return (self.current - 1) * self.size
 
+    @property
+    def pagination(self) -> "PageQuery":
+        """Alias for callers that historically used nested ``query.pagination``."""
+        return self
+
 
 class PageData(ApiSchema, Generic[T]):
     """标准分页响应体，统一返回页码、总量和当前页数据。"""

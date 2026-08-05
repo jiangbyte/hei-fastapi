@@ -42,8 +42,7 @@ class OperationAuditCreate(ApiSchema):
     error_message: str | None = None
 
 
-class OperationAuditPageQuery(ApiSchema):
-    pagination: PageQuery
+class OperationAuditPageQuery(PageQuery):
     module: str | None = Field(default=None, max_length=64)
     action: str | None = Field(default=None, max_length=64)
     account_id: str | None = Field(default=None, max_length=64)

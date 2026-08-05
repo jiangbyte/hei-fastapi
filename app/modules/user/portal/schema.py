@@ -32,6 +32,12 @@ class PortalPublicProfileResponse(ApiSchema):
     signature: str | None = None
 
 
+class PortalPublicSpaceQuery(ApiSchema):
+    """门户公开主页查询。"""
+
+    account_id: str = Field(min_length=1, max_length=64)
+
+
 class PortalProfileUpsertPayload(ApiSchema):
     """门户账户资料写入载荷。"""
 

@@ -22,6 +22,7 @@ from app.modules.sys.file.schema import (
     FileRecordCreate,
     FileUpdateRequest,
     FileUploadRequest,
+    ObjectNameQuery,
     SysFileSchema,
 )
 from app.modules.user.utils.profile import get_profiles_batch
@@ -140,9 +141,9 @@ class FileService:
         entity = await self.repo.get_required(query.id)
         return await self.response(entity.object_name)
 
-    async def get_url(self, object_name: str) -> str:
+    async def get_url(self, query: ObjectNameQuery) -> str:
         """优先返回已落库的稳定 URL，不存在时退化为存储层实时构造。"""
-        normalized = normalize_object_name(object_name)
+        normalized = normalize_object_name(query.object_name)
         if not normalized:
             raise NotFoundError("File not found")
         if is_external_url(normalized):
@@ -151,9 +152,9 @@ class FileService:
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         return str(storage.get_object_url(normalized))
 
-    async def get_presigned_url(self, object_name: str) -> str:
+    async def get_presigned_url(self, query: ObjectNameQuery) -> str:
         """获取对象的签名访问地址。"""
-        normalized = normalize_object_name(object_name)
+        normalized = normalize_object_name(query.object_name)
         if not normalized:
             raise NotFoundError("File not found")
         if is_external_url(normalized):
@@ -162,8 +163,8 @@ class FileService:
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         return str(storage.get_presigned_url(normalized))
 
-    async def response(self, object_name: str) -> Response:
-        normalized = normalize_object_name(object_name)
+    async def response(self, query: ObjectNameQuery) -> Response:
+        normalized = normalize_object_name(query.object_name)
         if not normalized:
             raise NotFoundError("File not found")
         entity = await self.repo.get_by_object_name(normalized)

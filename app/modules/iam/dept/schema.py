@@ -23,8 +23,7 @@ class DeptUpdateRequest(DeptCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class DeptAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class DeptAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     category: str | None = Field(default=None, max_length=64)
     parent_id: str | None = Field(default=None, max_length=64)

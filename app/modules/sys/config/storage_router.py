@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.config.storage_schema import (
@@ -77,9 +77,9 @@ async def delete(
 )
 async def detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    id: Annotated[Id, Query()],
+    query: Annotated[IdQuery, Depends()],
 ) -> ApiResponse[SysStorageConfigSchema]:
-    return success(await StorageConfigService(db).detail(id))
+    return success(await StorageConfigService(db).detail(query))
 
 
 @router.get(

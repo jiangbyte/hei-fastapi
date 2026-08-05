@@ -13,7 +13,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN pnpm build
+# Image build: skip vue-tsc (pre-existing TS noise); vite emit is enough for nginx static.
+RUN pnpm exec vite build
 
 #FROM nginx:1.27-alpine
 #FROM docker.xuanyuan.run/library/nginx:1.27-alpine

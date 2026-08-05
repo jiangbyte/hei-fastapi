@@ -70,8 +70,7 @@ class CodegenPlanUpdateRequest(CodegenPlanCreateRequest):
     id: str = Field(min_length=1, max_length=64)
 
 
-class CodegenPlanPageQuery(ApiSchema):
-    pagination: PageQuery
+class CodegenPlanPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=128)
     main_table: str | None = Field(default=None, max_length=128)
     gen_type: CodegenType | None = None
@@ -171,6 +170,19 @@ class CodegenPreviewFile(ApiSchema):
 
 class CodegenPreviewSchema(ApiSchema):
     files: list[CodegenPreviewFile]
+
+
+class CodegenTableColumnsQuery(ApiSchema):
+    table_name: str = Field(min_length=1, max_length=128)
+
+
+class CodegenFieldsQuery(ApiSchema):
+    plan_id: str = Field(min_length=1, max_length=64)
+    table_role: str | None = Field(default=None, max_length=16)
+
+
+class CodegenParentResourcesQuery(ApiSchema):
+    module_id: str | None = Field(default=None, max_length=64)
 
 
 class CodegenParentResourceOption(ApiSchema):

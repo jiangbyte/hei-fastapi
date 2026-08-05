@@ -6,13 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @asynccontextmanager
 async def transactional(session: AsyncSession) -> AsyncIterator[AsyncSession]:
+    """事务包装：外层 begin；已在事务中则使用 savepoint，避免嵌套 commit/rollback 误伤外层。"""
     if session.in_transaction():
-        try:
+        async with session.begin_nested():
             yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
         return
     async with session.begin():
         yield session

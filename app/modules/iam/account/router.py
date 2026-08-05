@@ -94,11 +94,11 @@ async def delete(
     response_model=ApiResponse[SysAccountSchema],
 )
 async def detail(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[SysAccountSchema]:
-    return success(await AccountService(db).detail(IdQuery(id=id), session))
+    return success(await AccountService(db).detail(query, session))
 
 
 @router.get(
@@ -110,26 +110,10 @@ async def detail(
     response_model=ApiResponse[PageData[SysAccountSchema]],
 )
 async def page(
+    query: Annotated[AccountAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    current: Current = 1,
-    size: Size = 20,
-    account: str | None = Query(default=None, max_length=64),
-    name: str | None = Query(default=None, max_length=64),
-    phone: str | None = Query(default=None, max_length=32),
-    email: str | None = Query(default=None, max_length=128),
-    account_type: str | None = Query(default=None, max_length=32),
-    account_status: str | None = Query(default=None, max_length=32),
 ) -> ApiResponse[PageData[SysAccountSchema]]:
-    query = AccountAdminPageQuery(
-        pagination=PageQuery(current=current, size=size),
-        account=account,
-        name=name,
-        phone=phone,
-        email=email,
-        account_type=account_type,
-        account_status=account_status,
-    )
     return success(await AccountService(db).page_admin(query, session))
 
 
@@ -191,11 +175,11 @@ async def assign_account_dept(
     summary="获取用户资源授权",
 )
 async def own_resource(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[AccountOwnResourceResponse]:
-    return success(await AccountService(db).own_resource(IdQuery(id=id), session))
+    return success(await AccountService(db).own_resource(query, session))
 
 
 @router.post(
@@ -226,11 +210,11 @@ async def grant_resource(
     summary="获取用户角色授权",
 )
 async def own_role(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[AccountOwnRoleResponse]:
-    return success(await AccountService(db).own_role(IdQuery(id=id), session))
+    return success(await AccountService(db).own_role(query, session))
 
 
 @router.post(
@@ -261,11 +245,11 @@ async def grant_role(
     summary="获取用户组授权",
 )
 async def own_group(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[AccountOwnGroupResponse]:
-    return success(await AccountService(db).own_group(IdQuery(id=id), session))
+    return success(await AccountService(db).own_group(query, session))
 
 
 @router.post(
@@ -296,11 +280,11 @@ async def grant_group(
     summary="获取用户部门授权",
 )
 async def own_dept(
+    query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-    id: Annotated[Id, Query()],
 ) -> ApiResponse[AccountOwnDeptResponse]:
-    return success(await AccountService(db).own_dept(IdQuery(id=id), session))
+    return success(await AccountService(db).own_dept(query, session))
 
 
 @router.post(

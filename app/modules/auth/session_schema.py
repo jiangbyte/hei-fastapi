@@ -16,8 +16,7 @@ class SessionAnalysisResponse(ApiSchema):
     max_token_count: int
 
 
-class SessionPageQuery(ApiSchema):
-    pagination: PageQuery
+class SessionPageQuery(PageQuery):
     account_type: AccountType | None = None
     account_id: str | None = Field(default=None, max_length=64)
     account: str | None = Field(default=None, max_length=128)

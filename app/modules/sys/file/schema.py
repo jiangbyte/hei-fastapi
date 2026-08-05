@@ -55,8 +55,7 @@ class FileUpdateRequest(ApiSchema):
     original_name: str = Field(min_length=1, max_length=255)
 
 
-class FileAdminPageQuery(ApiSchema):
-    pagination: PageQuery
+class FileAdminPageQuery(PageQuery):
     original_name: str | None = Field(default=None, max_length=255)
     object_name: str | None = Field(default=None, max_length=255)
     storage_config_id: str | None = Field(default=None, max_length=64)
@@ -64,8 +63,12 @@ class FileAdminPageQuery(ApiSchema):
     content_type: str | None = Field(default=None, max_length=128)
 
 
-class FileUrlRequest(ApiSchema):
+class ObjectNameQuery(ApiSchema):
     object_name: str = Field(min_length=1, max_length=255)
+
+
+class FileUrlRequest(ObjectNameQuery):
+    pass
 
 
 class FileUrlResponse(ApiSchema):
