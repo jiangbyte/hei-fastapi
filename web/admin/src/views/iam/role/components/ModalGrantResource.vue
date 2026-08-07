@@ -242,7 +242,7 @@ defineExpose({
 
         <NDataTable
           size="medium"
-          :row-key="(row) => row.id"
+          :row-key="(row: any) => row.id"
           :columns="columns"
           :data="rows"
           :bordered="true"

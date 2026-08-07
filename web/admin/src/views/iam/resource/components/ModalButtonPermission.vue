@@ -193,7 +193,7 @@ defineExpose({
 
       <NDataTable
         class="mt-12px"
-        :row-key="(row) => row.id"
+        :row-key="(row: any) => row.id"
         :columns="columns"
         :data="state.buttons"
         :loading="state.loading"

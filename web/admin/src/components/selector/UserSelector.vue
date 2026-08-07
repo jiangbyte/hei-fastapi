@@ -257,7 +257,7 @@ function resetSearch() {
     :default-width="mode === 'multiple' ? 1000 : 500"
     placement="right"
     :mask-closable="false"
-    @update:show="(val) => emit('update:visible', val)"
+    @update:show="(val: boolean) => emit('update:visible', val)"
   >
     <NDrawerContent :title="title" closable :native-scrollbar="false">
       <!-- 单选模式 -->
@@ -310,7 +310,7 @@ function resetSearch() {
                 <NButton dashed size="small" @click="addAllPage"> 新增当前页 </NButton>
               </NFlex>
               <NDataTable
-                :row-key="(row) => row.id"
+                :row-key="(row: any) => row.id"
                 :columns="multipleLeftColumns"
                 :data="state.options"
                 :loading="state.loading"
@@ -334,7 +334,7 @@ function resetSearch() {
                 <NButton dashed type="error" size="small" @click="delAll"> 全部移除 </NButton>
               </NFlex>
               <NDataTable
-                :row-key="(row) => row.id"
+                :row-key="(row: any) => row.id"
                 :columns="multipleRightColumns"
                 :data="state.selectedData"
                 :bordered="true"

@@ -107,7 +107,7 @@ function close() {
     placement="right"
     :width="440"
     :mask-closable="false"
-    @update:show="(v) => emit('update:visible', v)"
+    @update:show="(v: boolean) => emit('update:visible', v)"
   >
     <NDrawerContent :title="title" closable>
       <NSpin :show="state.loading">

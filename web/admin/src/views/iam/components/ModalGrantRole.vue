@@ -210,7 +210,7 @@ defineExpose({ openModal })
             </NFlex>
             <NDataTable
               size="small"
-              :row-key="(row) => row.id"
+              :row-key="(row: any) => row.id"
               :columns="listColumns"
               :data="tableItems"
               :loading="state.loading"
@@ -236,7 +236,7 @@ defineExpose({ openModal })
             </NFlex>
             <NDataTable
               size="small"
-              :row-key="(row) => row.id"
+              :row-key="(row: any) => row.id"
               :columns="selectedColumns"
               :data="state.selectedData"
               :bordered="true"

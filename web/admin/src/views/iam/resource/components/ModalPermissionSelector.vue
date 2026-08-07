@@ -202,7 +202,7 @@ defineExpose({
     <NSpin :show="state.loading">
       <NDataTable
         size="medium"
-        :row-key="(row) => row.permission_key"
+        :row-key="(row: any) => row.permission_key"
         :columns="columns"
         :data="tableRows"
         :bordered="true"

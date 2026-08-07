@@ -114,7 +114,7 @@ function close() {
     placement="right"
     :width="500"
     :mask-closable="false"
-    @update:show="(v) => emit('update:visible', v)"
+    @update:show="(v: boolean) => emit('update:visible', v)"
   >
     <NDrawerContent :title="title" closable>
       <NSpace vertical>
@@ -126,7 +126,7 @@ function close() {
           @clear="doSearch"
         />
         <NDataTable
-          :row-key="(row) => row.id"
+          :row-key="(row: any) => row.id"
           :columns="columns"
           :data="state.roles"
           :loading="state.loading"

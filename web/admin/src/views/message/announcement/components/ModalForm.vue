@@ -356,7 +356,7 @@ defineExpose({ openModal })
                 v-for="opt in locationOptions"
                 :key="opt.value"
                 :checked="!!state.formModel.publish_locations?.[opt.value]"
-                @update:checked="(v) => toggleLocation(opt.value, v)"
+                @update:checked="(v: boolean) => toggleLocation(opt.value, v)"
               >
                 {{ opt.label }}
               </NCheckbox>

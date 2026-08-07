@@ -247,7 +247,7 @@ defineExpose({
             </NFlex>
             <NDataTable
               size="small"
-              :row-key="(row) => row.id"
+              :row-key="(row: any) => row.id"
               :columns="userColumns"
               :data="tableUsers"
               :loading="state.loading"
@@ -273,7 +273,7 @@ defineExpose({
             </NFlex>
             <NDataTable
               size="small"
-              :row-key="(row) => row.id"
+              :row-key="(row: any) => row.id"
               :columns="selectedColumns"
               :data="state.selectedData"
               :bordered="true"
