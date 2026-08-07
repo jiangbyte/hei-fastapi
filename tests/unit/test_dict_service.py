@@ -1,8 +1,9 @@
+""" Author: Charlie """
+
 import pytest
 
 from app.core.config.enums import StatusEnum
 from app.core.exceptions.business import NotFoundError
-from app.core.response.pagination import PageQuery
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
     DictCreateRequest,
@@ -32,8 +33,7 @@ async def _create_dict(db_session, service: DictService, **overrides):
     await service.create(_dict_create_request(**overrides))
     page = await service.page_admin(
         DictAdminPageQuery(
-            pagination=PageQuery(current=1, size=1),
-            code=overrides.get("code", "GENDER"),
+            current=1, size=1, code=overrides.get("code", "GENDER"),
         )
     )
     assert page.records
@@ -48,8 +48,7 @@ async def test_dict_service_create_page_detail_update_delete(db_session):
     created = await _create_dict(db_session, service)
     page = await service.page_admin(
         DictAdminPageQuery(
-            pagination=PageQuery(current=1, size=20),
-            category="BIZ",
+            current=1, size=20, category="BIZ",
             status=StatusEnum.ENABLED.value,
         )
     )
@@ -163,8 +162,7 @@ async def test_dict_service_fills_parent_id_name_in_batch(db_session):
 
     page = await service.page_admin(
         DictAdminPageQuery(
-            pagination=PageQuery(current=1, size=20),
-            category="BIZ",
+            current=1, size=20, category="BIZ",
             status=StatusEnum.ENABLED.value,
         )
     )
@@ -215,8 +213,7 @@ async def test_dict_service_parent_filter_includes_parent_and_direct_children(db
 
     page = await service.page_admin(
         DictAdminPageQuery(
-            pagination=PageQuery(current=1, size=20),
-            category="BIZ",
+            current=1, size=20, category="BIZ",
             parent_id=parent.id,
         )
     )

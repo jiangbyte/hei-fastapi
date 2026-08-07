@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 export interface BannerItem {
   avatar?: string | null

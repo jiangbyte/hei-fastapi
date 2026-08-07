@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""按顺序加载 scripts/sql 下的 bootstrap SQL。
+""" Author: Charlie
+
+按顺序加载 scripts/sql 下的 bootstrap SQL。
 
 用法：
   python scripts/db/load_bootstrap_sql.py
 """
-
 from __future__ import annotations
 
 import os
@@ -12,7 +13,6 @@ import sys
 from pathlib import Path
 
 import psycopg
-
 
 BOOTSTRAP_FILES = (
     "sys_dict.sql",
@@ -47,7 +47,7 @@ def main() -> None:
             print(f"applying {path.relative_to(project_root)} ...")
             conn.execute(sql)
             conn.commit()
-            print(f"  ok")
+            print("  ok")
     print("bootstrap sql loaded")
 
 

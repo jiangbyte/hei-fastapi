@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -16,7 +18,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/sys/audit/page",
+    "/v1/admin/sys/audit/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:audit:page")),
@@ -31,7 +33,7 @@ async def page(
 
 
 @router.get(
-    "/sys/audit/detail",
+    "/v1/admin/sys/audit/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:audit:detail")),

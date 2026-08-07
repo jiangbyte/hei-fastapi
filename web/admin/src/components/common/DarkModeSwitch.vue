@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { Icon } from '@iconify/vue/offline'
 import { NFlex } from 'naive-ui'

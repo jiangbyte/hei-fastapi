@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { refreshDict, syncDictTree } from '@/utils/dict'

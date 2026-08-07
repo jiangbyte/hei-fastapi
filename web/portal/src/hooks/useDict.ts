@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useSyncExternalStore } from 'react'
 import { dictTreeState, subscribeDict } from '@/utils/dict'
 

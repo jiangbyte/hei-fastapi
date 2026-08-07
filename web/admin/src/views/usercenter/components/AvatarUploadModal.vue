@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { authApi } from '@/api'
 import { computed, reactive, ref, watch } from 'vue'

@@ -1,6 +1,9 @@
+""" Author: Charlie """
+
 from typing import Generic, TypeVar
 
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireInt
 
 T = TypeVar("T")
 
@@ -8,7 +11,7 @@ T = TypeVar("T")
 class ApiResponse(ApiSchema, Generic[T]):
     """统一 API 响应外壳，约束接口输出结构的一致性。"""
 
-    code: int = 200
+    code: WireInt = 200
     message: str = "success"
     data: T | None = None
 
@@ -16,7 +19,7 @@ class ApiResponse(ApiSchema, Generic[T]):
 class ApiErrorResponse(ApiSchema):
     """统一错误响应模型，所有异常响应均返回相同的外壳结构。"""
 
-    code: int
+    code: WireInt
     message: str
     data: None = None
 

@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import CssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import HtmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'

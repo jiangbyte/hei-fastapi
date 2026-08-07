@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const resourcePrefix = '/api/v1/admin/sys/resources'

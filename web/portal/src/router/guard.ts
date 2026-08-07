@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { LoaderFunctionArgs } from 'react-router-dom'
 import { redirect } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
@@ -13,8 +15,8 @@ export function isPublicPath(pathname: string) {
 export async function requireAuth({ request }: LoaderFunctionArgs) {
   syncDictTree()
   void refreshDict()
-  const { token } = useAuthStore.getState()
-  if (!token) {
+  const ok = await useAuthStore.getState().ensureSession()
+  if (!ok) {
     const url = new URL(request.url)
     const redirectTo = `${url.pathname}${url.search}`
     const search = redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : ''
@@ -26,8 +28,8 @@ export async function requireAuth({ request }: LoaderFunctionArgs) {
 export async function guestOnly({ request }: LoaderFunctionArgs) {
   syncDictTree()
   void refreshDict()
-  const { token } = useAuthStore.getState()
-  if (token) {
+  const ok = await useAuthStore.getState().ensureSession()
+  if (ok) {
     const url = new URL(request.url)
     throw redirect(getSafeRedirect(url.searchParams.get('redirect')))
   }

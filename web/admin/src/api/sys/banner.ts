@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const bannerPrefix = '/api/v1/admin/sys/banners'

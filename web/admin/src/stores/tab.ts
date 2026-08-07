@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import type { StoreDefinition } from 'pinia'
 import { defineStore } from 'pinia'

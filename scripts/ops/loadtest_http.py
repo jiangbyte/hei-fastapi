@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import argparse
@@ -73,13 +75,13 @@ def percentile(values: list[float], rank: int) -> float:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Simple HTTP load test for smoke baselines.")
+    parser = argparse.ArgumentParser(description="简单 HTTP 压测，用于冒烟基线。")
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
-    parser.add_argument("--path", default="/", help="Comma-separated GET paths.")
+    parser.add_argument("--path", default="/", help="逗号分隔的 GET 路径。")
     parser.add_argument("--requests", type=int, default=1000)
     parser.add_argument("--concurrency", type=int, default=50)
     parser.add_argument("--timeout", type=float, default=10.0)
-    parser.add_argument("--header", action="append", default=[], help="Header as 'Name: value'.")
+    parser.add_argument("--header", action="append", default=[], help="请求头，格式 'Name: value'。")
     return parser.parse_args()
 
 

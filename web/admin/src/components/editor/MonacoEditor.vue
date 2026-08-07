@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type * as monaco from 'monaco-editor'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'

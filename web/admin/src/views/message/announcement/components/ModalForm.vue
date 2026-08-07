@@ -1,5 +1,7 @@
 <!--
-  Refined announcement form with multi-select scope + publish locations.
+  Author: Charlie
+
+  公告表单：支持多选范围与发布位置。
 -->
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
@@ -102,21 +104,21 @@ function normalizeSubmitData(data: Record<string, any>) {
   r.pinned_until = n(data.pinned_until)
   r.publish_at = n(data.publish_at)
   r.expire_at = n(data.expire_at)
-  // Ensure JSON for publish_locations
+  // 确保 publish_locations 为 JSON
   if (typeof r.publish_locations === 'object' && !Array.isArray(r.publish_locations)) {
-    // already a dict
+    // 已是 dict
   } else if (Array.isArray(r.publish_locations)) {
     const d: Record<string, boolean> = {}
     r.publish_locations.forEach((k: string) => (d[k] = true))
     r.publish_locations = d
   }
-  // Remove hidden fields
+  // 移除隐藏字段
   delete r.sender_account_type
   delete r.sender_account_id
   delete r.revoked_at
   r.view_count = 0
   r.extra = {}
-  // Ensure arrays
+  // 确保为数组
   for (const k of [
     'target_account_types',
     'target_account_ids',
@@ -330,7 +332,7 @@ defineExpose({ openModal })
             </NGi>
           </NGrid>
 
-          <!-- Content editor -->
+          <!-- 内容编辑器 -->
           <NFormItem label="内容" path="content">
             <div v-if="state.formModel.content_type === 'text'" class="w-full">
               <NInput
@@ -347,7 +349,7 @@ defineExpose({ openModal })
             <RichTextEditor v-else v-model:value="state.formModel.content" :height="400" />
           </NFormItem>
 
-          <!-- Publish locations: individual checkboxes directly bound to dict -->
+          <!-- 发布位置：直接绑定字典的独立复选框 -->
           <NFormItem label="发布位置">
             <NFlex>
               <NCheckbox

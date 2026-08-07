@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -11,7 +13,7 @@ from app.modules.sys.file.service import FileService
 router = APIRouter()
 
 
-@router.get("/files", response_class=Response)
+@router.get("/v1/files", response_class=Response)
 async def get_file(
     query: Annotated[ObjectNameQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],

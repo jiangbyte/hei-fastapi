@@ -1,14 +1,16 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_permission, require_account_type
+from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.iam.dept.schema import (
     DeptAdminPageQuery,
@@ -23,7 +25,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/depts/create",
+    "/v1/admin/sys/depts/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:dept:create")),
@@ -40,7 +42,7 @@ async def create(
 
 
 @router.post(
-    "/sys/depts/update",
+    "/v1/admin/sys/depts/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:dept:update")),
@@ -57,7 +59,7 @@ async def update(
 
 
 @router.post(
-    "/sys/depts/delete",
+    "/v1/admin/sys/depts/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:dept:delete")),
@@ -74,7 +76,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/depts/detail",
+    "/v1/admin/sys/depts/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:dept:detail")),
@@ -90,7 +92,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/depts/page",
+    "/v1/admin/sys/depts/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:dept:page")),
@@ -106,7 +108,7 @@ async def page(
 
 
 @router.get(
-    "/sys/depts/tree",
+    "/v1/admin/sys/depts/tree",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:dept:list")),

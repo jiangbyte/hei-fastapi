@@ -1,4 +1,7 @@
-"""订阅 on_audit_event 事件，将审计事件持久化到 sys_operation_audit 表。"""
+""" Author: Charlie
+
+订阅 on_audit_event 事件，将审计事件持久化到 sys_operation_audit 表。
+"""
 import logging
 
 from app.platform.audit.queue import OperationAuditEvent

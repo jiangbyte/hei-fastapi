@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 type SearchValueNormalizer<T extends object> = Partial<{
   [K in keyof T]: (value: T[K]) => T[K]
 }>

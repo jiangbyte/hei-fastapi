@@ -1,11 +1,12 @@
+""" Author: Charlie """
+
+from app.core.config.settings import settings
 from app.platform.module import BeatScheduleSpec, ModuleSpec, RouteSpec
 
 module = ModuleSpec(
     name="sys.audit",
     routes=(
         RouteSpec(
-            version="v1",
-            prefix="/admin",
             tags=("admin",),
             router="app.modules.sys.audit.router:router",
         ),
@@ -13,13 +14,14 @@ module = ModuleSpec(
     models=(
         "app.modules.sys.audit.model",
         "app.modules.sys.audit.alert_model",
+        "app.modules.sys.audit.outbox",
     ),
     tasks=("app.modules.sys.audit.tasks",),
     beat_schedules=(
         BeatScheduleSpec(
             name="audit-analysis-cycle",
             task="audit.analysis_cycle",
-            schedule=300.0,
+            schedule=float(settings.audit_alert.analysis_interval_seconds),
         ),
     ),
     event_handlers=("app.modules.sys.audit.event_handler:register",),

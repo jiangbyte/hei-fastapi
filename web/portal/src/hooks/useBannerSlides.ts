@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useEffect, useState } from 'react'
 import { bannerApi } from '@/api'
 import type { PromoSlide } from '@/components/common/PromoCarousel'
@@ -53,7 +55,7 @@ export function useBannerSlides(query: any) {
     return () => {
       cancelled = true
     }
-    // position/category/type are stable string literals at call sites
+    // position/category/type 在调用处为稳定字符串字面量
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query.position, query.category, query.type])
 

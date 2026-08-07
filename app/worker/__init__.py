@@ -1,1 +1,4 @@
-"""Worker package."""
+""" Author: Charlie
+
+Worker 包。
+"""

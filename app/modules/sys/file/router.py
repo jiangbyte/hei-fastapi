@@ -1,14 +1,16 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StorageProvider
 from app.core.config.settings import settings
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
@@ -26,7 +28,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/file/upload",
+    "/v1/admin/sys/file/upload",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:upload")),
@@ -54,7 +56,7 @@ async def upload(
 
 
 @router.post(
-    "/sys/file/delete",
+    "/v1/admin/sys/file/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:delete")),
@@ -70,7 +72,7 @@ async def delete(
 
 
 @router.post(
-    "/sys/file/update",
+    "/v1/admin/sys/file/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:update")),
@@ -86,7 +88,7 @@ async def update(
 
 
 @router.get(
-    "/sys/file/detail",
+    "/v1/admin/sys/file/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:detail")),
@@ -101,7 +103,7 @@ async def detail(
 
 
 @router.post(
-    "/sys/file/list_by_ids",
+    "/v1/admin/sys/file/list_by_ids",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:detail")),
@@ -116,7 +118,7 @@ async def list_by_ids(
 
 
 @router.get(
-    "/sys/file/download",
+    "/v1/admin/sys/file/download",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:url")),
@@ -131,7 +133,7 @@ async def download(
 
 
 @router.post(
-    "/sys/file/url",
+    "/v1/admin/sys/file/url",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:url")),
@@ -151,7 +153,7 @@ async def url(
 
 
 @router.post(
-    "/sys/file/presigned_url",
+    "/v1/admin/sys/file/presigned_url",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:presignedurl")),
@@ -171,7 +173,7 @@ async def presigned_url(
 
 
 @router.get(
-    "/sys/file/page",
+    "/v1/admin/sys/file/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:file:page")),

@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+""" Author: Charlie """
+
+from fastapi import APIRouter, Response
 from sqlalchemy import text
 
 from app.core.config.settings import settings
@@ -17,14 +19,14 @@ from app.platform.tasks.celery_app import celery_app
 router = APIRouter()
 
 
-@router.get("/health/live", response_model=LiveHealthResponse)
+@router.get("/v1/internal/health/live", response_model=LiveHealthResponse)
 async def live() -> LiveHealthResponse:
     """存活探针，仅表示应用进程仍在运行。"""
     return LiveHealthResponse(status="live")
 
 
-@router.get("/health/ready", response_model=ReadyHealthResponse)
-async def ready() -> ReadyHealthResponse:
+@router.get("/v1/internal/health/ready", response_model=ReadyHealthResponse)
+async def ready(response: Response) -> ReadyHealthResponse:
     """就绪探针，聚合数据库、Redis、消息队列和存储配置的可用性检查。"""
     checks = ReadyChecksResponse(
         database=HealthCheckItem(enabled=True, ok=False, detail=None),
@@ -90,6 +92,8 @@ async def ready() -> ReadyHealthResponse:
         ]
         if component.enabled
     )
+    if not overall:
+        response.status_code = 503
     return ReadyHealthResponse(
         status="ready" if overall else "not_ready",
         checks=checks,

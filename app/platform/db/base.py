@@ -1,7 +1,7 @@
+""" Author: Charlie """
+
 from sqlalchemy import MetaData
 from sqlalchemy.orm import DeclarativeBase
-
-from app.platform.db import audit as _audit
 
 metadata = MetaData(
     naming_convention={
@@ -16,3 +16,7 @@ metadata = MetaData(
 
 class Base(DeclarativeBase):
     metadata = metadata
+
+
+# 在 Session.flush 时注册 TimestampMixin created_by / updated_by 注入。
+from app.platform.db import audit as _audit_hooks  # noqa: E402, F401

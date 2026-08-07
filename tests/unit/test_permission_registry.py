@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import json
 from dataclasses import dataclass
 from typing import Any
@@ -22,17 +24,7 @@ from app.platform.cache.keys import (
     permission_resource_cache_key,
     permission_resource_method_cache_key,
 )
-
-
-class FakeRedis:
-    def __init__(self) -> None:
-        self.values: dict[str, str] = {}
-
-    async def set(self, key: str, value: str) -> None:
-        self.values[key] = value
-
-    async def get(self, key: str):
-        return self.values.get(key)
+from tests.conftest import FakeRedis
 
 
 @dataclass
@@ -98,7 +90,7 @@ def test_scan_permission_registry_collects_fastapi_137_included_router_candidate
                 FakeEffectiveRoute(
                     original_route=original_route,
                     path="/api/v1/admin/files/page",
-                    tags=["admin"],
+                    tags=[],
                     methods=original_route.methods,
                     dependant=original_route.dependant,
                     summary=original_route.summary,

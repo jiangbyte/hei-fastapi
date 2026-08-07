@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { Themes } from 'md-editor-v3'
 import { MdPreview } from 'md-editor-v3'

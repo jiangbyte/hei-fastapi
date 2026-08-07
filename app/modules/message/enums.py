@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from enum import StrEnum
 
 

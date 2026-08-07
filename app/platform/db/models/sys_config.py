@@ -1,4 +1,7 @@
-"""系统配置表模型 — ORM 定义在 platform 层供框架基础设施查询。"""
+""" Author: Charlie
+
+系统配置表模型 — ORM 定义在 platform 层供框架基础设施查询。
+"""
 from sqlalchemy import JSON, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 

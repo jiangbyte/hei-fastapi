@@ -1,5 +1,7 @@
-"""代码生成方案模型。"""
+""" Author: Charlie
 
+代码生成方案模型。
+"""
 from sqlalchemy import Boolean, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,10 +32,16 @@ class SysCodegenPlan(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(Text, comment="描述")
 
     main_table: Mapped[str] = mapped_column(String(128), nullable=False, comment="主表名")
-    main_pk: Mapped[str] = mapped_column(String(128), nullable=False, default="id", comment="主表主键")
+    main_pk: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="id", comment="主表主键"
+    )
     main_entity_name: Mapped[str] = mapped_column(String(128), nullable=False, comment="主实体类名")
-    main_module_path: Mapped[str] = mapped_column(String(255), nullable=False, comment="后端模块路径")
-    main_business_name: Mapped[str] = mapped_column(String(128), nullable=False, comment="主业务名称")
+    main_module_path: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="后端模块路径"
+    )
+    main_business_name: Mapped[str] = mapped_column(
+        String(128), nullable=False, comment="主业务名称"
+    )
 
     api_prefix: Mapped[str] = mapped_column(String(255), nullable=False, comment="接口前缀")
     permission_prefix: Mapped[str] = mapped_column(String(128), nullable=False, comment="权限前缀")
@@ -60,7 +68,9 @@ class SysCodegenField(Base, TimestampMixin):
 
     __tablename__ = "sys_codegen_field"
     __table_args__ = (
-        UniqueConstraint("plan_id", "table_role", "column_name", name="uq_sys_codegen_field_plan_role_column"),
+        UniqueConstraint(
+            "plan_id", "table_role", "column_name", name="uq_sys_codegen_field_plan_role_column"
+        ),
         Index("ix_sys_codegen_field_plan_role_sort", "plan_id", "table_role", "sort"),
     )
 
@@ -71,22 +81,46 @@ class SysCodegenField(Base, TimestampMixin):
         comment="主键",
     )
     plan_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="方案ID")
-    table_role: Mapped[str] = mapped_column(String(16), nullable=False, default="MAIN", comment="表角色")
+    table_role: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="MAIN", comment="表角色"
+    )
     column_name: Mapped[str] = mapped_column(String(128), nullable=False, comment="字段名")
     column_comment: Mapped[str | None] = mapped_column(String(255), comment="字段注释")
     db_type: Mapped[str] = mapped_column(String(128), nullable=False, comment="数据库类型")
-    python_type: Mapped[str] = mapped_column(String(64), nullable=False, default="str", comment="Python类型")
-    typescript_type: Mapped[str] = mapped_column(String(64), nullable=False, default="string", comment="TypeScript类型")
-    form_widget: Mapped[str] = mapped_column(String(32), nullable=False, default="input", comment="表单控件")
+    python_type: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="str", comment="Python类型"
+    )
+    typescript_type: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="string", comment="TypeScript类型"
+    )
+    form_widget: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="input", comment="表单控件"
+    )
     dict_code: Mapped[str | None] = mapped_column(String(128), comment="字典编码")
     query_operator: Mapped[str | None] = mapped_column(String(32), comment="查询方式")
-    show_in_table: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, comment="表格显示")
-    show_in_form: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, comment="表单显示")
-    show_in_detail: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, comment="详情显示")
-    show_in_query: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="查询显示")
-    is_primary_key: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="是否主键")
-    is_required: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="是否必填")
-    is_unique: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="是否唯一")
-    is_nullable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, comment="是否可空")
+    show_in_table: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, comment="表格显示"
+    )
+    show_in_form: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, comment="表单显示"
+    )
+    show_in_detail: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, comment="详情显示"
+    )
+    show_in_query: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="查询显示"
+    )
+    is_primary_key: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="是否主键"
+    )
+    is_required: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="是否必填"
+    )
+    is_unique: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="是否唯一"
+    )
+    is_nullable: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, comment="是否可空"
+    )
     max_length: Mapped[int | None] = mapped_column(Integer, comment="最大长度")
     sort: Mapped[int] = mapped_column(Integer, default=99, nullable=False, comment="排序")

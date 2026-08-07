@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -26,8 +28,9 @@ portal_router = APIRouter()
 
 def register_current_user_routes(router: APIRouter, account_type: AccountType) -> None:
     deps = [Depends(require_account_type(account_type))]
+    base = f"/v1/{account_type.value.lower()}/message/messages"
 
-    @router.post("/message/messages/send", dependencies=deps, response_model=ApiResponse[MessageSchema])
+    @router.post(f"{base}/send", dependencies=deps, response_model=ApiResponse[MessageSchema])
     async def send(
         payload: SendMessageRequest,
         session: Annotated[SessionPayload, Depends(get_current_session)],
@@ -35,7 +38,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
     ) -> ApiResponse[MessageSchema]:
         return success(await MessageService(db).send(payload, session))
 
-    @router.post("/message/messages/reply", dependencies=deps, response_model=ApiResponse[MessageSchema])
+    @router.post(f"{base}/reply", dependencies=deps, response_model=ApiResponse[MessageSchema])
     async def reply(
         payload: SendMessageRequest,
         session: Annotated[SessionPayload, Depends(get_current_session)],
@@ -43,7 +46,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
     ) -> ApiResponse[MessageSchema]:
         return success(await MessageService(db).reply(payload, session))
 
-    @router.post("/message/messages/revoke", dependencies=deps, response_model=ApiResponse[None])
+    @router.post(f"{base}/revoke", dependencies=deps, response_model=ApiResponse[None])
     async def revoke(
         payload: RevokeMessageRequest,
         session: Annotated[SessionPayload, Depends(get_current_session)],
@@ -52,7 +55,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         await MessageService(db).revoke(payload, session)
         return success()
 
-    @router.post("/message/messages/read", dependencies=deps, response_model=ApiResponse[None])
+    @router.post(f"{base}/read", dependencies=deps, response_model=ApiResponse[None])
     async def read(
         payload: MessageReadRequest,
         session: Annotated[SessionPayload, Depends(get_current_session)],
@@ -61,7 +64,9 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         await MessageService(db).mark_read(payload, session)
         return success()
 
-    @router.get("/message/messages/page", dependencies=deps, response_model=ApiResponse[PageData[MessageSchema]])
+    @router.get(
+        f"{base}/page", dependencies=deps, response_model=ApiResponse[PageData[MessageSchema]]
+    )
     async def page(
         query: Annotated[MessagePageQuery, Depends()],
         session: Annotated[SessionPayload, Depends(get_current_session)],
@@ -69,7 +74,11 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
     ) -> ApiResponse[PageData[MessageSchema]]:
         return success(await MessageService(db).page_messages(query, session))
 
-    @router.get("/message/messages/unread-count", dependencies=deps, response_model=ApiResponse[UnreadCountResponse])
+    @router.get(
+        f"{base}/unread-count",
+        dependencies=deps,
+        response_model=ApiResponse[UnreadCountResponse],
+    )
     async def unread_count(
         query: Annotated[MessageUnreadCountQuery, Depends()],
         session: Annotated[SessionPayload, Depends(get_current_session)],

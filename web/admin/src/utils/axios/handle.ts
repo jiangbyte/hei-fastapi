@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { AxiosError, AxiosResponse } from 'axios'
 
 const loginPath = '/auth/login'
@@ -6,10 +8,11 @@ let isHandlingUnauthorized = false
 /**
  * 后端统一响应结构。
  *
- * 当前约定 code=200 表示业务成功，data 才是业务真正需要的数据。
+ * 约定 code="200" 表示业务成功，data 才是业务真正需要的数据。
+ * JSON 标量一律为字符串。
  */
 interface ApiResponse<T = unknown> {
-  code: number
+  code: string
   message?: string
   data: T
 }
@@ -29,16 +32,11 @@ const httpStatusMessageMap: Record<number, string> = {
 /**
  * 业务响应错误。
  *
- * HTTP 请求本身成功，但后端业务 code 非 200 时抛出该错误，便于调用方区分网络错误和业务错误。
+ * HTTP 请求本身成功，但后端业务 code 非 "200" 时抛出该错误。
  */
 export class ApiResponseError<T = unknown> extends Error {
-  // 后端业务状态码。
-  readonly apiCode: number
-
-  // 后端返回的业务 data，失败时也可能携带补充信息。
+  readonly apiCode: string
   readonly apiData: T
-
-  // 完整原始业务响应体。
   readonly rawData: ApiResponse<T>
 
   constructor(response: ApiResponse<T>) {
@@ -50,10 +48,9 @@ export class ApiResponseError<T = unknown> extends Error {
   }
 }
 
-// 统一解包后端响应：ApiResponse 成功时返回 data，失败时抛 ApiResponseError。
 export function unwrapResponseData(response: AxiosResponse) {
   if (isApiResponse(response.data)) {
-    if (response.data.code !== 200) {
+    if (response.data.code !== '200') {
       throw new ApiResponseError(response.data)
     }
     return response.data.data
@@ -62,7 +59,7 @@ export function unwrapResponseData(response: AxiosResponse) {
 }
 
 export function handleHttpError(error: AxiosError) {
-  if (isUnauthorizedError(error) && error.config?.addToken !== false) {
+  if (isUnauthorizedError(error) && !error.config?.public) {
     handleUnauthorizedError(error)
     return Promise.reject(error)
   }
@@ -71,33 +68,31 @@ export function handleHttpError(error: AxiosError) {
   return Promise.reject(error)
 }
 
-// 判断数据是否符合后端统一响应结构。这里只要求存在数字 code，保持兼容性。
 function isApiResponse(data: unknown): data is ApiResponse {
-  return isRecord(data) && typeof data.code === 'number'
+  return isRecord(data) && typeof data.code === 'string'
 }
 
-// unknown 到普通对象的基础类型保护，避免直接访问空值或原始类型属性。
 function isRecord(data: unknown): data is Record<string, unknown> {
   return typeof data === 'object' && data !== null
 }
 
 function isUnauthorizedError(error: AxiosError) {
-  return error.response?.status === 401 || getApiCode(error) === 401
+  return error.response?.status === 401 || getApiCode(error) === '401'
 }
 
 function getApiCode(error: AxiosError) {
-  const apiCode = (error as any).apiCode
-  if (typeof apiCode === 'number') {
+  const apiCode = (error as { apiCode?: string }).apiCode
+  if (typeof apiCode === 'string') {
     return apiCode
   }
 
   const responseData = error.response?.data
-  if (isRecord(responseData) && typeof responseData.code === 'number') {
+  if (isRecord(responseData) && typeof responseData.code === 'string') {
     return responseData.code
   }
 
-  const rawData = error.response?.rawData
-  if (isRecord(rawData) && typeof rawData.code === 'number') {
+  const rawData = (error.response as { rawData?: unknown } | undefined)?.rawData
+  if (isRecord(rawData) && typeof rawData.code === 'string') {
     return rawData.code
   }
 

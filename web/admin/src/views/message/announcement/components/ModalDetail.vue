@@ -1,5 +1,7 @@
 <!--
-  Refined announcement detail.
+  Author: Charlie
+
+  公告详情弹窗。
 -->
 <script setup lang="ts">
 import { msgAnnouncementApi } from '@/api'

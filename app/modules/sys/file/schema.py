@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
@@ -5,6 +7,7 @@ from pydantic import Field
 from app.core.config.enums import StorageProvider
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireInt
 
 
 class SysFileSchema(ApiSchema):
@@ -15,7 +18,7 @@ class SysFileSchema(ApiSchema):
     storage_provider: StorageProvider
     bucket: str | None = None
     content_type: str
-    size: int
+    size: WireInt
     url: str
     created_at: datetime = Field(examples=["2026-06-17T12:00:00Z"])
     created_by: str | None = None
@@ -46,7 +49,7 @@ class FileRecordCreate(ApiSchema):
     storage_provider: StorageProvider
     bucket: str | None = None
     content_type: str
-    size: int
+    size: WireInt
     url: str
 
 

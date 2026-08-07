@@ -20,6 +20,7 @@
     "@wangeditor/editor-for-vue": "5.1.12",
     "axios": "^1.18.1",
     "colord": "^2.9.3",
+    "dompurify": "^3.2.6",
     "highlight.js": "11.11.1",
     "md-editor-v3": "^6.5.4",
     "monaco-editor": "^0.55.1",

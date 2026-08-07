@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
 import { useThemeVars } from 'naive-ui'
@@ -31,7 +33,7 @@ const filteredGroups = computed(() => {
   )
 })
 
-// Trigger search from API when switching to users tab
+// 切换到用户标签页时触发 API 搜索
 function doSearchUsers() {
   const k = props.keyword
   if (!k) return

@@ -1,14 +1,16 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_permission, require_account_type
+from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.iam.group.schema import (
     GroupAdminPageQuery,
@@ -30,7 +32,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/groups/create",
+    "/v1/admin/sys/groups/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:create")),
@@ -47,7 +49,7 @@ async def create(
 
 
 @router.post(
-    "/sys/groups/update",
+    "/v1/admin/sys/groups/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:update")),
@@ -64,7 +66,7 @@ async def update(
 
 
 @router.post(
-    "/sys/groups/delete",
+    "/v1/admin/sys/groups/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:delete")),
@@ -81,7 +83,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/groups/detail",
+    "/v1/admin/sys/groups/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:detail")),
@@ -97,7 +99,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/groups/page",
+    "/v1/admin/sys/groups/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:page")),
@@ -113,7 +115,7 @@ async def page(
 
 
 @router.post(
-    "/group-roles",
+    "/v1/admin/group-roles",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:grantrole")),
@@ -129,7 +131,7 @@ async def assign_group_role(
 
 
 @router.get(
-    "/sys/groups/own-user",
+    "/v1/admin/sys/groups/own-user",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:ownuser")),
@@ -146,7 +148,7 @@ async def own_user(
 
 
 @router.post(
-    "/sys/groups/grant-user",
+    "/v1/admin/sys/groups/grant-user",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:grantuser")),
@@ -164,7 +166,7 @@ async def grant_user(
 
 
 @router.get(
-    "/sys/groups/own-role",
+    "/v1/admin/sys/groups/own-role",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:ownrole")),
@@ -181,7 +183,7 @@ async def own_role(
 
 
 @router.post(
-    "/sys/groups/grant-role",
+    "/v1/admin/sys/groups/grant-role",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:grantrole")),
@@ -199,7 +201,7 @@ async def grant_role(
 
 
 @router.get(
-    "/sys/groups/own-resource",
+    "/v1/admin/sys/groups/own-resource",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:ownresource")),
@@ -216,7 +218,7 @@ async def own_resource(
 
 
 @router.post(
-    "/sys/groups/grant-resource",
+    "/v1/admin/sys/groups/grant-resource",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:group:grantresource")),

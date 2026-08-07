@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const resourceModulePrefix = '/api/v1/admin/sys/resource-modules'

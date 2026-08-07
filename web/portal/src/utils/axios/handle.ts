@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { AxiosError, AxiosResponse } from 'axios'
 import { message } from 'antd'
 import type { ApiResponse } from '@/typing/api'
@@ -18,7 +20,7 @@ const httpStatusMessageMap: Record<number, string> = {
 }
 
 export class ApiResponseError<T = unknown> extends Error {
-  readonly apiCode: number
+  readonly apiCode: string
   readonly apiData: T
   readonly rawData: ApiResponse<T>
 
@@ -33,7 +35,7 @@ export class ApiResponseError<T = unknown> extends Error {
 
 export function unwrapResponseData(response: AxiosResponse) {
   if (isApiResponse(response.data)) {
-    if (response.data.code !== 200) {
+    if (response.data.code !== '200') {
       throw new ApiResponseError(response.data)
     }
     return response.data.data
@@ -42,7 +44,7 @@ export function unwrapResponseData(response: AxiosResponse) {
 }
 
 export function handleHttpError(error: AxiosError) {
-  if (isUnauthorizedError(error) && error.config?.addToken !== false) {
+  if (isUnauthorizedError(error) && !error.config?.public) {
     handleUnauthorizedError(error)
     return Promise.reject(error)
   }
@@ -52,7 +54,7 @@ export function handleHttpError(error: AxiosError) {
 }
 
 function isApiResponse(data: unknown): data is ApiResponse {
-  return isRecord(data) && typeof data.code === 'number'
+  return isRecord(data) && typeof data.code === 'string'
 }
 
 function isRecord(data: unknown): data is Record<string, unknown> {
@@ -60,22 +62,22 @@ function isRecord(data: unknown): data is Record<string, unknown> {
 }
 
 function isUnauthorizedError(error: AxiosError) {
-  return error.response?.status === 401 || getApiCode(error) === 401
+  return error.response?.status === 401 || getApiCode(error) === '401'
 }
 
 function getApiCode(error: AxiosError) {
-  const apiCode = (error as { apiCode?: number }).apiCode
-  if (typeof apiCode === 'number') {
+  const apiCode = (error as { apiCode?: string }).apiCode
+  if (typeof apiCode === 'string') {
     return apiCode
   }
 
   const responseData = error.response?.data
-  if (isRecord(responseData) && typeof responseData.code === 'number') {
+  if (isRecord(responseData) && typeof responseData.code === 'string') {
     return responseData.code
   }
 
-  const rawData = error.response?.rawData
-  if (isRecord(rawData) && typeof rawData.code === 'number') {
+  const rawData = (error.response as { rawData?: unknown } | undefined)?.rawData
+  if (isRecord(rawData) && typeof rawData.code === 'string') {
     return rawData.code
   }
 

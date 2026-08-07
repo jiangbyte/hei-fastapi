@@ -10,6 +10,8 @@ x-backend-env: &backend-env
   REDIS__URL: ${REDIS__URL:?REDIS__URL is required}
   CELERY__BROKER_URL: ${CELERY__BROKER_URL:?CELERY__BROKER_URL is required}
   CORS__ALLOW_ORIGINS: ${CORS__ALLOW_ORIGINS:-["http://localhost:8081","http://127.0.0.1:8081"]}
+  AUTH__SESSION_IDLE_TIMEOUT_SECONDS: ${AUTH__SESSION_IDLE_TIMEOUT_SECONDS:-1800}
+  AUTH__SESSION_COOKIE_SECURE: ${AUTH__SESSION_COOKIE_SECURE:-false}
   DB__POOL_SIZE: ${DB__POOL_SIZE:-5}
   DB__MAX_OVERFLOW: ${DB__MAX_OVERFLOW:-5}
   REDIS__MAX_CONNECTIONS: ${REDIS__MAX_CONNECTIONS:-100}
@@ -23,6 +25,8 @@ services:
     command: ["all"]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+      - "${IM_WS_PORT:-18080}:18080"
+      - "${IM_TCP_PORT:-18081}:18081"
     volumes:
       - backend_storage:/app/storage
     healthcheck:
@@ -42,9 +46,27 @@ services:
       context: ./web/admin
     environment:
       BACKEND_URL: http://hei:8000
+      IM_WS_URL: http://hei:18080
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
+      HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:
       - "${ADMIN_PORT:-8081}:81"
+    depends_on:
+      hei:
+        condition: service_healthy
+    restart: unless-stopped
+
+  portal:
+    profiles: ["portal"]
+    build:
+      context: ./web/portal
+    environment:
+      BACKEND_URL: http://hei:8000
+      IM_WS_URL: http://hei:18080
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
+      HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
+    ports:
+      - "${PORTAL_PORT:-8082}:80"
     depends_on:
       hei:
         condition: service_healthy

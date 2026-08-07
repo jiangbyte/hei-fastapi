@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -48,9 +50,7 @@ class RedisSettings(BaseSettings):
 class AuthSettings(BaseSettings):
     token_name: str = "Authorization"
     token_ttl_seconds: int = 60 * 60 * 4
-    refresh_ttl_seconds: int = 60 * 60 * 4
     token_ttl_short_seconds: int = 60 * 60 * 2
-    admin_register_enabled: bool = False
     portal_register_enabled: bool = True
     login_failure_window_seconds: int = 15 * 60
     login_account_max_failures: int = 5
@@ -60,11 +60,46 @@ class AuthSettings(BaseSettings):
     default_password: str = ""
     captcha_ttl_seconds: int = 5 * 60
     password_crypto_key_ttl_seconds: int = 10 * 60
+    # 0 = 禁用（本地/开发）。Docker compose 生产类栈常设为 1800。
     session_idle_timeout_seconds: int = 0
     session_bind_ip: bool = True
     session_bind_user_agent: bool = False
     max_concurrent_sessions: int = 5
-    password_expire_days: int = 90
+    # Cookie 优先的 Web 会话；原生客户端可在 token_name 头发送不透明 token
+    # （非 HTTP Bearer）。IM 使用短效 imt_ 票据。
+    session_cookie_enabled: bool = True
+    session_cookie_name: str = "hei_session"
+    session_cookie_secure: bool = False
+    session_cookie_samesite: str = "lax"
+    session_cookie_path: str = "/"
+    # IM AUTH 短效票据 TTL（秒）；避免在 WS 上携带长会话 token。
+    im_ticket_ttl_seconds: int = 120
+    # 额外鉴权豁免路径（精确或 fnmatch），与内置白名单合并。
+    auth_whitelist: list[str] = []
+    # 管理端 TOTP MFA（portal 登录不走 MFA）。
+    mfa_required: bool = False
+    mfa_challenge_ttl_seconds: int = 300
+    mfa_issuer: str = "HEI Admin"
+    # WebAuthn 依赖方（管理端 MFA）。
+    webauthn_rp_id: str = "localhost"
+    webauthn_rp_name: str = "HEI Admin"
+    webauthn_origin: str = "http://localhost:5173"
+
+
+class SecretsSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore")
+
+    # fernet = APP__CONFIG_CRYPTO_KEY；vault = 从 KV v2 加载 Fernet 密钥
+    backend: str = "fernet"
+    vault_addr: str = ""
+    vault_token: str = ""
+    vault_mount: str = "secret"
+    vault_path: str = "hei/fernet"
+    vault_key_field: str = "fernet_key"
+    vault_timeout_seconds: float = 5.0
+    # 生产加固：APP__DEBUG=false 时，除非显式豁免，否则拒绝仅 Fernet 后端。
+    require_vault: bool = False
+    allow_fernet_in_prod: bool = True
 
 
 class MailSettings(BaseSettings):
@@ -107,11 +142,11 @@ class CorsSettings(BaseSettings):
 
 
 class CelerySettings(BaseSettings):
-    # Prefer Redis broker (dedicated DB).
+    # 优先 Redis broker（独立 DB）。
     broker_url: str = "redis://127.0.0.1:6379/1"
-    # Empty → Redis result backend (settings.redis.url).
+    # 空 → Redis 结果后端（settings.redis.url）。
     result_backend: str = ""
-    # Must exceed longest task wall time. Redis broker un-acks after this.
+    # 必须大于最长任务墙钟时间。Redis broker 超时后会 un-ack。
     broker_visibility_timeout: int = 3600
     worker_log_level: str = "INFO"
     log_dir: str = "logs"
@@ -136,7 +171,7 @@ class StorageSettings(BaseSettings):
     presign_expire_seconds: int = 3600
     base_url: str = ""
     public_path: str = "/api/v1/files"
-    local_root: str = "storage"
+    local_root: str = ".runtime/storage"
     upload_max_bytes: int = 10 * 1024 * 1024
     upload_allowed_content_types: list[str] = [
         "image/jpeg",
@@ -171,16 +206,16 @@ class StorageSettings(BaseSettings):
         ".jar",
     ]
     upload_category_max_length: int = 64
-    public_upload_enabled: bool = False
 
 
 class IdGeneratorSettings(BaseSettings):
-    worker_id: int = 1
+    # 0 = 从 hostname/pid 自动派生唯一 worker（多副本推荐）
+    worker_id: int = 0
     datacenter_id: int = 1
 
 
 class SwaggerSettings(BaseSettings):
-    enabled: bool = True
+    enabled: bool = False
 
 
 class ObservabilitySettings(BaseSettings):
@@ -244,6 +279,7 @@ class Settings(BaseSettings):
     audit: AuditSettings = Field(default_factory=AuditSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    secrets: SecretsSettings = Field(default_factory=SecretsSettings)
     mail: MailSettings = Field(default_factory=MailSettings)
     cors: CorsSettings = Field(default_factory=CorsSettings)
     celery: CelerySettings = Field(default_factory=CelerySettings)

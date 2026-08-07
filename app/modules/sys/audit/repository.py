@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,8 +44,8 @@ class OperationAuditRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysOperationAuditLog.created_at.desc(), SysOperationAuditLog.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = int((await self.db.execute(count_stmt)).scalar_one())

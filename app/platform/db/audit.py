@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 

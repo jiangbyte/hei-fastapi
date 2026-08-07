@@ -1,9 +1,12 @@
+""" Author: Charlie """
+
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.core.security.auth_whitelist import get_auth_whitelist_patterns
 from app.core.security.permission_registry import sync_permission_registry
 from app.platform.audit.queue import start_operation_audit_queue, stop_operation_audit_queue
 from app.platform.cache.redis import close_redis, init_redis
@@ -22,6 +25,7 @@ from app.platform.module import (
 from app.platform.module.config_loader import load_module_configs
 from app.platform.module.services import register_services
 from app.platform.observability.tracing import shutdown_tracing
+from app.platform.secrets.validate import validate_secrets_config
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     init_engine()
     await init_redis()
+    validate_secrets_config()
     await start_operation_audit_queue()
 
     await config_reader.load_all()
@@ -43,6 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await run_event_handlers(module_specs)
 
     register_services(module_specs)
+    get_auth_whitelist_patterns()
     await sync_permission_registry(app)
     await init_http_client()
 

@@ -1,12 +1,14 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
@@ -38,7 +40,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/resources/create",
+    "/v1/admin/sys/resources/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:create")),
@@ -54,7 +56,7 @@ async def create(
 
 
 @router.post(
-    "/sys/resources/update",
+    "/v1/admin/sys/resources/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:update")),
@@ -70,7 +72,7 @@ async def update(
 
 
 @router.post(
-    "/sys/resources/delete",
+    "/v1/admin/sys/resources/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:delete")),
@@ -86,7 +88,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/resources/detail",
+    "/v1/admin/sys/resources/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:detail")),
@@ -101,7 +103,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/resources/page",
+    "/v1/admin/sys/resources/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:page")),
@@ -116,7 +118,7 @@ async def page(
 
 
 @router.get(
-    "/sys/resources/current",
+    "/v1/admin/sys/resources/current",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
     ],
@@ -135,7 +137,7 @@ async def current_resources(
 
 
 @router.get(
-    "/sys/resources/tree",
+    "/v1/admin/sys/resources/tree",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:list")),
@@ -151,7 +153,7 @@ async def list_resource_tree(
 
 
 @router.post(
-    "/resource-permissions",
+    "/v1/admin/resource-permissions",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:grant")),
@@ -167,7 +169,7 @@ async def bind_resource_permission(
 
 
 @router.get(
-    "/permission-registry",
+    "/v1/admin/permission-registry",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:grant")),
@@ -181,7 +183,7 @@ async def permission_registry(
 
 
 @router.post(
-    "/sys/resource-buttons/create",
+    "/v1/admin/sys/resource-buttons/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:create")),
@@ -198,7 +200,7 @@ async def create_button(
 
 
 @router.post(
-    "/sys/resource-buttons/update",
+    "/v1/admin/sys/resource-buttons/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:update")),
@@ -215,7 +217,7 @@ async def update_button(
 
 
 @router.post(
-    "/sys/resource-buttons/delete",
+    "/v1/admin/sys/resource-buttons/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:delete")),
@@ -231,7 +233,7 @@ async def delete_button(
 
 
 @router.get(
-    "/sys/resource-buttons/page",
+    "/v1/admin/sys/resource-buttons/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:list")),
@@ -246,7 +248,7 @@ async def button_page(
 
 
 @router.post(
-    "/sys/resource-modules/create",
+    "/v1/admin/sys/resource-modules/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resourcemodule:create")),
@@ -262,7 +264,7 @@ async def create_resource_module(
 
 
 @router.post(
-    "/sys/resource-modules/update",
+    "/v1/admin/sys/resource-modules/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resourcemodule:update")),
@@ -278,7 +280,7 @@ async def update_resource_module(
 
 
 @router.post(
-    "/sys/resource-modules/delete",
+    "/v1/admin/sys/resource-modules/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resourcemodule:delete")),
@@ -294,7 +296,7 @@ async def delete_resource_module(
 
 
 @router.get(
-    "/sys/resource-modules/detail",
+    "/v1/admin/sys/resource-modules/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resourcemodule:detail")),
@@ -309,7 +311,7 @@ async def resource_module_detail(
 
 
 @router.get(
-    "/sys/resource-modules/page",
+    "/v1/admin/sys/resource-modules/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resourcemodule:page")),
@@ -324,7 +326,7 @@ async def resource_module_page(
 
 
 @router.get(
-    "/sys/resource-modules/selector",
+    "/v1/admin/sys/resource-modules/selector",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
     ],

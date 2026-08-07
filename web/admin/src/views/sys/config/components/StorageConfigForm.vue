@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { storageConfigApi } from '@/api'
 import { useMessage } from 'naive-ui'
@@ -85,7 +87,7 @@ function emptyConfig(p: ProviderKey): StorageConfig {
     use_ssl: false,
     base_url: '',
     public_path: '/api/v1/files',
-    local_root: 'storage',
+    local_root: '.runtime/storage',
     is_default: false,
     remark: '',
     sort_code: 0,
@@ -93,8 +95,8 @@ function emptyConfig(p: ProviderKey): StorageConfig {
 }
 
 const localRootOptions: SelectMixedOption[] = [
-  { label: '本地文件系统', value: 'storage' },
-  { label: 'Docker 卷', value: '/data/storage' },
+  { label: '本地运行时目录', value: '.runtime/storage' },
+  { label: 'Docker 卷', value: '/app/storage' },
   { label: 'NFS 挂载', value: '/mnt/nfs/storage' },
 ]
 

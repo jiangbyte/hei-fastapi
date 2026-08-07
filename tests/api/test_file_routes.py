@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.config.settings import settings
 from app.core.security.session import SessionPayload, session_store
@@ -66,7 +68,9 @@ async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
         uploaded = upload_response.json()["data"]
         assert uploaded["original_name"] == "report.png"
         assert uploaded["content_type"] == "image/png"
-        assert uploaded["url"] == f"/api/v1/files?object_name={uploaded['object_name']}"
+        assert uploaded["url"].startswith("/api/v1/files?object_name=")
+        assert "expires=" in uploaded["url"]
+        assert "sig=" in uploaded["url"]
         assert (tmp_path / uploaded["object_name"]).exists()
 
         page_response = await client.get(
@@ -74,7 +78,7 @@ async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
             headers=headers,
         )
         assert page_response.status_code == 200
-        assert page_response.json()["data"]["total"] == 1
+        assert page_response.json()["data"]["total"] == "1"
         file_id = page_response.json()["data"]["records"][0]["id"]
 
         detail_response = await client.get(
@@ -112,7 +116,7 @@ async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
             "/api/v1/admin/sys/file/page?current=1&size=20&original_name=renamed",
             headers=headers,
         )
-        assert empty_page_response.json()["data"]["total"] == 0
+        assert empty_page_response.json()["data"]["total"] == "0"
     finally:
         settings.storage.provider = old_provider
         settings.storage.local_root = old_root

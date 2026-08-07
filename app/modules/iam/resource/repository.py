@@ -1,9 +1,17 @@
+""" Author: Charlie """
+
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import StatusEnum
 from app.core.exceptions.business import ConflictError, NotFoundError
-from app.modules.iam.enums import IamRelationSubjectType, IamRelationTargetType, IamRelationType, ResourceModuleClient, ResourceType
+from app.modules.iam.enums import (
+    IamRelationSubjectType,
+    IamRelationTargetType,
+    IamRelationType,
+    ResourceModuleClient,
+    ResourceType,
+)
 from app.modules.iam.reference_guard import (
     count_resource_references,
     ensure_not_self_or_descendant,
@@ -182,8 +190,8 @@ class ResourceRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysResource.sort.asc(), SysResource.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         resources = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
@@ -210,8 +218,8 @@ class ResourceRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysResource.sort.asc(), SysResource.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         resources = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
@@ -250,10 +258,7 @@ class ResourceRepository:
                 ).where(SysResourceModule.id.in_(unique_ids))
             )
         ).all()
-        return {
-            str(module_id): (str(name), str(client))
-            for module_id, name, client in rows
-        }
+        return {str(module_id): (str(name), str(client)) for module_id, name, client in rows}
 
     async def bind_resource_permission(
         self,
@@ -476,8 +481,8 @@ class ResourceModuleRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysResourceModule.sort.asc(), SysResourceModule.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         modules = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()

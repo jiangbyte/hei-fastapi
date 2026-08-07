@@ -1,4 +1,7 @@
-from typing import Iterable, Protocol, runtime_checkable
+""" Author: Charlie """
+
+from collections.abc import Iterable
+from typing import Protocol, runtime_checkable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.session import SessionPayload, session_store
 from app.deps.db import get_db_session
@@ -87,7 +89,7 @@ async def test_admin_dict_create_page_detail_update_delete(client):
         headers=headers,
     )
     assert page_response.status_code == 200
-    assert page_response.json()["data"]["total"] == 1
+    assert page_response.json()["data"]["total"] == "1"
     dict_id = page_response.json()["data"]["records"][0]["id"]
 
     detail_response = await client.get(
@@ -187,7 +189,7 @@ async def test_portal_dict_tree_is_public(client):
     response = await client.get("/api/v1/portal/sys/dicts/tree")
 
     assert response.status_code == 200
-    assert response.json()["code"] == 200
+    assert response.json()["code"] == "200"
     assert [node["code"] for node in response.json()["data"]] == ["COMMON_STATUS"]
 
 
@@ -292,7 +294,7 @@ async def test_admin_dict_page_parent_filter_includes_parent_and_direct_children
 
     assert page_response.status_code == 200
     data = page_response.json()["data"]
-    assert data["total"] == 3
+    assert data["total"] == "3"
     assert {item["id"] for item in data["records"]} == {parent_id, enabled_id, disabled_id}
 
 
@@ -306,7 +308,7 @@ async def test_admin_dict_page_without_permission_returns_403(client):
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == 403
+    assert response.json()["code"] == "403"
     assert response.json()["message"] == "Permission denied: sys:dict:page"
 
 

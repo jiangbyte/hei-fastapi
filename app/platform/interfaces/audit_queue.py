@@ -1,5 +1,7 @@
-from typing import Protocol, runtime_checkable
+""" Author: Charlie """
+
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 
 @dataclass(frozen=True, slots=True)

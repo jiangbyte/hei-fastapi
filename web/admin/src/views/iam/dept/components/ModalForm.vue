@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
 import { deptApi } from '@/api'
@@ -46,7 +48,7 @@ const parentTreeOptions = computed(() => {
   return buildParentTreeOptions(state.deptTree, excludedIds)
 })
 
-/* ---- Account user selector ---- */
+/* ---- 账号用户选择器 ---- */
 
 const userSelectorState = reactive({
   show: false,
@@ -143,7 +145,7 @@ async function submitForm() {
   }
 }
 
-/* ---- Tree helpers ---- */
+/* ---- 树形辅助 ---- */
 
 function collectDescendantIds(nodes: any[], id: string): string[] {
   const ids: string[] = [id]

@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { RouteLocationNormalized, Router } from 'vue-router'
 import { useAuthStore, useRouteStore, useTabStore } from '@/stores'
 import { getRouteTitle } from '@/stores/route'
@@ -28,6 +30,11 @@ export function setupRouterGuard(router: Router) {
     }
 
     window.$loadingBar?.start()
+
+    // 当 userInfo 过期或缺失时，从 HttpOnly cookie 恢复登录状态。
+    if (!authStore.sessionChecked) {
+      await authStore.ensureSession()
+    }
 
     const isLogin = authStore.isLogin
 

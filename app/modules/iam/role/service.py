@@ -1,8 +1,9 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.exceptions.business import AuthorizationError
-from app.modules.user.utils.profile import get_profiles_batch
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
@@ -11,8 +12,8 @@ from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
-from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.relation.model import SysIamRelation
+from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
 from app.modules.iam.role.schema import (
@@ -25,6 +26,7 @@ from app.modules.iam.role.schema import (
     RoleUpdateRequest,
     SysRoleSchema,
 )
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
@@ -78,14 +80,12 @@ class RoleService:
         session: SessionPayload | None = None,
     ) -> PageData[SysRoleSchema]:
         data_scope_filter = (
-            await self._role_scope_filter(session, "iam:role:page")
-            if session is not None
-            else None
+            await self._role_scope_filter(session, "iam:role:page") if session is not None else None
         )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         schemas = to_schema_list(SysRoleSchema, items)
         await self._resolve_names(schemas)
-        return build_page(query.pagination, total, schemas)
+        return build_page(query, total, schemas)
 
     async def own_resource(
         self,
@@ -150,8 +150,10 @@ class RoleService:
         dept_ids = {d.owner_dept_id for d in dtos if d.owner_dept_id}
         creator_ids = set()
         for d in dtos:
-            if d.created_by: creator_ids.add(d.created_by)
-            if d.updated_by: creator_ids.add(d.updated_by)
+            if d.created_by:
+                creator_ids.add(d.created_by)
+            if d.updated_by:
+                creator_ids.add(d.updated_by)
         if dept_ids:
             dept_map = await self.repo.resolve_dept_names(list(dept_ids))
             for d in dtos:

@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 export function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 }

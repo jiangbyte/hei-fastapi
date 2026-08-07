@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.password import hash_password
 from app.core.security.session import SessionPayload, session_store
@@ -35,12 +37,14 @@ async def test_dashboard_overview_returns_real_shape(client):
     assert response.status_code == 200
     data = response.json()["data"]
     metric_keys = {item["key"] for item in data["metrics"]}
-    assert metric_keys >= {"accounts", "online_sessions", "files", "banners", "notifications"}
+    assert metric_keys >= {"accounts", "online_sessions", "files"}
     assert all("title" not in item for item in data["metrics"])
     assert all("unit" not in item for item in data["metrics"])
     assert "audits" not in metric_keys
     assert "todos" not in metric_keys
     assert "messages" not in metric_keys
+    assert "banners" not in metric_keys
+    assert "notifications" not in metric_keys
     assert len(data["account_trend"]) == 7
     assert "audit_trend" not in data
     assert "todo_status" not in data

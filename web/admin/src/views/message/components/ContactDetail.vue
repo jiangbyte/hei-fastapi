@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
 import { useThemeVars } from 'naive-ui'

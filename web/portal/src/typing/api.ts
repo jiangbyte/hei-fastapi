@@ -1,13 +1,15 @@
+/** Author: Charlie */
+
 export interface ApiResponse<T = unknown> {
-  code: number
+  code: string
   message?: string
   data: T
 }
 
 export interface PageData<T> {
-  current: number
-  size: number
-  total: number
-  pages?: number
+  current: string
+  size: string
+  total: string
+  pages?: string
   records: T[]
 }

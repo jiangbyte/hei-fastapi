@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import base64
 import html
 import secrets
@@ -119,6 +121,11 @@ async def decrypt_passwords(
         await redis.delete(key)
 
 
+async def decrypt_password(password_key_id: str, encrypted_value: str | None) -> str:
+    """解密单个传输层加密密码（缺失时返回空字符串）。"""
+    return (await decrypt_passwords(password_key_id, encrypted_value))[0] or ""
+
+
 def _decrypt_password(private_key, encrypted_value: str) -> str:
     try:
         ciphertext = base64.b64decode(encrypted_value)
@@ -147,7 +154,7 @@ def _captcha_svg_base64(value: str) -> str:
         f'<text x="{22 + index * 26}" y="{29 + secrets.randbelow(5)}" '
         f'font-size="24" font-family="Arial, sans-serif" font-weight="700" '
         f'fill="#0f172a" transform="rotate({secrets.randbelow(21) - 10} {22 + index * 26} 25)">'
-        f'{html.escape(char)}</text>'
+        f"{html.escape(char)}</text>"
         for index, char in enumerate(escaped)
     )
     svg = (
@@ -226,8 +233,7 @@ def _captcha_png_base64(value: str) -> str:
         )
 
     raw = b"".join(
-        b"\x00" + bytes(pixels[row * width * 3 : (row + 1) * width * 3])
-        for row in range(height)
+        b"\x00" + bytes(pixels[row * width * 3 : (row + 1) * width * 3]) for row in range(height)
     )
     png = (
         b"\x89PNG\r\n\x1a\n"

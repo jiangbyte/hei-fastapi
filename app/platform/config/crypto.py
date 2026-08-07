@@ -1,6 +1,6 @@
-from cryptography.fernet import Fernet
+""" Author: Charlie """
 
-from app.core.config.settings import settings
+from app.platform.secrets.backend import decrypt_plaintext, encrypt_plaintext
 
 _sensitive_keys = {
     "auth.default_password",
@@ -14,11 +14,6 @@ _storage_sensitive_columns = {
 }
 
 
-def _get_fernet() -> Fernet | None:
-    key = (settings.app.config_crypto_key or "").strip()
-    return Fernet(key.encode()) if key else None
-
-
 def is_sensitive(config_key: str) -> bool:
     return config_key in _sensitive_keys
 
@@ -26,22 +21,15 @@ def is_sensitive(config_key: str) -> bool:
 def encrypt_config_value(config_key: str, value: str | None) -> str | None:
     if not value or not is_sensitive(config_key):
         return value
-    f = _get_fernet()
-    if f is None:
-        raise RuntimeError("config_crypto_key is not configured")
-    return f.encrypt(value.encode()).decode()
+    return encrypt_plaintext(value)
 
 
 def decrypt_config_value(config_key: str, value: str | None) -> str | None:
     if not value:
         return value
-    f = _get_fernet()
-    if f:
-        try:
-            return f.decrypt(value.encode()).decode()
-        except Exception:
-            pass
-    return value
+    decrypted = decrypt_plaintext(value)
+    # 明文行或密钥错误：非破坏性读取时原样返回。
+    return decrypted if decrypted is not None else value
 
 
 def is_storage_sensitive(column_name: str) -> bool:
@@ -49,12 +37,26 @@ def is_storage_sensitive(column_name: str) -> bool:
 
 
 def encrypt_storage_value(column_name: str, value: str | None) -> str | None:
+    """加密存储 AK/SK。需要 secrets 后端（Fernet 环境变量或 Vault）。"""
     if not value or not is_storage_sensitive(column_name):
         return value
-    return encrypt_config_value(column_name, value)
+    return encrypt_plaintext(value)
 
 
 def decrypt_storage_value(column_name: str, value: str | None) -> str | None:
     if not value:
         return value
-    return decrypt_config_value(column_name, value)
+    if not is_storage_sensitive(column_name):
+        return value
+    decrypted = decrypt_plaintext(value)
+    # 轮换前仍为明文行：原样返回。
+    return decrypted if decrypted is not None else value
+
+
+def encrypt_secret(value: str) -> str:
+    """加密任意密钥（如 MFA TOTP 种子）。"""
+    return encrypt_plaintext(value)
+
+
+def decrypt_secret(value: str) -> str | None:
+    return decrypt_plaintext(value)

@@ -1,5 +1,7 @@
-"""展示图内容表模型，字段默认值与 sys_dict 字典条目的 value 保持一致。"""
+""" Author: Charlie
 
+展示图内容表模型，字段默认值与 sys_dict 字典条目的 value 保持一致。
+"""
 from datetime import datetime
 
 from sqlalchemy import BigInteger, DateTime, Index, Integer, String, Text

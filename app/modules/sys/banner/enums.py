@@ -1,5 +1,7 @@
-"""展示图模块枚举定义，值与 sys_dict 字典条目一致（大写+下划线体系）。"""
+""" Author: Charlie
 
+展示图模块枚举定义，值与 sys_dict 字典条目一致（大写+下划线体系）。
+"""
 from enum import StrEnum
 
 

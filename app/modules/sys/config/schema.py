@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 from typing import Any
 
@@ -5,6 +7,7 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireInt
 
 
 class ConfigCreateRequest(ApiSchema):
@@ -12,7 +15,7 @@ class ConfigCreateRequest(ApiSchema):
     config_value: str | None = None
     category: str | None = Field(default=None, max_length=255)
     remark: str | None = Field(default=None, max_length=255)
-    sort_code: int = 0
+    sort_code: WireInt = 0
     ext_json: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -31,7 +34,7 @@ class SysConfigSchema(ApiSchema):
     config_value: str | None = None
     category: str | None = None
     remark: str | None = None
-    sort_code: int
+    sort_code: WireInt
     ext_json: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     created_by: str | None = None

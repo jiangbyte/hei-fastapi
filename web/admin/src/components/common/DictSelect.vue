@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { NCheckbox, NCheckboxGroup, NRadio } from 'naive-ui'
 import { computed } from 'vue'

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import type { EditorUploadedFile } from './shared'

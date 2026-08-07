@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <view class="crop-page">
     <view class="crop-header">

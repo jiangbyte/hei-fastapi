@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import ipaddress
@@ -8,7 +10,7 @@ from app.core.config.settings import settings
 
 
 def get_client_ip(request: Request) -> str | None:
-    """Resolve the real client IP, trusting forwarding headers only from trusted proxies."""
+    """解析真实客户端 IP；仅信任来自可信代理的转发头。"""
     direct_ip = request.client.host if request.client else None
     if not direct_ip or not _is_trusted_proxy(direct_ip):
         return direct_ip

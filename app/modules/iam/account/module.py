@@ -1,11 +1,11 @@
+""" Author: Charlie """
+
 from app.platform.module import BeatScheduleSpec, ModuleSpec, RouteSpec, ServiceRegistration
 
 module = ModuleSpec(
     name="iam.account",
     routes=(
         RouteSpec(
-            version="v1",
-            prefix="/admin",
             tags=("admin",),
             router="app.modules.iam.account.router:router",
         ),

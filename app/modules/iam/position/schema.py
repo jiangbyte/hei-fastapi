@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
@@ -5,14 +7,15 @@ from pydantic import Field
 from app.core.config.enums import StatusEnum
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 
 
 class PositionCreateRequest(ApiSchema):
     name: str = Field(min_length=1, max_length=64)
     category: str = Field(min_length=1, max_length=32)
     owner_dept_id: str | None = Field(default=None, max_length=64)
-    sort: int = 99
-    is_virtual: bool = False
+    sort: WireInt = 99
+    is_virtual: WireBool = False
     status: StatusEnum = StatusEnum.ENABLED
     description: str | None = None
     extra: dict = Field(default_factory=dict)
@@ -33,8 +36,8 @@ class SysPositionSchema(ApiSchema):
     name: str
     category: str
     owner_dept_id: str | None = None
-    sort: int
-    is_virtual: bool
+    sort: WireInt
+    is_virtual: WireBool
     status: str
     description: str | None = None
     extra: dict

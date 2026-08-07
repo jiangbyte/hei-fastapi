@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 
 from redis.asyncio import Redis
@@ -48,7 +50,7 @@ class BannerService:
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysBannerSchema, entities)
         await _resolve_nicknames(self.db, schemas)
-        return build_page(query.pagination, total, schemas)
+        return build_page(query, total, schemas)
 
     async def list_public(self, query: BannerPublicListQuery) -> list[SysBannerSchema]:
         items = await self.repo.list_public(now=datetime.now(UTC), query=query)
@@ -82,6 +84,7 @@ async def _resolve_nicknames(db, items: list) -> list:
         if item.updated_by and item.updated_by in nickname_map:
             item.updated_name = nickname_map[item.updated_by]
     return items
+
 
 async def _read_positive_deltas(redis: Redis, key: str) -> dict[str, int]:
     raw_values = await redis.hgetall(key)

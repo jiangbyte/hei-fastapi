@@ -8,7 +8,7 @@
 | `seed/` | 初始化超管、资源菜单等必要业务数据（与 bootstrap 并存） |
 | `ops/` | 运维、压测、验收辅助脚本 |
 | `sql/` | bootstrap 数据 SQL、历史备份 SQL |
-| `codegen/ddl_tests/` | 代码生成器的 DDL 测试样例 |
+| `codegen/` | 代码生成写盘 / 测试模块再生；`ddl_tests/` 为 DDL 样例 |
 
 ## 常用命令
 
@@ -26,6 +26,17 @@ python scripts/db/export_bootstrap_sql.py
 python scripts/seed/seed_super_admin.py
 
 python scripts/ops/loadtest_http.py --base-url http://127.0.0.1:8000 --path / --requests 1000 --concurrency 50
+
+# DR 文档门禁（CI 也会跑）
+python scripts/ops/check_dr_docs.py
+
+# owner_dept 历史回填（迁移之外的运维补跑）
+python scripts/ops/backfill_owner_dept.py
+
+# 代码生成：将方案预览落到仓库（幂等合并 api/index.ts；不改 routes.static.ts）
+python scripts/codegen/apply_plan.py --plan-id <plan_id>
+# 本地 cg_test_* 测试模块按模板再生（enabled=False）
+python scripts/codegen/regen_cg_test_modules.py
 ```
 
 ## Bootstrap 与 seed 并存

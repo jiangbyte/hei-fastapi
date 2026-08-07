@@ -1,10 +1,13 @@
+""" Author: Charlie """
+
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 
 CodegenType = Literal["TABLE", "TREE", "LEFT_TREE_TABLE", "MASTER_DETAIL"]
 CodegenTableRole = Literal["MAIN", "SUB"]
@@ -28,7 +31,7 @@ class CodegenPlanCreateRequest(ApiSchema):
     menu_path: str = Field(min_length=1, max_length=255)
     component_path: str = Field(min_length=1, max_length=255)
     icon: str | None = Field(default=None, max_length=255)
-    sort: int = 99
+    sort: WireInt = 99
     tree_parent_field: str | None = Field(default=None, max_length=128)
     tree_label_field: str | None = Field(default=None, max_length=128)
     sub_table: str | None = Field(default=None, max_length=128)
@@ -95,7 +98,7 @@ class SysCodegenPlanSchema(ApiSchema):
     menu_path: str
     component_path: str
     icon: str | None = None
-    sort: int
+    sort: WireInt
     tree_parent_field: str | None = None
     tree_label_field: str | None = None
     sub_table: str | None = None
@@ -120,16 +123,16 @@ class CodegenFieldUpdateItem(ApiSchema):
     form_widget: str = Field(default="input", min_length=1, max_length=32)
     dict_code: str | None = Field(default=None, max_length=128)
     query_operator: str | None = Field(default=None, max_length=32)
-    show_in_table: bool = True
-    show_in_form: bool = True
-    show_in_detail: bool = True
-    show_in_query: bool = False
-    is_primary_key: bool = False
-    is_required: bool = False
-    is_unique: bool = False
-    is_nullable: bool = True
-    max_length: int | None = None
-    sort: int = 99
+    show_in_table: WireBool = True
+    show_in_form: WireBool = True
+    show_in_detail: WireBool = True
+    show_in_query: WireBool = False
+    is_primary_key: WireBool = False
+    is_required: WireBool = False
+    is_unique: WireBool = False
+    is_nullable: WireBool = True
+    max_length: WireInt | None = None
+    sort: WireInt = 99
 
 
 class CodegenFieldsUpdateBatchRequest(ApiSchema):
@@ -157,9 +160,9 @@ class DatabaseColumnSchema(ApiSchema):
     db_type: str
     python_type: str
     typescript_type: str
-    is_primary_key: bool
-    is_nullable: bool
-    max_length: int | None = None
+    is_primary_key: WireBool
+    is_nullable: WireBool
+    max_length: WireInt | None = None
 
 
 class CodegenPreviewFile(ApiSchema):

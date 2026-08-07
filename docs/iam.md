@@ -66,6 +66,15 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 | `SELF` | 仅本人 |
 | `CUSTOM` | 自定义范围（配合部门选择） |
 
+业务列表（如 `page_admin`）通过 `build_data_scope_filter` 注入 SQL 条件：
+
+- **SELF**：按 `created_by`（账号 ID）过滤。
+- **DEPT / DEPT_AND_CHILD / CUSTOM**：需要模型上的部门列。Codegen 主表已混入 `OwnerDeptMixin.owner_dept_id`；`service` 传 `dept_column=getattr(Model, "owner_dept_id", None)`。
+- 若角色含部门范围但模型**没有** `owner_dept_id`，会降级为 SELF（避免误放行全部数据）。
+- 存量 biz 主表已混入 `OwnerDeptMixin`；迁移 `c3d4e5f6a7b8_biz_owner_dept` 在表存在时 `add_column`；`d4e5f6a7b8c9_mfa_owner_backfill` 按 `ACCOUNT_DEPT` 回填历史行。
+- 创建时：`default_owner_dept_id(session)` 取 `session.dept_ids[0]` 写入（账号无部门则为空）；历史行可为空，SELF 仍靠 `created_by`。
+- **Admin MFA**：TOTP + WebAuthn/Passkey；`AUTH__MFA_REQUIRED` 时可强制开通；密码通过后 challenge，再 `POST /v1/admin/login/mfa`；Portal / Uniapp 不参与 MFA 完成流程。
+
 ---
 
 ## 权限注册与同步
@@ -74,7 +83,7 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 
 - 权限键格式遵循资源路由路径
 - 管理端 `sys_resource` 模块提供页面前端可见资源的查询接口
-- 启动时通过 `apply_db_config_overrides()` 同步覆盖后端的运行时配置（Auth、Storage、Mail、Audit 参数）
+- 启动时通过 `apply_all_config()` 将 `sys_config` 覆盖到 `settings`（Auth、Storage、Mail、Audit、PasswordPolicy）
 
 ---
 
@@ -83,10 +92,11 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 | 特性 | 说明 |
 |---|---|
 | Token 存储 | Redis，支持集群共享 |
+| 传输形态 | HttpOnly Cookie 优先（Web）；原生可传裸 token 于 `Authorization`（无 Bearer）；IM 用短时 `imt_` ticket |
 | Token 绑定 | 可选 IP 绑定、User-Agent 绑定 |
 | 并发限制 | 可配置最大并发会话数 |
 | 空闲超时 | 可配置空闲超时时间 |
-| 有效期 | 支持 Token TTL 和 Refresh TTL 分离 |
+| 有效期 | `token_ttl_seconds`（记住我）/ `token_ttl_short_seconds` |
 
 ---
 
@@ -97,16 +107,17 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 | 暴力破解 | 账号级和 IP 级登录失败计数，超过阈值临时锁定 |
 | 密码加密 | RSA 公钥加密传输 |
 | 验证码 | 登录/注册支持验证码校验 |
+| 二次认证 | Admin TOTP / WebAuthn |
 | 审计告警 | 异常时段登录、敏感操作、批量删除、IP 异常行为检测 |
 
 ---
 
 ## 审计
 
-关键操作通过 `OperationAuditMiddleware` 自动记录到 `sys_operation_audit` 表：
+关键操作通过 `app.middleware.asgi_rest.OperationAuditMiddleware` 写入有界队列，持久化到 `sys_operation_audit_log`，溢出可落 `sys_operation_audit_outbox` / Redis spill：
 
-- 写队列使用有界异步队列（默认 1000），队满时丢弃但不阻塞请求
-- Celery 定时任务分析异常行为并生成审计告警
+- 写路径不阻塞请求；队满时降级到 outbox，而不是静默丢弃关键写操作
+- Celery 定时任务（间隔取 `audit_alert.analysis_interval_seconds`）分析异常行为并生成审计告警
 - 支持的告警规则：暴力破解、非常规时段操作、敏感操作、批量删除、IP 异常
 
 ---
@@ -115,10 +126,29 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 
 | 维度 | 管理端 (ADMIN) | 门户端 (PORTAL) |
 |---|---|---|
-| 典型客户端 | Vue 3 管理端 | React 门户 / 其他门户 API 客户端 |
-| 登录入口 | `/api/v1/admin/auth/*` | `/api/v1/portal/auth/*` |
+| 典型客户端 | Vue 3 管理端 / Admin Uniapp | React 门户 / 其他门户 API 客户端 |
+| 登录入口 | `/api/v1/admin/login`（MFA：`/api/v1/admin/login/mfa`、`/api/v1/admin/auth/mfa/*`） | `/api/v1/portal/login` |
 | 用户资料表 | `admin_user_profile` | `portal_user_profile` |
-| 注册方式 | 默认不开放 | 可配置开放注册 |
+| 注册方式 | 不开放 HTTP 注册 | 可配置开放注册 |
 | 功能范围 | 系统管理、IAM、业务管理 | 个人门户、消息、空间 |
 
 两个端共享统一的账号表（`sys_account`），但通过 `account_type` 字段隔离，各自拥有独立的登录身份和会话上下文。`PORTAL` 面向门户 API 客户端（含 React 门户），与管理端路由和会话上下文分离。
+
+---
+
+## 字典待补
+
+IAM 管理页已统一走字典工具，不写本地枚举。在字典管理中补充下列字典后页面会直接生效：
+
+| 字典编码 | 用途 | 建议值 |
+| --- | --- | --- |
+| `ACCOUNT_TYPE` | 账号类型 | `ADMIN`、`PORTAL` |
+| `ACCOUNT_STATUS` | 账号状态 | `ENABLED`、`DISABLED`、`CANCELLED` |
+| `COMMON_STATUS` | 通用状态 | `ENABLED`、`DISABLED` |
+| `DEPT_CATEGORY` | 部门分类 | 按业务补充 |
+| `POSITION_CATEGORY` | 岗位分类 | 按业务补充 |
+| `ROLE_CATEGORY` | 角色分类 | 按业务补充 |
+| `ROLE_SCOPE_TYPE` | 角色数据范围 | `PLATFORM`、`DEPT` |
+| `RESOURCE_TYPE` | 资源类型 | `CATALOG`、`MENU`、`PAGE`、`BUTTON`、`ACTION`、`API_GROUP` |
+
+颜色建议统一使用十六进制颜色值。

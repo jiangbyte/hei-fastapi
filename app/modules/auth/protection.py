@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountType
 from app.core.config.settings import settings
 from app.core.exceptions.business import AuthenticationError
@@ -12,7 +14,7 @@ from app.platform.observability.metrics import record_login_lock
 
 
 class LoginProtectionService:
-    """Redis-backed login throttling by account and client IP."""
+    """基于 Redis 的登录限流，按账户与客户端 IP 统计。"""
 
     async def ensure_allowed(
         self,

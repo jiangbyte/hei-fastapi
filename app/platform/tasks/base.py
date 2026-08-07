@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from contextlib import nullcontext
 
 from celery import Task
@@ -14,7 +16,8 @@ class BaseTask(Task):
     def __call__(self, *args, **kwargs):
         tracker = (
             track_celery_task(self.name)
-            if settings.observability.enabled and settings.observability.celery_observability_enabled
+            if settings.observability.enabled
+            and settings.observability.celery_observability_enabled
             else nullcontext(lambda *_: None)
         )
         with tracker as finalize:

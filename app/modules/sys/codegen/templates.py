@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -72,8 +74,15 @@ class RenderContext:
         component_path = PurePosixPath(self.plan.component_path.strip("/"))
         parts = component_path.parts
         if len(parts) >= 2 and parts[-1] == "index.vue":
-            return str(PurePosixPath("web/admin/src/api") / PurePosixPath(*parts[:-1])).replace(".vue", ".ts") + ".ts"
-        return str(PurePosixPath("web/admin/src/api") / f"{snake_case(self.plan.main_entity_name)}.ts")
+            return (
+                str(PurePosixPath("web/admin/src/api") / PurePosixPath(*parts[:-1])).replace(
+                    ".vue", ".ts"
+                )
+                + ".ts"
+            )
+        return str(
+            PurePosixPath("web/admin/src/api") / f"{snake_case(self.plan.main_entity_name)}.ts"
+        )
 
     @property
     def api_export(self) -> str:
@@ -111,11 +120,24 @@ def render_files(
             "menu_permission.sql.j2",
         ),
     ]
-    if plan.gen_type in {"LEFT_TREE_TABLE", "MASTER_DETAIL"} and plan.sub_entity_name and plan.sub_table and plan.sub_pk:
+    if (
+        plan.gen_type in {"LEFT_TREE_TABLE", "MASTER_DETAIL"}
+        and plan.sub_entity_name
+        and plan.sub_table
+        and plan.sub_pk
+    ):
         file_specs.extend(
             [
-                (f"{ctx.child_view_component_dir}/ChildModalForm.vue", "vue", "child_modal_form.vue.j2"),
-                (f"{ctx.child_view_component_dir}/ChildModalDetail.vue", "vue", "child_modal_detail.vue.j2"),
+                (
+                    f"{ctx.child_view_component_dir}/ChildModalForm.vue",
+                    "vue",
+                    "child_modal_form.vue.j2",
+                ),
+                (
+                    f"{ctx.child_view_component_dir}/ChildModalDetail.vue",
+                    "vue",
+                    "child_modal_detail.vue.j2",
+                ),
             ]
         )
     return [
@@ -129,7 +151,11 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
     template = env.get_template(template_name)
     has_tree = ctx.plan.gen_type in {"TREE", "LEFT_TREE_TABLE"}
     has_sub = ctx.plan.gen_type in {"LEFT_TREE_TABLE", "MASTER_DETAIL"}
-    main_table_exclude = {ctx.plan.tree_parent_field} if ctx.plan.gen_type == "TREE" and ctx.plan.tree_parent_field else set()
+    main_table_exclude = (
+        {ctx.plan.tree_parent_field}
+        if ctx.plan.gen_type == "TREE" and ctx.plan.tree_parent_field
+        else set()
+    )
     main = entity_context(
         ctx.plan.main_entity_name,
         ctx.plan.main_table,
@@ -138,7 +164,9 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
         table_exclude=main_table_exclude,
     )
     sub = (
-        entity_context(ctx.plan.sub_entity_name, ctx.plan.sub_table, ctx.plan.sub_pk, ctx.sub_fields)
+        entity_context(
+            ctx.plan.sub_entity_name, ctx.plan.sub_table, ctx.plan.sub_pk, ctx.sub_fields
+        )
         if ctx.plan.sub_entity_name and ctx.plan.sub_table and ctx.plan.sub_pk
         else None
     )
@@ -147,32 +175,39 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
         has_tree
         and not template_name.startswith("child_")
         and ctx.plan.tree_parent_field
-        and any(field["name"] == ctx.plan.tree_parent_field for field in main.get("form_fields", []))
+        and any(
+            field["name"] == ctx.plan.tree_parent_field for field in main.get("form_fields", [])
+        )
     )
-    return template.render(
-        ctx=ctx,
-        plan=ctx.plan,
-        main=main,
-        sub=sub,
-        target=target,
-        is_child_template=template_name.startswith("child_"),
-        has_tree=has_tree,
-        has_tree_parent_form=has_tree_parent_form,
-        has_sub=has_sub,
-        needs_list_permission=has_tree,
-        menu_permission=menu_permission_context(has_tree)
-        if template_name == "menu_permission.sql.j2"
-        else None,
-    ).rstrip() + "\n"
+    return (
+        template.render(
+            ctx=ctx,
+            plan=ctx.plan,
+            main=main,
+            sub=sub,
+            target=target,
+            is_child_template=template_name.startswith("child_"),
+            has_tree=has_tree,
+            has_tree_parent_form=has_tree_parent_form,
+            has_sub=has_sub,
+            needs_list_permission=has_tree,
+            menu_permission=menu_permission_context(has_tree)
+            if template_name == "menu_permission.sql.j2"
+            else None,
+        ).rstrip()
+        + "\n"
+    )
 
 
 def _environment() -> Environment:
-    env = Environment(
+    # 代码生成输出 Python/TS/Vue 源码而非 HTML — autoescape 会破坏模板。
+    env = Environment(  # nosec B701
         loader=FileSystemLoader(TEMPLATE_DIR),
         trim_blocks=True,
         lstrip_blocks=True,
         undefined=StrictUndefined,
         keep_trailing_newline=True,
+        autoescape=False,
     )
     env.filters.update(
         camel=camel_case,
@@ -194,9 +229,13 @@ def entity_context(
     if not entity_name or not table_name or not pk_name:
         return {}
     table_exclude = table_exclude or set()
-    model_fields = [field_context(field) for field in fields if field.column_name not in AUDIT_COLUMNS]
+    model_fields = [
+        field_context(field) for field in fields if field.column_name not in AUDIT_COLUMNS
+    ]
     form_fields = [field_context(field) for field in fields if is_form_field(field)]
-    query_fields = [field_context(field) for field in fields if field.show_in_query and not field.is_primary_key]
+    query_fields = [
+        field_context(field) for field in fields if field.show_in_query and not field.is_primary_key
+    ]
     table_fields = [
         field_context(field)
         for field in fields
@@ -227,8 +266,24 @@ def entity_context(
         "has_table_bool": any(field["is_bool"] for field in table_fields),
         "has_table_tag": any(field["dict_code"] or field["is_bool"] for field in table_fields),
         "has_detail_dict": any(field["dict_code"] for field in detail_fields),
-        "needs_form_normalize": any(field["is_datetime"] or field["is_json"] for field in form_fields),
-        "needs_submit_normalize": any(field["is_datetime"] or field["is_json"] for field in form_fields),
+        "needs_form_normalize": any(
+            field["is_datetime"] or field["is_json"] for field in form_fields
+        ),
+        "needs_submit_normalize": any(
+            field["is_datetime"] or field["is_json"] for field in form_fields
+        ),
+        "uses_wire_bool": any(
+            "WireBool" in field["schema_type"] or "WireBool" in field["query_schema_type"]
+            for field in (*form_fields, *detail_fields, *query_fields)
+        ),
+        "uses_wire_int": any(
+            "WireInt" in field["schema_type"] or "WireInt" in field["query_schema_type"]
+            for field in (*form_fields, *detail_fields, *query_fields)
+        ),
+        "uses_wire_float": any(
+            "WireFloat" in field["schema_type"] or "WireFloat" in field["query_schema_type"]
+            for field in (*form_fields, *detail_fields, *query_fields)
+        ),
     }
 
 
@@ -285,7 +340,9 @@ def field_context(field: SysCodegenField) -> dict[str, Any]:
 
 
 def is_form_field(field: SysCodegenField) -> bool:
-    return field.show_in_form and not field.is_primary_key and field.column_name not in AUDIT_COLUMNS
+    return (
+        field.show_in_form and not field.is_primary_key and field.column_name not in AUDIT_COLUMNS
+    )
 
 
 def normalized_py_type(field: SysCodegenField) -> str:
@@ -301,15 +358,20 @@ def is_json_field(field: SysCodegenField, python_type: str | None = None) -> boo
     return raw_python_type in {"dict", "dict[str, Any]"} or "json" in field.db_type.lower()
 
 
+def _wire_schema_type(raw: str) -> str:
+    mapping = {"int": "WireInt", "bool": "WireBool", "float": "WireFloat"}
+    return mapping.get(raw, raw)
+
+
 def schema_py_type(field: SysCodegenField) -> str:
-    raw = normalized_py_type(field)
+    raw = _wire_schema_type(normalized_py_type(field))
     if field.is_nullable and not field.is_primary_key:
         return f"{raw} | None"
     return raw
 
 
 def query_schema_py_type(field: SysCodegenField) -> str:
-    raw = normalized_py_type(field)
+    raw = _wire_schema_type(normalized_py_type(field))
     if raw.endswith(" | None"):
         return raw
     return f"{raw} | None"

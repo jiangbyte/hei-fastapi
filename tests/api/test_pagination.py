@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.session import SessionPayload, session_store
 from app.modules.iam.account.model import SysAccount
@@ -52,10 +54,10 @@ async def test_admin_file_list_uses_current_size_total_pages_records(client):
 
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["current"] == 1
-    assert data["size"] == 20
-    assert data["total"] == 1
-    assert data["pages"] == 1
+    assert data["current"] == "1"
+    assert data["size"] == "20"
+    assert data["total"] == "1"
+    assert data["pages"] == "1"
     assert isinstance(data["records"], list)
     assert data["records"][0]["object_name"] == "uploads/20260617/demo.txt"
     assert "page" not in data

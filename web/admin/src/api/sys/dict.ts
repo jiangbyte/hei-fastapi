@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const dictPrefix = '/api/v1/admin/sys/dicts'

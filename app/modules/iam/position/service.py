@@ -1,8 +1,9 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.exceptions.business import AuthorizationError
-from app.modules.user.utils.profile import get_profiles_batch
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
@@ -15,6 +16,7 @@ from app.modules.iam.position.schema import (
     PositionUpdateRequest,
     SysPositionSchema,
 )
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
@@ -23,17 +25,25 @@ class PositionService:
         self.db = db
         self.repo = PositionRepository(db)
 
-    async def create(self, payload: PositionCreateRequest, session: SessionPayload | None = None) -> None:
+    async def create(
+        self, payload: PositionCreateRequest, session: SessionPayload | None = None
+    ) -> None:
         if session is not None and payload.owner_dept_id:
-            await self._ensure_depts_visible(session, "iam:position:create", [payload.owner_dept_id])
+            await self._ensure_depts_visible(
+                session, "iam:position:create", [payload.owner_dept_id]
+            )
         async with transactional(self.db):
             await self.repo.create(payload)
 
-    async def update(self, payload: PositionUpdateRequest, session: SessionPayload | None = None) -> None:
+    async def update(
+        self, payload: PositionUpdateRequest, session: SessionPayload | None = None
+    ) -> None:
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:update", [payload.id])
             if payload.owner_dept_id:
-                await self._ensure_depts_visible(session, "iam:position:update", [payload.owner_dept_id])
+                await self._ensure_depts_visible(
+                    session, "iam:position:update", [payload.owner_dept_id]
+                )
         async with transactional(self.db):
             await self.repo.update(payload)
 
@@ -43,7 +53,9 @@ class PositionService:
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
-    async def detail(self, query: IdQuery, session: SessionPayload | None = None) -> SysPositionSchema:
+    async def detail(
+        self, query: IdQuery, session: SessionPayload | None = None
+    ) -> SysPositionSchema:
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:detail", [query.id])
         schema = to_schema(SysPositionSchema, await self.repo.get_required(query.id))
@@ -63,15 +75,18 @@ class PositionService:
         items, total = await self.repo.page_admin(query, data_scope_filter)
         schemas = to_schema_list(SysPositionSchema, items)
         await self._resolve_creator_names(schemas)
-        return build_page(query.pagination, total, schemas)
+        return build_page(query, total, schemas)
 
     async def _resolve_creator_names(self, items: list[SysPositionSchema]) -> None:
         """批量查询 created_by / updated_by 对应的昵称。"""
         account_ids: set[str] = set()
         for item in items:
-            if item.created_by: account_ids.add(item.created_by)
-            if item.updated_by: account_ids.add(item.updated_by)
-        if not account_ids: return
+            if item.created_by:
+                account_ids.add(item.created_by)
+            if item.updated_by:
+                account_ids.add(item.updated_by)
+        if not account_ids:
+            return
         profiles = await get_profiles_batch(self.db, AccountType.ADMIN, list(account_ids))
         for item in items:
             if item.created_by and item.created_by in profiles:
@@ -98,7 +113,9 @@ class PositionService:
         if not unique_ids:
             return
         data_scope_filter = await self._position_scope_filter(session, permission_key)
-        if await self.repo.count_positions_in_scope(unique_ids, data_scope_filter) != len(unique_ids):
+        if await self.repo.count_positions_in_scope(unique_ids, data_scope_filter) != len(
+            unique_ids
+        ):
             raise AuthorizationError("Position is outside current data scope")
 
     async def _ensure_depts_visible(

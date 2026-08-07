@@ -1,9 +1,12 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
 
 from app.core.schema.base import ApiSchema
-from app.core.schema.common_schema import IdNameResponse as IdNameResponse
+from app.core.schema.common_schema import IdNameResponse
+from app.core.schema.wire import WireBool
 from app.core.security.transport import PasswordKeyMixin
 
 
@@ -17,8 +20,8 @@ class AdminProfileResponse(ApiSchema):
     signature: str | None = None
     phone: str | None = None
     email: str | None = None
-    phone_login_enabled: bool = False
-    email_login_enabled: bool = False
+    phone_login_enabled: WireBool = False
+    email_login_enabled: WireBool = False
     remark: str | None = None
     created_at: datetime | None = Field(default=None, examples=["2026-06-17T12:00:00Z"])
     updated_at: datetime | None = Field(default=None, examples=["2026-06-17T12:00:00Z"])
@@ -59,7 +62,7 @@ class AdminUserCenterPhoneUpdateRequest(PasswordKeyMixin):
 
     password: str = Field(min_length=1, max_length=512)
     phone: str | None = Field(default=None, max_length=32)
-    phone_login_enabled: bool = False
+    phone_login_enabled: WireBool = False
 
 
 class AdminUserCenterEmailUpdateRequest(PasswordKeyMixin):
@@ -67,7 +70,7 @@ class AdminUserCenterEmailUpdateRequest(PasswordKeyMixin):
 
     password: str = Field(min_length=1, max_length=512)
     email: str | None = Field(default=None, max_length=128)
-    email_login_enabled: bool = False
+    email_login_enabled: WireBool = False
 
 
 class AdminUserCenterOrgInfoResponse(ApiSchema):

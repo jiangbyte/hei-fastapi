@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import asyncio
 from logging.config import fileConfig
 
@@ -10,7 +12,8 @@ from app.core.config.settings import settings
 from app.platform.db.base import Base
 from app.platform.module import load_declared_models, load_module_specs
 
-load_declared_models(load_module_specs())
+# 包含已禁用模块，使 Alembic 元数据完整而无需启用路由。
+load_declared_models(load_module_specs(include_disabled=True))
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.db.url)
@@ -22,7 +25,7 @@ target_metadata = Base.metadata
 
 
 def include_name(name: str | None, type_: str, parent_names: dict[str, str | None]) -> bool:
-    """Keep autogenerate scoped to tables declared in project metadata."""
+    """将 autogenerate 范围限定为项目元数据中声明的表。"""
 
     if type_ == "schema":
         return name in (None, target_metadata.schema)

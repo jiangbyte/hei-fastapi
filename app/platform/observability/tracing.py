@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import logging
 
 from app.core.config.settings import settings
@@ -40,10 +42,14 @@ def init_tracing(app=None, engine=None) -> None:
         sampler=TraceIdRatioBased(settings.observability.sample_ratio),
     )
     if settings.observability.otlp_enabled and settings.observability.otlp_endpoint:
-        exporter = OTLPSpanExporter(endpoint=f"{settings.observability.otlp_endpoint.rstrip('/')}/v1/traces")
+        exporter = OTLPSpanExporter(
+            endpoint=f"{settings.observability.otlp_endpoint.rstrip('/')}/v1/traces"
+        )
         provider.add_span_processor(BatchSpanProcessor(exporter))
     elif settings.observability.otlp_enabled:
-        logger.warning("OTLP exporter enabled but endpoint is empty; skipping exporter registration")
+        logger.warning(
+            "OTLP exporter enabled but endpoint is empty; skipping exporter registration"
+        )
     trace.set_tracer_provider(provider)
     if app is not None:
         FastAPIInstrumentor.instrument_app(app)

@@ -1,9 +1,11 @@
+""" Author: Charlie """
+
 from pydantic import Field
 
 from app.core.config.enums import AccountType
 from app.core.schema.base import ApiSchema
-from app.modules.user.admin.schema import AdminProfileResponse
 from app.core.schema.common_schema import IdNameResponse
+from app.modules.user.admin.schema import AdminProfileResponse
 from app.modules.user.portal.schema import PortalProfileResponse
 
 

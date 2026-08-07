@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { defineStore } from 'pinia'
 import { router } from '@/router'
 import { resourceApi } from '@/api'

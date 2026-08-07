@@ -1,5 +1,7 @@
-"""检查当前数据库结构是否与 SQLAlchemy 模型一致。"""
+""" Author: Charlie
 
+检查当前数据库结构是否与 SQLAlchemy 模型一致。
+"""
 import os
 import sys
 from pathlib import Path

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <Layout title="个人资料" :back="true">
     <view class="profile-container">

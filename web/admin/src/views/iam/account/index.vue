@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="tsx">
 import type { PaginationProps } from 'naive-ui'
 import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
@@ -21,6 +23,7 @@ import ModalGrantDept from '../components/ModalGrantDept.vue'
 import ModalGrantResource from '../role/components/ModalGrantResource.vue'
 import ModalGrantGroup from '../components/ModalGrantGroup.vue'
 import ModalGrantRole from '../components/ModalGrantRole.vue'
+import { readPageMeta } from '@/utils/wire'
 
 const formModalRef = ref<any>(null)
 const detailModalRef = ref<any>(null)
@@ -288,9 +291,10 @@ async function fetchPage() {
     })
     const data = response.data ?? {}
     state.accounts = data.records ?? []
-    state.total = data.total ?? 0
-    state.page = data.current ?? state.page
-    state.pageSize = data.size ?? state.pageSize
+    const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
+    state.total = pageMeta.total
+    state.page = pageMeta.current
+    state.pageSize = pageMeta.size
     state.checkedRowKeys = state.checkedRowKeys.filter((key) =>
       state.accounts.some((item) => item.id === key),
     )

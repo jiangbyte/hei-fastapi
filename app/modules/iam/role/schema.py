@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
@@ -5,6 +7,7 @@ from pydantic import Field
 from app.core.config.enums import StatusEnum
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 from app.modules.iam.enums import RoleScopeType
 from app.modules.iam.schema import (
     ResourceGrantModuleOption,
@@ -18,9 +21,9 @@ class RoleCreateRequest(ApiSchema):
     category: str = Field(min_length=1, max_length=64)
     scope_type: RoleScopeType = RoleScopeType.PLATFORM
     owner_dept_id: str | None = Field(default=None, max_length=64)
-    sort: int = 99
+    sort: WireInt = 99
     status: StatusEnum = StatusEnum.ENABLED
-    is_builtin: bool = False
+    is_builtin: WireBool = False
     description: str | None = None
     extra: dict = Field(default_factory=dict)
 
@@ -44,9 +47,9 @@ class SysRoleSchema(ApiSchema):
     category: str
     scope_type: RoleScopeType
     owner_dept_id: str | None = None
-    sort: int
+    sort: WireInt
     status: str
-    is_builtin: bool
+    is_builtin: WireBool
     description: str | None = None
     extra: dict
     created_at: datetime

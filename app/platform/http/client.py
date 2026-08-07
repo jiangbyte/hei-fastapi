@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Any
 
 import httpx
@@ -9,9 +11,14 @@ http_client: httpx.AsyncClient | None = None
 
 
 class InstrumentedAsyncClient(httpx.AsyncClient):
-    async def request(self, method: str, url: httpx._types.URLTypes, *args: Any, **kwargs: Any) -> httpx.Response:
+    async def request(
+        self, method: str, url: httpx._types.URLTypes, *args: Any, **kwargs: Any
+    ) -> httpx.Response:
         """在启用观测性时采集出站 HTTP 指标，关闭观测性时保持纯净调用链。"""
-        if not (settings.observability.enabled and settings.observability.http_client_observability_enabled):
+        if not (
+            settings.observability.enabled
+            and settings.observability.http_client_observability_enabled
+        ):
             return await super().request(method, url, *args, **kwargs)
         request = self.build_request(method, url, *args, **kwargs)
         host = request.url.host or "unknown"

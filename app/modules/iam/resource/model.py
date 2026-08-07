@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,9 +14,7 @@ class SysResource(Base, TimestampMixin):
     """资源表，统一描述目录、菜单、页面、按钮和接口分组等可授权资源节点。"""
 
     __tablename__ = "sys_resource"
-    __table_args__ = (
-        UniqueConstraint("module_id", "code", name="uq_sys_resource_module_id_code"),
-    )
+    __table_args__ = (UniqueConstraint("module_id", "code", name="uq_sys_resource_module_id_code"),)
 
     id: Mapped[str] = mapped_column(
         String(64),

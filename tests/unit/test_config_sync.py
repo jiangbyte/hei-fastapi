@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import asyncio
 import json
 
@@ -39,8 +41,7 @@ async def test_config_sync_listener_reloads_on_peer_event(fake_redis, monkeypatc
 async def _wait_for_subscription(fake_redis) -> None:
     for _ in range(20):
         subscribed = any(
-            config_sync.CONFIG_SYNC_CHANNEL in pubsub.channels
-            for pubsub in fake_redis._pubsubs
+            config_sync.CONFIG_SYNC_CHANNEL in pubsub.channels for pubsub in fake_redis._pubsubs
         )
         if subscribed:
             return

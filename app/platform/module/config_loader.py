@@ -1,4 +1,7 @@
-"""模块级配置加载 — 从 ModuleSpec.config_model 声明实例化 BaseSettings 并注入 settings。"""
+""" Author: Charlie
+
+模块级配置加载 — 从 ModuleSpec.config_model 声明实例化 BaseSettings 并注入 settings。
+"""
 import importlib
 import logging
 
@@ -44,7 +47,7 @@ def _apply_db_overrides(instance: BaseSettings, module_name: str) -> None:
     for key, value in config_reader.raw_items().items():
         if not key.startswith(prefix):
             continue
-        attr_name = key[len(prefix):]
+        attr_name = key[len(prefix) :]
         field_info = instance.__class__.model_fields.get(attr_name)
         if field_info is None:
             continue

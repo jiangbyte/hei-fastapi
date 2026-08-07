@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 export const navItems = [
   { key: '/', label: '首页' },
   { key: '/announcements', label: '公告' },

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
 import { authApi } from '@/api'

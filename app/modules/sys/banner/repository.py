@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from sqlalchemy import Select, case, delete, func, or_, select, update
@@ -69,8 +71,8 @@ class BannerRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysBanner.sort.asc(), SysBanner.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { fileApi } from '@/api'
 import { displayValue, formatDateTime, formatFileSize, isImageFile, resolveFileUrl } from '@/utils'

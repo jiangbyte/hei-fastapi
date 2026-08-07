@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { DropdownOption } from 'naive-ui'
 import { computed, ref } from 'vue'

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import re
 from urllib.parse import parse_qs, urlparse
 
@@ -20,11 +22,11 @@ def auth_security_bypass(monkeypatch):
     async def fake_verify_captcha(captcha_id: str, captcha_value: str) -> None:
         return None
 
-    async def fake_decrypt_passwords(password_key_id: str, *values: str | None):
-        return list(values)
+    async def fake_decrypt_password(password_key_id: str, value: str | None) -> str:
+        return value or ""
 
     monkeypatch.setattr("app.modules.auth.router.verify_captcha", fake_verify_captcha)
-    monkeypatch.setattr("app.modules.auth.router.decrypt_passwords", fake_decrypt_passwords)
+    monkeypatch.setattr("app.modules.auth.router.decrypt_password", fake_decrypt_password)
 
 
 def _secured(payload: dict) -> dict:
@@ -88,8 +90,9 @@ async def test_public_auth_login_route_not_found(client):
         "/api/v1/public/auth/login",
         json={"account": "anyone", "password": "Secret@123"},
     )
-    assert response.status_code == 404
-    assert response.json() == {"code": 404, "message": "Not Found", "data": None}
+        # 未注册的 /api 路径在路由前被 auth 白名单中间件拒绝。
+    assert response.status_code == 401
+    assert response.json()["code"] == "401"
 
 
 async def test_portal_auth_login_success(client):
@@ -112,7 +115,7 @@ async def test_portal_auth_login_success(client):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["code"] == 200
+    assert payload["code"] == "200"
     data = payload["data"]
     assert data["account_type"] == AccountType.PORTAL.value
 
@@ -138,19 +141,23 @@ async def test_login_identity_type_is_strict(client):
 
     wrong_type_response = await client.post(
         "/api/v1/portal/login",
-        json=_secured({
-            "account": "portal_identity_user",
-            "password": "Portal@123456",
-            "identity_type": "EMAIL",
-        }),
+        json=_secured(
+            {
+                "account": "portal_identity_user",
+                "password": "Portal@123456",
+                "identity_type": "EMAIL",
+            }
+        ),
     )
     email_response = await client.post(
         "/api/v1/portal/login",
-        json=_secured({
-            "account": "portal_identity@example.com",
-            "password": "Portal@123456",
-            "identity_type": "EMAIL",
-        }),
+        json=_secured(
+            {
+                "account": "portal_identity@example.com",
+                "password": "Portal@123456",
+                "identity_type": "EMAIL",
+            }
+        ),
     )
 
     assert wrong_type_response.status_code == 401
@@ -160,34 +167,41 @@ async def test_login_identity_type_is_strict(client):
 async def test_admin_register_route_is_removed(client):
     response = await client.post(
         "/api/v1/admin/register",
-        json=_secured({
-            "account": "admin_register_removed",
-            "nickname": "Admin",
-            "email": "admin-register@example.com",
-            "password": "Admin@123456",
-        }),
+        json=_secured(
+            {
+                "account": "admin_register_removed",
+                "nickname": "Admin",
+                "email": "admin-register@example.com",
+                "password": "Admin@123456",
+            }
+        ),
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 401
+    assert response.json()["code"] == "401"
 
 
 async def test_portal_register_requires_email_and_does_not_require_name_or_phone(client):
     missing_email = await client.post(
         "/api/v1/portal/register",
-        json=_secured({
-            "account": "portal_missing_email",
-            "nickname": "Portal User",
-            "password": "Portal@123456",
-        }),
+        json=_secured(
+            {
+                "account": "portal_missing_email",
+                "nickname": "Portal User",
+                "password": "Portal@123456",
+            }
+        ),
     )
     created = await client.post(
         "/api/v1/portal/register",
-        json=_secured({
-            "account": "portal_register_email",
-            "nickname": "Portal User",
-            "email": "portal-register@example.com",
-            "password": "Portal@123456",
-        }),
+        json=_secured(
+            {
+                "account": "portal_register_email",
+                "nickname": "Portal User",
+                "email": "portal-register@example.com",
+                "password": "Portal@123456",
+            }
+        ),
     )
 
     assert missing_email.status_code == 422
@@ -233,27 +247,33 @@ async def test_admin_forgot_and_reset_password_use_email_link(client, monkeypatc
 
     reset = await client.post(
         "/api/v1/admin/reset-password",
-        json=_secured({
-            "email": "admin-reset@example.com",
-            "token": token,
-            "password": "Admin@654321",
-        }),
+        json=_secured(
+            {
+                "email": "admin-reset@example.com",
+                "token": token,
+                "password": "Admin@654321",
+            }
+        ),
     )
     login = await client.post(
         "/api/v1/admin/login",
-        json=_secured({
-            "account": "admin-reset@example.com",
-            "password": "Admin@654321",
-            "identity_type": "EMAIL",
-        }),
+        json=_secured(
+            {
+                "account": "admin-reset@example.com",
+                "password": "Admin@654321",
+                "identity_type": "EMAIL",
+            }
+        ),
     )
     reused = await client.post(
         "/api/v1/admin/reset-password",
-        json=_secured({
-            "email": "admin-reset@example.com",
-            "token": token,
-            "password": "Admin@111111",
-        }),
+        json=_secured(
+            {
+                "email": "admin-reset@example.com",
+                "token": token,
+                "password": "Admin@111111",
+            }
+        ),
     )
 
     assert reset.status_code == 200
@@ -293,15 +313,16 @@ async def test_logout_rejects_bearer_prefixed_token(client):
     )
 
     assert response.status_code == 401
-    assert response.json()["code"] == 401
-    assert response.json()["message"] == "Invalid or expired token"
+    assert response.json()["code"] == "401"
+    # Bearer 方案被忽略（非有效 HEI 会话传输）。
+    assert response.json()["message"] == "Missing authorization token"
 
 
 async def test_protected_admin_route_without_token_returns_401(client):
     response = await client.get("/api/v1/admin/sys/file/page")
 
     assert response.status_code == 401
-    assert response.json()["code"] == 401
+    assert response.json()["code"] == "401"
     assert response.json()["message"] == "Missing authorization token"
 
 
@@ -312,7 +333,7 @@ async def test_protected_admin_route_with_invalid_token_returns_401(client):
     )
 
     assert response.status_code == 401
-    assert response.json()["code"] == 401
+    assert response.json()["code"] == "401"
     assert response.json()["message"] == "Invalid or expired token"
 
 
@@ -348,7 +369,7 @@ async def test_admin_route_rejects_wrong_account_type_with_403(client):
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == 403
+    assert response.json()["code"] == "403"
     assert response.json()["message"] == "Account type 'PORTAL' is not allowed"
 
 
@@ -385,7 +406,7 @@ async def test_admin_route_rejects_missing_permission_with_403(client):
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == 403
+    assert response.json()["code"] == "403"
     assert response.json()["message"] == "Permission denied: sys:file:page"
 
 
@@ -422,7 +443,7 @@ async def test_admin_route_allows_valid_account_type_and_permission(client):
     )
 
     assert response.status_code == 200
-    assert response.json()["code"] == 200
+    assert response.json()["code"] == "200"
 
 
 async def test_admin_route_allows_super_admin_role_without_explicit_permission(client):
@@ -461,7 +482,7 @@ async def test_admin_route_allows_super_admin_role_without_explicit_permission(c
     )
 
     assert response.status_code == 200
-    assert response.json()["code"] == 200
+    assert response.json()["code"] == "200"
 
 
 async def test_login_validation_error_uses_unified_response(client):
@@ -472,7 +493,7 @@ async def test_login_validation_error_uses_unified_response(client):
 
     assert response.status_code == 422
     assert response.json() == {
-        "code": 422,
+        "code": "422",
         "message": "account: String should have at least 3 characters",
         "data": None,
     }

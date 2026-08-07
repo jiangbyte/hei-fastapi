@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { bannerApi } from '@/api'
 import { createTagColor, displayValue, formatDateTime, resolveFileUrl } from '@/utils'

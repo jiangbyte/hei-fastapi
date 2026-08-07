@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -9,9 +11,9 @@ from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.modules.sys.codegen.model import SysCodegenPlan
 from app.modules.sys.codegen.repository import CodegenRepository
 from app.modules.sys.codegen.schema import (
-    CodegenFieldUpdateItem,
     CodegenFieldsQuery,
     CodegenFieldsUpdateBatchRequest,
+    CodegenFieldUpdateItem,
     CodegenParentResourceOption,
     CodegenParentResourcesQuery,
     CodegenPlanCreateRequest,
@@ -55,7 +57,7 @@ class CodegenService:
 
     async def page_admin(self, query: CodegenPlanPageQuery) -> PageData[SysCodegenPlanSchema]:
         items, total = await self.repo.page_admin(query)
-        return build_page(query.pagination, total, to_schema_list(SysCodegenPlanSchema, items))
+        return build_page(query, total, to_schema_list(SysCodegenPlanSchema, items))
 
     async def tables(self) -> list[DatabaseTableSchema]:
         return [DatabaseTableSchema(**item) for item in await self.repo.list_database_tables()]
@@ -67,13 +69,17 @@ class CodegenService:
         ]
 
     async def fields(self, query: CodegenFieldsQuery) -> list[SysCodegenFieldSchema]:
-        return to_schema_list(SysCodegenFieldSchema, await self.repo.list_fields(query.plan_id, query.table_role))
+        return to_schema_list(
+            SysCodegenFieldSchema, await self.repo.list_fields(query.plan_id, query.table_role)
+        )
 
     async def update_fields_batch(self, payload: CodegenFieldsUpdateBatchRequest) -> None:
         async with transactional(self.db):
             await self.repo.replace_fields(payload.plan_id, payload.fields)
 
-    async def parent_resources(self, query: CodegenParentResourcesQuery) -> list[CodegenParentResourceOption]:
+    async def parent_resources(
+        self, query: CodegenParentResourcesQuery
+    ) -> list[CodegenParentResourceOption]:
         return _build_resource_options(await self.repo.list_resource_options(query.module_id))
 
     async def preview(self, query: IdQuery) -> CodegenPreviewSchema:
@@ -94,7 +100,9 @@ class CodegenService:
                 zip_file.writestr(file.path, file.content)
         return buffer.getvalue(), f"codegen-{query.id}.zip"
 
-    async def _validate_plan_tables(self, payload: CodegenPlanCreateRequest | CodegenPlanUpdateRequest) -> None:
+    async def _validate_plan_tables(
+        self, payload: CodegenPlanCreateRequest | CodegenPlanUpdateRequest
+    ) -> None:
         main_columns = await self.repo.list_database_columns(payload.main_table)
         main_column_names = {column["column_name"] for column in main_columns}
         if payload.main_pk not in main_column_names:

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { UploadFileInfo } from 'naive-ui'
 import { Icon } from '@iconify/vue/offline'

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.response.pagination import PageData, build_page
@@ -72,4 +74,4 @@ class ConfigService:
         for s in schemas:
             if is_sensitive(s.config_key):
                 s.config_value = ""
-        return build_page(query.pagination, total, schemas)
+        return build_page(query, total, schemas)

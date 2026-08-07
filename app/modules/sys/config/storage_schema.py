@@ -1,8 +1,11 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
 
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 
 
 class StorageConfigCreateRequest(ApiSchema):
@@ -13,13 +16,13 @@ class StorageConfigCreateRequest(ApiSchema):
     access_key: str | None = Field(default=None, max_length=255)
     secret_key: str | None = Field(default=None, max_length=255)
     region: str | None = Field(default=None, max_length=100)
-    use_ssl: bool = False
+    use_ssl: WireBool = False
     base_url: str | None = Field(default=None, max_length=500)
     public_path: str = "/api/v1/files"
-    local_root: str = "storage"
-    is_default: bool = False
+    local_root: str = ".runtime/storage"
+    is_default: WireBool = False
     remark: str | None = Field(default=None, max_length=255)
-    sort_code: int = 0
+    sort_code: WireInt = 0
 
 
 class StorageConfigUpdateRequest(ApiSchema):
@@ -31,13 +34,13 @@ class StorageConfigUpdateRequest(ApiSchema):
     access_key: str | None = Field(default=None, max_length=255)
     secret_key: str | None = Field(default=None, max_length=255)
     region: str | None = Field(default=None, max_length=100)
-    use_ssl: bool | None = None
+    use_ssl: WireBool | None = None
     base_url: str | None = Field(default=None, max_length=500)
     public_path: str | None = Field(default=None, max_length=255)
     local_root: str | None = Field(default=None, max_length=500)
-    is_default: bool | None = None
+    is_default: WireBool | None = None
     remark: str | None = Field(default=None, max_length=255)
-    sort_code: int | None = None
+    sort_code: WireInt | None = None
 
 
 class StorageConfigSetDefaultRequest(ApiSchema):
@@ -52,14 +55,16 @@ class SysStorageConfigSchema(ApiSchema):
     endpoint: str | None = None
     access_key: str | None = None
     secret_key: str | None = None
+    access_key_set: WireBool = False
+    secret_key_set: WireBool = False
     region: str | None = None
-    use_ssl: bool = False
+    use_ssl: WireBool = False
     base_url: str | None = None
     public_path: str = "/api/v1/files"
-    local_root: str = "storage"
-    is_default: bool = False
+    local_root: str = ".runtime/storage"
+    is_default: WireBool = False
     remark: str | None = None
-    sort_code: int = 0
+    sort_code: WireInt = 0
     created_at: datetime
     created_by: str | None = None
     updated_at: datetime

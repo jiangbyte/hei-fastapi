@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 export {}
 
 declare module 'vue' {

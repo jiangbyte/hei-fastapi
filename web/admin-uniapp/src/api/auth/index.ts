@@ -1,17 +1,19 @@
+/** Author: Charlie */
+
 import { http } from '@/utils/request'
 
 const prefix = '/api/v1/admin'
 
 export function captcha(params?: any) {
-  return http.get<any>(`${prefix}/captcha`, params, { addToken: false })
+  return http.get<any>(`${prefix}/captcha`, params, { attachSession: false })
 }
 
 export function passwordKey() {
-  return http.get<any>(`${prefix}/password-key`, undefined, { addToken: false })
+  return http.get<any>(`${prefix}/password-key`, undefined, { attachSession: false })
 }
 
 export function login(data: any) {
-  return http.post<any>(`${prefix}/login`, data, { addToken: false })
+  return http.post<any>(`${prefix}/login`, data, { attachSession: false })
 }
 
 export function logout() {
@@ -23,11 +25,11 @@ export function me() {
 }
 
 export function forgotPassword(data: any) {
-  return http.post<any>(`${prefix}/forgot-password`, data, { addToken: false })
+  return http.post<any>(`${prefix}/forgot-password`, data, { attachSession: false })
 }
 
 export function resetPassword(data: any) {
-  return http.post<any>(`${prefix}/reset-password`, data, { addToken: false })
+  return http.post<any>(`${prefix}/reset-password`, data, { attachSession: false })
 }
 
 export function updateProfile(data: any) {

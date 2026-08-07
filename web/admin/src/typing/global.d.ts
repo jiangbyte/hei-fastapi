@@ -1,4 +1,6 @@
-/**
+/** Author: Charlie
+ *
+ *
  * 挂载在 window 上的 Naive UI 全局 API。
  *
  * 这些实例通常由 NaiveProvider 在应用启动时注入，业务代码可以通过 window.$message、

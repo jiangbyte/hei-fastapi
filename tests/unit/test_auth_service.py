@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import pytest
 
 from app.core.config.enums import (
@@ -79,15 +81,15 @@ async def test_admin_login_success(db_session):
     db_session.add_all([role, resource])
     await db_session.flush()
     db_session.add(resource_permission(resource.id, "iam:account:list"))
-    db_session.add(
-        subject_resource_grant(GrantSubjectType.ROLE, role.id, resource.id)
-    )
+    db_session.add(subject_resource_grant(GrantSubjectType.ROLE, role.id, resource.id))
     db_session.add(account_role(account.id, role.id))
     await db_session.commit()
 
-    payload = await AuthService(db_session).login(
+    outcome = await AuthService(db_session).login(
         LoginPayload(account="admin", password="Admin@123456", account_type=AccountType.ADMIN)
     )
+    assert outcome.session is not None
+    payload = outcome.session
     assert payload.account_id == account.id
     assert payload.account_type == AccountType.ADMIN.value
     assert "iam:account:list" in payload.permission_keys

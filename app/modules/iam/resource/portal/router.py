@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -12,7 +14,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/sys/resources/current",
+    "/v1/portal/sys/resources/current",
     response_model=ApiResponse[list[SysResourceSchema]],
 )
 async def current_resources(

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +12,7 @@ T = TypeVar("T")
 
 
 class WorkerAsyncRunner:
-    """Run async task bodies on one persistent event loop per worker process."""
+    """每个 worker 进程在单一持久事件循环上运行异步任务体。"""
 
     def __init__(self) -> None:
         self._loop: asyncio.AbstractEventLoop | None = None

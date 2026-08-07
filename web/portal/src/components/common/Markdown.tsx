@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { MdPreview } from '@/components/editor/MdPreview'
 
 type Props = {

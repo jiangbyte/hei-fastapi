@@ -1,5 +1,7 @@
-"""根据 SQLAlchemy 模型变更自动生成 Alembic 迁移文件。"""
+""" Author: Charlie
 
+根据 SQLAlchemy 模型变更自动生成 Alembic 迁移文件。
+"""
 import os
 import sys
 from pathlib import Path

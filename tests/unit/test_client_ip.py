@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from starlette.requests import Request
 
 from app.core.config.settings import settings

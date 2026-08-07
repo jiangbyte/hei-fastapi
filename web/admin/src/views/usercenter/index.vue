@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
 import { authApi } from '@/api'
@@ -5,9 +7,11 @@ import { useAuthStore } from '@/stores'
 import { isValidEmail, resolveFileUrl } from '@/utils'
 import { encryptPasswords } from '@/utils/security'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import AvatarUploadModal from './components/AvatarUploadModal.vue'
 
 const authStore = useAuthStore()
+const route = useRoute()
 const emailFormRef = ref<FormInst | null>(null)
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 
@@ -17,9 +21,22 @@ const state = reactive({
   savingPassword: false,
   savingPhone: false,
   savingEmail: false,
+  savingMfa: false,
   activeTab: 'basic_info',
   avatarModalShow: false,
   me: null as any,
+  mfa: {
+    enabled: false,
+    totpEnabled: false,
+    required: false,
+    setupSecret: '',
+    setupUri: '',
+    confirmCode: '',
+    backupCodes: [] as string[],
+    disablePassword: '',
+    disableCode: '',
+    webauthnCount: 0,
+  },
   profileForm: {
     name: '',
     nickname: '',
@@ -72,13 +89,155 @@ const emailRules = computed<FormRules>(() => ({
 }))
 
 onMounted(async () => {
+  const tab = typeof route.query.tab === 'string' ? route.query.tab : ''
+  if (tab) {
+    state.activeTab = tab
+  }
   state.loading = true
   try {
     await loadMe()
+    await loadMfaStatus()
   } finally {
     state.loading = false
   }
 })
+
+async function loadMfaStatus() {
+  try {
+    const res = await authApi.mfaStatus()
+    state.mfa.enabled = Boolean(res.data?.enabled)
+    state.mfa.totpEnabled = Boolean(res.data?.totp_enabled)
+    state.mfa.required = Boolean(res.data?.required)
+    state.mfa.webauthnCount = Number(res.data?.webauthn_count ?? 0)
+  } catch {
+    // 接口不可用时忽略
+  }
+}
+
+async function startMfaSetup() {
+  state.savingMfa = true
+  try {
+    const res = await authApi.mfaSetup()
+    state.mfa.setupSecret = res.data?.secret ?? ''
+    state.mfa.setupUri = res.data?.otpauth_uri ?? ''
+    state.mfa.confirmCode = ''
+    state.mfa.backupCodes = []
+    window.$message.success('请用认证器扫描或手动录入密钥')
+  } finally {
+    state.savingMfa = false
+  }
+}
+
+async function confirmMfaSetup() {
+  if (!state.mfa.confirmCode.trim()) {
+    window.$message.warning('请输入动态码')
+    return
+  }
+  state.savingMfa = true
+  try {
+    const res = await authApi.mfaConfirm({ code: state.mfa.confirmCode.trim() })
+    state.mfa.backupCodes = res.data?.backup_codes ?? []
+    state.mfa.setupSecret = ''
+    state.mfa.setupUri = ''
+    state.mfa.confirmCode = ''
+    await loadMfaStatus()
+    window.$message.success('MFA 已启用，请妥善保存备份码')
+  } finally {
+    state.savingMfa = false
+  }
+}
+
+async function disableMfa() {
+  if (!state.mfa.disablePassword) {
+    window.$message.warning('请输入当前密码')
+    return
+  }
+  if (state.mfa.totpEnabled && !state.mfa.disableCode.trim()) {
+    window.$message.warning('请输入动态码或备份码')
+    return
+  }
+  state.savingMfa = true
+  try {
+    const encrypted = await encryptPasswords({ password: state.mfa.disablePassword })
+    await authApi.mfaDisable({
+      password: encrypted.values.password,
+      password_key_id: encrypted.password_key_id,
+      code: state.mfa.disableCode.trim() || undefined,
+    })
+    state.mfa.disablePassword = ''
+    state.mfa.disableCode = ''
+    state.mfa.backupCodes = []
+    await loadMfaStatus()
+    window.$message.success('MFA 已关闭')
+  } finally {
+    state.savingMfa = false
+  }
+}
+
+function bufferToBase64Url(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function base64UrlToBuffer(value: string) {
+  const padded = value.replace(/-/g, '+').replace(/_/g, '/')
+  const pad = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
+  const binary = atob(padded + pad)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes.buffer
+}
+
+async function registerWebAuthn() {
+  if (!window.PublicKeyCredential) {
+    window.$message.warning('当前浏览器不支持 Passkey / 安全密钥')
+    return
+  }
+  state.savingMfa = true
+  try {
+    const res = await authApi.webauthnRegisterOptions()
+    const options = res.data as any
+    const publicKey = {
+      ...options,
+      challenge: base64UrlToBuffer(options.challenge),
+      user: {
+        ...options.user,
+        id: base64UrlToBuffer(options.user.id),
+      },
+      excludeCredentials: (options.excludeCredentials || []).map((item: any) => ({
+        ...item,
+        id: base64UrlToBuffer(item.id),
+      })),
+    }
+    const cred = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential | null
+    if (!cred) {
+      throw new Error('cancelled')
+    }
+    const attestation = cred.response as AuthenticatorAttestationResponse
+    const payload = {
+      id: cred.id,
+      rawId: bufferToBase64Url(cred.rawId),
+      type: cred.type,
+      response: {
+        clientDataJSON: bufferToBase64Url(attestation.clientDataJSON),
+        attestationObject: bufferToBase64Url(attestation.attestationObject),
+      },
+    }
+    await authApi.webauthnRegisterVerify(payload)
+    await loadMfaStatus()
+    window.$message.success('安全密钥已绑定')
+  } catch {
+    window.$message.error('安全密钥绑定失败')
+  } finally {
+    state.savingMfa = false
+  }
+}
 
 async function loadMe() {
   const data = await authStore.refreshUserInfo()
@@ -359,6 +518,63 @@ function displayValue(value: unknown) {
                     <NButton type="primary" :loading="state.savingPassword" @click="savePassword">
                       修改密码
                     </NButton>
+                  </NFormItem>
+                </NForm>
+              </NTabPane>
+
+              <NTabPane name="mfa" :tab="'双因素认证'">
+                <NForm class="user-center-form w-full min-w-0" label-placement="top">
+                  <NFormItem :label="'状态'">
+                    <span>{{ state.mfa.enabled ? '已启用' : '未启用' }}{{ state.mfa.required ? '（组织强制）' : '' }} · Passkey {{ state.mfa.webauthnCount }}</span>
+                  </NFormItem>
+                  <NFormItem :show-label="false">
+                    <NButton :loading="state.savingMfa" @click="registerWebAuthn">
+                      绑定安全密钥 / Passkey
+                    </NButton>
+                  </NFormItem>
+                  <template v-if="!state.mfa.totpEnabled">
+                    <NFormItem :show-label="false">
+                      <NButton type="primary" :loading="state.savingMfa" @click="startMfaSetup">
+                        开始开通 TOTP
+                      </NButton>
+                    </NFormItem>
+                    <NFormItem v-if="state.mfa.setupSecret" :label="'密钥'">
+                      <NInput :value="state.mfa.setupSecret" readonly />
+                    </NFormItem>
+                    <NFormItem v-if="state.mfa.setupUri" :label="'otpauth URI'">
+                      <NInput :value="state.mfa.setupUri" type="textarea" readonly />
+                    </NFormItem>
+                    <NFormItem v-if="state.mfa.setupSecret" :label="'动态码确认'">
+                      <NInput v-model:value="state.mfa.confirmCode" placeholder="认证器 6 位码" />
+                    </NFormItem>
+                    <NFormItem v-if="state.mfa.setupSecret" :show-label="false">
+                      <NButton type="primary" :loading="state.savingMfa" @click="confirmMfaSetup">
+                        确认启用
+                      </NButton>
+                    </NFormItem>
+                  </template>
+                  <template v-if="state.mfa.enabled">
+                    <NFormItem :label="'当前密码'">
+                      <NInput
+                        v-model:value="state.mfa.disablePassword"
+                        type="password"
+                        show-password-on="click"
+                      />
+                    </NFormItem>
+                    <NFormItem v-if="state.mfa.totpEnabled" :label="'动态码 / 备份码'">
+                      <NInput v-model:value="state.mfa.disableCode" />
+                    </NFormItem>
+                    <NFormItem v-else :show-label="false">
+                      <NText depth="3">仅 Passkey 时关闭 MFA 只需验证当前密码。</NText>
+                    </NFormItem>
+                    <NFormItem :show-label="false">
+                      <NButton type="error" :loading="state.savingMfa" @click="disableMfa">
+                        关闭 MFA / Passkey
+                      </NButton>
+                    </NFormItem>
+                  </template>
+                  <NFormItem v-if="state.mfa.backupCodes.length" :label="'备份码（仅显示一次）'">
+                    <NInput :value="state.mfa.backupCodes.join('\n')" type="textarea" readonly :rows="8" />
                   </NFormItem>
                 </NForm>
               </NTabPane>

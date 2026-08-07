@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import asyncio
@@ -26,14 +28,91 @@ class FakeRedis:
     async def setex(self, key: object, ttl: int, value: object) -> None:
         self.values[str(key)] = value
 
-    async def set(self, key: object, value: object) -> None:
-        self.values[str(key)] = value
+    async def set(
+        self,
+        key: object,
+        value: object,
+        *,
+        nx: bool = False,
+        xx: bool = False,
+        ex: int | None = None,
+        px: int | None = None,
+        **_: object,
+    ) -> bool | None:
+        key_s = str(key)
+        exists = key_s in self.values
+        if nx and exists:
+            return False
+        if xx and not exists:
+            return False
+        self.values[key_s] = value
+        # FakeRedis 忽略 TTL；expire() 为空操作且返回成功。
+        _ = ex or px
+        return True
 
     async def get(self, key: object) -> object | None:
         return self.values.get(str(key))
 
+    async def getdel(self, key: object) -> object | None:
+        key_s = str(key)
+        value = self.values.get(key_s)
+        if value is not None:
+            self.values.pop(key_s, None)
+        return value
+
     async def delete(self, key: object) -> None:
         self.values.pop(str(key), None)
+
+    async def expire(self, key: object, seconds: int) -> bool:
+        _ = seconds
+        return str(key) in self.values
+
+    async def lpush(self, key: object, *values: object) -> int:
+        key_s = str(key)
+        lst = self.values.setdefault(key_s, [])
+        if not isinstance(lst, list):
+            lst = []
+            self.values[key_s] = lst
+        for value in values:
+            lst.insert(0, value)
+        return len(lst)
+
+    async def rpush(self, key: object, *values: object) -> int:
+        key_s = str(key)
+        lst = self.values.setdefault(key_s, [])
+        if not isinstance(lst, list):
+            lst = []
+            self.values[key_s] = lst
+        for value in values:
+            lst.append(value)
+        return len(lst)
+
+    async def lpop(self, key: object) -> object | None:
+        lst = self.values.get(str(key))
+        if not isinstance(lst, list) or not lst:
+            return None
+        return lst.pop(0)
+
+    async def rpop(self, key: object) -> object | None:
+        lst = self.values.get(str(key))
+        if not isinstance(lst, list) or not lst:
+            return None
+        return lst.pop()
+
+    async def ltrim(self, key: object, start: int, end: int) -> bool:
+        lst = self.values.get(str(key))
+        if not isinstance(lst, list):
+            return True
+        # Redis 的 end 含边界；Python 切片 end 不含边界。
+        if end == -1:
+            self.values[str(key)] = lst[start:]
+        else:
+            self.values[str(key)] = lst[start : end + 1]
+        return True
+
+    async def llen(self, key: object) -> int:
+        lst = self.values.get(str(key))
+        return len(lst) if isinstance(lst, list) else 0
 
     async def sadd(self, key: object, *values: object) -> None:
         self.sets.setdefault(str(key), set()).update(values)
@@ -83,9 +162,7 @@ class FakeRedis:
         delivered = 0
         for pubsub in list(self._pubsubs):
             if channel in pubsub.channels:
-                await pubsub.queue.put(
-                    {"type": "message", "channel": channel, "data": message}
-                )
+                await pubsub.queue.put({"type": "message", "channel": channel, "data": message})
                 delivered += 1
         return delivered
 
@@ -149,6 +226,8 @@ async def db_session() -> AsyncIterator[AsyncSession]:
 
 @pytest.fixture
 async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
+    # 契约测试需要 OpenAPI；生产默认关闭 Swagger。
+    monkeypatch.setattr(settings.swagger, "enabled", True)
     app = create_app()
     test_router = APIRouter()
 

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import importlib
@@ -47,13 +49,30 @@ def _iter_module_manifest_names(package_name: str) -> list[str]:
     return sorted(set(names))
 
 
-def load_module_specs(package_name: str = "app.modules") -> list[ModuleSpec]:
+def load_module_specs(
+    package_name: str = "app.modules",
+    *,
+    include_disabled: bool = False,
+) -> list[ModuleSpec]:
+    """发现 ModuleSpec 清单。
+
+    运行期调用方保持 ``include_disabled=False``，禁用模块不会注册路由/任务/钩子。
+    Alembic 应传入 ``include_disabled=True``，以便模型元数据完整且无需切换模块开关。
+    """
     package_names = _resolve_package_names(package_name)
-    return list(_load_module_specs_cached(tuple(package_names)))
+    return list(_load_module_specs_cached(tuple(package_names), include_disabled))
+
+
+def clear_module_specs_cache() -> None:
+    """清除发现缓存（测试 / 热重载辅助）。"""
+    _load_module_specs_cached.cache_clear()
 
 
 @cache
-def _load_module_specs_cached(package_names: tuple[str, ...]) -> tuple[ModuleSpec, ...]:
+def _load_module_specs_cached(
+    package_names: tuple[str, ...],
+    include_disabled: bool,
+) -> tuple[ModuleSpec, ...]:
     specs: list[ModuleSpec] = []
     seen: set[str] = set()
     manifest_names: list[str] = []
@@ -67,19 +86,20 @@ def _load_module_specs_cached(package_names: tuple[str, ...]) -> tuple[ModuleSpe
             raise TypeError(f"{manifest_name}.module must be a ModuleSpec instance")
         if module_spec.name in seen:
             raise ValueError(f"Duplicate module name: {module_spec.name}")
-        if not _is_module_enabled(module_spec):
+        seen.add(module_spec.name)
+        if not include_disabled and not _is_module_enabled(module_spec):
             logger.info("Module %s disabled", module_spec.name)
             continue
-        seen.add(module_spec.name)
         specs.append(module_spec)
 
     specs = _topological_sort(specs)
 
     route_count = sum(len(spec.routes) for spec in specs)
     logger.info(
-        "Loaded %d modules with %d route specs total",
+        "Loaded %d modules with %d route specs total (include_disabled=%s)",
         len(specs),
         route_count,
+        include_disabled,
     )
     return tuple(specs)
 

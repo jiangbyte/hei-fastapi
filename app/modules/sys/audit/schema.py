@@ -1,9 +1,12 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool
 
 
 class OperationAuditRecord(ApiSchema):
@@ -20,7 +23,7 @@ class OperationAuditRecord(ApiSchema):
     request_id: str | None = None
     ip: str | None = None
     user_agent: str | None = None
-    success: bool
+    success: WireBool
     error_message: str | None = None
     created_at: datetime
 
@@ -38,7 +41,7 @@ class OperationAuditCreate(ApiSchema):
     request_id: str | None = None
     ip: str | None = None
     user_agent: str | None = None
-    success: bool = True
+    success: WireBool = True
     error_message: str | None = None
 
 
@@ -46,4 +49,4 @@ class OperationAuditPageQuery(PageQuery):
     module: str | None = Field(default=None, max_length=64)
     action: str | None = Field(default=None, max_length=64)
     account_id: str | None = Field(default=None, max_length=64)
-    success: bool | None = None
+    success: WireBool | None = None

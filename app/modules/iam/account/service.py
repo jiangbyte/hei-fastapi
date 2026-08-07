@@ -1,17 +1,18 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import AccountType
-from app.core.config.enums import AccountStatusEnum
+from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.config.settings import settings
 from app.core.exceptions.business import AuthorizationError, BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
 from app.core.security.password import hash_password
-from app.core.security.transport import decrypt_passwords
 from app.core.security.session import SessionPayload
+from app.core.security.transport import decrypt_password
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.query_service import AccountQueryService
@@ -147,7 +148,7 @@ class AccountService:
         )
         accounts, total = await self.repo.page_admin(query, data_scope_filter)
         items = await AccountQueryService(self.db).build_account_schemas(accounts)
-        return build_page(query.pagination, total, items)
+        return build_page(query, total, items)
 
     async def assign_account_role(
         self,
@@ -468,17 +469,18 @@ class AccountService:
         self,
         payload: AccountCreateRequest | AccountUpdateRequest,
     ) -> None:
-        if payload.email_login_enabled and not str(
-            payload.email_identity or payload.email or ""
-        ).strip():
+        if (
+            payload.email_login_enabled
+            and not str(payload.email_identity or payload.email or "").strip()
+        ):
             raise BusinessError("Email login requires an email")
-        if payload.phone_login_enabled and not str(
-            payload.phone_identity or payload.phone or ""
-        ).strip():
+        if (
+            payload.phone_login_enabled
+            and not str(payload.phone_identity or payload.phone or "").strip()
+        ):
             raise BusinessError("Phone login requires a phone")
 
     async def _resolve_password(self, password: str, password_key_id: str | None) -> str:
         if not password_key_id:
             return password
-        decrypted = (await decrypt_passwords(password_key_id, password))[0]
-        return decrypted or ""
+        return await decrypt_password(password_key_id, password)

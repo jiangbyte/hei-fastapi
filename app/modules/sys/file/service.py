@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import asyncio
 import logging
 import re
@@ -50,10 +52,7 @@ class FileService:
         now = datetime.now(UTC)
         category = self._normalize_category(category)
         prefix = f"{category}/" if category else ""
-        return (
-            f"{prefix}{now:%Y}/{now:%m}/{now:%d}/"
-            f"{uuid4().hex}{suffix}"
-        )
+        return f"{prefix}{now:%Y}/{now:%m}/{now:%d}/{uuid4().hex}{suffix}"
 
     async def upload(self, payload: FileUploadRequest) -> SysFileSchema:
         """上传文件并创建元数据记录，参数通过对象统一承载。"""
@@ -71,24 +70,36 @@ class FileService:
             payload.content,
             content_type=payload.content_type,
         )
-        async with transactional(self.db):
-            entity = await self.repo.create(
-                FileRecordCreate(
-                    object_name=object_name,
-                    original_name=PurePosixPath(payload.filename).name,
-                    storage_config_id=storage_config.id,
-                    storage_provider=storage_config.provider,
-                    bucket=(
-                        storage_config.bucket
-                        if storage_config.provider != StorageProvider.LOCAL
-                        else None
-                    ),
-                    content_type=payload.content_type,
-                    size=len(payload.content),
-                    url=url,
+        try:
+            async with transactional(self.db):
+                entity = await self.repo.create(
+                    FileRecordCreate(
+                        object_name=object_name,
+                        original_name=PurePosixPath(payload.filename).name,
+                        storage_config_id=storage_config.id,
+                        storage_provider=storage_config.provider,
+                        bucket=(
+                            storage_config.bucket
+                            if storage_config.provider != StorageProvider.LOCAL
+                            else None
+                        ),
+                        content_type=payload.content_type,
+                        size=len(payload.content),
+                        url=url,
+                    )
                 )
-            )
-            return self._with_resolved_url(to_schema(SysFileSchema, entity))
+                return self._with_resolved_url(to_schema(SysFileSchema, entity))
+        except Exception:
+            # 补偿：元数据提交失败时避免孤立对象。
+            try:
+                await asyncio.to_thread(storage.delete_object, object_name)
+            except Exception:
+                logger.warning(
+                    "Failed to rollback storage object after DB error: %s",
+                    object_name,
+                    exc_info=True,
+                )
+            raise
 
     async def update(self, payload: FileUpdateRequest) -> None:
         async with transactional(self.db):
@@ -164,9 +175,14 @@ class FileService:
         return str(storage.get_presigned_url(normalized))
 
     async def response(self, query: ObjectNameQuery) -> Response:
+        from app.core.exceptions.business import AuthenticationError
+        from app.platform.storage.signed_url import verify_object_access
+
         normalized = normalize_object_name(query.object_name)
         if not normalized:
             raise NotFoundError("File not found")
+        if not verify_object_access(normalized, query.expires, query.sig):
+            raise AuthenticationError("Invalid or expired file signature")
         entity = await self.repo.get_by_object_name(normalized)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         if isinstance(storage, LocalStorage):
@@ -193,7 +209,7 @@ class FileService:
         page_query = (
             query
             if isinstance(query, FileAdminPageQuery)
-            else FileAdminPageQuery(pagination=query)
+            else FileAdminPageQuery(current=query.current, size=query.size)
         )
         data_scope_filter = None
         if session is not None:
@@ -208,11 +224,10 @@ class FileService:
             data_scope_filter,
         )
         schemas = [
-            self._with_resolved_url(schema)
-            for schema in to_schema_list(SysFileSchema, items)
+            self._with_resolved_url(schema) for schema in to_schema_list(SysFileSchema, items)
         ]
         await self._resolve_creator_names(schemas)
-        return build_page(page_query.pagination, total, schemas)
+        return build_page(page_query, total, schemas)
 
     def _with_resolved_url(self, schema: SysFileSchema) -> SysFileSchema:
         storage_config = resolve_storage_config(
@@ -263,10 +278,12 @@ class FileService:
             "upload validation | filename=%s suffix=%s "
             "allowed_extensions=%s denied_extensions=%s "
             "content_type=%s allowed_content_types=%s",
-            payload.filename, PurePosixPath(safe_name).suffix.lower(),
+            payload.filename,
+            PurePosixPath(safe_name).suffix.lower(),
             settings.storage.upload_allowed_extensions,
             settings.storage.upload_denied_extensions,
-            payload.content_type, settings.storage.upload_allowed_content_types,
+            payload.content_type,
+            settings.storage.upload_allowed_content_types,
         )
         suffix = PurePosixPath(safe_name).suffix.lower()
         if not safe_name or safe_name in {".", ".."}:
@@ -292,13 +309,11 @@ class FileService:
             self._validate_object_name(payload.object_name)
 
     def _validate_content_magic_bytes(self, payload: FileUploadRequest) -> None:
-        """Validate file content magic bytes against declared content type.
+        """校验文件内容 magic bytes 是否与声明的 content type 一致。
 
-        Only checks content types that have known magic signatures in the
-        registry below.  Types that were explicitly allowed in the config
-        table (``upload_allowed_content_types``) but *lack* a registered
-        magic signature are silently skipped — this keeps the validator
-        compatible with custom / future types without false positives.
+        仅检查下方注册表中有已知 magic 签名的 content type。
+        配置表 (``upload_allowed_content_types``) 中明确允许但*无*注册
+        magic 签名的类型将静默跳过 — 以兼容自定义/未来类型并避免误报。
         """
         content = getattr(payload, "content", None)
         if not content or not isinstance(content, (bytes, bytearray)):
@@ -307,7 +322,7 @@ class FileService:
             return
         header = content[:12]
 
-        # Registry: (magic_prefix, content_type_prefix)
+        # 注册表：(magic_prefix, content_type_prefix)
         magic_registry: dict[str, bytes] = {
             "image/jpeg": b"\xff\xd8\xff",
             "image/png": b"\x89PNG\r\n\x1a\n",
@@ -339,7 +354,7 @@ class FileService:
     def _normalize_category(self, category: str) -> str:
         value = str(category or "").strip().strip("/")
         if not value:
-            return "" 
+            return ""
         if len(value) > settings.storage.upload_category_max_length:
             self._reject_upload("invalid_category", "Upload category is too long")
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9/_-]*", value):

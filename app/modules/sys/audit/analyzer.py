@@ -1,4 +1,6 @@
-"""Audit log analyzer — detects suspicious patterns and generates alerts.
+""" Author: Charlie
+
+审计日志分析器 — 检测可疑模式并生成告警。
 
 每条规则独立开关，由 settings.audit_alert 控制。
 """
@@ -6,7 +8,7 @@ import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 
 from app.core.config.settings import settings
 
@@ -182,7 +184,11 @@ class AuditAnalyzer:
                 rule_name="ip_anomaly",
                 severity="WARNING",
                 summary=f"账户 {row.account_id} 在 15 分钟内从 {row.ip_cnt} 个不同 IP 登录",
-                details={"account_id": row.account_id, "ip_count": row.ip_cnt, "threshold": threshold},
+                details={
+                    "account_id": row.account_id,
+                    "ip_count": row.ip_cnt,
+                    "threshold": threshold,
+                },
             )
             for row in rows
         ]

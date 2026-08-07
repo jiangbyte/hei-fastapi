@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 export function arrayToTree<
   T extends { id: string; parent_id?: string | null; children?: T[] },
 >(items: T[]) {

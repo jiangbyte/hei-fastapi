@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import asyncio
 import smtplib
 import ssl
@@ -8,7 +10,7 @@ from app.core.exceptions.business import BusinessError
 
 
 async def send_mail(to_email: str, subject: str, body: str) -> None:
-    """Send a plain-text email through configured SMTP settings."""
+    """通过已配置的 SMTP 发送纯文本邮件。"""
     mail = settings.mail
     if not mail.host or not mail.from_email:
         raise BusinessError("Mail service is not configured")

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useThemeVars } from 'naive-ui'
@@ -5,7 +7,7 @@ import { formatDateTime, isImageFile, resolveFileUrl } from '@/utils'
 import { fileApi, messageApi } from '@/api'
 import { useAuthStore } from '@/stores'
 import type { Message, Conversation } from '../../views/message/types'
-import { useWebSocket } from '../../views/message/use-websocket'
+import { useImClient } from '../../views/message/useImClient'
 
 const emit = defineEmits<{
   changed: [payload: { type: string; id: string }]
@@ -34,7 +36,7 @@ const conversationTypeLabel = computed(() =>
   conversation.value?.conversation_type === 'GROUP' ? '群聊' : '私聊',
 )
 
-const ws = useWebSocket({
+const ws = useImClient({
   onNewMessage(msgData: any) {
     if (msgData.conversation_id !== cid.value) return
     if (!allMessages.value.some((m) => m.id === msgData.id)) {
@@ -43,9 +45,13 @@ const ws = useWebSocket({
     }
     if (msgData.id) ws.markConversationRead(cid.value, msgData.id)
   },
+  onKick() {
+    window.$message?.warning?.('会话已失效，请重新登录')
+    void authStore.logout('/auth/login')
+  },
 })
 
-/* ---- message helpers ---- */
+/* ---- 消息辅助 ---- */
 
 function isOwnMessage(message: Message): boolean {
   const user = authStore.userInfo
@@ -62,7 +68,7 @@ function messageBubbleStyle(isMine: boolean) {
     : { backgroundColor: v.cardColor, border: `1px solid ${v.borderColor}`, color: v.textColor1 }
 }
 
-/* ---- sync / pagination ---- */
+/* ---- 同步 / 分页 ---- */
 
 function syncVisibleMessages() {
   visibleMessages.value = allMessages.value.slice(Math.max(0, allMessages.value.length - 20))
@@ -90,7 +96,7 @@ async function loadMessages() {
     await nextTick()
     scrollMessagesToBottom()
   } catch {
-    /* silent */
+    /* 静默 */
   } finally {
     loading.value = false
   }
@@ -121,7 +127,7 @@ async function loadOlderMessages() {
       hasMoreOlder.value = false
     }
   } catch {
-    /* silent */
+    /* 静默 */
   } finally {
     loadingOlder.value = false
   }
@@ -132,7 +138,7 @@ function handleMessageScroll(event: Event) {
   if (target.scrollTop <= 24) void loadOlderMessages()
 }
 
-/* ---- composer ---- */
+/* ---- 输入区 ---- */
 
 function handleAddFileButtonClick() {
   fileInputRef.value?.click()
@@ -173,7 +179,7 @@ async function sendMessage() {
   const content = composerText.value.trim()
   if (!content && !selectedAttachments.value.length) return
 
-  // ── Upload pending files ──
+  // ── 上传待发送文件 ──
   const pending = selectedAttachments.value
     .map((a, i) => ({ attachment: a, file: selectedFiles.value[i], index: i }))
     .filter(({ attachment, file }) => !attachment.url && file)
@@ -199,6 +205,7 @@ async function sendMessage() {
   try {
     const res = await messageApi.sendMessage({
       conversation_id: cid.value,
+      client_msg_id: crypto.randomUUID(),
       content: content || ' ',
       attachments: selectedAttachments.value.length
         ? selectedAttachments.value.map((a: any) => ({
@@ -226,7 +233,7 @@ async function sendMessage() {
   scrollMessagesToBottom()
 }
 
-/* ---- open / expose ---- */
+/* ---- 打开 / 暴露 ---- */
 
 async function open(
   conversationId: string,
@@ -272,7 +279,7 @@ defineExpose({ open })
     style="width: 760px"
   >
     <div class="h-[560px] flex min-h-0 flex-col -mx-16px -mb-16px">
-      <!-- header: conversation info bar -->
+      <!-- 头部：会话信息栏 -->
       <div
         v-if="conversation"
         class="flex items-center gap-3 border-b px-4 py-2.5"
@@ -299,7 +306,7 @@ defineExpose({ open })
         </div>
       </div>
 
-      <!-- messages -->
+      <!-- 消息列表 -->
       <div class="flex min-h-0 flex-1 flex-col">
         <div
           v-if="hasMoreOlder"
@@ -414,7 +421,7 @@ defineExpose({ open })
           <NEmpty v-else-if="!loading" class="py-12" description="暂无消息" />
         </div>
 
-        <!-- composer -->
+        <!-- 输入区 -->
         <div class="border-t p-4" :style="{ borderColor: themeVars.borderColor }">
           <input
             ref="fileInputRef"

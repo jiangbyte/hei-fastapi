@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 const hexColorPattern = /^#(?:[\da-f]{3}|[\da-f]{6})$/i
 const lightTextColor = '#ffffff'
 const darkTextColor = '#000000'

@@ -10,6 +10,6 @@ max_requests_jitter = 1000
 timeout = 30
 graceful_timeout = 30
 keepalive = 5
-accesslog = "-"
+accesslog = None  # App AccessLogMiddleware owns access logging
 errorlog = "-"
 loglevel = "info"

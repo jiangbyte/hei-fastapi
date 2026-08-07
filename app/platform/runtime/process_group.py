@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import asyncio
@@ -98,9 +100,7 @@ async def run_all() -> int:
         except NotImplementedError:
             signal.signal(signum, lambda *_: stopping.set())
 
-    wait_tasks = {
-        asyncio.create_task(process.wait()): name for name, process in processes.items()
-    }
+    wait_tasks = {asyncio.create_task(process.wait()): name for name, process in processes.items()}
     stop_task = asyncio.create_task(stopping.wait())
     done, pending = await asyncio.wait(
         [*wait_tasks.keys(), stop_task],

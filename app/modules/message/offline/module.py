@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.platform.module import ModuleSpec
 
 module = ModuleSpec(

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -423,11 +425,7 @@ class IamRelationRepository:
         if not resource_ids:
             return []
         resources = list(
-            (
-                await self.db.execute(
-                    select(SysResource).where(SysResource.id.in_(resource_ids))
-                )
-            )
+            (await self.db.execute(select(SysResource).where(SysResource.id.in_(resource_ids))))
             .scalars()
             .all()
         )
@@ -541,25 +539,33 @@ class IamRelationRepository:
 
     async def _get_account_role_and_group_ids(self, account_id: str) -> tuple[list[str], list[str]]:
         group_rows = (
-            await self.db.execute(
-                select(SysIamRelation.target_id).where(
-                    SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
-                    SysIamRelation.subject_id == account_id,
-                    SysIamRelation.relation_type == IamRelationType.ACCOUNT_GROUP.value,
-                    SysIamRelation.target_type == IamRelationTargetType.GROUP.value,
+            (
+                await self.db.execute(
+                    select(SysIamRelation.target_id).where(
+                        SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
+                        SysIamRelation.subject_id == account_id,
+                        SysIamRelation.relation_type == IamRelationType.ACCOUNT_GROUP.value,
+                        SysIamRelation.target_type == IamRelationTargetType.GROUP.value,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         direct_role_rows = (
-            await self.db.execute(
-                select(SysIamRelation.target_id).where(
-                    SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
-                    SysIamRelation.subject_id == account_id,
-                    SysIamRelation.relation_type == IamRelationType.ACCOUNT_ROLE.value,
-                    SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
+            (
+                await self.db.execute(
+                    select(SysIamRelation.target_id).where(
+                        SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
+                        SysIamRelation.subject_id == account_id,
+                        SysIamRelation.relation_type == IamRelationType.ACCOUNT_ROLE.value,
+                        SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         group_role_ids: list[str] = []
         group_ids = [str(value) for value in group_rows]
         if group_ids:
@@ -574,7 +580,9 @@ class IamRelationRepository:
                             SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
                         )
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             ]
         role_ids = sorted({str(value) for value in direct_role_rows}.union(group_role_ids))
         return role_ids, group_ids

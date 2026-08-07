@@ -1,13 +1,13 @@
-"""Password policy enforcement — strength validation and common-password
-checking, mirroring the等保 password-complexity requirements.
+""" Author: Charlie
 
-All policy parameters are driven through ``settings.password_policy``.
+密码策略校验——强度验证与常见密码检查，对齐等保密码复杂度要求。
+
+所有策略参数由 ``settings.password_policy`` 驱动。
 """
 import re
 
 from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
-
 
 # fmt: off
 _COMMON_PASSWORDS: frozenset[str] = frozenset({
@@ -25,21 +25,16 @@ _COMMON_PASSWORDS: frozenset[str] = frozenset({
 
 
 def validate_password_strength(password: str) -> None:
-    """Validate password against the configured policy.
+    """按配置策略校验密码。
 
-    Raises ``BusinessError`` with a user-facing message on the first
-    violated rule.
+    违反首条规则时抛出带用户可读消息的 ``BusinessError``。
     """
     policy = settings.password_policy
 
     if len(password) < policy.min_length:
-        raise BusinessError(
-            f"密码长度至少 {policy.min_length} 个字符"
-        )
+        raise BusinessError(f"密码长度至少 {policy.min_length} 个字符")
     if len(password) > policy.max_length:
-        raise BusinessError(
-            f"密码长度不能超过 {policy.max_length} 个字符"
-        )
+        raise BusinessError(f"密码长度不能超过 {policy.max_length} 个字符")
 
     if policy.require_uppercase and not re.search(r"[A-Z]", password):
         raise BusinessError("密码必须包含至少一个大写字母")
@@ -58,7 +53,7 @@ def validate_password_strength(password: str) -> None:
 
 
 def estimate_strength_level(password: str) -> int:
-    """Return a rough strength score (0-4) for frontend display."""
+    """返回粗略强度分数（0–4），供前端展示。"""
     score = 0
     if len(password) >= 8:
         score += 1

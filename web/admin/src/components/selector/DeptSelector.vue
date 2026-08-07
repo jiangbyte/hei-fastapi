@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="tsx">
 import { deptApi } from '@/api'
 import { NTree } from 'naive-ui'

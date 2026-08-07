@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.response.pagination import PageQuery, build_page
 
 
@@ -19,3 +21,17 @@ def test_build_page_returns_standard_shape():
         "pages": 1,
         "records": ["record"],
     }
+    assert page.model_dump(mode="json") == {
+        "size": "20",
+        "current": "1",
+        "total": "1",
+        "pages": "1",
+        "records": ["record"],
+    }
+
+
+def test_page_query_accepts_wire_strings():
+    query = PageQuery.model_validate({"current": "3", "size": "10"})
+    assert query.current == 3
+    assert query.size == 10
+    assert query.offset == 20

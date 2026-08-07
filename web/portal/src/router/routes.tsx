@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { Navigate, type RouteObject } from 'react-router-dom'
 import { MainLayout } from '@/layouts'
 import { HomePage } from '@/pages/home'

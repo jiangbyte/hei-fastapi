@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile
@@ -5,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse, success
-from app.core.security.transport import decrypt_passwords
 from app.core.security.session import SessionPayload
+from app.core.security.transport import decrypt_passwords
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.iam.account.query_service import AccountQueryService
@@ -28,7 +30,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/me",
+    "/v1/admin/me",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[AdminMeResponse],
 )
@@ -83,7 +85,7 @@ async def get_me(
 
 
 @router.post(
-    "/user-center/profile/update",
+    "/v1/admin/user-center/profile/update",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[None],
 )
@@ -97,7 +99,7 @@ async def update_user_center_profile(
 
 
 @router.post(
-    "/user-center/avatar/upload",
+    "/v1/admin/user-center/avatar/upload",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[AdminUserCenterAvatarUpdateResponse],
 )
@@ -117,7 +119,7 @@ async def upload_user_center_avatar(
 
 
 @router.post(
-    "/user-center/password/update",
+    "/v1/admin/user-center/password/update",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[None],
 )
@@ -144,7 +146,7 @@ async def update_user_center_password(
 
 
 @router.post(
-    "/user-center/phone/update",
+    "/v1/admin/user-center/phone/update",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[None],
 )
@@ -162,7 +164,7 @@ async def update_user_center_phone(
 
 
 @router.post(
-    "/user-center/email/update",
+    "/v1/admin/user-center/email/update",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[None],
 )
@@ -180,7 +182,7 @@ async def update_user_center_email(
 
 
 @router.get(
-    "/user-center/org-info",
+    "/v1/admin/user-center/org-info",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[AdminUserCenterOrgInfoResponse],
 )

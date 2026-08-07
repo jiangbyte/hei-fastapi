@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
@@ -54,7 +56,9 @@ class PositionRepository:
         unique_ids = list(dict.fromkeys(position_ids))
         if not unique_ids:
             return 0
-        stmt = select(func.count(SysPosition.id)).where(SysPosition.id.in_(unique_ids), data_scope_filter)
+        stmt = select(func.count(SysPosition.id)).where(
+            SysPosition.id.in_(unique_ids), data_scope_filter
+        )
         return int((await self.db.execute(stmt)).scalar_one())
 
     async def page_admin(
@@ -78,8 +82,8 @@ class PositionRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysPosition.sort.asc(), SysPosition.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         positions = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()

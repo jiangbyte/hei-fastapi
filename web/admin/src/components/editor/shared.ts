@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { fileApi } from '@/api'
 import { normalizeUploadedFile } from '@/utils'
 import type { NormalizedUploadedFile } from '@/utils'

@@ -1,19 +1,19 @@
+/** Author: Charlie */
+
 import axios, { type CreateAxiosDefaults } from 'axios'
 import { handleHttpError, unwrapResponseData } from './handle'
-import { setupTokenInterceptor } from './request-interceptors'
+import { setupRequestInterceptor } from './request-interceptors'
 import { setupResponseInterceptors } from './response-interceptors'
 
 export { ApiResponseError } from './handle'
 
 /**
- * 创建项目 HTTP 客户端。
- *
- * 所有 axios 实例统一挂载 token 请求拦截器和响应解包拦截器，避免业务侧重复处理。
+ * 创建项目 HTTP 客户端（cookie 会话 + 统一解包/错误处理）。
  */
 export function createHttp(config?: CreateAxiosDefaults) {
   const http = axios.create(config)
 
-  setupTokenInterceptor(http)
+  setupRequestInterceptor(http)
 
   setupResponseInterceptors(http, {
     unwrapResponseData,

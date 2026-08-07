@@ -1,5 +1,7 @@
 <!--
-  Feedback detail modal.
+  Author: Charlie
+
+  反馈详情弹窗。
 -->
 <script setup lang="ts">
 import { msgFeedbackApi } from '@/api'

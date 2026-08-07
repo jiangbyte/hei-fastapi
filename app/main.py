@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import sys
 from pathlib import Path
 

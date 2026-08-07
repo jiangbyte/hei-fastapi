@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { onLaunch } from '@dcloudio/uni-app'
 import { useAuthStore } from '@/stores/auth'

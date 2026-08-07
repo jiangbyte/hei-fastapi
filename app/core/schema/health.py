@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.schema.base import ApiSchema
 
 
@@ -12,6 +14,7 @@ class LiveHealthResponse(ApiSchema):
     """存活探针响应结构。"""
 
     status: str
+    im: dict | None = None
 
 
 class HealthCheckItem(ApiSchema):
@@ -37,4 +40,3 @@ class ReadyHealthResponse(ApiSchema):
 
     status: str
     checks: ReadyChecksResponse
-

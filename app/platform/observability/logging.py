@@ -1,29 +1,80 @@
-import json
+""" Author: Charlie
+
+基于 structlog 的结构化日志（stdlib 集成）。
+"""
+from __future__ import annotations
+
 import logging
-from datetime import datetime, UTC
+from typing import Any
+
+import structlog
+from structlog.types import Processor
 
 from app.core.config.settings import settings
-from app.core.schema.datetime import format_utc_iso8601
-from app.core.logger.formatter import RequestFormatter
-from app.platform.observability.context import get_log_context
 
 
-class JsonLogFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord) -> str:
-        payload: dict[str, object] = {
-            "timestamp": format_utc_iso8601(datetime.now(UTC)),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }
-        payload.update(get_log_context())
-        if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
-        return json.dumps(payload, ensure_ascii=True)
+def _add_service_context(
+    _logger: logging.Logger,
+    _method_name: str,
+    event_dict: dict[str, Any],
+) -> dict[str, Any]:
+    obs = settings.observability
+    event_dict.setdefault("service", obs.service_name)
+    event_dict.setdefault("service_version", obs.service_version)
+    event_dict.setdefault("environment", obs.environment)
+    return event_dict
+
+
+def _drop_empty_values(
+    _logger: logging.Logger,
+    _method_name: str,
+    event_dict: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in event_dict.items()
+        if value is not None and value != "" and value != "-"
+    }
+
+
+def _shared_processors() -> list[Processor]:
+    return [
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.ExtraAdder(),
+        _add_service_context,
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        _drop_empty_values,
+    ]
 
 
 def build_log_formatter() -> logging.Formatter:
-    """按当前配置构建日志格式化器，普通文本日志也需要补齐请求上下文字段。"""
-    if settings.observability.enabled and settings.observability.log_json:
-        return JsonLogFormatter()
-    return RequestFormatter("%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s")
+    """配置 structlog 并返回与 stdlib 兼容的 ProcessorFormatter。"""
+    shared = _shared_processors()
+    renderer: Processor
+    if settings.observability.log_json:
+        renderer = structlog.processors.JSONRenderer()
+    else:
+        renderer = structlog.dev.ConsoleRenderer(colors=False)
+
+    formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=shared,
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            renderer,
+        ],
+    )
+
+    structlog.configure(
+        processors=[
+            *shared,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+    return formatter

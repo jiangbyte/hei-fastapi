@@ -1,8 +1,10 @@
-"""用户资料批量查询工具。
+""" Author: Charlie
 
-提供按 account_type + account_ids 批量查询 profile 的公共函数，
-供消息模块等需要解析 created_by / updated_by 的场景复用。
+用户资料批量查询与审计字段名 enrichment。
 """
+from __future__ import annotations
+
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,17 +16,26 @@ from app.modules.user.portal.model import PortalUserProfile
 from app.modules.user.portal.repository import PortalUserProfileRepository
 
 
-def _pick_profile_repo(db: AsyncSession, account_type: AccountType):
-    """根据账户类型返回对应的 profile 仓库。"""
+def as_account_type(account_type: AccountType | str) -> AccountType:
+    if isinstance(account_type, AccountType):
+        return account_type
+    try:
+        return AccountType(str(account_type))
+    except ValueError as exc:
+        raise BusinessError(f"Unsupported account type: {account_type}") from exc
+
+
+def pick_profile_repo(db: AsyncSession, account_type: AccountType | str):
+    account_type = as_account_type(account_type)
     if account_type == AccountType.ADMIN:
         return AdminUserProfileRepository(db)
     if account_type == AccountType.PORTAL:
         return PortalUserProfileRepository(db)
-    raise ValueError(f"Unsupported account type: {account_type}")
+    raise BusinessError(f"Unsupported account type: {account_type}")
 
 
-def pick_profile_model(account_type: AccountType):
-    """根据账户类型返回对应的 profile 模型类。"""
+def pick_profile_model(account_type: AccountType | str):
+    account_type = as_account_type(account_type)
     if account_type == AccountType.ADMIN:
         return AdminUserProfile
     if account_type == AccountType.PORTAL:
@@ -33,19 +44,68 @@ def pick_profile_model(account_type: AccountType):
 
 
 async def get_profile(
-    db: AsyncSession, account_type: AccountType, account_id: str
+    db: AsyncSession, account_type: AccountType | str, account_id: str
 ) -> object | None:
-    """获取单个用户的资料。"""
-    repo = _pick_profile_repo(db, account_type)
+    repo = pick_profile_repo(db, account_type)
     return await repo.get_by_account_id(account_id)
 
 
 async def get_profiles_batch(
-    db: AsyncSession, account_type: AccountType, account_ids: list[str],
+    db: AsyncSession,
+    account_type: AccountType | str,
+    account_ids: list[str],
 ) -> dict[str, object]:
-    """批量获取同一类型用户的资料，返回 {account_id: profile} 映射。"""
     if not account_ids:
         return {}
-    repo = _pick_profile_repo(db, account_type)
+    repo = pick_profile_repo(db, account_type)
     profiles = await repo.list_by_account_ids(list(dict.fromkeys(account_ids)))
     return {p.account_id: p for p in profiles}
+
+
+def _profile_display_name(profile: object) -> str | None:
+    name = getattr(profile, "name", None) or getattr(profile, "nickname", None)
+    return str(name) if name else None
+
+
+async def enrich_audit_names(
+    db: AsyncSession,
+    schemas: list[Any],
+    *,
+    account_type: AccountType | str = AccountType.ADMIN,
+    created_by_attr: str = "created_by",
+    updated_by_attr: str = "updated_by",
+    created_name_attr: str = "created_name",
+    updated_name_attr: str = "updated_name",
+) -> list[Any]:
+    """从 admin/portal profile 填充 schema 对象的 created_name / updated_name。"""
+    if not schemas:
+        return schemas
+    all_ids: set[str] = set()
+    for schema in schemas:
+        created_by = getattr(schema, created_by_attr, None)
+        updated_by = getattr(schema, updated_by_attr, None)
+        if created_by:
+            all_ids.add(str(created_by))
+        if updated_by:
+            all_ids.add(str(updated_by))
+    if not all_ids:
+        return schemas
+    profiles = await get_profiles_batch(db, account_type, list(all_ids))
+    for schema in schemas:
+        created_by = getattr(schema, created_by_attr, None)
+        updated_by = getattr(schema, updated_by_attr, None)
+        if created_by and str(created_by) in profiles:
+            setattr(schema, created_name_attr, _profile_display_name(profiles[str(created_by)]))
+        if updated_by and str(updated_by) in profiles:
+            setattr(schema, updated_name_attr, _profile_display_name(profiles[str(updated_by)]))
+    return schemas
+
+
+async def enrich_audit_name(
+    db: AsyncSession,
+    schema: Any,
+    *,
+    account_type: AccountType | str = AccountType.ADMIN,
+) -> Any:
+    await enrich_audit_names(db, [schema], account_type=account_type)
+    return schema

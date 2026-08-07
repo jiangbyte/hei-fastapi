@@ -1,5 +1,7 @@
-"""系统字典模块 Schema，类型字段使用枚举以保证值和字典数据一致。"""
+""" Author: Charlie
 
+系统字典模块 Schema，类型字段使用枚举以保证值和字典数据一致。
+"""
 from datetime import datetime
 from typing import Annotated
 
@@ -8,6 +10,7 @@ from pydantic import Field
 from app.core.config.enums import StatusEnum, SysBizCategory
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireInt
 
 DictId = Annotated[str, Field(min_length=1, max_length=32)]
 
@@ -20,7 +23,7 @@ class DictCreateRequest(ApiSchema):
     category: SysBizCategory | None = None
     parent_id: DictId | None = None
     status: StatusEnum = StatusEnum.ENABLED
-    sort: int = 0
+    sort: WireInt = 0
 
 
 class DictUpdateRequest(DictCreateRequest):
@@ -56,7 +59,7 @@ class SysDictSchema(ApiSchema):
     parent_id: str | None = None
     parent_id_name: str | None = None
     status: StatusEnum | str
-    sort: int
+    sort: WireInt
     created_at: datetime
     created_by: str | None = None
     created_name: str | None = None
@@ -75,5 +78,5 @@ class SysDictTreeNode(ApiSchema):
     parent_id: str | None = None
     parent_id_name: str | None = None
     status: StatusEnum | str
-    sort: int
+    sort: WireInt
     children: list["SysDictTreeNode"] = Field(default_factory=list)

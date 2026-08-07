@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
@@ -23,7 +25,7 @@ portal_dependencies = [Depends(require_account_type(AccountType.PORTAL))]
 
 
 @router.post(
-    "/sys/file/upload",
+    "/v1/portal/sys/file/upload",
     dependencies=portal_dependencies,
     response_model=ApiResponse[SysFileSchema],
 )
@@ -48,7 +50,7 @@ async def upload(
 
 
 @router.get(
-    "/sys/file/detail",
+    "/v1/portal/sys/file/detail",
     dependencies=portal_dependencies,
     response_model=ApiResponse[SysFileSchema],
 )
@@ -60,7 +62,7 @@ async def detail(
 
 
 @router.post(
-    "/sys/file/list_by_ids",
+    "/v1/portal/sys/file/list_by_ids",
     dependencies=portal_dependencies,
     response_model=ApiResponse[list[SysFileSchema]],
 )
@@ -72,7 +74,7 @@ async def list_by_ids(
 
 
 @router.get(
-    "/sys/file/download",
+    "/v1/portal/sys/file/download",
     dependencies=portal_dependencies,
     response_class=Response,
 )
@@ -84,7 +86,7 @@ async def download(
 
 
 @router.post(
-    "/sys/file/url",
+    "/v1/portal/sys/file/url",
     dependencies=portal_dependencies,
     response_model=ApiResponse[FileUrlResponse],
 )
@@ -101,7 +103,7 @@ async def url(
 
 
 @router.post(
-    "/sys/file/presigned_url",
+    "/v1/portal/sys/file/presigned_url",
     dependencies=portal_dependencies,
     response_model=ApiResponse[FileUrlResponse],
 )

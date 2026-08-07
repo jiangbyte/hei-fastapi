@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
@@ -5,6 +7,7 @@ from pydantic import Field
 from app.core.config.enums import DataScope, StatusEnum
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 from app.modules.iam.enums import ResourceModuleClient, ResourceType
 
 
@@ -20,10 +23,10 @@ class ResourceCreateRequest(ApiSchema):
     icon: str | None = Field(default=None, max_length=255)
     color: str | None = Field(default=None, max_length=32)
     href: str | None = Field(default=None, max_length=255)
-    sort: int = 99
-    is_visible: bool = True
-    is_cache: bool = False
-    is_affix: bool = False
+    sort: WireInt = 99
+    is_visible: WireBool = True
+    is_cache: WireBool = False
+    is_affix: WireBool = False
     status: StatusEnum = StatusEnum.ENABLED
     description: str | None = None
     layout: str | None = Field(default=None, max_length=255)
@@ -66,10 +69,10 @@ class SysResourceSchema(ApiSchema):
     icon: str | None = None
     color: str | None = None
     href: str | None = None
-    sort: int
-    is_visible: bool
-    is_cache: bool
-    is_affix: bool
+    sort: WireInt
+    is_visible: WireBool
+    is_cache: WireBool
+    is_affix: WireBool
     status: str
     description: str | None = None
     layout: str | None = None
@@ -82,13 +85,12 @@ class SysResourceSchema(ApiSchema):
     updated_name: str | None = None
 
 
-
 class ResourcePermissionBindRequest(ApiSchema):
     resource_id: str
     permission_key: str
     data_scope: DataScope = DataScope.SELF
     custom_scope_dept_ids: list[str] = Field(default_factory=list)
-    sort: int = 99
+    sort: WireInt = 99
     description: str | None = None
 
 
@@ -99,7 +101,7 @@ class ResourceButtonCreateRequest(ApiSchema):
     permission_key: str = Field(min_length=1, max_length=128)
     data_scope: DataScope = DataScope.SELF
     custom_scope_dept_ids: list[str] = Field(default_factory=list)
-    sort: int = 99
+    sort: WireInt = 99
     status: StatusEnum = StatusEnum.ENABLED
     description: str | None = None
 
@@ -114,7 +116,7 @@ class SysResourcePermissionRelSchema(ApiSchema):
     permission_key: str
     data_scope: DataScope
     custom_scope_dept_ids: list[str]
-    sort: int
+    sort: WireInt
     status: str
     description: str | None = None
     created_at: datetime
@@ -152,7 +154,7 @@ class ResourceModuleCreateRequest(ApiSchema):
     client: ResourceModuleClient = ResourceModuleClient.ADMIN
     icon: str | None = Field(default=None, max_length=255)
     color: str | None = Field(default=None, max_length=32)
-    sort: int = 99
+    sort: WireInt = 99
     status: StatusEnum = StatusEnum.ENABLED
     description: str | None = None
     extra: dict = Field(default_factory=dict)
@@ -176,7 +178,7 @@ class SysResourceModuleSchema(ApiSchema):
     client: ResourceModuleClient
     icon: str | None = None
     color: str | None = None
-    sort: int
+    sort: WireInt
     status: str
     description: str | None = None
     extra: dict

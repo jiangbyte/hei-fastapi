@@ -1,4 +1,6 @@
-"""将前端路由 JSON 资源数据转换为 sys_resource 表的 INSERT SQL。
+""" Author: Charlie
+
+将前端路由 JSON 资源数据转换为 sys_resource 表的 INSERT SQL。
 
 使用方式：
   1. 从 web/admin/src/router/routes.static.ts 导出 JSON 数组：
@@ -17,10 +19,8 @@
   3. 执行生成的 SQL（需要先手动插入 sys_resource_module 记录）：
      psql -U postgres -d hei_fastapi -f /tmp/sys_resource_seed.sql
 """
-
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -53,11 +53,27 @@ RESOURCE_COLUMNS = [
 ]
 
 UPDATE_COLUMNS = [
-    "parent_id", "code", "name", "resource_type", "module_id",
-    "path", "component", "redirect", "icon", "color", "href",
-    "sort", "is_visible", "is_cache", "is_affix", "status",
-    "description", "layout", "extra",
-    "updated_at", "updated_by",
+    "parent_id",
+    "code",
+    "name",
+    "resource_type",
+    "module_id",
+    "path",
+    "component",
+    "redirect",
+    "icon",
+    "color",
+    "href",
+    "sort",
+    "is_visible",
+    "is_cache",
+    "is_affix",
+    "status",
+    "description",
+    "layout",
+    "extra",
+    "updated_at",
+    "updated_by",
 ]
 
 # 前端独有、需丢弃的字段

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <view class="login-page">
     <view class="login-header">

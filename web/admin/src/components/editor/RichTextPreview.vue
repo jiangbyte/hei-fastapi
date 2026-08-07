@@ -1,5 +1,8 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed } from 'vue'
+import DOMPurify from 'dompurify'
 
 const props = withDefaults(
   defineProps<{
@@ -10,7 +13,7 @@ const props = withDefaults(
   },
 )
 
-const html = computed(() => props.value ?? '')
+const html = computed(() => DOMPurify.sanitize(props.value ?? ''))
 </script>
 
 <template>

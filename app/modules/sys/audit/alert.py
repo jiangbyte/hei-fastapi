@@ -1,8 +1,11 @@
-"""Alert dispatcher — sends alerts via email and/or webhook with cooldown."""
-import json
-import hmac
-import hashlib
+""" Author: Charlie
+
+告警分发器 — 通过邮件和/或 webhook 发送告警，含冷却。
+"""
 import base64
+import hashlib
+import hmac
+import json
 import logging
 import time
 from datetime import UTC, datetime, timedelta
@@ -101,17 +104,12 @@ class AlertDispatcher:
 
         payload = {
             "msg_type": "text",
-            "content": {
-                "text": (
-                    f"[{event.severity}] {event.summary}\n"
-                    f"规则: {event.rule_name}"
-                )
-            },
+            "content": {"text": (f"[{event.severity}] {event.summary}\n规则: {event.rule_name}")},
         }
 
         if secret:
             timestamp = str(int(time.time()))
-            string_to_sign = "{}\n{}".format(timestamp, secret)
+            string_to_sign = f"{timestamp}\n{secret}"
             hmac_code = hmac.new(
                 string_to_sign.encode("utf-8"),
                 digestmod=hashlib.sha256,
@@ -127,6 +125,8 @@ class AlertDispatcher:
                 await client.post(url, json=payload)
         except Exception:
             logger.exception("Failed to send alert webhook for %s", event.rule_name)
+
+
 async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
     """发送测试 Webhook 消息。成功返回空字符串，失败返回错误信息。"""
     if not webhook_url:
@@ -136,12 +136,14 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
         url = webhook_url
         payload = {
             "msg_type": "text",
-            "content": {"text": "HEI-FastAPI 审计告警系统测试消息\n\n如果收到此消息，说明 Webhook 配置正确。"},
+            "content": {
+                "text": "HEI-FastAPI 审计告警系统测试消息\n\n如果收到此消息，说明 Webhook 配置正确。"
+            },
         }
 
         if webhook_secret:
             ts = str(int(time.time()))
-            string_to_sign = "{}\n{}".format(ts, webhook_secret)
+            string_to_sign = f"{ts}\n{webhook_secret}"
             hmac_code = hmac.new(
                 string_to_sign.encode("utf-8"),
                 digestmod=hashlib.sha256,
@@ -159,5 +161,6 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
         return ""
     except Exception as exc:
         return f"发送失败: {exc}"
+
 
 alert_dispatcher = AlertDispatcher()

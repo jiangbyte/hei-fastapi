@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/** Author: Charlie */
 
 declare module '*.vue' {
   import { DefineComponent } from 'vue'

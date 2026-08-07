@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, inject, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
 import { useThemeVars } from 'naive-ui'
@@ -122,7 +124,7 @@ async function loadOlderMessages() {
       messageState.hasMoreOlder = false
     }
   } catch {
-    /* silent */
+    /* 静默 */
   } finally {
     messageState.loadingOlder = false
   }
@@ -223,7 +225,7 @@ async function sendMessage() {
   const content = composerText.value.trim()
   if (!content && !selectedAttachments.value.length) return
 
-  // ── Upload pending files ──
+  // ── 上传待发送文件 ──
   const pending = selectedAttachments.value
     .map((a, i) => ({ attachment: a, file: selectedFiles.value[i], index: i }))
     .filter(({ attachment, file }) => !attachment.url && file)
@@ -250,6 +252,7 @@ async function sendMessage() {
   try {
     const res = await messageApi.sendMessage({
       conversation_id: convId,
+      client_msg_id: crypto.randomUUID(),
       content: content || ' ',
       attachments: selectedAttachments.value.length
         ? selectedAttachments.value.map((a: any) => ({

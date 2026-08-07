@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.session import SessionPayload, session_store
 from app.deps.db import get_db_session
@@ -87,7 +89,7 @@ async def test_admin_banner_create_page_detail_update_delete(client):
         headers=headers,
     )
     assert page_response.status_code == 200
-    assert page_response.json()["data"]["total"] == 1
+    assert page_response.json()["data"]["total"] == "1"
     banner_id = page_response.json()["data"]["records"][0]["id"]
 
     detail_response = await client.get(
@@ -152,7 +154,7 @@ async def test_admin_banner_delete_accepts_id_array(client):
         "/api/v1/admin/sys/banners/page?current=1&size=20&display_scope=PORTAL&position=HOME_TOP",
         headers=headers,
     )
-    assert page_response.json()["data"]["total"] == 0
+    assert page_response.json()["data"]["total"] == "0"
 
 
 async def test_public_banner_list_does_not_require_admin_session(client):
@@ -169,7 +171,7 @@ async def test_public_banner_list_does_not_require_admin_session(client):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["code"] == 200
+    assert payload["code"] == "200"
     assert [item["title"] for item in payload["data"]] == ["Public Banner"]
 
 
@@ -183,5 +185,5 @@ async def test_admin_banner_page_without_permission_returns_403(client):
     )
 
     assert response.status_code == 403
-    assert response.json()["code"] == 403
+    assert response.json()["code"] == "403"
     assert response.json()["message"] == "Permission denied: sys:banner:page"

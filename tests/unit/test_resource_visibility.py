@@ -1,14 +1,17 @@
+""" Author: Charlie """
+
 import pytest
 
 from app.core.config.enums import AccountType, StatusEnum
 from app.core.exceptions.business import ConflictError
-from app.core.response.pagination import PageQuery
 from app.core.security.session import SessionPayload
 from app.modules.iam.enums import GrantSubjectType, ResourceModuleClient, ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.iam.resource.schema import (
     ResourceCreateRequest,
     ResourceModuleAdminPageQuery,
+    ResourceModuleSelectorQuery,
+    ResourceTreeQuery,
     ResourceUpdateRequest,
 )
 from app.modules.iam.resource.service import ResourceModuleService, ResourceService
@@ -251,7 +254,8 @@ async def test_current_resources_regular_account_returns_granted_resources_with_
         _session("account_1", ["iam:resource:list"])
     )
     tree = await ResourceService(db_session).list_resource_tree(
-        _session("account_1", ["iam:resource:list"])
+        _session("account_1", ["iam:resource:list"]),
+        ResourceTreeQuery(),
     )
 
     assert [resource.id for resource in resources] == ["resource_root", "resource_granted"]
@@ -277,7 +281,8 @@ async def test_resource_tree_regular_account_without_grants_returns_empty(db_ses
     await db_session.commit()
 
     tree = await ResourceService(db_session).list_resource_tree(
-        _session("account_without_grant", ["iam:resource:list"])
+        _session("account_without_grant", ["iam:resource:list"]),
+        ResourceTreeQuery(),
     )
 
     assert tree == []
@@ -462,7 +467,10 @@ async def test_public_portal_resource_modules_group_resources(db_session):
 
     resources = await ResourceService(db_session).list_public_portal_resources()
 
-    assert sorted([resource.id for resource in resources]) == ["resource_content", "resource_header"]
+    assert sorted([resource.id for resource in resources]) == [
+        "resource_content",
+        "resource_header",
+    ]
 
 
 async def test_resource_tree_filters_by_module_id_and_client(db_session):
@@ -504,8 +512,10 @@ async def test_resource_tree_filters_by_module_id_and_client(db_session):
 
     tree = await ResourceService(db_session).list_resource_tree(
         _session("admin", ["*:*:*"]),
-        module_id="module_admin_b",
-        module_client=ResourceModuleClient.ADMIN,
+        ResourceTreeQuery(
+            module_id="module_admin_b",
+            module_client=ResourceModuleClient.ADMIN,
+        ),
     )
 
     assert [node.id for node in tree] == ["resource_admin_b"]
@@ -535,11 +545,12 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
     await db_session.commit()
 
     service = ResourceModuleService(db_session)
-    selector = await service.selector(ResourceModuleClient.PORTAL)
+    selector = await service.selector(
+        ResourceModuleSelectorQuery(client=ResourceModuleClient.PORTAL)
+    )
     page = await service.page_admin(
         ResourceModuleAdminPageQuery(
-            pagination=PageQuery(current=1, size=20),
-            client=ResourceModuleClient.PORTAL,
+            current=1, size=20, client=ResourceModuleClient.PORTAL,
         )
     )
 

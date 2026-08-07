@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.password import hash_password
 from app.core.security.session import SessionPayload, session_store
@@ -72,14 +74,14 @@ async def test_session_admin_lists_and_exits_tokens(client):
         headers={"Authorization": token},
     )
     assert analysis.status_code == 200
-    assert analysis.json()["data"]["online_token_count"] == 2
+    assert analysis.json()["data"]["online_token_count"] == "2"
 
     page = await client.get(
         "/api/v1/admin/auth/sessions/page",
         headers={"Authorization": token},
     )
     assert page.status_code == 200
-    assert page.json()["data"]["records"][0]["token_count"] == 2
+    assert page.json()["data"]["records"][0]["token_count"] == "2"
 
     tokens = await client.get(
         "/api/v1/admin/auth/sessions/tokens",

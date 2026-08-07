@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from collections.abc import Iterable
 
 from app.core.config.enums import AccountType

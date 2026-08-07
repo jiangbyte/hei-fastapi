@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import pytest
 from sqlalchemy import select
 
@@ -62,7 +64,6 @@ async def _group(db_session, name: str = "Guard Group") -> SysGroup:
 async def _dept(db_session, code: str, parent_id: str | None = None) -> SysDept:
     dept = SysDept(
         name=code,
-        code=code,
         category="SYS",
         parent_id=parent_id,
         status=StatusEnum.ENABLED.value,
@@ -241,14 +242,12 @@ async def test_dept_update_rejects_self_and_descendant_parent(db_session):
     self_payload = DeptUpdateRequest(
         id=root.id,
         name=root.name,
-        code=root.code,
         category=root.category,
         parent_id=root.id,
     )
     descendant_payload = DeptUpdateRequest(
         id=root.id,
         name=root.name,
-        code=root.code,
         category=root.category,
         parent_id=child.id,
     )
@@ -300,7 +299,6 @@ async def test_unreferenced_iam_entities_can_be_deleted(db_session):
     resource = await _resource(db_session, "guard_delete_resource")
     position = SysPosition(
         name="Guard Position",
-        code="guard_delete_position",
         category="SYS",
         status=StatusEnum.ENABLED.value,
     )
@@ -314,8 +312,18 @@ async def test_unreferenced_iam_entities_can_be_deleted(db_session):
     await PositionService(db_session).delete(IdsRequest(ids=[position.id]))
     await db_session.commit()
 
-    assert (await db_session.execute(select(SysRole).where(SysRole.id == role.id))).scalar_one_or_none() is None
-    assert (await db_session.execute(select(SysGroup).where(SysGroup.id == group.id))).scalar_one_or_none() is None
-    assert (await db_session.execute(select(SysDept).where(SysDept.id == dept.id))).scalar_one_or_none() is None
-    assert (await db_session.execute(select(SysResource).where(SysResource.id == resource.id))).scalar_one_or_none() is None
-    assert (await db_session.execute(select(SysPosition).where(SysPosition.id == position.id))).scalar_one_or_none() is None
+    assert (
+        await db_session.execute(select(SysRole).where(SysRole.id == role.id))
+    ).scalar_one_or_none() is None
+    assert (
+        await db_session.execute(select(SysGroup).where(SysGroup.id == group.id))
+    ).scalar_one_or_none() is None
+    assert (
+        await db_session.execute(select(SysDept).where(SysDept.id == dept.id))
+    ).scalar_one_or_none() is None
+    assert (
+        await db_session.execute(select(SysResource).where(SysResource.id == resource.id))
+    ).scalar_one_or_none() is None
+    assert (
+        await db_session.execute(select(SysPosition).where(SysPosition.id == position.id))
+    ).scalar_one_or_none() is None

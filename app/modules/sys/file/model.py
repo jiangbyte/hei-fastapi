@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import BigInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
 

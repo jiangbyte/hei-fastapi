@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { Themes, UploadImgEvent } from 'md-editor-v3'
 import type { EditorUploadedFile } from './shared'

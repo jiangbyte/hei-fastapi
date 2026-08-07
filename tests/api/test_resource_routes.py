@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountStatusEnum, AccountType
@@ -92,12 +94,11 @@ async def test_admin_current_resources_only_return_admin_client_resources(client
     )
 
     assert response.status_code == 200
-    assert response.json()["code"] == 200
+    assert response.json()["code"] == "200"
     data = response.json()["data"]
-    assert [item["id"] for item in data] == ["module_admin"]
-    assert data[0]["client"] == ResourceModuleClient.ADMIN.value
-    assert [item["id"] for item in data[0]["resources"]] == ["resource_admin"]
-    assert data[0]["resources"][0]["module_client"] == ResourceModuleClient.ADMIN.value
+    assert [item["id"] for item in data] == ["resource_admin"]
+    assert data[0]["module_client"] == ResourceModuleClient.ADMIN.value
+    assert data[0]["module_id"] == "module_admin"
 
 
 async def test_admin_resource_management_interfaces_keep_all_clients_by_default(client):
@@ -130,9 +131,8 @@ async def test_portal_current_resources_are_public(client):
     response = await client.get("/api/v1/portal/sys/resources/current")
 
     assert response.status_code == 200
-    assert response.json()["code"] == 200
+    assert response.json()["code"] == "200"
     data = response.json()["data"]
-    assert [item["id"] for item in data] == ["module_portal"]
-    assert data[0]["client"] == ResourceModuleClient.PORTAL.value
-    assert [item["id"] for item in data[0]["resources"]] == ["resource_portal"]
-    assert data[0]["resources"][0]["module_client"] == ResourceModuleClient.PORTAL.value
+    assert [item["id"] for item in data] == ["resource_portal"]
+    assert data[0]["module_client"] == ResourceModuleClient.PORTAL.value
+    assert data[0]["module_id"] == "module_portal"

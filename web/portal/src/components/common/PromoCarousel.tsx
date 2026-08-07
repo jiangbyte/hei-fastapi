@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { Carousel } from 'antd'
 import { Link } from 'react-router-dom'
 
@@ -6,21 +8,21 @@ export type PromoSlide = {
   title: string
   desc: string
   tag?: string
-  /** Internal SPA route */
+  /** 内部 SPA 路由 */
   to?: string
-  /** External / absolute URL */
+  /** 外部 / 绝对 URL */
   href?: string
-  /** Tailwind gradient classes, e.g. from-[...] to-[...] */
+  /** Tailwind 渐变类，如 from-[...] to-[...] */
   tone?: string
   cta?: string
-  /** Optional cover image; clipped by fixed slide height */
+  /** 可选封面图；按固定幻灯片高度裁剪 */
   imageUrl?: string
   onClick?: () => void
 }
 
 type Props = {
   slides: PromoSlide[]
-  /** Fixed slide height — keeps layout stable when images are added later */
+  /** 固定幻灯片高度 — 后续加图时保持布局稳定 */
   height?: number
   className?: string
   autoplay?: boolean

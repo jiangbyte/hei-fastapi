@@ -1,4 +1,7 @@
-"""从 DB 配置表回写运行期 settings 的自动映射函数。"""
+""" Author: Charlie
+
+从 DB 配置表回写运行期 settings 的自动映射函数。
+"""
 from app.core.config.settings import settings
 from app.platform.config.coerce import coerce_config_value
 from app.platform.config.reader import config_reader
@@ -20,13 +23,16 @@ def _apply_from_config(settings_obj: object, prefix: str) -> None:
 
 
 def apply_sys_config() -> None:
-    """从 sys_config 表覆盖上传和邮件配置。"""
+    """从 sys_config 表覆盖运行期 settings（仅映射已声明字段）。"""
     _apply_from_config(settings.storage, "storage")
     _apply_from_config(settings.mail, "mail")
+    _apply_from_config(settings.auth, "auth")
+    _apply_from_config(settings.audit_alert, "audit_alert")
+    _apply_from_config(settings.password_policy, "password_policy")
 
 
 def apply_storage_config() -> None:
-    """Validate that a DB-backed default storage config is available."""
+    """校验 DB 中是否存在可用的默认存储配置。"""
     if not config_reader.get_default_storage():
         raise RuntimeError(
             "No active storage configuration found in sys_storage_config table. "

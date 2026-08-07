@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { usePreferredDark } from '@vueuse/core'
 import { computed } from 'vue'

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import time
 from contextlib import contextmanager
 
@@ -92,6 +94,8 @@ file_upload_rejected_total = Counter(
     ["reason"],
     registry=registry,
 )
+
+
 def metrics_enabled() -> bool:
     return settings.observability.enabled and settings.observability.metrics_enabled
 

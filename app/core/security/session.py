@@ -1,9 +1,11 @@
+""" Author: Charlie """
+
 import json
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
-from typing import TypedDict
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from app.core.config.enums import AccountType, DataScope
 from app.core.config.settings import settings
@@ -71,12 +73,10 @@ class SessionStore:
         raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
         data = json.loads(raw_text)
         session = SessionPayload(**data)
-        session = self._check_idle_timeout(redis, session)
-        return session
-
+        return await self._check_idle_timeout(redis, session)
 
     async def touch(self, token: str) -> None:
-        """Async update last_active_at with sliding TTL."""
+        """异步更新 last_active_at 并滑动 TTL。"""
         try:
             redis = self._get_required_redis()
             raw = await redis.get(login_token_key(token))
@@ -100,7 +100,7 @@ class SessionStore:
         account_type: str,
         account_id: str,
     ) -> list[SessionPayload]:
-        """Return all online sessions for an account, oldest first."""
+        """返回账户全部在线会话，按登录时间升序。"""
         tokens = await self.get_account_tokens(account_type, account_id)
         sessions = await self.list_sessions_by_tokens(tokens)
         sessions.sort(key=lambda s: _parse_datetime_or_epoch(s.login_at))
@@ -112,7 +112,7 @@ class SessionStore:
         account_id: str,
         max_sessions: int,
     ) -> None:
-        """Remove oldest sessions when exceeding max_sessions."""
+        """超过 max_sessions 时移除最旧会话。"""
         if max_sessions <= 0:
             return
         sessions = await self.list_account_sessions(account_type, account_id)
@@ -123,24 +123,15 @@ class SessionStore:
             await self.delete(session.token)
         logger.info("Pruned %d excess sessions for %s/%s", len(excess), account_type, account_id)
 
-    def _check_idle_timeout(self, redis, session: SessionPayload) -> SessionPayload | None:
-        """Delete session if idle_timeout exceeded."""
+    async def _check_idle_timeout(self, redis, session: SessionPayload) -> SessionPayload | None:
+        """空闲超时则删除会话。"""
         idle_timeout = settings.auth.session_idle_timeout_seconds
         if idle_timeout <= 0 or not session.last_active_at:
             return session
         last_active = _parse_datetime_or_epoch(session.last_active_at)
         if (datetime.now(UTC) - last_active).total_seconds() > idle_timeout:
             logger.info("Session %s idle timeout, deleting", session.token[:8])
-            key = login_token_key(session.token)
-            try:
-                redis.delete(key)
-            except TypeError:
-                pass
-            try:
-                redis.srem(login_tokens_key(), session.token)
-                redis.srem(login_account_tokens_key(str(session.account_type), session.account_id), session.token)
-            except TypeError:
-                pass
+            await self.delete(session.token)
             return None
         return session
 
@@ -154,8 +145,7 @@ class SessionStore:
         redis = self._get_required_redis()
         values = await redis.smembers(login_tokens_key())
         return [
-            value.decode("utf-8") if isinstance(value, bytes) else str(value)
-            for value in values
+            value.decode("utf-8") if isinstance(value, bytes) else str(value) for value in values
         ]
 
     async def list_sessions_by_tokens(self, tokens: list[str]) -> list[SessionPayload]:
@@ -217,9 +207,7 @@ class SessionStore:
     ) -> None:
         """批量刷新多个账户在线会话，Redis 读写合并为批量操作。"""
         unique_targets = [
-            target
-            for target in dict.fromkeys(targets)
-            if target in payload_factories
+            target for target in dict.fromkeys(targets) if target in payload_factories
         ]
         if not unique_targets:
             return
@@ -265,22 +253,14 @@ class SessionStore:
         if not unique_targets:
             return
         token_map = await self.get_accounts_tokens(unique_targets)
-        keys = {
-            login_token_key(token)
-            for tokens in token_map.values()
-            for token in tokens
-        }
+        keys = {login_token_key(token) for tokens in token_map.values() for token in tokens}
         keys.update(
             login_account_tokens_key(account_type, account_id)
             for account_type, account_id in unique_targets
         )
         if keys:
             await self._delete_keys(redis, list(keys))
-        tokens = {
-            token
-            for tokens in token_map.values()
-            for token in tokens
-        }
+        tokens = {token for tokens in token_map.values() for token in tokens}
         if tokens:
             await redis.srem(login_tokens_key(), *tokens)
 
@@ -362,7 +342,7 @@ class SessionStore:
 
 
 def _parse_datetime_or_epoch(value: str | None) -> datetime:
-    """Parse ISO datetime string; return Unix epoch on failure."""
+    """解析 ISO datetime 字符串；失败时返回 Unix 纪元。"""
     if not value:
         return datetime.min.replace(tzinfo=UTC)
     try:

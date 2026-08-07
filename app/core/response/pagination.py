@@ -1,47 +1,44 @@
-from math import ceil
-from typing import Annotated, Generic, TypeVar
+""" Author: Charlie """
 
-from fastapi import Query
+from math import ceil
+from typing import Generic, TypeVar
+
 from pydantic import Field
 
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireInt
 
 T = TypeVar("T")
 
-Current = Annotated[int, Query(ge=1, description="Current page")]
-Size = Annotated[int, Query(ge=1, le=100, description="Page size")]
-
 
 class PageQuery(ApiSchema):
-    current: int = Field(default=1, ge=1)
-    size: int = Field(default=20, ge=1, le=100)
+    current: WireInt = Field(default=1, ge=1)
+    size: WireInt = Field(default=20, ge=1, le=100)
 
     @property
     def offset(self) -> int:
-        return (self.current - 1) * self.size
-
-    @property
-    def pagination(self) -> "PageQuery":
-        """Alias for callers that historically used nested ``query.pagination``."""
-        return self
+        return (int(self.current) - 1) * int(self.size)
 
 
 class PageData(ApiSchema, Generic[T]):
     """标准分页响应体，统一返回页码、总量和当前页数据。"""
 
-    size: int
-    current: int
-    total: int
-    pages: int
+    size: WireInt
+    current: WireInt
+    total: WireInt
+    pages: WireInt
     records: list[T]
 
 
 def build_page(query: PageQuery, total: int, items: list[T]) -> PageData[T]:
     """构造统一分页模型，避免各路由重复计算总页数和手工拼装字典。"""
+    size = int(query.size)
+    current = int(query.current)
+    total_i = int(total)
     return PageData(
-        size=query.size,
-        current=query.current,
-        total=total,
-        pages=ceil(total / query.size) if total else 0,
+        size=size,
+        current=current,
+        total=total_i,
+        pages=ceil(total_i / size) if total_i else 0,
         records=items,
     )

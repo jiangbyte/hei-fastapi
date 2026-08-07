@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { RouteRecordRaw } from 'vue-router'
 import { RouterLink } from 'vue-router'
 import { h } from 'vue'
@@ -129,7 +131,7 @@ export function getActiveMenuPath(resources: AppRoute.RowRoute[], path: string) 
   return current.path ?? path
 }
 
-/** Match `/biz/foo/edit/:id` style resource paths against a concrete URL. */
+/** 将 `/biz/foo/edit/:id` 式资源路径与具体 URL 匹配。 */
 function matchResourcePath(pattern: string | null | undefined, path: string) {
   if (!pattern || !pattern.includes(':')) {
     return false
@@ -208,18 +210,17 @@ function buildRoutes(resources: AppRoute.RowRoute[]) {
     }
   })
 
-  // MENU/PAGE that already render a leaf page must not nest other pages as vue-router
-  // children — otherwise create/edit/sub-pages stay stuck on the parent CRUD view.
+  // 已渲染叶子页的 MENU/PAGE 不应再嵌套其他页面为 vue-router 子路由，
+  // 否则新建/编辑/子页会卡在父级 CRUD 视图。
   return hoistLeafPageChildren(arrayToTree(routes))
 }
 
 /**
- * Hoist nested page routes out from under leaf MENU/PAGE parents.
+ * 将嵌套页面路由从叶子 MENU/PAGE 父节点下提升为同级。
  *
- * Vue Router nests by tree shape. A parent with its own component needs a
- * `<router-view>` for children; our list pages don't have one, so hidden form /
- * child-table routes must be siblings instead. parent_id is unchanged so menu
- * highlighting via getActiveMenuPath still works.
+ * vue-router 按树形结构嵌套。带自身组件的父路由需要 `<router-view>` 渲染子路由；
+ * 列表页没有该插槽，因此隐藏表单/子表路由须作为兄弟节点。parent_id 不变，
+ * getActiveMenuPath 菜单高亮逻辑仍有效。
  */
 function hoistLeafPageChildren(routes: AppRoute.Route[]): AppRoute.Route[] {
   const result: AppRoute.Route[] = []

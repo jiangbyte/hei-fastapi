@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 async def test_root_health(client):
     response = await client.get("/")
     assert response.status_code == 200
@@ -29,12 +31,11 @@ async def test_openapi_422_uses_unified_error_schema(client):
         "$ref": "#/components/schemas/ApiErrorResponse"
     }
     assert (
-        data["components"]["schemas"]["ApiErrorResponse"]["properties"]["code"]["type"]
-        == "integer"
+        data["components"]["schemas"]["ApiErrorResponse"]["properties"]["code"]["type"] == "string"
     )
     assert (
         data["components"]["schemas"]["ApiResponse_LoginResponse_"]["properties"]["code"]["type"]
-        == "integer"
+        == "string"
     )
 
 
@@ -60,7 +61,7 @@ async def test_unhandled_exception_uses_unified_500_response(client):
 
     assert response.status_code == 500
     assert response.json() == {
-        "code": 500,
+        "code": "500",
         "message": "Internal server error",
         "data": None,
     }

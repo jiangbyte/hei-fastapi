@@ -1,8 +1,9 @@
-/**
+/** Author: Charlie
+ *
+ *
  * Portal 字典工具 — API 与 admin/src/utils/dict.ts 对齐。
  * 仅存储 key / 无 Vue 依赖处不同；查询与刷新语义保持一致。
  */
-
 const DICT_TREE_STORAGE_KEY = 'hei:portal:dict-tree'
 
 type DictTreeRef = {

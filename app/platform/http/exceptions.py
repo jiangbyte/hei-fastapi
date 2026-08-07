@@ -1,2 +1,4 @@
+""" Author: Charlie """
+
 class HttpClientError(Exception):
-    """Raised when external HTTP access fails."""
+    """外部 HTTP 访问失败时抛出。"""

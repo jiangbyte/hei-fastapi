@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -7,7 +9,6 @@ from app.core.exceptions.business import NotFoundError
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.enums import IamRelationSubjectType, IamRelationTargetType, IamRelationType
 from app.modules.iam.group.model import SysGroup
-from app.modules.iam.reference_guard import count_group_references, raise_if_referenced
 from app.modules.iam.group.schema import (
     GroupAdminPageQuery,
     GroupCreateRequest,
@@ -16,6 +17,7 @@ from app.modules.iam.group.schema import (
     GroupRoleAssignRequest,
     GroupUpdateRequest,
 )
+from app.modules.iam.reference_guard import count_group_references, raise_if_referenced
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository, account_dept_condition
 from app.modules.iam.role.model import SysRole
@@ -88,8 +90,8 @@ class GroupRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysGroup.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         groups = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
@@ -115,13 +117,12 @@ class GroupRepository:
     async def list_accounts(
         self,
         data_scope_filter: ColumnElement[bool] | None = None,
-        ) -> list[SysAccount]:
+    ) -> list[SysAccount]:
         stmt = select(SysAccount).order_by(SysAccount.id.desc())
         if data_scope_filter is not None:
-            stmt = (
-                stmt.outerjoin(SysIamRelation, account_dept_condition(SysIamRelation, SysAccount.id))
-                .where(data_scope_filter)
-            )
+            stmt = stmt.outerjoin(
+                SysIamRelation, account_dept_condition(SysIamRelation, SysAccount.id)
+            ).where(data_scope_filter)
         return list((await self.db.execute(stmt)).unique().scalars().all())
 
     async def list_group_accounts(
@@ -189,7 +190,7 @@ class GroupRepository:
         self,
         group_id: str,
         data_scope_filter: ColumnElement[bool] | None = None,
-        ) -> list[str]:
+    ) -> list[str]:
         await self.get_required(group_id)
         stmt = select(SysIamRelation.target_id).where(
             SysIamRelation.subject_type == IamRelationSubjectType.GROUP.value,
@@ -198,7 +199,9 @@ class GroupRepository:
             SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
         )
         if data_scope_filter is not None:
-            stmt = stmt.join(SysRole, SysRole.id == SysIamRelation.target_id).where(data_scope_filter)
+            stmt = stmt.join(SysRole, SysRole.id == SysIamRelation.target_id).where(
+                data_scope_filter
+            )
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
     async def replace_group_roles(self, payload: GroupGrantRoleRequest) -> None:

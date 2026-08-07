@@ -1,15 +1,21 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 
 
 class SendMessageRequest(ApiSchema):
     conversation_id: str | None = Field(default=None, min_length=1, max_length=64)
     group_id: str | None = Field(default=None, min_length=1, max_length=64)
-    participant_refs: list[dict] = Field(default_factory=list, description="[{'account_type':..,'account_id':..}] for creating direct thread on the fly")
+    participant_refs: list[dict] = Field(
+        default_factory=list,
+        description="[{'account_type':..,'account_id':..}] for creating direct thread on the fly",
+    )
     title: str | None = Field(default=None, max_length=255)
     parent_id: str | None = Field(default=None, max_length=64)
     content: str = Field(min_length=1)
@@ -25,10 +31,10 @@ class MessageAttachmentInput(ApiSchema):
     name: str = Field(min_length=1, max_length=255)
     url: str = Field(min_length=1, max_length=1024)
     content_type: str | None = Field(default=None, max_length=128)
-    size: int | None = Field(default=None, ge=0)
+    size: WireInt | None = Field(default=None, ge=0)
     attachment_type: str = Field(default="FILE", max_length=32)
     thumbnail_url: str | None = Field(default=None, max_length=1024)
-    sort: int = 0
+    sort: WireInt = 0
     extra: dict = Field(default_factory=dict)
 
 
@@ -58,8 +64,8 @@ class MessageSchema(ApiSchema):
     sender_nickname: str | None = None
     content: str
     content_type: str
-    reply_count: int = 0
-    is_revoked: bool = False
+    reply_count: WireInt = 0
+    is_revoked: WireBool = False
     revoked_at: datetime | None = None
     extra: dict
     created_at: datetime
@@ -73,13 +79,13 @@ class MessageAttachmentSchema(ApiSchema):
     name: str
     url: str
     content_type: str | None = None
-    size: int | None = None
+    size: WireInt | None = None
     attachment_type: str
     thumbnail_url: str | None = None
-    duration: int | None = None
-    width: int | None = None
-    height: int | None = None
-    sort: int
+    duration: WireInt | None = None
+    width: WireInt | None = None
+    height: WireInt | None = None
+    sort: WireInt
     extra: dict
 
 
@@ -88,4 +94,4 @@ class RevokeMessageRequest(ApiSchema):
 
 
 class UnreadCountResponse(ApiSchema):
-    unread_count: int = 0
+    unread_count: WireInt = 0

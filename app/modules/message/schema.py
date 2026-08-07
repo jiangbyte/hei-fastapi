@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from pydantic import Field
 
 from app.core.schema.base import ApiSchema

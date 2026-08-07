@@ -21,6 +21,11 @@ vitepress/*.local
 logs
 .nuxt/
 
+# Playwright
+**/playwright-report/
+**/test-results/
+**/blob-report/
+
 # 任意一级的node_modules目录
 /**/node_modules/
 
@@ -148,7 +153,7 @@ ipython_config.py
 __pypackages__/
 
 # Celery stuff
-celerybeat-schedule
+.celerybeat-schedule
 celerybeat.pid
 .runtime/
 
@@ -236,15 +241,10 @@ __marimo__/
 
 uploads
 
-# Web local/reference files
-web1/ant-design-vue-pro/
-web1/**/.env
-web1/**/.env.*
-!web1/**/.env.example
-!web1/**/.env.template
-web1/**/dist/
-web1/**/.vite/
-web1/**/coverage/
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
 
 # Auto-generated type stubs from Vite plugins
 web/admin/src/typing/components.d.ts

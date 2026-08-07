@@ -1,8 +1,10 @@
-"""MsgMessage - chat message, immutable (only revocable)."""
+""" Author: Charlie
 
+MsgMessage - 聊天消息，不可变（仅可撤回）。
+"""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db.base import Base
@@ -10,18 +12,25 @@ from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class MsgMessage(Base):
-    """Chat message. Not editable, only revocable (is_revoked).
-    Does NOT extend TimestampMixin — only created_at is needed (updated doesn't apply)."""
+    """聊天消息，不可编辑，仅可撤回 (is_revoked)。
+    不继承 TimestampMixin — 仅需 created_at（无 updated）。"""
 
     __tablename__ = "msg_message"
     __table_args__ = (
         Index("ix_msg_msg_conv_created", "conversation_id", "created_at"),
         Index("ix_msg_msg_parent", "parent_id"),
         Index("ix_msg_msg_sender", "sender_account_type", "sender_account_id"),
+        UniqueConstraint(
+            "sender_account_type",
+            "sender_account_id",
+            "client_msg_id",
+            name="uq_msg_sender_client_msg_id",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_snowflake_id)
     conversation_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    client_msg_id: Mapped[str | None] = mapped_column(String(64))
     msg_type: Mapped[str] = mapped_column(String(32), default="TEXT", nullable=False)
     parent_id: Mapped[str | None] = mapped_column(String(64))
     sender_type: Mapped[str] = mapped_column(String(32), default="USER", nullable=False)
@@ -38,12 +47,12 @@ class MsgMessage(Base):
 
 
 class MsgMessageRead(Base):
-    """Cursor-based read tracking per account per conversation per terminal."""
+    """按账户、会话、终端的游标式已读追踪。"""
 
     __tablename__ = "msg_message_read"
     __table_args__ = (
         Index("ix_msg_mread_account", "account_type", "account_id"),
-        # UniqueConstraint for cursor: one per conversation+account+terminal
+        # 游标 UniqueConstraint：每个 conversation+account+terminal 一条
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_snowflake_id)
@@ -56,7 +65,7 @@ class MsgMessageRead(Base):
 
 
 class MsgMessageAttachment(Base):
-    """Message attachment, linked to sys_file for raw file storage."""
+    """消息附件，关联 sys_file 存储原始文件。"""
 
     __tablename__ = "msg_message_attachment"
     __table_args__ = (Index("ix_msg_mattach_message", "message_id", "sort"),)

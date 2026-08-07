@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { resolveFileUrl } from '@/utils'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
@@ -12,7 +14,7 @@ const show = defineModel<boolean>('show', { required: true })
 
 const createGroupName = ref('')
 const createGroupDesc = ref('')
-/** friendship_id keys of invitees */
+/** 被邀请者的 friendship_id 键 */
 const createGroupInvitees = ref<string[]>([])
 const showInviteFriendModal = ref(false)
 const inviteSearchText = ref('')

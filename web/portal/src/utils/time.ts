@@ -1,4 +1,4 @@
-/** China (UTC+8) datetime display — avoid en-US `8/4/2026, 8:13:30 PM`. */
+/** Author: Charlie */
 
 const CHINA_OFFSET_MS = 8 * 60 * 60 * 1000
 const LOCAL_DATE_TIME_PATTERN =
@@ -39,10 +39,11 @@ export function formatDateTime(value: unknown, fallback = '-') {
   return Number.isNaN(timestamp) ? text : formatChinaDate(timestamp)
 }
 
-/** Shorter display for lists (drop seconds). */
 export function formatDateMinute(value: unknown, fallback = '-') {
-  const full = formatDateTime(value, '')
-  if (!full) return fallback
+  const full = formatDateTime(value, fallback)
+  if (full === fallback || full.length < 16) {
+    return full
+  }
   return full.slice(0, 16)
 }
 

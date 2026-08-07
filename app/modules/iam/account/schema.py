@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
@@ -5,6 +7,7 @@ from pydantic import Field
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
 from app.modules.iam.schema import (
     AccountIdentitySchema as AccountIdentitySchema,
@@ -22,8 +25,8 @@ class AccountIdentityUpsertPayload(ApiSchema):
     account_id: str
     identity_type: AccountIdentityType
     identifier: str = Field(min_length=1, max_length=128)
-    verified: bool = False
-    is_primary: bool = False
+    verified: WireBool = False
+    is_primary: WireBool = False
     bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
 
 
@@ -39,12 +42,12 @@ class AccountCreateRequest(ApiSchema):
     signature: str | None = None
     phone: str | None = None
     email: str | None = None
-    email_login_enabled: bool = False
-    phone_login_enabled: bool = False
+    email_login_enabled: WireBool = False
+    phone_login_enabled: WireBool = False
     email_identity: str | None = Field(default=None, max_length=128)
     phone_identity: str | None = Field(default=None, max_length=32)
-    email_identity_verified: bool = False
-    phone_identity_verified: bool = False
+    email_identity_verified: WireBool = False
+    phone_identity_verified: WireBool = False
     email_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     phone_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     bio: str | None = Field(default=None, max_length=255)
@@ -65,12 +68,12 @@ class AccountUpdateRequest(ApiSchema):
     signature: str | None = None
     phone: str | None = None
     email: str | None = None
-    email_login_enabled: bool = False
-    phone_login_enabled: bool = False
+    email_login_enabled: WireBool = False
+    phone_login_enabled: WireBool = False
     email_identity: str | None = Field(default=None, max_length=128)
     phone_identity: str | None = Field(default=None, max_length=32)
-    email_identity_verified: bool = False
-    phone_identity_verified: bool = False
+    email_identity_verified: WireBool = False
+    phone_identity_verified: WireBool = False
     email_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     phone_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     bio: str | None = Field(default=None, max_length=255)
@@ -105,7 +108,7 @@ class AccountGroupAssignRequest(ApiSchema):
 class AccountDeptAssignRequest(ApiSchema):
     account_id: str
     dept_id: str
-    is_primary: bool = False
+    is_primary: WireBool = False
 
 
 class AccountGroupOption(ApiSchema):
@@ -116,7 +119,7 @@ class AccountGroupOption(ApiSchema):
 
 class AccountDeptGrantInfo(ApiSchema):
     dept_id: str
-    is_primary: bool = False
+    is_primary: WireBool = False
 
 
 class AccountResourceGrantInfo(ApiSchema):
@@ -148,7 +151,7 @@ class SysAccountDeptRelSchema(ApiSchema):
     id: str
     account_id: str
     dept_id: str
-    is_primary: bool
+    is_primary: WireBool
     created_at: datetime
     created_by: str | None = None
     updated_at: datetime

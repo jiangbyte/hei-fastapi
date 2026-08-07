@@ -1,8 +1,10 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const prefix = '/api/v1/admin/message'
 
-// ── Conversation ─────────────────────────────────────────────────────
+// ── 会话 ─────────────────────────────────────────────────────
 
 export function conversationList(params?: { current?: number; size?: number }) {
   return http.get<any>(`${prefix}/conversations/my-list`, { params })
@@ -32,12 +34,13 @@ export function markConversationRead(data: { id: string }) {
   return http.post<any>(`${prefix}/conversations/mark-read`, data)
 }
 
-// ── Message ──────────────────────────────────────────────────────────
+// ── 消息 ──────────────────────────────────────────────────────────
 
 export function sendMessage(data: {
   conversation_id?: string
   group_id?: string
   participant_refs?: Array<{ account_type: string; account_id: string }>
+  client_msg_id: string
   title?: string
   parent_id?: string
   content: string
@@ -90,7 +93,7 @@ export function unreadCount(conversationId: string) {
   })
 }
 
-// ── Group ────────────────────────────────────────────────────────────
+// ── 群组 ────────────────────────────────────────────────────────────
 
 export function groupList() {
   return http.get<any[]>(`${prefix}/groups/my-list`)
@@ -181,7 +184,7 @@ export function pendingJoinRequestCount() {
   return http.get<any>(`${prefix}/groups/join-requests/pending-count`)
 }
 
-// ── Friend ───────────────────────────────────────────────────────────
+// ── 好友 ───────────────────────────────────────────────────────────
 
 export function friendList() {
   return http.get<any[]>(`${prefix}/friends/my-list`)
@@ -221,7 +224,7 @@ export function myFriendRequestCount() {
   return http.get<any>(`${prefix}/friends/my-request-count`)
 }
 
-// ── Notification ────────────────────────────────────────────────────
+// ── 通知 ────────────────────────────────────────────────────
 
 export function notificationMyPage(params?: {
   current?: number
@@ -247,7 +250,7 @@ export function readAllNotification() {
   return http.post<any>(`${prefix}/notifications/read-all`)
 }
 
-// ── Announcement ────────────────────────────────────────────────────
+// ── 公告 ────────────────────────────────────────────────────
 
 export function announcementMyPage(params?: { current?: number; size?: number }) {
   return http.get<any>(`${prefix}/announcements/my-page`, { params })
@@ -267,4 +270,9 @@ export function readAnnouncement(data: { ids: string[] }) {
 
 export function readAllAnnouncement() {
   return http.post<any>(`${prefix}/announcements/read-all`)
+}
+
+/** IM AUTH 用的一次性短期 ticket（优先于长期 session token）。 */
+export function imTicket() {
+  return http.post<{ ticket: string; expires_in: number }>(`${prefix}/im/ticket`)
 }

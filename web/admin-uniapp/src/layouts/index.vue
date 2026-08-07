@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <view>
     <u-navbar :title="title" :is-back="back" :placeholder="true" :border="true">

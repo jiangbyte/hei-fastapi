@@ -1,14 +1,14 @@
-"""Data masking utilities — prevent sensitive information leakage in logs,
-audit trails, and API responses.
+""" Author: Charlie
 
-等保 requirement: sensitive personal data must not be exposed in cleartext
-in non-essential contexts.
+数据脱敏工具——防止日志、审计与 API 响应泄露敏感信息。
+
+等保要求：非必要场景不得以明文暴露敏感个人信息。
 """
 import re
 
 
 def mask_email(email: str | None) -> str | None:
-    """Mask email: j***@example.com"""
+    """邮箱脱敏：j***@example.com"""
     if not email:
         return email
     at_idx = email.find("@")
@@ -18,14 +18,14 @@ def mask_email(email: str | None) -> str | None:
 
 
 def mask_phone(phone: str | None) -> str | None:
-    """Mask phone: 138****1234"""
+    """手机号脱敏：138****1234"""
     if not phone or len(phone) < 7:
         return phone
     return phone[:3] + "****" + phone[-4:]
 
 
 def mask_identifier(value: str | None) -> str | None:
-    """Auto-detect and mask email or phone. Returns original if not detected."""
+    """自动识别并脱敏邮箱或手机号；无法识别时返回原值。"""
     if not value:
         return value
     if "@" in value:
@@ -36,7 +36,7 @@ def mask_identifier(value: str | None) -> str | None:
 
 
 def mask_ip(ip: str | None) -> str | None:
-    """Mask last octet for IPv4: 192.168.1.*"""
+    """IPv4 末段脱敏：192.168.1.*"""
     if not ip:
         return ip
     parts = ip.rsplit(".", 1)

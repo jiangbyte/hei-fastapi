@@ -1,5 +1,7 @@
 <!--
-  Refined notification detail.
+  Author: Charlie
+
+  通知详情弹窗。
 -->
 <script setup lang="ts">
 import { msgNotificationApi } from '@/api'

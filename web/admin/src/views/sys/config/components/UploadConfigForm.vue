@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { configApi } from '@/api'
 import { onMounted, reactive } from 'vue'
@@ -7,7 +9,6 @@ const emit = defineEmits<{ saved: [] }>()
 
 const fields = reactive({
   maxBytes: { id: '', value: 0, remark: '' },
-  publicUpload: { id: '', value: false, remark: '' },
   presignExpire: { id: '', value: 0, remark: '' },
   categoryMaxLength: { id: '', value: 0, remark: '' },
   allowedContentTypes: { id: '', tags: [] as string[], remark: '' },
@@ -38,13 +39,6 @@ onMounted(async () => {
         fields.maxBytes = {
           id: row.id,
           value: Number(row.config_value) || 0,
-          remark: row.remark ?? '',
-        }
-        break
-      case 'storage.public_upload_enabled':
-        fields.publicUpload = {
-          id: row.id,
-          value: row.config_value === 'true',
           remark: row.remark ?? '',
         }
         break
@@ -96,11 +90,6 @@ function buildPayload() {
         config_value: String(fields.maxBytes.value),
       },
       {
-        id: fields.publicUpload.id,
-        config_key: 'storage.public_upload_enabled',
-        config_value: String(fields.publicUpload.value),
-      },
-      {
         id: fields.presignExpire.id,
         config_key: 'storage.presign_expire_seconds',
         config_value: String(fields.presignExpire.value),
@@ -150,16 +139,6 @@ async function saveAll() {
             <NInputNumber v-model:value="fields.maxBytes.value" class="w-full" :min="0" />
             <div class="hint">
               {{ fields.maxBytes.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-      <NGi :span="12">
-        <NFormItem label="公开上传" :style="{ marginBottom: 0 }">
-          <div>
-            <NSwitch v-model:value="fields.publicUpload.value" />
-            <div class="hint">
-              {{ fields.publicUpload.remark }}
             </div>
           </div>
         </NFormItem>

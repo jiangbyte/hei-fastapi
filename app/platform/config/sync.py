@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import asyncio
@@ -36,7 +38,7 @@ class ConfigSyncState:
 
 
 async def reload_and_publish(reason: str) -> bool:
-    """Reload this process and publish a best-effort invalidation event to peers."""
+    """重载本进程并向其他实例发布尽力而为的配置失效事件。"""
     await config_reader.reload()
     return await publish_config_changed(reason)
 
@@ -94,7 +96,7 @@ async def stop_config_sync_listener() -> None:
 
 
 def start_config_sync_listener_thread() -> None:
-    """Start config sync in a dedicated loop for Celery worker processes."""
+    """在 Celery worker 进程的专用事件循环中启动配置同步。"""
     global _listener_thread
     if _listener_thread is not None and _listener_thread.is_alive():
         return

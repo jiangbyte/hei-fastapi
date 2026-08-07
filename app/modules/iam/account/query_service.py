@@ -1,18 +1,19 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.schema.datetime import normalize_orm_datetimes
-from app.modules.iam.enums import AccountIdentityBindStatus
 from app.modules.iam.account.repository import AccountRepository
-from app.modules.iam.schema import AccountIdentitySchema
-from app.modules.iam.schema import SysAccountSchema
+from app.modules.iam.enums import AccountIdentityBindStatus
+from app.modules.iam.schema import AccountIdentitySchema, SysAccountSchema
 from app.modules.user.admin.repository import AdminUserProfileRepository
 from app.modules.user.portal.repository import PortalUserProfileRepository
 from app.platform.storage.url import resolve_file_url
 
 
 class AccountQueryService:
-    """Read-side account composition shared by IAM and user-center modules."""
+    """IAM 与用户中心模块共用的账户读侧组装逻辑。"""
 
     def __init__(self, db: AsyncSession):
         self.db = db

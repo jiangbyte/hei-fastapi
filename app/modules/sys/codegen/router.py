@@ -1,12 +1,14 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.codegen.schema import (
@@ -19,7 +21,6 @@ from app.modules.sys.codegen.schema import (
     CodegenPlanUpdateRequest,
     CodegenPreviewSchema,
     CodegenTableColumnsQuery,
-    CodegenType,
     DatabaseColumnSchema,
     DatabaseTableSchema,
     SysCodegenFieldSchema,
@@ -31,7 +32,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/codegen/create",
+    "/v1/admin/sys/codegen/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:create")),
@@ -47,7 +48,7 @@ async def create(
 
 
 @router.post(
-    "/sys/codegen/update",
+    "/v1/admin/sys/codegen/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:update")),
@@ -63,7 +64,7 @@ async def update(
 
 
 @router.post(
-    "/sys/codegen/delete",
+    "/v1/admin/sys/codegen/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:delete")),
@@ -79,7 +80,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/codegen/detail",
+    "/v1/admin/sys/codegen/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:detail")),
@@ -94,7 +95,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/codegen/page",
+    "/v1/admin/sys/codegen/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:page")),
@@ -109,7 +110,7 @@ async def page(
 
 
 @router.get(
-    "/sys/codegen/tables",
+    "/v1/admin/sys/codegen/tables",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:tables")),
@@ -123,7 +124,7 @@ async def tables(
 
 
 @router.get(
-    "/sys/codegen/table-columns",
+    "/v1/admin/sys/codegen/table-columns",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:tables")),
@@ -138,7 +139,7 @@ async def table_columns(
 
 
 @router.get(
-    "/sys/codegen/fields",
+    "/v1/admin/sys/codegen/fields",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:detail")),
@@ -153,7 +154,7 @@ async def fields(
 
 
 @router.post(
-    "/sys/codegen/fields/update-batch",
+    "/v1/admin/sys/codegen/fields/update-batch",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:update")),
@@ -169,7 +170,7 @@ async def update_fields_batch(
 
 
 @router.get(
-    "/sys/codegen/parent-resources",
+    "/v1/admin/sys/codegen/parent-resources",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:detail")),
@@ -184,7 +185,7 @@ async def parent_resources(
 
 
 @router.get(
-    "/sys/codegen/preview",
+    "/v1/admin/sys/codegen/preview",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:preview")),
@@ -199,7 +200,7 @@ async def preview(
 
 
 @router.get(
-    "/sys/codegen/download",
+    "/v1/admin/sys/codegen/download",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:codegen:download")),

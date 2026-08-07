@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { EditorUploadedFile } from '@/components/editor'
 import { computed, reactive } from 'vue'

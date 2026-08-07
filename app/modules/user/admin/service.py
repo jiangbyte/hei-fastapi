@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from uuid import uuid4
@@ -5,6 +7,7 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions.business import AuthenticationError, BusinessError
+from app.core.schema.common_schema import IdNameResponse
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload
 from app.modules.auth.session_service import AccountSessionService
@@ -25,7 +28,6 @@ from app.modules.user.admin.schema import (
     AdminUserCenterPhoneUpdateRequest,
     AdminUserCenterProfileUpdateRequest,
 )
-from app.core.schema.common_schema import IdNameResponse
 from app.platform.db.transaction import transactional
 from app.platform.storage.url import is_external_url, normalize_object_name, resolve_file_url
 

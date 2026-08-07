@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import json
 import logging
 import re
@@ -16,7 +18,14 @@ from app.platform.cache.redis import get_redis
 logger = logging.getLogger(__name__)
 
 PERMISSION_KEY_PATTERN = re.compile(r"^[a-z0-9*]+(?::[a-z0-9*]+)+$")
-API_VERSION_PREFIX_PATTERN = re.compile(r"^/api/v[0-9]+(?=/|$)")
+# 绝对 OpenAPI 路径 → 业务路径，如 /api/v1/admin/sys/file/page → /sys/file/page
+PERMISSION_ROUTE_PREFIX_PATTERN = re.compile(
+    r"^/api(?:/v[0-9]+)?(?:/(?:admin|portal|internal|public))?(?=/|$)"
+)
+# 装饰器路径（未挂载全局 /api）
+DECORATOR_CLIENT_PREFIX_PATTERN = re.compile(
+    r"^/v[0-9]+/(?:admin|portal|internal|public)(?=/|$)"
+)
 PERMISSION_META_ATTR = "__permission_meta__"
 ACCOUNT_TYPE_META_ATTR = "__account_type_meta__"
 
@@ -52,23 +61,17 @@ def _normalize_methods(route: Any) -> list[str]:
 
 
 def normalize_route_path(path: str) -> str:
+    """从路由路径剥离 ``/api``、API 版本与客户端段。"""
     normalized = path.strip() or "/"
-    if normalized == "/api":
-        return "/"
-    normalized = API_VERSION_PREFIX_PATTERN.sub("", normalized, count=1) or "/"
-    return normalized
+    stripped = PERMISSION_ROUTE_PREFIX_PATTERN.sub("", normalized, count=1)
+    if stripped != normalized:
+        return stripped or "/"
+    stripped = DECORATOR_CLIENT_PREFIX_PATTERN.sub("", normalized, count=1)
+    return stripped or "/"
 
 
 def normalize_permission_route_path(route: Any) -> str:
-    normalized = normalize_route_path(route.path)
-    route_tags = [str(tag).strip("/") for tag in getattr(route, "tags", []) if str(tag).strip("/")]
-    for tag in route_tags:
-        prefix = f"/{tag}"
-        if normalized == prefix:
-            return "/"
-        if normalized.startswith(prefix + "/"):
-            return normalized.removeprefix(prefix)
-    return normalized
+    return normalize_route_path(route.path)
 
 
 def _resolve_route_name(route: Any) -> str:
@@ -241,6 +244,5 @@ async def ensure_registered_permission_keys(permission_keys: list[str]) -> None:
         from app.core.exceptions.business import BusinessError
 
         raise BusinessError(
-            "Permission is not registered in Redis: "
-            + ", ".join(missing_permission_keys)
+            "Permission is not registered in Redis: " + ", ".join(missing_permission_keys)
         )

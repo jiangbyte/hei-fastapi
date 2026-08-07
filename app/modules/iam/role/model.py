@@ -1,4 +1,6 @@
-from sqlalchemy import Boolean, Integer, JSON, String, Text, UniqueConstraint
+""" Author: Charlie """
+
+from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.enums import StatusEnum, SysBizCategory
@@ -20,10 +22,7 @@ class SysRole(Base, TimestampMixin):
     code: Mapped[str] = mapped_column(String(64), nullable=False, comment="角色编码")
     name: Mapped[str] = mapped_column(String(64), nullable=False, comment="角色名称")
     category: Mapped[str] = mapped_column(
-        String(64),
-        default=SysBizCategory.SYS.value,
-        nullable=False,
-        comment="角色分类"
+        String(64), default=SysBizCategory.SYS.value, nullable=False, comment="角色分类"
     )
     scope_type: Mapped[str] = mapped_column(
         String(32),

@@ -1,17 +1,18 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.exceptions.business import AuthorizationError, ConflictError
-from app.modules.user.utils.profile import get_profiles_batch
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import resolve_data_scope_dept_ids
 from app.core.security.permission_registry import list_permission_resources
 from app.core.security.session import SessionPayload
 from app.modules.iam.enums import ResourceModuleClient, ResourceType
-from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.permission.service import ensure_registered_permission
-from app.modules.iam.resource.model import SysResource, SysResourceModule
+from app.modules.iam.relation.repository import IamRelationRepository
+from app.modules.iam.resource.model import SysResource
 from app.modules.iam.resource.repository import ResourceModuleRepository, ResourceRepository
 from app.modules.iam.resource.schema import (
     ResourceAdminPageQuery,
@@ -34,6 +35,7 @@ from app.modules.iam.resource.schema import (
     SysResourceSchema,
 )
 from app.modules.iam.schema import PermissionRegistryItem, ResourceGrantModuleOption
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
@@ -77,12 +79,12 @@ class ResourceService:
 
     async def page_admin(self, query: ResourceAdminPageQuery) -> PageData[SysResourceSchema]:
         items, total = await self.repo.page_admin(query)
-        return build_page(query.pagination, total, await self._build_resource_schemas(items))
+        return build_page(query, total, await self._build_resource_schemas(items))
 
     async def page_buttons(self, query: ResourceButtonPageQuery) -> PageData[ResourceButtonSchema]:
         await self._get_button_parent(query.parent_id)
         items, total = await self.repo.page_buttons(query)
-        return build_page(query.pagination, total, await self._build_button_schemas(items))
+        return build_page(query, total, await self._build_button_schemas(items))
 
     async def bind_resource_permission(
         self,
@@ -109,9 +111,7 @@ class ResourceService:
     ) -> ResourceButtonSchema:
         parent = await self._prepare_button_permission(payload, session)
         async with transactional(self.db):
-            button = await self.repo.create(
-                self._build_button_resource_payload(payload, parent)
-            )
+            button = await self.repo.create(self._build_button_resource_payload(payload, parent))
             await self.repo.replace_resource_permission(
                 self._build_button_permission_payload(button.id, payload)
             )
@@ -156,8 +156,7 @@ class ResourceService:
         resources = [
             resource
             for resource in resources
-            if resource.resource_type
-            not in {ResourceType.BUTTON.value, ResourceType.ACTION.value}
+            if resource.resource_type not in {ResourceType.BUTTON.value, ResourceType.ACTION.value}
         ]
         return await self._build_resource_tree_nodes(resources)
 
@@ -368,7 +367,7 @@ class ResourceModuleService:
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysResourceModuleSchema, items)
         await _resolve_creator_names(self.db, schemas)
-        return build_page(query.pagination, total, schemas)
+        return build_page(query, total, schemas)
 
     async def selector(
         self,
@@ -384,10 +383,7 @@ def _build_resource_tree_nodes(
     resources: list[SysResource],
     module_meta_map: dict[str, tuple[str, str]],
 ) -> list[ResourceTreeNode]:
-    node_map = {
-        resource.id: to_schema(ResourceTreeNode, resource)
-        for resource in resources
-    }
+    node_map = {resource.id: to_schema(ResourceTreeNode, resource) for resource in resources}
     for node in node_map.values():
         module_name, module_client = module_meta_map.get(node.module_id or "", ("", None))
         node.module_id_name = module_name
@@ -400,4 +396,3 @@ def _build_resource_tree_nodes(
         else:
             roots.append(node)
     return roots
-

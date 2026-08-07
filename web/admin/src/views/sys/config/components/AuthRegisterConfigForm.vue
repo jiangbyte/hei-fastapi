@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { configApi } from '@/api'
 import { onMounted, reactive } from 'vue'
@@ -13,7 +15,6 @@ const props = defineProps<{ category: string }>()
 const emit = defineEmits<{ saved: [] }>()
 
 const fields = reactive({
-  adminEnabled: { id: '', value: false, remark: '' } as BoolItem,
   portalEnabled: { id: '', value: false, remark: '' } as BoolItem,
   saving: false,
 })
@@ -21,14 +22,7 @@ const fields = reactive({
 onMounted(async () => {
   const res = await configApi.list({ category: props.category })
   for (const row of res.data ?? []) {
-    if (row.config_key === 'auth.admin_register_enabled')
-      fields.adminEnabled = {
-        id: row.id,
-        config_key: row.config_key,
-        value: row.config_value === 'true',
-        remark: row.remark ?? '',
-      }
-    else if (row.config_key === 'auth.portal_register_enabled')
+    if (row.config_key === 'auth.portal_register_enabled')
       fields.portalEnabled = {
         id: row.id,
         config_key: row.config_key,
@@ -43,11 +37,6 @@ async function saveAll() {
   try {
     await configApi.batchSave({
       items: [
-        {
-          id: fields.adminEnabled.id,
-          config_key: 'auth.admin_register_enabled',
-          config_value: String(fields.adminEnabled.value),
-        },
         {
           id: fields.portalEnabled.id,
           config_key: 'auth.portal_register_enabled',
@@ -66,16 +55,6 @@ async function saveAll() {
 <template>
   <NForm label-placement="top" :label-width="140">
     <NGrid :cols="24" :x-gap="24" :y-gap="12">
-      <NGi :span="12">
-        <NFormItem label="管理端注册" :style="{ marginBottom: 0 }">
-          <div>
-            <NSwitch v-model:value="fields.adminEnabled.value" />
-            <div class="hint">
-              {{ fields.adminEnabled.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
       <NGi :span="12">
         <NFormItem label="门户端注册" :style="{ marginBottom: 0 }">
           <div>

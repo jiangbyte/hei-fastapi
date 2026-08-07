@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from urllib.parse import urljoin
 
 from app.platform.storage.config import StorageConfig

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 
@@ -48,8 +50,10 @@ class SessionAdminService:
         items = self._filter_items(items, query)
         items.sort(key=self._sort_key, reverse=True)
         total = len(items)
-        page_items = items[query.pagination.offset : query.pagination.offset + query.pagination.size]
-        return build_page(query.pagination, total, page_items)
+        page_items = items[
+            query.offset : query.offset + query.size
+        ]
+        return build_page(query, total, page_items)
 
     async def tokens(self, query: SessionTokensQuery) -> list[SessionTokenInfo]:
         tokens = await session_store.get_account_tokens(query.account_type.value, query.account_id)
@@ -58,7 +62,9 @@ class SessionAdminService:
 
     async def exit_sessions(self, targets: list[SessionTokensQuery]) -> None:
         for target in targets:
-            await session_store.delete_account_sessions(target.account_type.value, target.account_id)
+            await session_store.delete_account_sessions(
+                target.account_type.value, target.account_id
+            )
 
     async def exit_tokens(self, tokens: list[str]) -> None:
         for token in list(dict.fromkeys(tokens)):
@@ -89,7 +95,9 @@ class SessionAdminService:
             schema = schema_map.get(account_id)
             token_infos = [_token_info(session) for session in sessions]
             token_infos.sort(
-                key=lambda item: item.last_active_at or item.login_at or datetime.min.replace(tzinfo=UTC),
+                key=lambda item: (
+                    item.last_active_at or item.login_at or datetime.min.replace(tzinfo=UTC)
+                ),
                 reverse=True,
             )
             login_times = [item.login_at for item in token_infos if item.login_at]

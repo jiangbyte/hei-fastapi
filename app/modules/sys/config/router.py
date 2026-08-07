@@ -1,13 +1,15 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import IdQuery, IdsRequest
-from app.core.schema.base import ApiSchema
+from app.core.schema.base import ApiSchema, IdQuery, IdsRequest
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.config.schema import (
@@ -19,18 +21,18 @@ from app.modules.sys.config.schema import (
     SysConfigSchema,
 )
 from app.modules.sys.config.service import ConfigService
-from pydantic import Field
 
 
 class TestWebhookRequest(ApiSchema):
     webhook_url: str = Field(default="", max_length=1024)
     webhook_secret: str = Field(default="", max_length=256)
 
+
 router = APIRouter()
 
 
 @router.post(
-    "/sys/config/create",
+    "/v1/admin/sys/config/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:create")),
@@ -46,7 +48,7 @@ async def create(
 
 
 @router.post(
-    "/sys/config/update",
+    "/v1/admin/sys/config/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:update")),
@@ -62,7 +64,7 @@ async def update(
 
 
 @router.post(
-    "/sys/config/delete",
+    "/v1/admin/sys/config/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:delete")),
@@ -78,7 +80,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/config/detail",
+    "/v1/admin/sys/config/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:detail")),
@@ -93,7 +95,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/config/page",
+    "/v1/admin/sys/config/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:page")),
@@ -108,7 +110,7 @@ async def page(
 
 
 @router.get(
-    "/sys/config/list",
+    "/v1/admin/sys/config/list",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:page")),
@@ -123,7 +125,7 @@ async def list_config(
 
 
 @router.post(
-    "/sys/config/batch-save",
+    "/v1/admin/sys/config/batch-save",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:update")),
@@ -139,7 +141,7 @@ async def batch_save(
 
 
 @router.post(
-    "/sys/config/audit-alert/test-webhook",
+    "/v1/admin/sys/config/audit-alert/test-webhook",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
 )
 async def test_audit_alert_webhook(

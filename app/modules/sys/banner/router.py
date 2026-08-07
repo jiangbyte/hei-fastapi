@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -7,7 +9,7 @@ from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
 from app.core.schema.base import IdQuery, IdsRequest
-from app.deps.auth import require_permission, require_account_type
+from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -21,7 +23,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/banners/create",
+    "/v1/admin/sys/banners/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:banner:create")),
@@ -37,7 +39,7 @@ async def create(
 
 
 @router.post(
-    "/sys/banners/update",
+    "/v1/admin/sys/banners/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:banner:update")),
@@ -53,7 +55,7 @@ async def update(
 
 
 @router.post(
-    "/sys/banners/delete",
+    "/v1/admin/sys/banners/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:banner:delete")),
@@ -69,7 +71,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/banners/detail",
+    "/v1/admin/sys/banners/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:banner:detail")),
@@ -84,7 +86,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/banners/page",
+    "/v1/admin/sys/banners/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:banner:page")),

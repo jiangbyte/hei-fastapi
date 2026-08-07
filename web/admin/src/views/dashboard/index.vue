@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { Chart } from '@antv/g2'
 import { dashboardApi } from '@/api'

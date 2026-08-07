@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -20,7 +22,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/storage-config/create",
+    "/v1/admin/sys/storage-config/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:create")),
@@ -36,7 +38,7 @@ async def create(
 
 
 @router.post(
-    "/sys/storage-config/update",
+    "/v1/admin/sys/storage-config/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:update")),
@@ -52,7 +54,7 @@ async def update(
 
 
 @router.post(
-    "/sys/storage-config/delete",
+    "/v1/admin/sys/storage-config/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:delete")),
@@ -68,7 +70,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/storage-config/detail",
+    "/v1/admin/sys/storage-config/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:page")),
@@ -83,7 +85,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/storage-config/list",
+    "/v1/admin/sys/storage-config/list",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:page")),
@@ -97,7 +99,7 @@ async def list_config(
 
 
 @router.post(
-    "/sys/storage-config/set-default",
+    "/v1/admin/sys/storage-config/set-default",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:config:update")),

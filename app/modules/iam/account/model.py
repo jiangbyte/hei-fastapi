@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, String, Text, UniqueConstraint
@@ -15,7 +17,9 @@ class SysAccount(Base, TimestampMixin):
 
     __tablename__ = "sys_account"
 
-    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_snowflake_id, comment="主键")
+    id: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default=generate_snowflake_id, comment="主键"
+    )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False, comment="密码哈希")
     account_type: Mapped[str] = mapped_column(String(32), nullable=False, comment="账户类型")
     account_status: Mapped[str] = mapped_column(
@@ -24,17 +28,34 @@ class SysAccount(Base, TimestampMixin):
         default=AccountStatusEnum.ENABLED.value,
         comment="账户状态",
     )
-    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), comment="注销时间")
+    cancelled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="注销时间"
+    )
     cancelled_by: Mapped[str | None] = mapped_column(String(64), comment="注销人")
     cancel_reason: Mapped[str | None] = mapped_column(Text, comment="注销原因")
     last_login_ip: Mapped[str | None] = mapped_column(String(64), comment="上次登录IP")
     last_login_address: Mapped[str | None] = mapped_column(String(255), comment="上次登录地点")
-    last_login_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), comment="上次登录时间")
+    last_login_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="上次登录时间"
+    )
     last_login_device: Mapped[str | None] = mapped_column(Text, comment="上次登录设备")
     latest_login_ip: Mapped[str | None] = mapped_column(String(64), comment="最新登录IP")
     latest_login_address: Mapped[str | None] = mapped_column(String(255), comment="最新登录地点")
-    latest_login_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), comment="最新登录时间")
+    latest_login_time: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="最新登录时间"
+    )
     latest_login_device: Mapped[str | None] = mapped_column(Text, comment="最新登录设备")
+    mfa_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="是否启用 MFA"
+    )
+    mfa_secret_encrypted: Mapped[str | None] = mapped_column(Text, comment="MFA TOTP 密钥（加密）")
+    mfa_enabled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), comment="MFA 启用时间"
+    )
+    mfa_backup_codes_hash: Mapped[str | None] = mapped_column(Text, comment="MFA 备份码哈希 JSON")
+    webauthn_credentials_json: Mapped[str | None] = mapped_column(
+        Text, comment="WebAuthn 凭证 JSON 列表"
+    )
 
 
 class SysAccountIdentity(Base, TimestampMixin):
@@ -42,15 +63,23 @@ class SysAccountIdentity(Base, TimestampMixin):
 
     __tablename__ = "sys_account_identity"
     __table_args__ = (
-        UniqueConstraint("identity_type", "identifier", name="uq_sys_account_identity_type_identifier"),
+        UniqueConstraint(
+            "identity_type", "identifier", name="uq_sys_account_identity_type_identifier"
+        ),
     )
 
-    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_snowflake_id, comment="主键")
+    id: Mapped[str] = mapped_column(
+        String(64), primary_key=True, default=generate_snowflake_id, comment="主键"
+    )
     account_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="账户ID")
     identity_type: Mapped[str] = mapped_column(String(32), nullable=False, comment="登录标识类型")
     identifier: Mapped[str] = mapped_column(String(128), nullable=False, comment="登录标识")
-    verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="是否已验证")
-    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, comment="是否主标识")
+    verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="是否已验证"
+    )
+    is_primary: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, comment="是否主标识"
+    )
     bind_status: Mapped[str] = mapped_column(
         String(32),
         default=AccountIdentityBindStatus.BOUND.value,

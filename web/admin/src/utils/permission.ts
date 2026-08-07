@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useAuthStore } from '@/stores'
 
 export function hasPermission(permissionKey: string) {

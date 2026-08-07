@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
@@ -75,8 +77,8 @@ class FileRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysFile.created_at.desc(), SysFile.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()

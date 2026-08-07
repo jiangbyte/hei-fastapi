@@ -1,6 +1,9 @@
+""" Author: Charlie """
+
 from urllib.parse import quote, urljoin, urlparse
 
 from app.core.config.settings import settings
+from app.platform.storage.signed_url import build_signed_file_query
 
 
 def quote_object_name(object_name: str) -> str:
@@ -12,12 +15,12 @@ def build_file_access_url(
     *,
     base_url: str | None = None,
     public_path: str | None = None,
+    ttl_seconds: int = 3600,
 ) -> str:
-    quoted_name = quote(object_name.strip("/"), safe="/")
     resolved_base_url = settings.storage.base_url if base_url is None else base_url
     resolved_public_path = settings.storage.public_path if public_path is None else public_path
     path = resolved_public_path.rstrip("/")
-    query = f"object_name={quoted_name}"
+    query = build_signed_file_query(object_name, ttl_seconds=ttl_seconds)
     if resolved_base_url:
         return urljoin(resolved_base_url.rstrip("/") + "/", f"{path.lstrip('/')}?{query}")
     return f"{path}?{query}"
@@ -50,7 +53,7 @@ def normalize_object_name(value: str | None, *, public_path: str | None = None) 
     public_prefix = resolved_public_path.rstrip("/") + "/"
     if path_only.startswith(public_prefix):
         return path_only[len(public_prefix) :].lstrip("/")
-    # Legacy path-style URLs: /api/v1/files/<object_name>
+    # 旧版 path 风格 URL：/api/v1/files/<object_name>
     bare_prefix = resolved_public_path.rstrip("/")
     if path_only.startswith(bare_prefix + "/") or path_only == bare_prefix:
         remainder = path_only[len(bare_prefix) :].lstrip("/")
@@ -58,6 +61,7 @@ def normalize_object_name(value: str | None, *, public_path: str | None = None) 
             return remainder
 
     return raw_value.replace("\\", "/").lstrip("/")
+
 
 def resolve_file_url(
     value: str | None,

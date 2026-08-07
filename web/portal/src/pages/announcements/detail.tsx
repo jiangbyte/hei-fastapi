@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react'
+/** Author: Charlie */
+
+import { useEffect, useMemo, useState } from 'react'
 import { Button, Empty, Skeleton, Tag } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { Link, useParams } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import { Markdown } from '@/components/common/Markdown'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/time'
+import { readPageMeta } from '@/utils/wire'
 import { announcementApi } from '@/api'
 
 async function findAnnouncementById(id: string) {
@@ -15,7 +19,7 @@ async function findAnnouncementById(id: string) {
   while ((current - 1) * pageSize < total) {
     const res = await announcementApi.list({ current, size: pageSize })
     const records = res.data.records ?? []
-    total = Number(res.data.total) || 0
+    total = readPageMeta(res.data).total
     const found = records.find((row: any) => String(row.id) === String(id))
     if (found) return found
     if (!records.length) break
@@ -27,7 +31,7 @@ async function findAnnouncementById(id: string) {
 export function AnnouncementDetailPage() {
   const { id } = useParams<{ id: string }>()
   const isLogin = useAuthStore((s) => s.isLogin)
-  const token = useAuthStore((s) => s.token)
+  const loggedIn = isLogin()
 
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<any>(null)
@@ -90,7 +94,7 @@ export function AnnouncementDetailPage() {
     return () => {
       mounted = false
     }
-  }, [id, token])
+  }, [id, loggedIn])
 
   return (
     <div className="page-shell">
@@ -115,7 +119,9 @@ export function AnnouncementDetailPage() {
                 {detail.content_type === 'html' ? (
                   <div
                     className="prose max-w-none text-sm leading-7"
-                    dangerouslySetInnerHTML={{ __html: detail.content }}
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(detail.content || ''),
+                    }}
                   />
                 ) : detail.content_type === 'markdown' ? (
                   <Markdown content={detail.content || ''} />

@@ -1,10 +1,12 @@
+/** Author: Charlie */
+
+const PUBLIC_FILE_PATH = '/api/v1/files'
+
 function isAbsoluteUrl(value: string) {
   return /^(https?:|data:|blob:)/i.test(value)
 }
 
-const PUBLIC_FILE_PATH = '/api/v1/files'
-
-function toPublicFilePath(value: string) {
+export function toPublicFilePath(value: string) {
   const rawValue = value.trim()
   if (!rawValue || isAbsoluteUrl(rawValue)) {
     return rawValue
@@ -15,9 +17,10 @@ function toPublicFilePath(value: string) {
   const legacyPrefix = `${PUBLIC_FILE_PATH}/`
   if (rawValue.startsWith(legacyPrefix)) {
     const objectName = rawValue.slice(legacyPrefix.length).replace(/^\/+/, '')
-    return objectName ? `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(objectName)}` : PUBLIC_FILE_PATH
+    return objectName
+      ? `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(objectName)}`
+      : PUBLIC_FILE_PATH
   }
-  // Bare storage object name (e.g. uploads/a.png)
   if (!rawValue.startsWith('/')) {
     return `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(rawValue)}`
   }

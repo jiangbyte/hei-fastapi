@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
@@ -23,9 +25,13 @@ class DashboardService:
         since = datetime.now(UTC) - timedelta(days=6)
         account_total = await self._count(SysAccount.id)
         account_new = await self._count(SysAccount.id, SysAccount.created_at >= _day_start())
-        online_sessions = len(await session_store.list_sessions_by_tokens(await session_store.list_tokens()))
+        online_sessions = len(
+            await session_store.list_sessions_by_tokens(await session_store.list_tokens())
+        )
         file_total = await self._count(SysFile.id)
-        file_size = int((await self.db.execute(select(func.coalesce(func.sum(SysFile.size), 0)))).scalar_one())
+        file_size = int(
+            (await self.db.execute(select(func.coalesce(func.sum(SysFile.size), 0)))).scalar_one()
+        )
         return DashboardOverviewResponse(
             metrics=[
                 DashboardMetric(key="accounts", value=account_total, trend_value=account_new),
@@ -50,7 +56,9 @@ class DashboardService:
                 continue
             counts[value.date().isoformat()] += 1
         days = [(since + timedelta(days=index)).date().isoformat() for index in range(7)]
-        return [DashboardTrendPoint(date=day[5:], type=label, value=counts.get(day, 0)) for day in days]
+        return [
+            DashboardTrendPoint(date=day[5:], type=label, value=counts.get(day, 0)) for day in days
+        ]
 
     async def _file_type_share(self) -> list[DashboardStatusItem]:
         rows = (

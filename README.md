@@ -19,13 +19,15 @@ HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，�
 
 ## 功能概览
 
-- 异步后端：FastAPI / SQLAlchemy 2.0 Async / Pydantic v2
-- 权限体系：账号、角色、部门、用户组、资源菜单、数据范围
-- 系统能力：字典、配置、文件、Banner、审计、代码生成
-- 消息能力：站内消息、通知、公告、反馈、WebSocket
+- 异步后端：FastAPI / SQLAlchemy 2.0 Async / Pydantic v2；自定义中间件纯 ASGI
+- 权限体系：账号、角色、部门、用户组、资源菜单、数据范围（`owner_dept_id`）
+- 会话安全：Cookie 优先（Web）；原生裸 Authorization token；Admin TOTP / WebAuthn MFA；IM 短时 ticket
+- 密钥托管：Fernet / Vault KV；生产可强制 Vault
+- 系统能力：字典、配置、文件、Banner、审计 outbox、代码生成
+- 消息能力：站内消息、通知、公告、反馈、IM 双通道（WS Binary + TCP）
 - 文件存储：Local / MinIO / S3 / OSS
-- 前端应用：Vue 3 管理端、React 门户端、uni-app 管理端
-- 工程能力：Alembic、Celery（Redis broker）、RedBeat、Docker、Prometheus、OpenTelemetry
+- 前端应用：Vue 3 管理端、React 门户端、uni-app 管理端（原生本地存储会话 token）
+- 工程能力：Alembic、Celery（Redis broker）、RedBeat、Docker、Prometheus、OpenTelemetry、DR 演练门禁
 
 ---
 
@@ -46,7 +48,7 @@ HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，�
 | 类别 | 技术 |
 |---|---|
 | 后端 | FastAPI / SQLAlchemy Async / Pydantic v2 / Gunicorn / Uvicorn |
-| 数据库 | PostgreSQL / MySQL / SQLite / Alembic |
+| 数据库 | PostgreSQL（主推）/ SQLite（测试）/ Alembic；可选 MySQL extra |
 | 缓存会话 | Redis |
 | 任务队列 | Celery / celery-redbeat / Redis（broker + beat） |
 | 存储 | Local / MinIO / S3 / OSS |
@@ -142,24 +144,42 @@ pnpm dev:h5
 
 ---
 
-## 模块扩展
+## 模块扩展（低侵入）
 
-后端模块通过 `ModuleSpec` 声明式装配。新增业务模块通常只需要维护自己的 `router`、`model`、`schema`、`repository`、`service` 和 `module.py`。
+后端通过扫描 `**/module.py` 的 `ModuleSpec` 自动装配。**新增业务模块不要改** `app/factory.py`、`app/lifespan.py`，也不要为新菜单去改 `web/admin/src/router/routes.static.ts`（Admin 默认 `VITE_ROUTE_LOAD_MODE=dynamic`，菜单以 DB `sys_resource` 为准）。
 
-外部业务模块包可通过环境变量追加扫描：
+路由全局挂 `/api`；完整路径写在装饰器上（如 `@router.post("/v1/admin/sys/banners/create")`）。`RouteSpec.tags` 只给 OpenAPI 用。
+
+### 新增模块 checklist
+
+1. **模块包**：在 `app/modules/...` 放 `model` / `schema` / `repository` / `service` / `router` / `module.py`（或用代码生成）；`RouteSpec(tags=("admin",), router="...:router")`，路径带 `/v1/admin|portal/...`
+2. **落盘生成物**（可选）：`python scripts/codegen/apply_plan.py --plan-id <id>`  
+   - 会写入后端与 Admin 视图/API  
+   - 幂等合并 `web/admin/src/api/index.ts`  
+   - 产出 `*_menu_permission.sql`
+3. **迁移**：`python scripts/db/makemigration.py "..."` / `migrate.py`  
+   - Alembic 使用 `include_disabled=True`，**禁用模块的模型也会进入 metadata**，不必为了迁表而打开路由
+4. **菜单权限**：执行生成的 menu SQL（按需改 `module_id` / `parent_id`），再给角色授权
+5. **Admin**：确保 `component_path` 对应的 vue 文件存在；dynamic 模式下登录后即可看到菜单
+6. **模块配置**（可选）：本模块 `BaseSettings` + `ModuleSpec.config_model="pkg:Class"`；env 前缀写在 settings 类上；需要库表覆盖时设 `config_from_db=True`（键名 `{module.name}.{field}`）
+
+### 启用开关
 
 ```bash
-HEI_MODULE_PACKAGES=your_company.modules
-HEI_DISABLED_MODULES=some.module
-HEI_ENABLED_MODULES=some.module
+HEI_MODULE_PACKAGES=your_company.modules   # 追加外部包扫描根
+HEI_DISABLED_MODULES=some.module           # 强制关闭（运行时）
+HEI_ENABLED_MODULES=some.module            # 强制打开（覆盖 ModuleSpec.enabled=False）
 ```
 
 推荐二次开发方式：
 
-- 业务代码放在独立模块内，不直接改框架启动、路由聚合和基础设施代码
+- 业务代码放在独立模块内，不改框架启动与路由聚合
 - 模块间协作优先使用 `app/platform/interfaces`
-- 模块配置放在本模块配置模型或 `sys_config` 的模块名前缀下
 - 存储连接统一走 `sys_storage_config`，不要在业务模块里硬编码 provider 密钥
+
+### API JSON 契约（标量字符串化）
+
+HTTP JSON 进出时，**所有标量均为字符串**（含 `ApiResponse.code`、分页 `current/size/total/pages`、业务 `bool/int/float`）。允许 `string` / `object` / `list` / `null`。服务端内部与数据库仍使用真实类型；Admin/Portal 只认字符串契约，不做 number/bool 历史兼容。
 
 ---
 
@@ -237,6 +257,8 @@ python scripts/ops/loadtest_http.py --base-url http://127.0.0.1:8000 --path / --
 - [docs/iam.md](docs/iam.md)
 - [docs/migration.md](docs/migration.md)
 - [docs/production.md](docs/production.md)
+- [docs/dr-checklist.md](docs/dr-checklist.md)
+- [docs/dr-drills/](docs/dr-drills/)
 - [migrations/README.md](migrations/README.md)
 - [web/admin/README.md](web/admin/README.md)
 - [web/portal/README.md](web/portal/README.md)

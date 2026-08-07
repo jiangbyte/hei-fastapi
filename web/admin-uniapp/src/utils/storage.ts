@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 export function getStorage<T>(key: string, fallback: T): T {
   const value = uni.getStorageSync(key)
   if (!value) {

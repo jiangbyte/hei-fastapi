@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,9 +52,7 @@ class StorageConfigRepository:
             raise NotFoundError("Storage config not found")
         if any(entity.is_default for entity in entities):
             raise BusinessError("Cannot delete the default storage config")
-        await self.db.execute(
-            delete(SysStorageConfig).where(SysStorageConfig.id.in_(unique_ids))
-        )
+        await self.db.execute(delete(SysStorageConfig).where(SysStorageConfig.id.in_(unique_ids)))
         await self.db.flush()
 
     async def list_all(self) -> list[SysStorageConfig]:
@@ -63,13 +63,9 @@ class StorageConfigRepository:
 
     async def set_default(self, config_id: str) -> None:
         await self.get_required(config_id)
+        await self.db.execute(update(SysStorageConfig).values(is_default=False))
         await self.db.execute(
-            update(SysStorageConfig).values(is_default=False)
-        )
-        await self.db.execute(
-            update(SysStorageConfig)
-            .where(SysStorageConfig.id == config_id)
-            .values(is_default=True)
+            update(SysStorageConfig).where(SysStorageConfig.id == config_id).values(is_default=True)
         )
         await self.db.flush()
 

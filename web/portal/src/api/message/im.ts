@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const prefix = '/api/v1/portal/message'
@@ -67,4 +69,8 @@ export const imApi = {
   readNotifications: (ids: string[]) =>
     http.post<any>(`${prefix}/notifications/read`, { ids }),
   readAllNotifications: () => http.post<any>(`${prefix}/notifications/read-all`),
+
+  /** IM AUTH 用的一次性短期 ticket。 */
+  imTicket: () =>
+    http.post<{ ticket: string; expires_in: number }>(`${prefix}/im/ticket`),
 }

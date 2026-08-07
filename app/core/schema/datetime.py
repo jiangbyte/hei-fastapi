@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 from typing import Any, get_args, get_origin
 
@@ -16,21 +18,6 @@ def format_utc_iso8601(value: datetime) -> str:
     else:
         value = value.astimezone(UTC)
     return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
-
-
-def serialize_datetime_value(value):
-    """递归序列化响应载荷中的 datetime，覆盖 ApiResponse.data 的嵌套结构。"""
-    if isinstance(value, datetime):
-        return format_utc_iso8601(value)
-    if isinstance(value, dict):
-        return {key: serialize_datetime_value(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [serialize_datetime_value(item) for item in value]
-    if isinstance(value, tuple):
-        return tuple(serialize_datetime_value(item) for item in value)
-    if isinstance(value, set):
-        return [serialize_datetime_value(item) for item in value]
-    return value
 
 
 def normalize_orm_datetimes(item: object) -> None:

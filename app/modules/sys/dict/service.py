@@ -1,11 +1,12 @@
+""" Author: Charlie """
+
 from collections.abc import Mapping, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import to_schema, to_schema_list
-from app.core.config.enums import AccountType
-from app.modules.user.utils.profile import get_profiles_batch
 from app.modules.sys.dict.repository import DictRepository, DictTreeRecord
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
@@ -17,6 +18,7 @@ from app.modules.sys.dict.schema import (
     SysDictSchema,
     SysDictTreeNode,
 )
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
@@ -48,7 +50,7 @@ class DictService:
         items, total = await self.repo.page_admin(query)
         records = await self._attach_parent_names(to_schema_list(SysDictSchema, items))
         await self._resolve_creator_names(records)
-        return build_page(query.pagination, total, records)
+        return build_page(query, total, records)
 
     async def list_tree(self, query: DictTreeQuery) -> list[SysDictTreeNode]:
         return _build_tree_nodes(await self.repo.list_tree(query))

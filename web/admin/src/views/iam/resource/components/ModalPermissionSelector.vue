@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { resourceApi } from '@/api'

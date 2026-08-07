@@ -1,29 +1,31 @@
+/** Author: Charlie */
+
 import { http } from '@/utils'
 
 const prefix = '/api/v1/portal'
 
 export function captcha(format: 'svg' | 'png' = 'svg') {
-  return http.get<any>(`${prefix}/captcha`, { params: { format }, addToken: false })
+  return http.get<any>(`${prefix}/captcha`, { params: { format }, public: true })
 }
 
 export function passwordKey() {
-  return http.get<any>(`${prefix}/password-key`, { addToken: false })
+  return http.get<any>(`${prefix}/password-key`, { public: true })
 }
 
 export function login(data: any) {
-  return http.post<any>(`${prefix}/login`, data, { addToken: false })
+  return http.post<any>(`${prefix}/login`, data, { public: true })
 }
 
 export function register(data: any) {
-  return http.post<any>(`${prefix}/register`, data, { addToken: false })
+  return http.post<any>(`${prefix}/register`, data, { public: true })
 }
 
 export function forgotPassword(data: any) {
-  return http.post<any>(`${prefix}/forgot-password`, data, { addToken: false })
+  return http.post<any>(`${prefix}/forgot-password`, data, { public: true })
 }
 
 export function resetPassword(data: any) {
-  return http.post<any>(`${prefix}/reset-password`, data, { addToken: false })
+  return http.post<any>(`${prefix}/reset-password`, data, { public: true })
 }
 
 export function me() {
@@ -58,7 +60,7 @@ export function uploadUserCenterAvatar(file: File) {
 
 export function getPublicSpace(accountId: string) {
   return http.get<any>(`${prefix}/spaces/detail`, {
-    addToken: false,
+    public: true,
     params: { account_id: accountId },
   })
 }

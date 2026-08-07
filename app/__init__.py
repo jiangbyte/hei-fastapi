@@ -1,1 +1,4 @@
-"""Application package."""
+""" Author: Charlie
+
+Application package.
+"""

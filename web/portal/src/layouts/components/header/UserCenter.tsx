@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useEffect } from 'react'
 import { Avatar, Badge, Button, Dropdown, Modal, Space, Tooltip, Typography, message } from 'antd'
 import {
@@ -22,8 +24,8 @@ type Props = {
 export function UserCenter({ compact = false, placement = 'bottomRight' }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
-  const token = useAuthStore((s) => s.token)
   const userInfo = useAuthStore((s) => s.userInfo)
+  const ensureSession = useAuthStore((s) => s.ensureSession)
   const logout = useAuthStore((s) => s.logout)
   const messageUnread = useImUnreadStore((s) => s.messageUnread)
   const friendRequestPending = useImUnreadStore((s) => s.friendRequestPending)
@@ -35,16 +37,21 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
   const resetUnread = useImUnreadStore((s) => s.reset)
 
   const badgeTotal = messageUnread + friendRequestPending + joinRequestPending
+  const loggedIn = Boolean(userInfo?.accountId)
 
   useEffect(() => {
-    if (!token) {
+    void ensureSession()
+  }, [ensureSession])
+
+  useEffect(() => {
+    if (!loggedIn) {
       resetUnread()
       return
     }
     void refreshUnread()
-  }, [token, location.pathname, refreshUnread, resetUnread])
+  }, [loggedIn, location.pathname, refreshUnread, resetUnread])
 
-  useImWebSocket(Boolean(token), {
+  useImWebSocket(loggedIn, {
     onNewMessage: () => {
       bumpMessage(1)
       void refreshUnread()
@@ -60,9 +67,13 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
       bumpJoinRequest(1)
       void refreshUnread()
     },
+    onKick: () => {
+      message.warning('会话已失效，请重新登录')
+      void logout('/auth/login')
+    },
   })
 
-  if (!token) {
+  if (!loggedIn) {
     if (compact) {
       return (
         <Tooltip title="登录" placement="right">

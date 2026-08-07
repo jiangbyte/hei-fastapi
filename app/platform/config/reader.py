@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import json
 from dataclasses import asdict
 
@@ -8,7 +10,7 @@ from app.platform.config.crypto import decrypt_config_value, decrypt_storage_val
 from app.platform.db.models.sys_config import SysConfig
 from app.platform.db.models.sys_storage_config import SysStorageConfig
 from app.platform.db.session import get_session_factory
-from app.platform.storage.config import StorageConfig
+from app.platform.storage.config import DEFAULT_LOCAL_STORAGE_ROOT, StorageConfig
 
 
 class ConfigReader:
@@ -139,7 +141,7 @@ def _storage_config_from_row(row: SysStorageConfig, presign_expire_seconds: int)
         use_ssl=bool(row.use_ssl),
         base_url=decrypt_storage_value("base_url", row.base_url) or "",
         public_path=row.public_path or "/api/v1/files",
-        local_root=row.local_root or "storage",
+        local_root=row.local_root or DEFAULT_LOCAL_STORAGE_ROOT,
         is_default=bool(row.is_default),
         presign_expire_seconds=presign_expire_seconds,
     )

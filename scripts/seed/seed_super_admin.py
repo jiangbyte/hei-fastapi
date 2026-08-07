@@ -1,5 +1,7 @@
-"""写入系统初始化所需的超管账户、资料、角色和绑定关系。"""
+""" Author: Charlie
 
+写入系统初始化所需的超管账户、资料、角色和绑定关系。
+"""
 import argparse
 import asyncio
 import os

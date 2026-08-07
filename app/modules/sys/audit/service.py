@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,7 +78,7 @@ class OperationAuditService:
     async def page_admin(self, query: OperationAuditPageQuery) -> PageData[OperationAuditRecord]:
         items, total = await self.repo.page_admin(query)
         return build_page(
-            query.pagination,
+            query,
             total,
             to_schema_list(OperationAuditRecord, items),
         )

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.core.exceptions.base import AppError
 
 

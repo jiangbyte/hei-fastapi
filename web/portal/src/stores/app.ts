@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { create } from 'zustand'
 
 export type ColorMode = 'light' | 'dark' | 'auto'

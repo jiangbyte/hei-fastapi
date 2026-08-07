@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 class AppError(Exception):
     status_code = 500
     code = 500

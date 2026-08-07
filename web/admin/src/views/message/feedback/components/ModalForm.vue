@@ -1,5 +1,7 @@
 <!--
-  Feedback edit modal — only update status and reply.
+  Author: Charlie
+
+  反馈编辑弹窗 — 仅更新状态与回复。
 -->
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'

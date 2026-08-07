@@ -1,3 +1,14 @@
+""" Author: Charlie
+
+Snowflake ID 生成，worker 位按进程唯一。
+"""
+from __future__ import annotations
+
+import hashlib
+import logging
+import os
+import socket
+
 from app.core.config.settings import settings
 
 try:
@@ -5,11 +16,38 @@ try:
 except ModuleNotFoundError as exc:  # pragma: no cover
     raise RuntimeError("snowflake-id package is required for ID generation") from exc
 
+logger = logging.getLogger(__name__)
+
+
+def _resolve_worker_id() -> int:
+    """返回 0–31 的 worker id。
+
+    ``ID_GENERATOR__WORKER_ID`` > 0 时使用配置值。
+    ``0``（默认）从 hostname+pid（及可选 ``HOSTNAME`` / ``POD_NAME``）派生
+    进程级稳定 id，避免多副本部署全部碰撞到 1。
+    """
+    configured = int(settings.id_generator.worker_id)
+    if configured > 0:
+        return configured & 0x1F
+    host = (
+        os.environ.get("POD_NAME") or os.environ.get("HOSTNAME") or socket.gethostname() or "host"
+    )
+    seed = f"{host}:{os.getpid()}:{os.environ.get('APP__PROCESS_ROLE', '')}"
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
+    return digest[0] % 32
+
 
 def _build_instance_id() -> int:
     datacenter = settings.id_generator.datacenter_id & 0x1F
-    worker = settings.id_generator.worker_id & 0x1F
-    return (datacenter << 5) | worker
+    worker = _resolve_worker_id()
+    instance = (datacenter << 5) | worker
+    logger.info(
+        "Snowflake instance_id=%s datacenter=%s worker=%s",
+        instance,
+        datacenter,
+        worker,
+    )
+    return instance
 
 
 _generator = SnowflakeGenerator(

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import importlib
@@ -10,9 +12,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class RouteSpec:
-    version: str
+    """模块路由声明：全局挂 ``/api``；完整路径写在装饰器上。
+
+    ``tags`` 仅用于 OpenAPI（如 admin / portal），不参与路径装配。
+    """
+
     router: str
-    prefix: str = ""
     tags: tuple[str, ...] = ()
     order: int = 100
 
@@ -25,17 +30,10 @@ class BeatScheduleSpec:
 
 
 @dataclass(frozen=True, slots=True)
-class ConfigModelSpec:
-    """声明模块级 Pydantic BaseSettings 配置模型。"""
-    import_path: str     # "app.modules.x.config:MySettings"
-    prefix: str = ""     # env 前缀
-    load_from_db: bool = False  # 是否从 sys_config 表加载覆盖
-
-
-@dataclass(frozen=True, slots=True)
 class ServiceRegistration:
     """注册模块提供的框架服务实现。"""
-    interface: str       # "data_scope_resolver" | "account_lookup"
+
+    interface: str  # "data_scope_resolver" | "account_lookup"
     implementation: str  # "app.modules.x.impl:instance"
 
 
@@ -43,7 +41,6 @@ class ServiceRegistration:
 class ModuleSpec:
     name: str
     enabled: bool = True
-    enabled_key: str = ""
     routes: tuple[RouteSpec, ...] = ()
     models: tuple[str, ...] = ()
     tasks: tuple[str, ...] = ()
@@ -51,11 +48,11 @@ class ModuleSpec:
     startup_hooks: tuple[str, ...] = ()
     shutdown_hooks: tuple[str, ...] = ()
     order: int = 100
-    config_model: str = ""       # "app.modules.x.config:MySettings"
+    config_model: str = ""  # "app.modules.x.config:MySettings"
     config_from_db: bool = False
     services: tuple[ServiceRegistration, ...] = ()
     event_handlers: tuple[str, ...] = ()
-    depends_on: tuple[str, ...] = ()  # 依赖的模块名列表，保证加载顺序
+    depends_on: tuple[str, ...] = ()
 
 
 def import_string(path: str) -> Any:

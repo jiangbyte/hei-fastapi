@@ -1,7 +1,9 @@
-"""Password management helper — strength validation, history recording,
-reuse checking, and expiry detection.
+""" Author: Charlie
 
-Used by ``AuthService`` and ``AccountService`` to enforce password policy.
+密码管理辅助工具 — 强度校验、历史记录、
+复用检查与过期检测。
+
+供 ``AuthService`` 与 ``AccountService`` 执行密码策略。
 """
 from datetime import UTC, datetime
 
@@ -16,7 +18,7 @@ from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 def _parse_dt(value) -> datetime | None:
-    """Safely parse a datetime-or-None value to UTC-aware datetime."""
+    """安全地将 datetime 或 None 解析为 UTC 时区的 datetime。"""
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -32,9 +34,9 @@ async def validate_and_record_password(
     changed_by: str | None = None,
     change_reason: str | None = None,
 ) -> None:
-    """Validate password strength, check history for reuse, then record.
+    """校验密码强度、检查历史复用并记录。
 
-    Raises ``BusinessError`` on strength or reuse violations.
+    强度或复用违规时抛出 ``BusinessError``。
     """
     # 1. 强度校验
     validate_password_strength(plain_password)
@@ -54,10 +56,8 @@ async def validate_and_record_password(
     )
 
 
-async def _check_password_reuse(
-    db: AsyncSession, account_id: str, new_password: str
-) -> None:
-    """Check if the new password matches any of the recent history entries."""
+async def _check_password_reuse(db: AsyncSession, account_id: str, new_password: str) -> None:
+    """检查新密码是否与最近历史记录中的任一密码相同。"""
     count = settings.password_policy.history_check_count
     if count <= 0:
         return
@@ -78,7 +78,7 @@ async def _check_password_reuse(
 
 
 async def get_password_age_days(db: AsyncSession, account_id: str) -> float | None:
-    """Return days since the last password change, or ``None`` if unknown."""
+    """返回距上次改密的天数，未知时返回 ``None``。"""
     stmt = (
         select(SysAccountPasswordHistory.created_at)
         .where(SysAccountPasswordHistory.account_id == account_id)
@@ -95,7 +95,7 @@ async def get_password_age_days(db: AsyncSession, account_id: str) -> float | No
 
 
 async def is_password_expired(db: AsyncSession, account_id: str) -> bool:
-    """Check if the account's password is past the configured expiry period."""
+    """检查账户密码是否已超过配置的过期期限。"""
     expire_days = settings.password_policy.expire_days
     if expire_days <= 0:
         return False

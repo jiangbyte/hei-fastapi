@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import logging
 
 from app.modules.sys.banner.service import flush_interaction_deltas

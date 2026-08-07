@@ -1,8 +1,9 @@
+""" Author: Charlie """
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions.business import AuthorizationError
 from app.core.config.enums import AccountType
-from app.modules.user.utils.profile import get_profiles_batch
+from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
@@ -29,11 +30,12 @@ from app.modules.iam.group.schema import (
     SysGroupRoleRelSchema,
     SysGroupSchema,
 )
-from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
+from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
@@ -95,7 +97,7 @@ class GroupService:
         items, total = await self.repo.page_admin(query, data_scope_filter)
         schemas = to_schema_list(SysGroupSchema, items)
         await self._resolve_creator_names(schemas)
-        return build_page(query.pagination, total, schemas)
+        return build_page(query, total, schemas)
 
     async def assign_group_role(
         self,

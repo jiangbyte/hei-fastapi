@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from collections import defaultdict
 
 from sqlalchemy import Select, delete, func, select
@@ -6,7 +8,8 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.exceptions.business import NotFoundError
-from app.modules.iam.reference_guard import count_role_references, raise_if_referenced
+from app.modules.iam.account.model import SysAccount
+from app.modules.iam.dept.model import SysDept
 from app.modules.iam.enums import (
     GrantMode,
     GrantSubjectType,
@@ -15,18 +18,17 @@ from app.modules.iam.enums import (
     IamRelationType,
     ResourceType,
 )
-from app.modules.iam.account.model import SysAccount
-from app.modules.iam.resource.model import SysResource
+from app.modules.iam.reference_guard import count_role_references, raise_if_referenced
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository, account_dept_condition
-from app.modules.iam.dept.model import SysDept
+from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.schema import (
     RoleAdminPageQuery,
+    RoleCreateRequest,
     RoleGrantResourceRequest,
     RoleGrantUserRequest,
     RoleResourceGrantInfo,
-    RoleCreateRequest,
     RoleUpdateRequest,
 )
 
@@ -104,8 +106,8 @@ class RoleRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysRole.sort.asc(), SysRole.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         roles = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
@@ -278,13 +280,12 @@ class RoleRepository:
     async def list_accounts(
         self,
         data_scope_filter: ColumnElement[bool] | None = None,
-        ) -> list[SysAccount]:
+    ) -> list[SysAccount]:
         stmt = select(SysAccount).order_by(SysAccount.id.desc())
         if data_scope_filter is not None:
-            stmt = (
-                stmt.outerjoin(SysIamRelation, account_dept_condition(SysIamRelation, SysAccount.id))
-                .where(data_scope_filter)
-            )
+            stmt = stmt.outerjoin(
+                SysIamRelation, account_dept_condition(SysIamRelation, SysAccount.id)
+            ).where(data_scope_filter)
         return list((await self.db.execute(stmt)).unique().scalars().all())
 
     async def replace_role_accounts(self, payload: RoleGrantUserRequest) -> None:

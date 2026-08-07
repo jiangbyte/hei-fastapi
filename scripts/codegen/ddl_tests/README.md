@@ -10,3 +10,21 @@ These PostgreSQL DDL files are isolated with the `cg_test_` prefix and can be im
 | `04_left_tree_table_knowledge.sql` | `LEFT_TREE_TABLE` | `cg_test_knowledge_category` | `cg_test_knowledge_doc` | Use `parent_id` / `name` for the tree and `category_id` as sub foreign key. |
 
 All files include column comments so the code generator can reflect Chinese labels.
+
+## Low-invasion apply
+
+After creating a plan in Admin codegen:
+
+```bash
+python scripts/codegen/apply_plan.py --plan-id <plan_id>
+```
+
+This writes backend + Admin files, idempotently merges `web/admin/src/api/index.ts`, and emits `*_menu_permission.sql`.
+
+**Do not** edit `web/admin/src/router/routes.static.ts` for new modules — Admin uses dynamic menus (`sys_resource`). Run the menu SQL, grant the role, keep `VITE_ROUTE_LOAD_MODE=dynamic`.
+
+Regenerate in-repo `cg_test_*` fixtures (modules stay `enabled=False`):
+
+```bash
+python scripts/codegen/regen_cg_test_modules.py
+```

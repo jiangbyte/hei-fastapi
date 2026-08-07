@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -6,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.deps.auth import require_permission, require_account_type
+from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
@@ -24,7 +26,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/dicts/create",
+    "/v1/admin/sys/dicts/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:dict:create")),
@@ -40,7 +42,7 @@ async def create(
 
 
 @router.post(
-    "/sys/dicts/update",
+    "/v1/admin/sys/dicts/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:dict:update")),
@@ -56,7 +58,7 @@ async def update(
 
 
 @router.post(
-    "/sys/dicts/delete",
+    "/v1/admin/sys/dicts/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:dict:delete")),
@@ -72,7 +74,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/dicts/detail",
+    "/v1/admin/sys/dicts/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:dict:detail")),
@@ -87,7 +89,7 @@ async def get(
 
 
 @router.get(
-    "/sys/dicts/page",
+    "/v1/admin/sys/dicts/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:dict:page")),
@@ -102,7 +104,7 @@ async def page(
 
 
 @router.get(
-    "/sys/dicts/tree",
+    "/v1/admin/sys/dicts/tree",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN, AccountType.PORTAL)),
         # Depends(require_permission("sys:dict:tree")),

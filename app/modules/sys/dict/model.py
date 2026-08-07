@@ -1,5 +1,7 @@
-"""系统字典表模型，字段默认值与 sys_dict 字典条目的 value 保持一致。"""
+""" Author: Charlie
 
+系统字典表模型，字段默认值与 sys_dict 字典条目的 value 保持一致。
+"""
 from sqlalchemy import Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -7,6 +9,7 @@ from app.core.config.enums import StatusEnum, SysBizCategory
 from app.platform.db.base import Base
 from app.platform.db.mixins import TimestampMixin
 from app.platform.id_generator.snowflake import generate_snowflake_id
+
 
 class SysDict(Base, TimestampMixin):
     """系统字典表，支持分类、选项值和父子树结构。"""

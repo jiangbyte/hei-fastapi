@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useEffect, useState } from 'react'
 import { Empty, Skeleton, Tag } from 'antd'
 import { NotificationOutlined, RightOutlined } from '@ant-design/icons'
@@ -17,12 +19,17 @@ function announcementSummary(content: string, contentType: string) {
 }
 
 export function HomePage() {
-  const token = useAuthStore((s) => s.token)
   const userInfo = useAuthStore((s) => s.userInfo)
   const isLogin = useAuthStore((s) => s.isLogin)
+  const ensureSession = useAuthStore((s) => s.ensureSession)
+  const loggedIn = isLogin()
 
   const [announcements, setAnnouncements] = useState<any[]>([])
   const [announceLoading, setAnnounceLoading] = useState(true)
+
+  useEffect(() => {
+    void ensureSession()
+  }, [ensureSession])
 
   useEffect(() => {
     let mounted = true
@@ -45,7 +52,7 @@ export function HomePage() {
     return () => {
       mounted = false
     }
-  }, [token])
+  }, [loggedIn])
 
   const displayName = userInfo?.nickname || userInfo?.account || '用户'
   const brand = import.meta.env.VITE_APP_TITLE || 'HEI'
@@ -55,7 +62,7 @@ export function HomePage() {
       <section className="panel rounded-xl px-6 py-10 md:px-10">
         <div className="text-sm text-[var(--ant-color-text-secondary)]">{brand}</div>
         <h1 className="mt-2 text-2xl font-semibold md:text-3xl">
-          {token ? `${displayName}，欢迎回来` : `欢迎使用 ${brand}`}
+          {loggedIn ? `${displayName}，欢迎回来` : `欢迎使用 ${brand}`}
         </h1>
         <p className="muted-text mt-3 max-w-2xl text-sm leading-6 md:text-base">
           这是 HEI FastAPI 门户脚手架。账号认证、个人中心、站内消息与公告已就绪，可在此基础上扩展业务模块。
@@ -67,7 +74,7 @@ export function HomePage() {
           >
             查看公告 <RightOutlined />
           </Link>
-          {token ? (
+          {loggedIn ? (
             <Link
               to="/usercenter"
               className="inline-flex items-center rounded-lg bg-[var(--ant-color-fill-quaternary)] px-4 py-2 text-sm font-medium hover:bg-[var(--ant-color-fill-secondary)]"

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Any
 
 from sqlalchemy import Select, delete, func, inspect, select
@@ -53,7 +55,9 @@ class CodegenRepository:
         existing_ids = set((await self.db.execute(stmt)).scalars().all())
         if len(existing_ids) != len(unique_ids):
             raise NotFoundError("Codegen plan not found")
-        await self.db.execute(delete(SysCodegenField).where(SysCodegenField.plan_id.in_(unique_ids)))
+        await self.db.execute(
+            delete(SysCodegenField).where(SysCodegenField.plan_id.in_(unique_ids))
+        )
         await self.db.execute(delete(SysCodegenPlan).where(SysCodegenPlan.id.in_(unique_ids)))
 
     async def page_admin(self, query: CodegenPlanPageQuery) -> tuple[list[SysCodegenPlan], int]:
@@ -71,19 +75,23 @@ class CodegenRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysCodegenPlan.updated_at.desc(), SysCodegenPlan.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
         return items, total
 
-    async def list_fields(self, plan_id: str, table_role: str | None = None) -> list[SysCodegenField]:
+    async def list_fields(
+        self, plan_id: str, table_role: str | None = None
+    ) -> list[SysCodegenField]:
         await self.get_required(plan_id)
         stmt = select(SysCodegenField).where(SysCodegenField.plan_id == plan_id)
         if table_role:
             stmt = stmt.where(SysCodegenField.table_role == table_role)
-        stmt = stmt.order_by(SysCodegenField.table_role.asc(), SysCodegenField.sort.asc(), SysCodegenField.id.asc())
+        stmt = stmt.order_by(
+            SysCodegenField.table_role.asc(), SysCodegenField.sort.asc(), SysCodegenField.id.asc()
+        )
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def replace_fields(self, plan_id: str, fields: list[CodegenFieldUpdateItem]) -> None:
@@ -102,8 +110,7 @@ class CodegenRepository:
     ) -> None:
         await self.get_required(plan_id)
         existing = {
-            field.column_name: field
-            for field in await self.list_fields(plan_id, table_role)
+            field.column_name: field for field in await self.list_fields(plan_id, table_role)
         }
         for item in fields:
             entity = existing.get(item.column_name)
@@ -112,7 +119,15 @@ class CodegenRepository:
                 self.db.add(SysCodegenField(plan_id=plan_id, **data))
                 continue
             for key, value in data.items():
-                if key in {"show_in_table", "show_in_form", "show_in_detail", "show_in_query", "form_widget", "dict_code", "query_operator"}:
+                if key in {
+                    "show_in_table",
+                    "show_in_form",
+                    "show_in_detail",
+                    "show_in_query",
+                    "form_widget",
+                    "dict_code",
+                    "query_operator",
+                }:
                     continue
                 setattr(entity, key, value)
         await self.db.flush()
@@ -127,7 +142,9 @@ class CodegenRepository:
             .where(
                 SysResourceModule.client == ResourceModuleClient.ADMIN.value,
                 SysResource.status == StatusEnum.ENABLED.value,
-                SysResource.resource_type.in_([ResourceType.CATALOG.value, ResourceType.MENU.value, ResourceType.PAGE.value]),
+                SysResource.resource_type.in_(
+                    [ResourceType.CATALOG.value, ResourceType.MENU.value, ResourceType.PAGE.value]
+                ),
             )
             .order_by(SysResource.sort.asc(), SysResource.id.asc())
         )

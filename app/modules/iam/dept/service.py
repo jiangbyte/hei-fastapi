@@ -1,16 +1,17 @@
+""" Author: Charlie """
+
 from collections.abc import Mapping, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions.business import AuthorizationError
 from app.core.config.enums import AccountType
-from app.modules.user.utils.profile import get_profiles_batch
+from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
 from app.core.security.session import SessionPayload
-from app.modules.iam.dept.repository import DeptRepository, DeptTreeRecord
 from app.modules.iam.dept.model import SysDept
+from app.modules.iam.dept.repository import DeptRepository, DeptTreeRecord
 from app.modules.iam.dept.schema import (
     DeptAdminPageQuery,
     DeptCreateRequest,
@@ -18,6 +19,7 @@ from app.modules.iam.dept.schema import (
     DeptUpdateRequest,
     SysDeptSchema,
 )
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
@@ -26,17 +28,23 @@ class DeptService:
         self.db = db
         self.repo = DeptRepository(db)
 
-    async def create(self, payload: DeptCreateRequest, session: SessionPayload | None = None) -> None:
+    async def create(
+        self, payload: DeptCreateRequest, session: SessionPayload | None = None
+    ) -> None:
         if session is not None and payload.parent_id:
             await self._ensure_dept_ids_visible(session, "iam:dept:create", [payload.parent_id])
         async with transactional(self.db):
             await self.repo.create(payload)
 
-    async def update(self, payload: DeptUpdateRequest, session: SessionPayload | None = None) -> None:
+    async def update(
+        self, payload: DeptUpdateRequest, session: SessionPayload | None = None
+    ) -> None:
         if session is not None:
             await self._ensure_dept_records_visible(session, "iam:dept:update", [payload.id])
             if payload.parent_id:
-                await self._ensure_dept_records_visible(session, "iam:dept:update", [payload.parent_id])
+                await self._ensure_dept_records_visible(
+                    session, "iam:dept:update", [payload.parent_id]
+                )
         async with transactional(self.db):
             await self.repo.update(payload)
 
@@ -59,34 +67,36 @@ class DeptService:
         session: SessionPayload | None = None,
     ) -> PageData[SysDeptSchema]:
         data_scope_filter = (
-            await self._dept_scope_filter(session, "iam:dept:page")
-            if session is not None
-            else None
+            await self._dept_scope_filter(session, "iam:dept:page") if session is not None else None
         )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         dtos = to_schema_list(SysDeptSchema, items)
         await self._resolve_names(dtos)
-        return build_page(query.pagination, total, dtos)
+        return build_page(query, total, dtos)
 
     async def list_dept_tree(self, session: SessionPayload | None = None) -> list[DeptTreeNode]:
         data_scope_filter = (
-            await self._dept_scope_filter(session, "iam:dept:list")
-            if session is not None
-            else None
+            await self._dept_scope_filter(session, "iam:dept:list") if session is not None else None
         )
         raw_records = await self.repo.get_dept_tree(data_scope_filter)
 
         # 批量回显负责人名称
         all_ids: set[str] = set()
+
         def collect_ids(nodes: list[DeptTreeRecord]) -> None:
             for n in nodes:
-                if n.get("master_id"): all_ids.add(str(n["master_id"]))
-                if n.get("deputy_master_id"): all_ids.add(str(n["deputy_master_id"]))
-                if n.get("children"): collect_ids(n["children"])
+                if n.get("master_id"):
+                    all_ids.add(str(n["master_id"]))
+                if n.get("deputy_master_id"):
+                    all_ids.add(str(n["deputy_master_id"]))
+                if n.get("children"):
+                    collect_ids(n["children"])
+
         collect_ids(raw_records)
 
         if all_ids:
             name_map = await self.repo.resolve_account_names(list(all_ids))
+
             def apply_names(nodes: list[DeptTreeRecord]) -> None:
                 for n in nodes:
                     mid = n.get("master_id")
@@ -97,6 +107,7 @@ class DeptService:
                         n["deputy_master_name"] = name_map[str(did)]
                     if n.get("children"):
                         apply_names(n["children"])
+
             apply_names(raw_records)
 
         return _build_dept_tree_nodes(raw_records)
@@ -106,12 +117,12 @@ class DeptService:
         account_ids = set()
         parent_ids = set()
         for dto in dtos:
-           if dto.master_id:
-               account_ids.add(dto.master_id)
-           if dto.deputy_master_id:
-               account_ids.add(dto.deputy_master_id)
-           if dto.parent_id:
-               parent_ids.add(dto.parent_id)
+            if dto.master_id:
+                account_ids.add(dto.master_id)
+            if dto.deputy_master_id:
+                account_ids.add(dto.deputy_master_id)
+            if dto.parent_id:
+                parent_ids.add(dto.parent_id)
         # 解析创建人/更新人昵称
         creator_ids: set[str] = set()
         for dto in dtos:
@@ -196,9 +207,11 @@ def _build_dept_tree_nodes(
                 sort=int(raw_item.get("sort", 99)),
                 is_virtual=bool(raw_item.get("is_virtual", False)),
                 master_name=str(raw_item["master_name"]) if raw_item.get("master_name") else None,
-            deputy_master_name=str(raw_item["deputy_master_name"]) if raw_item.get("deputy_master_name") else None,
-            updated_at=str(raw_item["updated_at"]) if raw_item.get("updated_at") else None,
-            children=_build_dept_tree_nodes(raw_item.get("children", [])),  # type: ignore[arg-type]
+                deputy_master_name=str(raw_item["deputy_master_name"])
+                if raw_item.get("deputy_master_name")
+                else None,
+                updated_at=str(raw_item["updated_at"]) if raw_item.get("updated_at") else None,
+                children=_build_dept_tree_nodes(raw_item.get("children", [])),  # type: ignore[arg-type]
             )
         )
     return nodes

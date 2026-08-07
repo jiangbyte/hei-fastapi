@@ -1,1 +1,4 @@
-"""HTTP package."""
+""" Author: Charlie
+
+HTTP 包。
+"""

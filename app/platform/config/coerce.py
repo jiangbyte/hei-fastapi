@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from __future__ import annotations
 
 import json
@@ -6,7 +8,7 @@ from typing import Any, Union, get_args, get_origin
 
 
 def coerce_config_value(value: Any, annotation: Any) -> Any:
-    """Coerce DB string config values into the declared settings field type."""
+    """将 DB 字符串配置值强制转换为 settings 字段声明的类型。"""
     if value is None:
         return None
 

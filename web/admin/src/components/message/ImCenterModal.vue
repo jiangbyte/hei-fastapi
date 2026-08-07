@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useThemeVars } from 'naive-ui'

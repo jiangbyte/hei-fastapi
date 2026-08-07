@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <Layout title="字典测试" :back="true">
     <view class="px-4 py-4">

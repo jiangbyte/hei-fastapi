@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <view class="mine-container">
     <!-- 顶部个人信息栏 -->

@@ -1,21 +1,24 @@
+/** Author: Charlie */
+
+import { stringifyScalars } from '@/utils/wire'
 import { clearSessionStorage, getToken } from './session'
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   data?: Record<string, any>
-  addToken?: boolean
+  attachSession?: boolean
   skipErrorMessage?: boolean
   header?: Record<string, string>
 }
 
 export class ApiResponseError extends Error {
-  code?: number
+  code?: string
   statusCode?: number
   raw?: unknown
 
   constructor(
     message: string,
-    code?: number,
+    code?: string,
     statusCode?: number,
     raw?: unknown
   ) {
@@ -27,6 +30,10 @@ export class ApiResponseError extends Error {
   }
 }
 
+function isSuccessCode(code: unknown): boolean {
+  return typeof code === 'string' && code === '200'
+}
+
 const baseURL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 export function request<T = any>(url: string, options: RequestOptions = {}) {
@@ -36,14 +43,14 @@ export function request<T = any>(url: string, options: RequestOptions = {}) {
       ...(options.header ?? {}),
     }
 
-    if (options.addToken !== false && token) {
+    if (options.attachSession !== false && token) {
       header.Authorization = token
     }
 
     uni.request({
       url: `${baseURL}${url}`,
       method: options.method ?? 'GET',
-      data: cleanData(options.data ?? {}),
+      data: stringifyScalars(cleanData(options.data ?? {})) as Record<string, any>,
       header,
       success(response) {
         const statusCode = response.statusCode
@@ -61,7 +68,10 @@ export function request<T = any>(url: string, options: RequestOptions = {}) {
         }
         if (statusCode < 200 || statusCode >= 300) {
           const raw = response.data as any
-          const bodyCode = raw && typeof raw === 'object' ? raw.code : undefined
+          const bodyCode =
+            raw && typeof raw === 'object' && typeof raw.code === 'string'
+              ? raw.code
+              : undefined
           const message =
             readMessage(response.data) || `请求失败(${statusCode})`
           showError(message, options.skipErrorMessage)
@@ -73,10 +83,17 @@ export function request<T = any>(url: string, options: RequestOptions = {}) {
 
         const body = response.data as any
         if (body && typeof body === 'object' && 'code' in body) {
-          if (body.code !== 0 && body.code !== 200) {
+          if (!isSuccessCode(body.code)) {
             const message = body.message || '业务处理失败'
             showError(message, options.skipErrorMessage)
-            reject(new ApiResponseError(message, body.code, statusCode, body))
+            reject(
+              new ApiResponseError(
+                message,
+                typeof body.code === 'string' ? body.code : undefined,
+                statusCode,
+                body,
+              ),
+            )
             return
           }
           resolve(body.data as T)
@@ -122,13 +139,13 @@ export const http = {
         success(res) {
           try {
             const data = JSON.parse(res.data)
-            if (data.code === 0 || data.code === 200) {
+            if (isSuccessCode(data.code)) {
               resolve(data.data as T)
             } else {
               reject(
                 new ApiResponseError(
                   data.message || '上传失败',
-                  data.code,
+                  typeof data.code === 'string' ? data.code : undefined,
                   res.statusCode
                 )
               )

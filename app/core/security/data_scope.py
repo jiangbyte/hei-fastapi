@@ -1,8 +1,9 @@
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import Iterable
+""" Author: Charlie """
 
-from sqlalchemy import false, select, true
+from collections.abc import Iterable
+from dataclasses import dataclass
+
+from sqlalchemy import false, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -33,6 +34,13 @@ def has_unrestricted_data_scope(session: SessionPayload, permission_key: str) ->
         return True
     grant = find_permission_grant(session, permission_key)
     return bool(grant and DataScope(str(grant["data_scope"])) == DataScope.ALL)
+
+
+def default_owner_dept_id(session: SessionPayload | None) -> str | None:
+    """客户端未提供 owner_dept_id 时，为新行选取默认部门。"""
+    if session is None or not session.dept_ids:
+        return None
+    return session.dept_ids[0]
 
 
 async def resolve_data_scope_dept_ids(
@@ -76,15 +84,23 @@ async def build_data_scope_filter(
         return owner_column == session.account_id if owner_column is not None else false()
 
     dept_ids = await resolve_data_scope_dept_ids(db, session, permission_key)
+    if dept_column is not None:
+        return _in_or_false(dept_column, dept_ids or [])
+    # 尚无 owner_dept_id 列：DEPT/CUSTOM 范围降级为通过 created_by 的 SELF。
+    if owner_column is not None and data_scope in {
+        DataScope.DEPT,
+        DataScope.DEPT_AND_CHILD,
+        DataScope.CUSTOM,
+    }:
+        return owner_column == session.account_id
     return _in_or_false(dept_column, dept_ids or [])
 
 
 async def list_dept_and_child_ids(db: AsyncSession, dept_ids: Iterable[str]) -> list[str]:
     from typing import cast
 
-    return await cast(DataScopeResolverProtocol, resolve("data_scope_resolver")).list_dept_and_child_ids(
-        db, dept_ids
-    )
+    resolver = cast(DataScopeResolverProtocol, resolve("data_scope_resolver"))
+    return await resolver.list_dept_and_child_ids(db, dept_ids)
 
 
 def _in_or_false(column, values: Iterable[str]) -> ColumnElement[bool]:

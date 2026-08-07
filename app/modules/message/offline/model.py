@@ -1,8 +1,10 @@
-"""Offline message queue. Stores messages for offline users, delivered on WS reconnect."""
+""" Author: Charlie
 
+离线消息队列，IM 重连 (WS/TCP) 时投递。
+"""
 from datetime import datetime
 
-from sqlalchemy import DateTime, Index, Integer, JSON, String
+from sqlalchemy import JSON, DateTime, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db.base import Base
@@ -12,7 +14,13 @@ from app.platform.id_generator.snowflake import generate_snowflake_id
 class MsgOfflineQueue(Base):
     __tablename__ = "msg_offline_message_queue"
     __table_args__ = (
-        Index("ix_msg_offline_target_status", "target_account_type", "target_account_id", "status", "created_at"),
+        Index(
+            "ix_msg_offline_target_status",
+            "target_account_type",
+            "target_account_id",
+            "status",
+            "created_at",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=generate_snowflake_id)

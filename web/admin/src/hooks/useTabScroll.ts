@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import type { NScrollbar } from 'naive-ui'
 import type { Ref } from 'vue'
 import { nextTick, ref, watchEffect } from 'vue'

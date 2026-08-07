@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import logging
 
 from celery import Celery
@@ -18,16 +20,18 @@ celery_app.conf.worker_enable_remote_control = settings.celery.worker_remote_con
 celery_app.conf.worker_cancel_long_running_tasks_on_connection_loss = (
     settings.celery.worker_cancel_long_running_tasks_on_connection_loss
 )
-# Redis broker: visibility_timeout must exceed longest task wall time or tasks redeliver mid-run.
-# Do NOT put these into redbeat_redis_options — redis-py rejects visibility_timeout.
+# Redis broker：visibility_timeout 必须大于最长任务墙钟时间，否则任务运行中会重投递。
+# 不要放入 redbeat_redis_options —— redis-py 不接受 visibility_timeout。
 celery_app.conf.broker_transport_options = {
     "visibility_timeout": settings.celery.broker_visibility_timeout,
 }
 celery_app.conf.broker_connection_retry_on_startup = True
+celery_app.conf.task_acks_late = True
+celery_app.conf.task_reject_on_worker_lost = True
 celery_app.conf.task_compression = "gzip"
 celery_app.conf.result_expires = settings.celery.broker_visibility_timeout
 celery_app.conf.redbeat_redis_url = settings.redis.url
-# Explicit options so RedBeat does not inherit broker_transport_options.
+# 显式选项，避免 RedBeat 继承 broker_transport_options。
 celery_app.conf.redbeat_redis_options = {"decode_responses": True}
 celery_app.conf.redbeat_lock_key = "redbeat:lock"
 
@@ -38,9 +42,12 @@ sync_to_redbeat(celery_app)
 
 @worker_process_init.connect
 def _worker_process_init(**_: object) -> None:
-    # Must share WorkerAsyncRunner's loop: asyncio.run() would bind Redis/DB
-    # connections to a temporary loop that is closed before tasks run.
+    # 必须与 WorkerAsyncRunner 共用同一 loop：asyncio.run() 会把 Redis/DB
+    # 连接绑定到临时 loop，任务执行前该 loop 已关闭。
     try:
+        from app.core.logger.setup import setup_logging
+
+        setup_logging()
         from app.platform.tasks.async_runner import worker_async_runner
 
         worker_async_runner.run(_startup_worker_infra())

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAppStore } from '@/stores'

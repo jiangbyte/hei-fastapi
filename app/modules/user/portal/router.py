@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile
@@ -5,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse, success
-from app.core.security.transport import decrypt_passwords
 from app.core.security.session import SessionPayload
+from app.core.security.transport import decrypt_passwords
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.iam.account.repository import AccountRepository
@@ -29,7 +31,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/me",
+    "/v1/portal/me",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[PortalMeResponse],
 )
@@ -42,11 +44,7 @@ async def get_me(
     await account_repo.get_required(session.account_id)
     identities = await account_repo.list_identities_by_account_ids([session.account_id])
     primary_identity = next(
-        (
-            item
-            for item in identities
-            if item.identity_type == "ACCOUNT" and item.is_primary
-        ),
+        (item for item in identities if item.identity_type == "ACCOUNT" and item.is_primary),
         None,
     ) or next((item for item in identities if item.identity_type == "ACCOUNT"), None)
     email_identity = next((item for item in identities if item.identity_type == "EMAIL"), None)
@@ -84,7 +82,7 @@ async def get_me(
 
 
 @router.post(
-    "/user-center/profile/update",
+    "/v1/portal/user-center/profile/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -98,7 +96,7 @@ async def update_user_center_profile(
 
 
 @router.post(
-    "/user-center/avatar/upload",
+    "/v1/portal/user-center/avatar/upload",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[PortalUserCenterAvatarUpdateResponse],
 )
@@ -118,7 +116,7 @@ async def upload_user_center_avatar(
 
 
 @router.post(
-    "/user-center/password/update",
+    "/v1/portal/user-center/password/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -145,7 +143,7 @@ async def update_user_center_password(
 
 
 @router.post(
-    "/user-center/phone/update",
+    "/v1/portal/user-center/phone/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -163,7 +161,7 @@ async def update_user_center_phone(
 
 
 @router.post(
-    "/user-center/email/update",
+    "/v1/portal/user-center/email/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -181,7 +179,7 @@ async def update_user_center_email(
 
 
 @router.get(
-    "/spaces/detail",
+    "/v1/portal/spaces/detail",
     response_model=ApiResponse[PortalPublicProfileResponse],
 )
 async def get_public_space(

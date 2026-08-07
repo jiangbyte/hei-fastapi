@@ -1,4 +1,7 @@
-"""注册模块提供的框架服务实现到 ServiceRegistry。"""
+""" Author: Charlie
+
+注册模块提供的框架服务实现到 ServiceRegistry。
+"""
 import logging
 
 from app.platform.interfaces import register

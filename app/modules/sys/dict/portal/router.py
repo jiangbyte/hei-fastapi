@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -12,7 +14,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/sys/dicts/tree",
+    "/v1/portal/sys/dicts/tree",
     response_model=ApiResponse[list[SysDictTreeNode]],
 )
 async def tree(

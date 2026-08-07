@@ -1,5 +1,7 @@
-"""执行 Alembic 数据库迁移到最新版本。"""
+""" Author: Charlie
 
+执行 Alembic 数据库迁移到最新版本。
+"""
 import os
 import sys
 from pathlib import Path

@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <template>
   <view class="card-head">
     <text class="card-head__title">{{ title }}</text>

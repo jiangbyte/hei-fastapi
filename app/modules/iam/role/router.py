@@ -1,22 +1,24 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_permission, require_account_type
+from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.iam.role.schema import (
     RoleAdminPageQuery,
+    RoleCreateRequest,
     RoleGrantResourceRequest,
     RoleGrantUserRequest,
     RoleOwnResourceResponse,
     RoleOwnUserResponse,
-    RoleCreateRequest,
     RoleUpdateRequest,
     SysRoleSchema,
 )
@@ -26,7 +28,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/roles/create",
+    "/v1/admin/sys/roles/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:create")),
@@ -43,7 +45,7 @@ async def create(
 
 
 @router.post(
-    "/sys/roles/update",
+    "/v1/admin/sys/roles/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:update")),
@@ -60,7 +62,7 @@ async def update(
 
 
 @router.post(
-    "/sys/roles/delete",
+    "/v1/admin/sys/roles/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:delete")),
@@ -77,7 +79,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/roles/detail",
+    "/v1/admin/sys/roles/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:detail")),
@@ -93,7 +95,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/roles/page",
+    "/v1/admin/sys/roles/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:page")),
@@ -109,7 +111,7 @@ async def page(
 
 
 @router.get(
-    "/sys/roles/own-resource",
+    "/v1/admin/sys/roles/own-resource",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:ownresource")),
@@ -126,7 +128,7 @@ async def own_resource(
 
 
 @router.post(
-    "/sys/roles/grant-resource",
+    "/v1/admin/sys/roles/grant-resource",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:grantresource")),
@@ -144,7 +146,7 @@ async def grant_resource(
 
 
 @router.get(
-    "/sys/roles/own-user",
+    "/v1/admin/sys/roles/own-user",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:ownuser")),
@@ -161,7 +163,7 @@ async def own_user(
 
 
 @router.post(
-    "/sys/roles/grant-user",
+    "/v1/admin/sys/roles/grant-user",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:role:grantuser")),

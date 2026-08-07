@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -14,7 +16,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/dashboard/overview",
+    "/v1/admin/dashboard/overview",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("dashboard:overview:view")),

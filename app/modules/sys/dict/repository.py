@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import TypedDict
 
 from sqlalchemy import Select, delete, func, or_, select
@@ -79,8 +81,8 @@ class DictRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysDict.sort.asc(), SysDict.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()

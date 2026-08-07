@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import IconSelect from '@/components/common/IconSelect.vue'

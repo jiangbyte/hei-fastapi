@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 
 from sqlalchemy import Select, case, delete, func, or_, select
@@ -412,8 +414,8 @@ class AccountRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysAccount.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         accounts = list((await self.db.execute(stmt)).unique().scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
@@ -585,9 +587,7 @@ class AccountRepository:
         for item in payload.grant_info_list:
             is_primary = bool(item.is_primary) and not primary_seen
             primary_seen = primary_seen or is_primary
-            self.db.add(
-                self.relations.account_dept(payload.id, item.dept_id, is_primary)
-            )
+            self.db.add(self.relations.account_dept(payload.id, item.dept_id, is_primary))
         await self.db.flush()
 
     async def get_account_role_ids(self, account_id: str) -> list[str]:

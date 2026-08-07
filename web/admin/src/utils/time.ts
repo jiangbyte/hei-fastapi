@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 const CHINA_OFFSET_MS = 8 * 60 * 60 * 1000
 const LOCAL_DATE_TIME_PATTERN =
   /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})(?::(\d{1,2})(?::(\d{1,2})(?:\.\d+)?)?)?)?$/
@@ -37,8 +39,26 @@ export function formatDateTime(value: unknown, fallback = '-') {
   return Number.isNaN(timestamp) ? text : formatChinaDate(timestamp)
 }
 
-export const normalizeDateTime = formatDateTime
-export const normalizeBackendTime = formatDateTime
+/** API/任意时间 → 表单展示用中国本地时间；空则 null */
+export function toFormDateTime(value: unknown): string | null {
+  const text = formatDateTime(value, '')
+  return text || null
+}
+
+/**
+ * 表单/展示时间 → API ISO8601 UTC（无毫秒）。
+ * 已带时区或 ISO `T` 的值原样返回；中国本地 `YYYY-MM-DD HH:mm:ss` 按 +08:00 解释。
+ */
+export function toApiDateTime(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') return null
+  const s = String(value).trim()
+  if (!s) return null
+  if (/[TZz]/.test(s) || /[+-]\d{2}:?\d{2}$/.test(s)) return s
+  const text = formatDateTime(value, '')
+  if (!text) return null
+  const date = new Date(`${text.replace(' ', 'T')}+08:00`)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().replace(/\.\d{3}Z$/, 'Z')
+}
 
 function formatTimestamp(value: number, fallback: string) {
   if (!Number.isFinite(value)) {
@@ -63,17 +83,4 @@ function formatChinaDate(timestamp: number) {
 
 function pad(value: string | number, length = 2) {
   return String(value).padStart(length, '0')
-}
-
-/** 将表单 datetime 字符串转为 API 兼容的带时区格式 */
-export function toApiDateTime(value: unknown): string | null {
-  if (value === undefined || value === null || value === '') return null
-  const s = String(value).trim()
-  if (!s) return null
-  // Already ISO with timezone (from API) → pass through unchanged
-  if (/[TZz]/.test(s) || /[+-]\d{2}:?\d{2}$/.test(s)) return s
-  // China-time display string → parse as local time → ISO UTC (matching backend format)
-  const d = new Date(s)
-  if (isNaN(d.getTime())) return null
-  return d.toISOString()
 }

@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -15,7 +17,7 @@ from app.modules.sys.banner.service import BannerService
 router = APIRouter()
 
 
-@router.get("/sys/banners/list", response_model=ApiResponse[list[SysBannerSchema]])
+@router.get("/v1/portal/sys/banners/list", response_model=ApiResponse[list[SysBannerSchema]])
 async def list_public_banners(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[BannerPublicListQuery, Depends()],
@@ -23,7 +25,7 @@ async def list_public_banners(
     return success(await BannerService(db).list_public(query))
 
 
-@router.post("/sys/banners/interaction", response_model=ApiResponse[None])
+@router.post("/v1/portal/sys/banners/interaction", response_model=ApiResponse[None])
 async def record_banner_interaction(
     payload: IdQuery,
     db: Annotated[AsyncSession, Depends(get_db_session)],

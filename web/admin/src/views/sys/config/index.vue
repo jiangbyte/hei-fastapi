@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="tsx">
 import type { PaginationProps } from 'naive-ui'
 import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
@@ -10,6 +12,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import CategoryConfigForm from './components/CategoryConfigForm.vue'
 import ModalDetail from './components/ModalDetail.vue'
 import ModalForm from './components/ModalForm.vue'
+import { readPageMeta } from '@/utils/wire'
 
 const tabs = [
   { name: 'AUTH_TOKEN', label: 'Token 配置' },
@@ -145,9 +148,10 @@ async function fetchPage() {
     })
     const data = response.data ?? {}
     state.configs = data.records ?? []
-    state.total = data.total ?? 0
-    state.page = data.current ?? state.page
-    state.pageSize = data.size ?? state.pageSize
+    const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
+    state.total = pageMeta.total
+    state.page = pageMeta.current
+    state.pageSize = pageMeta.size
     state.checkedRowKeys = state.checkedRowKeys.filter((key) =>
       state.configs.some((item) => item.id === key),
     )

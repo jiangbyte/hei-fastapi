@@ -1,22 +1,25 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 
 import pytest
 
 from app.core.config.enums import AccountStatusEnum, AccountType, DataScope
 from app.core.exceptions.business import AuthorizationError
-from app.core.response.pagination import PageQuery
 from app.core.schema.base import IdQuery
 from app.core.security.session import SessionPayload
 from app.modules.iam.account.model import SysAccount, SysAccountIdentity
-from app.modules.iam.account.schema import AccountAdminPageQuery
 from app.modules.iam.account.repository import AccountRepository
+from app.modules.iam.account.schema import AccountAdminPageQuery
 from app.modules.iam.account.service import AccountService
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
 from app.modules.user.admin.model import AdminUserProfile
 from tests.iam_relation_helpers import account_dept
 
 
-async def _admin_account(db_session, account_id: str, account_name: str, dept_id: str) -> SysAccount:
+async def _admin_account(
+    db_session, account_id: str, account_name: str, dept_id: str
+) -> SysAccount:
     now = datetime.now(UTC)
     account = SysAccount(
         id=account_id,
@@ -39,13 +42,17 @@ async def _admin_account(db_session, account_id: str, account_name: str, dept_id
             updated_at=now,
         )
     )
-    db_session.add(AdminUserProfile(account_id=account_id, name=account_name, created_at=now, updated_at=now))
+    db_session.add(
+        AdminUserProfile(account_id=account_id, name=account_name, created_at=now, updated_at=now)
+    )
     db_session.add(account_dept(account_id, dept_id, created_at=now, updated_at=now))
     await db_session.flush()
     return account
 
 
-def _session(data_scope: DataScope, custom_scope_dept_ids: list[str] | None = None) -> SessionPayload:
+def _session(
+    data_scope: DataScope, custom_scope_dept_ids: list[str] | None = None
+) -> SessionPayload:
     return SessionPayload(
         token="token",
         account_id="admin_a",
@@ -85,7 +92,7 @@ async def test_account_page_respects_custom_dept_scope(db_session):
         "iam:account:page",
     )
     accounts, total = await AccountRepository(db_session).page_admin(
-        AccountAdminPageQuery(pagination=PageQuery(current=1, size=20)),
+        AccountAdminPageQuery(current=1, size=20),
         data_scope_filter,
     )
 

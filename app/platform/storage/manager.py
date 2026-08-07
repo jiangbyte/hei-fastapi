@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from threading import RLock
 
 from app.core.config.enums import StorageProvider
@@ -22,7 +24,7 @@ def get_storage(
     provider: StorageProvider | str | None = None,
     allow_settings_fallback: bool = True,
 ):
-    """Return a storage client for a cached DB storage config."""
+    """返回缓存 DB 存储配置对应的存储客户端。"""
     config = resolve_storage_config(
         config_id=config_id,
         provider=provider,

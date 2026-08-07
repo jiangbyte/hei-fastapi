@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 export { default as MdEditor } from './MdEditor.vue'
 export { default as MdPreview } from './MdPreview.vue'
 export { default as MonacoDiffPreview } from './MonacoDiffPreview.vue'

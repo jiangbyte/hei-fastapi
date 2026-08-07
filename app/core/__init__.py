@@ -1,1 +1,4 @@
-"""Core package."""
+""" Author: Charlie
+
+Core 包。
+"""

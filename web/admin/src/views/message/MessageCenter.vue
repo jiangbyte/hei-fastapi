@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useThemeVars } from 'naive-ui'
@@ -28,7 +30,7 @@ import {
   type MessageActions,
   type MessageUIState,
 } from './provide-keys'
-import { useWebSocket } from './use-websocket'
+import { useImClient } from './useImClient'
 
 import Sidebar from './components/Sidebar.vue'
 import MobileBottomNav from './components/MobileBottomNav.vue'
@@ -49,7 +51,7 @@ const homePath = import.meta.env.VITE_HOME_PATH || '/dashboard'
 const authStore = useAuthStore()
 const imCenterStore = useImCenterStore()
 
-/* ---- Page data ---- */
+/* ---- 页面数据 ---- */
 
 const data = reactive({
   conversations: [] as Conversation[],
@@ -63,7 +65,7 @@ const data = reactive({
   profile: null as any,
 })
 
-/* ---- URL-driven state ---- */
+/* ---- URL 驱动状态 ---- */
 
 const activeSection = ref('chat')
 const mobileView = ref('list')
@@ -80,7 +82,7 @@ const searchScope = ref('conversations')
 const contactTab = ref('friends')
 const noticeTab = ref('notices')
 
-/* ---- Derived UI state ---- */
+/* ---- 派生 UI 状态 ---- */
 
 const showProfileModal = ref(false)
 const contactActionHint = ref('')
@@ -144,7 +146,7 @@ const selectedGroupContact = computed(() => {
   return data.groups.find((g) => g.id === selectedContact.value?.id) ?? null
 })
 
-/* ---- URL sync helpers ---- */
+/* ---- URL 同步辅助 ---- */
 
 function syncStateToUrl() {
   if (props.modal) return
@@ -210,7 +212,7 @@ watch(
 
 /* ---- WebSocket ---- */
 
-const ws = useWebSocket({
+const ws = useImClient({
   onNewMessage(msgData) {
     const convId = msgData.conversation_id
     if (!convId) return
@@ -230,7 +232,7 @@ const ws = useWebSocket({
         conv.unread_count = (conv.unread_count || 0) + 1
       }
     }
-    // Mark read if currently viewing this conversation
+    // 若正在查看该会话则标记已读
     if (convId === selectedConversationId.value && msgData.id) {
       ws.markConversationRead(convId, msgData.id)
     }
@@ -318,9 +320,13 @@ const ws = useWebSocket({
         .catch(() => {})
     }
   },
+  onKick() {
+    window.$message?.warning?.('会话已失效，请重新登录')
+    void authStore.logout('/auth/login')
+  },
 })
 
-/* ---- Actions ---- */
+/* ---- 操作 ---- */
 
 function goHome() {
   if (props.modal) {
@@ -527,7 +533,7 @@ async function continueChatFromContact() {
       return
     }
 
-    // Create direct conversation on demand
+    // 按需创建单聊会话
     try {
       const res = await messageApi.createDirectConversation({
         account_type: friend.friend_account_type,
@@ -538,7 +544,7 @@ async function continueChatFromContact() {
         openConversation(res.data.id)
         return
       }
-      // Response succeeded but no data — reload list and retry
+      // 响应成功但无 data — 重新加载列表并重试
       const convRes = await messageApi.conversationList()
       if (convRes?.data?.records) {
         data.conversations = convRes.data.records
@@ -570,7 +576,7 @@ async function continueChatFromContact() {
       return
     }
 
-    // Reload conversations and try again
+    // 重新加载会话列表并重试
     try {
       const convRes = await messageApi.conversationList()
       if (convRes?.data?.records) {
@@ -750,7 +756,7 @@ onMounted(async () => {
       }
     }
   } catch {
-    // silent
+    // 静默
   }
 
   ws.connect()

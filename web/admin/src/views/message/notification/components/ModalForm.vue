@@ -1,5 +1,7 @@
 <!--
-  Refined notification form with multi-select scope support.
+  Author: Charlie
+
+  通知表单：支持多选范围。
 -->
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
@@ -90,14 +92,14 @@ function normalizeSubmitData(data: Record<string, any>) {
     const d = new Date(t.replace(' ', 'T') + '+08:00')
     return Number.isNaN(d.getTime()) ? null : d.toISOString().replace(/\.\d{3}Z$/, 'Z')
   })(data.publish_at)
-  // remove hidden auto-set fields
+  // 移除隐藏且自动设置的字段
   delete r.sender_account_type
   delete r.sender_account_id
   delete r.source_type
   delete r.source_id
   delete r.revoked_at
   r.extra = {}
-  // ensure arrays
+  // 确保为数组
   if (!Array.isArray(r.target_account_types)) r.target_account_types = []
   if (!Array.isArray(r.target_account_ids)) r.target_account_ids = []
   if (!Array.isArray(r.target_dept_ids)) r.target_dept_ids = []
@@ -218,7 +220,7 @@ defineExpose({ openModal })
               </NFormItem>
             </NGi>
 
-            <!-- Scope-specific selectors -->
+            <!-- 按范围的选择器 -->
             <NGi v-if="state.formModel.target_scope === 'SPECIFIC'">
               <NFormItem label="目标用户" path="target_account_ids">
                 <NInput

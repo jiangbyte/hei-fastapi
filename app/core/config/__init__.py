@@ -1,1 +1,4 @@
-"""Config package."""
+""" Author: Charlie
+
+Config 包。
+"""

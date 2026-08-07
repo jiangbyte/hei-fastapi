@@ -1,1 +1,4 @@
-"""Portal user profile package."""
+""" Author: Charlie
+
+Portal 用户资料包。
+"""

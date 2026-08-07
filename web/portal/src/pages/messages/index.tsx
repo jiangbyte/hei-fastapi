@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import {
   Avatar,
@@ -461,6 +463,10 @@ export function MessagesPage() {
     onJoinRequestHandled: () => {
       void reloadLists()
     },
+    onKick: () => {
+      message.warning('会话已失效，请重新登录')
+      void useAuthStore.getState().logout('/auth/login')
+    },
   })
 
   function onPickFiles(event: ChangeEvent<HTMLInputElement>) {
@@ -501,6 +507,7 @@ export function MessagesPage() {
       }
       const res = await imApi.sendMessage({
         conversation_id: activeId,
+        client_msg_id: crypto.randomUUID(),
         content: text || ' ',
         content_type: attachments.length ? 'file' : 'text',
         msg_type: attachments.length ? 'FILE' : 'TEXT',

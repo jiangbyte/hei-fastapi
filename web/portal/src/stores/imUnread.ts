@@ -1,4 +1,7 @@
+/** Author: Charlie */
+
 import { create } from 'zustand'
+import { wireInt } from '@/utils/wire'
 import { imApi } from '@/api'
 
 type ImUnreadState = {
@@ -29,16 +32,22 @@ export const useImUnreadStore = create<ImUnreadState>((set, get) => ({
         imApi.pendingJoinRequestCount(),
       ])
       const messageUnread = (convRes.data.records ?? []).reduce(
-        (sum: any, c: any) => sum + (c.unread_count || 0),
+        (sum: number, c: { unread_count?: string }) =>
+          sum + (c.unread_count ? wireInt(c.unread_count) : 0),
         0,
       )
-      const raw = reqRes.data as any
+      const raw = reqRes.data as { pending_count?: string } | string | undefined
       const friendRequestPending =
-        typeof raw === 'number' ? raw : Number(raw?.pending_count ?? 0)
-      const joinRequestPending = Number(joinRes.data ?? 0)
+        typeof raw === 'string'
+          ? wireInt(raw)
+          : raw?.pending_count
+            ? wireInt(raw.pending_count)
+            : 0
+      const joinRequestPending =
+        joinRes.data != null && joinRes.data !== '' ? wireInt(String(joinRes.data)) : 0
       set({ messageUnread, friendRequestPending, joinRequestPending })
     } catch {
-      // keep previous
+      // 保留原值
     } finally {
       set({ loading: false })
     }

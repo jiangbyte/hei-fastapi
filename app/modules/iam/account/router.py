@@ -1,18 +1,20 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_permission, require_account_type
+from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.iam.account.schema import (
-    AccountCreateRequest,
     AccountAdminPageQuery,
+    AccountCreateRequest,
     AccountDeptAssignRequest,
     AccountGrantDeptRequest,
     AccountGrantGroupRequest,
@@ -36,7 +38,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/accounts/create",
+    "/v1/admin/sys/accounts/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:create")),
@@ -52,7 +54,7 @@ async def create(
 
 
 @router.post(
-    "/sys/accounts/update",
+    "/v1/admin/sys/accounts/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:update")),
@@ -69,7 +71,7 @@ async def update(
 
 
 @router.post(
-    "/sys/accounts/delete",
+    "/v1/admin/sys/accounts/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:delete")),
@@ -86,7 +88,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/accounts/detail",
+    "/v1/admin/sys/accounts/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:detail")),
@@ -102,7 +104,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/accounts/page",
+    "/v1/admin/sys/accounts/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:page")),
@@ -118,7 +120,7 @@ async def page(
 
 
 @router.post(
-    "/account-roles",
+    "/v1/admin/account-roles",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantrole")),
@@ -134,7 +136,7 @@ async def assign_account_role(
 
 
 @router.post(
-    "/account-groups",
+    "/v1/admin/account-groups",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantgroup")),
@@ -150,7 +152,7 @@ async def assign_account_group(
 
 
 @router.post(
-    "/account-depts",
+    "/v1/admin/account-depts",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantdept")),
@@ -166,7 +168,7 @@ async def assign_account_dept(
 
 
 @router.get(
-    "/sys/accounts/own-resource",
+    "/v1/admin/sys/accounts/own-resource",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:ownresource")),
@@ -183,7 +185,7 @@ async def own_resource(
 
 
 @router.post(
-    "/sys/accounts/grant-resource",
+    "/v1/admin/sys/accounts/grant-resource",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantresource")),
@@ -201,7 +203,7 @@ async def grant_resource(
 
 
 @router.get(
-    "/sys/accounts/own-role",
+    "/v1/admin/sys/accounts/own-role",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:ownrole")),
@@ -218,7 +220,7 @@ async def own_role(
 
 
 @router.post(
-    "/sys/accounts/grant-role",
+    "/v1/admin/sys/accounts/grant-role",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantrole")),
@@ -236,7 +238,7 @@ async def grant_role(
 
 
 @router.get(
-    "/sys/accounts/own-group",
+    "/v1/admin/sys/accounts/own-group",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:owngroup")),
@@ -253,7 +255,7 @@ async def own_group(
 
 
 @router.post(
-    "/sys/accounts/grant-group",
+    "/v1/admin/sys/accounts/grant-group",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantgroup")),
@@ -271,7 +273,7 @@ async def grant_group(
 
 
 @router.get(
-    "/sys/accounts/own-dept",
+    "/v1/admin/sys/accounts/own-dept",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:owndept")),
@@ -288,7 +290,7 @@ async def own_dept(
 
 
 @router.post(
-    "/sys/accounts/grant-dept",
+    "/v1/admin/sys/accounts/grant-dept",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:grantdept")),

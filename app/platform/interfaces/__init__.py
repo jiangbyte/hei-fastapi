@@ -1,4 +1,6 @@
-"""ServiceRegistry — 通用服务注册中心。
+""" Author: Charlie
+
+ServiceRegistry — 通用服务注册中心。
 
 注册:  register("interface_name", impl_instance)
 消费:  resolve("interface_name") → object（调用方 import Protocol 后 cast）
@@ -7,9 +9,6 @@
   1. 在 interfaces/ 下定义 Protocol 类
   2. 在模块的 module.py 中声明 ServiceRegistration
 """
-
-from typing import cast
-
 from app.platform.interfaces.account_lookup import AccountLookupProtocol
 from app.platform.interfaces.audit_queue import AuditQueueProtocol
 from app.platform.interfaces.config_reader import ConfigReaderProtocol
@@ -30,6 +29,7 @@ def resolve(interface: str) -> object:
 
 
 # 类型安全的便捷注册函数（薄封装）
+
 
 def register_audit_queue(impl: AuditQueueProtocol) -> None:
     register("audit_queue", impl)

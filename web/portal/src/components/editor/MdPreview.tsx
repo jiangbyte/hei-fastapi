@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { MdPreview as MdPreviewBase } from 'md-editor-rt'
 import { useAppStore } from '@/stores/app'
 import 'md-editor-rt/lib/preview.css'

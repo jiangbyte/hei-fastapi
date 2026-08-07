@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { resolveFileUrl } from '@/utils'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any

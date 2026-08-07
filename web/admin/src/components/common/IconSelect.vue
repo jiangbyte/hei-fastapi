@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { icons as iconParkOutline } from '@iconify-json/icon-park-outline'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'

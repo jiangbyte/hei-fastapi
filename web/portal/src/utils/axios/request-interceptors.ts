@@ -1,21 +1,25 @@
+/** Author: Charlie */
+
 import type { AxiosInstance } from 'axios'
-import { getToken } from '@/utils/storage'
+import { stringifyScalars } from '@/utils/wire'
 
 declare module 'axios' {
   interface AxiosRequestConfig {
-    addToken?: boolean
+    /** 公开接口：401 时不跳转登录。 */
+    public?: boolean
     skipErrorMessage?: boolean
     customErrorMessage?: string
   }
 }
 
-export function setupTokenInterceptor(http: AxiosInstance) {
+/** 按 wire 约定将 JSON body/params 标量序列化为字符串。 */
+export function setupRequestInterceptor(http: AxiosInstance) {
   http.interceptors.request.use((config) => {
-    if (config.addToken !== false) {
-      const token = getToken()
-      if (token) {
-        config.headers.set('Authorization', token)
-      }
+    if (config.data && !(config.data instanceof FormData)) {
+      config.data = stringifyScalars(config.data)
+    }
+    if (config.params) {
+      config.params = stringifyScalars(config.params) as typeof config.params
     }
     return config
   })

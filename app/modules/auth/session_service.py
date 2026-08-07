@@ -1,17 +1,19 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.core.config.settings import settings
 from app.core.security.session import SessionPayload, session_store
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.relation.repository import IamRelationRepository
+from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 
 
 class AccountSessionService:
-    """Build and refresh account sessions without depending on auth workflows."""
+    """构建并刷新账户会话，不依赖 auth 业务流程。"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -41,7 +43,6 @@ class AccountSessionService:
             device_label=device_label,
         )
 
-
     async def refresh_account_sessions(self, account_id: str) -> None:
         await self.refresh_accounts_sessions([account_id])
 
@@ -50,7 +51,9 @@ class AccountSessionService:
         if not accounts:
             return
         account_map = {account.id: account for account in accounts}
-        authorizations = await self.relation_repo.get_accounts_authorization(list(account_map.keys()))
+        authorizations = await self.relation_repo.get_accounts_authorization(
+            list(account_map.keys())
+        )
         targets = [(account.account_type, account.id) for account in accounts]
         payload_factories = {}
 

@@ -1,4 +1,7 @@
-"""文件存储配置表模型 — ORM 定义在 platform 层供框架基础设施查询。"""
+""" Author: Charlie
+
+文件存储配置表模型 — ORM 定义在 platform 层供框架基础设施查询。
+"""
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,7 +38,7 @@ class SysStorageConfig(Base, TimestampMixin):
         String(255), default="/api/v1/files", nullable=False, comment="公开访问路径"
     )
     local_root: Mapped[str] = mapped_column(
-        String(500), default="storage", nullable=False, comment="本地存储根目录"
+        String(500), default=".runtime/storage", nullable=False, comment="本地存储根目录"
     )
     is_default: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False, comment="是否为当前启用的默认配置（互斥）"

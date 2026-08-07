@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="tsx">
 import type { DataTableColumns, PaginationProps } from 'naive-ui'
 import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
@@ -14,6 +16,7 @@ import { dictList, dictTypeColor, dictTypeData } from '@/utils/dict'
 import { NButton, NDataTable, NFlex, NIcon, NTag } from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive } from 'vue'
+import { readPageMeta } from '@/utils/wire'
 
 const state = reactive({
   rows: [] as any[],
@@ -209,9 +212,10 @@ async function fetchPage() {
     })
     const data = response.data ?? {}
     state.rows = data.records ?? []
-    state.total = data.total ?? 0
-    state.page = data.current ?? state.page
-    state.pageSize = data.size ?? state.pageSize
+    const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
+    state.total = pageMeta.total
+    state.page = pageMeta.current
+    state.pageSize = pageMeta.size
   } finally {
     state.loading = false
   }

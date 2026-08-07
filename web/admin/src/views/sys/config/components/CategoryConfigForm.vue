@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import AuthTokenConfigForm from './AuthTokenConfigForm.vue'
 import AuthLoginConfigForm from './AuthLoginConfigForm.vue'

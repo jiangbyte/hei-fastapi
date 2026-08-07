@@ -1,13 +1,13 @@
+/** Author: Charlie */
+
 import { create } from 'zustand'
 import { message } from 'antd'
 import { authApi } from '@/api'
-import { refreshDict, syncDictTree } from '@/utils/dict'
+import { clearDict, refreshDict, syncDictTree } from '@/utils/dict'
 import {
   clearAuthStorage,
   getStoredUserInfo,
-  getToken,
   setStoredUserInfo,
-  setToken,
 } from '@/utils/storage'
 import { getSafeRedirect } from '@/utils/validate'
 
@@ -29,9 +29,10 @@ export interface AuthUserInfo {
 }
 
 interface AuthState {
-  token: string
   userInfo: AuthUserInfo | null
+  sessionChecked: boolean
   isLogin: () => boolean
+  ensureSession: () => Promise<boolean>
   login: (
     account: string,
     password: string,
@@ -65,10 +66,25 @@ function mapMe(data: any, loginAt = Date.now()): AuthUserInfo {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  token: getToken(),
   userInfo: getStoredUserInfo<AuthUserInfo>(),
+  sessionChecked: false,
 
-  isLogin: () => Boolean(get().token),
+  isLogin: () => Boolean(get().userInfo?.accountId),
+
+  ensureSession: async () => {
+    if (get().sessionChecked) {
+      return get().isLogin()
+    }
+    set({ sessionChecked: true })
+    try {
+      await get().refreshUserInfo()
+      return true
+    } catch {
+      clearAuthStorage()
+      set({ userInfo: null })
+      return false
+    }
+  },
 
   login: async (
     account,
@@ -88,18 +104,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       captcha_value: security?.captcha_value || '',
     })
 
-    const token = response.data.token
-    setToken(token)
-    set({ token })
+    // 服务端设置 HttpOnly cookie；不在浏览器持久化 session token。
+    clearAuthStorage()
+    set({ sessionChecked: true })
 
     if (response.data.password_expired) {
       message.warning('密码已过期，请登录后尽快修改密码')
     }
 
-    const meResponse = await authApi.me()
-    const userInfo = mapMe(meResponse.data)
-    setStoredUserInfo(userInfo)
-    set({ userInfo })
+    await get().refreshUserInfo()
 
     syncDictTree()
     await refreshDict()
@@ -116,16 +129,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetSession: () => {
-    // 门户字典公开缓存，登出不清理
     clearAuthStorage()
-    set({ token: '', userInfo: null })
+    clearDict()
+    set({ userInfo: null, sessionChecked: true })
   },
 
   logout: async (redirect) => {
     try {
       await authApi.logout()
     } catch {
-      // ignore
+      // 忽略
     } finally {
       get().resetSession()
     }

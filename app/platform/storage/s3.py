@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from urllib.parse import urljoin
 
 import boto3

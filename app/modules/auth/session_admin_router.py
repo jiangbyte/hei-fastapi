@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -23,7 +25,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/auth/sessions/analysis",
+    "/v1/admin/auth/sessions/analysis",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("auth:session:analysis")),
@@ -37,7 +39,7 @@ async def analysis(
 
 
 @router.get(
-    "/auth/sessions/page",
+    "/v1/admin/auth/sessions/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("auth:session:page")),
@@ -52,7 +54,7 @@ async def page(
 
 
 @router.get(
-    "/auth/sessions/tokens",
+    "/v1/admin/auth/sessions/tokens",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("auth:session:tokenlist")),
@@ -67,7 +69,7 @@ async def tokens(
 
 
 @router.post(
-    "/auth/sessions/exit",
+    "/v1/admin/auth/sessions/exit",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("auth:session:exit")),
@@ -83,7 +85,7 @@ async def exit_sessions(
 
 
 @router.post(
-    "/auth/sessions/token/exit",
+    "/v1/admin/auth/sessions/token/exit",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("auth:session:tokenexit")),

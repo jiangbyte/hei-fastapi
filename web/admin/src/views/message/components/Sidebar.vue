@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import { resolveFileUrl } from '@/utils'

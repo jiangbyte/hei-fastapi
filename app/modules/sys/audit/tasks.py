@@ -1,4 +1,7 @@
-"""Audit analysis tasks."""
+""" Author: Charlie
+
+审计分析任务。
+"""
 import asyncio
 import logging
 
@@ -20,7 +23,7 @@ def audit_analysis_cycle(self):
         asyncio.run(_run_analysis())
     except Exception:
         logger.exception("Audit analysis cycle failed")
-        raise self.retry()
+        raise self.retry() from None
 
 
 async def _run_analysis():

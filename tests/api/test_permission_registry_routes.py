@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 async def test_subject_permission_grant_routes_are_not_registered(client):
     routes = [
         ("GET", "/api/v1/admin/sys/accounts/own-permission"),
@@ -14,7 +16,8 @@ async def test_subject_permission_grant_routes_are_not_registered(client):
 
     for method, path in routes:
         response = await client.request(method, path)
-        assert response.status_code == 404
+        # 未注册的 /api 路径在路由前被 auth 白名单中间件拒绝。
+        assert response.status_code == 401
 
 
 async def test_generic_grant_routes_are_not_registered(client):
@@ -23,4 +26,4 @@ async def test_generic_grant_routes_are_not_registered(client):
         json={},
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 401

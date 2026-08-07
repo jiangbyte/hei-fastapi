@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from typing import Protocol, runtime_checkable
 
 from app.platform.storage.config import StorageConfig

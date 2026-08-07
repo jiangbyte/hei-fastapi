@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import type { GlobalThemeOverrides } from 'naive-ui'
 import type { ProConfigProviderProps } from 'pro-naive-ui'

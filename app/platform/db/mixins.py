@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
@@ -20,3 +22,14 @@ class TimestampMixin:
         comment="更新时间",
     )
     updated_by: Mapped[str | None] = mapped_column(String(64), nullable=True, comment="更新人")
+
+
+class OwnerDeptMixin:
+    """可选部门归属字段，用于 DEPT / DEPT_AND_CHILD / CUSTOM 数据范围。"""
+
+    owner_dept_id: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="所属部门ID（数据范围）",
+    )

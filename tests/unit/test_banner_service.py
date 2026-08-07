@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import event, select
@@ -11,28 +13,7 @@ from app.modules.sys.banner.schema import (
 )
 from app.modules.sys.banner.service import BannerService, flush_interaction_deltas
 from app.platform.cache.keys import banner_interaction_delta_key
-
-
-class FakeRedis:
-    def __init__(self) -> None:
-        self.hashes: dict[str, dict[str, str]] = {}
-
-    async def hincrby(self, key: str, field: str, amount: int) -> int:
-        current = int(self.hashes.setdefault(key, {}).get(field, "0"))
-        next_value = current + amount
-        self.hashes[key][field] = str(next_value)
-        return next_value
-
-    async def hgetall(self, key: str):
-        return dict(self.hashes.get(key, {}))
-
-    async def hdel(self, key: str, *fields: str) -> int:
-        removed = 0
-        for field in fields:
-            if field in self.hashes.get(key, {}):
-                removed += 1
-                del self.hashes[key][field]
-        return removed
+from tests.conftest import FakeRedis
 
 
 def _banner_create_request(**overrides) -> BannerCreateRequest:

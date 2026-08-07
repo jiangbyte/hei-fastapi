@@ -1,14 +1,16 @@
+""" Author: Charlie """
+
 from sqlalchemy import Select, case, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions.business import NotFoundError
-from app.platform.db.models.sys_config import SysConfig
 from app.modules.sys.config.schema import (
     ConfigAdminPageQuery,
     ConfigBatchItem,
     ConfigCreateRequest,
     ConfigUpdateRequest,
 )
+from app.platform.db.models.sys_config import SysConfig
 
 
 class ConfigRepository:
@@ -56,9 +58,7 @@ class ConfigRepository:
         """通过单条 SQL CASE WHEN 批量更新，避免 N+1 问题。"""
         if not items:
             return
-        when_clauses = {
-            item.id: item.config_value for item in items
-        }
+        when_clauses = {item.id: item.config_value for item in items}
         id_list = list(when_clauses.keys())
         stmt = (
             update(SysConfig)
@@ -83,8 +83,8 @@ class ConfigRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysConfig.sort_code.asc(), SysConfig.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()

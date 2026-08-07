@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from app.platform.id_generator.snowflake import generate_snowflake_id
 
 

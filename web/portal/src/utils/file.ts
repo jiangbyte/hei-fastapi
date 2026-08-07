@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 const PUBLIC_FILE_PATH = '/api/v1/files'
 
 function isAbsoluteUrl(value: string) {
@@ -15,7 +17,9 @@ function toPublicFilePath(value: string) {
   const legacyPrefix = `${PUBLIC_FILE_PATH}/`
   if (rawValue.startsWith(legacyPrefix)) {
     const objectName = rawValue.slice(legacyPrefix.length).replace(/^\/+/, '')
-    return objectName ? `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(objectName)}` : PUBLIC_FILE_PATH
+    return objectName
+      ? `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(objectName)}`
+      : PUBLIC_FILE_PATH
   }
   if (!rawValue.startsWith('/')) {
     return `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(rawValue)}`

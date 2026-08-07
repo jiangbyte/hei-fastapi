@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 from typing import TypedDict
 
@@ -5,8 +7,8 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.modules.iam.dept.model import SysDept
 from app.core.exceptions.business import NotFoundError
+from app.modules.iam.dept.model import SysDept
 from app.modules.iam.dept.schema import DeptAdminPageQuery, DeptCreateRequest, DeptUpdateRequest
 from app.modules.iam.reference_guard import (
     count_dept_references,
@@ -104,8 +106,8 @@ class DeptRepository:
             count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysDept.sort.asc(), SysDept.id.desc())
-            .offset(query.pagination.offset)
-            .limit(query.pagination.size)
+            .offset(query.offset)
+            .limit(query.size)
         )
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
@@ -163,6 +165,7 @@ class DeptRepository:
             return {}
         from app.modules.iam.account.model import SysAccount
         from app.modules.user.admin.model import AdminUserProfile
+
         stmt = (
             select(SysAccount.id, AdminUserProfile.name)
             .outerjoin(AdminUserProfile, AdminUserProfile.account_id == SysAccount.id)

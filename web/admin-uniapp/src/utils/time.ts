@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 const CHINA_OFFSET_MS = 8 * 60 * 60 * 1000
 const LOCAL_DATE_TIME_PATTERN =
   /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})(?::(\d{1,2})(?::(\d{1,2})(?:\.\d+)?)?)?)?$/
@@ -38,9 +40,6 @@ export function formatDateTime(value: unknown, fallback = '-') {
   const timestamp = Date.parse(normalized)
   return Number.isNaN(timestamp) ? text : formatChinaDate(timestamp)
 }
-
-export const normalizeDateTime = formatDateTime
-export const normalizeBackendTime = formatDateTime
 
 function formatTimestamp(value: number, fallback: string) {
   if (!Number.isFinite(value)) {

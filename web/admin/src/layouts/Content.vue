@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { useAppStore, useRouteStore } from '@/stores'
 

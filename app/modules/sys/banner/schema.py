@@ -1,7 +1,13 @@
+""" Author: Charlie """
+
 from datetime import datetime
 
 from pydantic import Field
 
+from app.core.config.enums import StatusEnum
+from app.core.response.pagination import PageQuery
+from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireInt
 from app.modules.sys.banner.enums import (
     BannerCategory,
     BannerDisplayScope,
@@ -9,9 +15,6 @@ from app.modules.sys.banner.enums import (
     BannerPosition,
     BannerType,
 )
-from app.core.config.enums import StatusEnum
-from app.core.response.pagination import PageQuery
-from app.core.schema.base import ApiSchema
 
 
 class BannerCreateRequest(ApiSchema):
@@ -25,7 +28,7 @@ class BannerCreateRequest(ApiSchema):
     type: BannerType
     position: BannerPosition
     display_scope: BannerDisplayScope
-    sort: int = 0
+    sort: WireInt = 0
     status: StatusEnum = StatusEnum.ENABLED
     start_at: datetime | None = None
     end_at: datetime | None = None
@@ -61,8 +64,8 @@ class SysBannerSchema(ApiSchema):
     type: BannerType
     position: BannerPosition
     display_scope: BannerDisplayScope
-    sort: int
-    interaction_count: int
+    sort: WireInt
+    interaction_count: WireInt
     status: StatusEnum | str
     start_at: datetime | None = None
     end_at: datetime | None = None

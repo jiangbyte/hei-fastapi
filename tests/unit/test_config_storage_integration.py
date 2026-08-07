@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from pathlib import Path
 
 import pytest
@@ -44,9 +46,18 @@ def test_resolve_storage_config_uses_snapshot_config_id_and_provider(monkeypatch
     assert storage_manager.resolve_storage_config("local-archive") == archive_config
     assert storage_manager.resolve_storage_config(provider=StorageProvider.LOCAL) == default_config
 
+    from urllib.parse import parse_qs, urlparse
+
+    from app.platform.storage.signed_url import verify_object_access
+
     storage = storage_manager.get_storage("local-archive", allow_settings_fallback=False)
     assert storage.root == (tmp_path / "archive").resolve()
-    assert storage.get_object_url("a/b.txt") == "/files/local-archive?object_name=a/b.txt"
+    url = storage.get_object_url("a/b.txt")
+    parsed = urlparse(url)
+    assert parsed.path == "/files/local-archive"
+    qs = parse_qs(parsed.query)
+    assert qs["object_name"][0] == "a/b.txt"
+    assert verify_object_access("a/b.txt", int(qs["expires"][0]), qs["sig"][0])
 
 
 def test_storage_cache_is_versioned_by_config_snapshot(monkeypatch, tmp_path):

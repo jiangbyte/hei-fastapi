@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, nextTick, ref, watchEffect } from 'vue'
 import { useMagicKeys } from '@vueuse/core'

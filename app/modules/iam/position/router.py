@@ -1,14 +1,16 @@
+""" Author: Charlie """
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import Current, PageData, PageQuery, Size
+from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import Id, IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
-from app.deps.auth import get_current_session, require_permission, require_account_type
+from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.iam.position.schema import (
     PositionAdminPageQuery,
@@ -22,7 +24,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/sys/positions/create",
+    "/v1/admin/sys/positions/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:position:create")),
@@ -39,7 +41,7 @@ async def create(
 
 
 @router.post(
-    "/sys/positions/update",
+    "/v1/admin/sys/positions/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:position:update")),
@@ -56,7 +58,7 @@ async def update(
 
 
 @router.post(
-    "/sys/positions/delete",
+    "/v1/admin/sys/positions/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:position:delete")),
@@ -73,7 +75,7 @@ async def delete(
 
 
 @router.get(
-    "/sys/positions/detail",
+    "/v1/admin/sys/positions/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:position:detail")),
@@ -89,7 +91,7 @@ async def detail(
 
 
 @router.get(
-    "/sys/positions/page",
+    "/v1/admin/sys/positions/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:position:page")),

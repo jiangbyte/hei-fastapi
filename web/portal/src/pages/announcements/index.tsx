@@ -1,8 +1,11 @@
+/** Author: Charlie */
+
 import { useEffect, useState } from 'react'
 import { Empty, Pagination, Skeleton, Tag } from 'antd'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/time'
+import { readPageMeta } from '@/utils/wire'
 import { announcementApi } from '@/api'
 
 function announcementSummary(content: string, contentType: string) {
@@ -16,8 +19,8 @@ function announcementSummary(content: string, contentType: string) {
 }
 
 export function AnnouncementListPage() {
-  const token = useAuthStore((s) => s.token)
   const isLogin = useAuthStore((s) => s.isLogin)
+  const loggedIn = isLogin()
 
   const [loading, setLoading] = useState(true)
   const [records, setRecords] = useState<any[]>([])
@@ -34,7 +37,7 @@ export function AnnouncementListPage() {
         const res = await announcementApi.list({ current, size })
         if (!mounted) return
         setRecords(res.data.records ?? [])
-        setTotal(Number(res.data.total) || 0)
+        setTotal(readPageMeta(res.data).total)
       } catch {
         if (!mounted) return
         setRecords([])
@@ -48,7 +51,7 @@ export function AnnouncementListPage() {
     return () => {
       mounted = false
     }
-  }, [current, size, token])
+  }, [current, size, loggedIn])
 
   return (
     <div className="page-shell">

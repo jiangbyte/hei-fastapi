@@ -1,12 +1,18 @@
+""" Author: Charlie """
+
 from sqlalchemy import select
 
 from app.core.config.enums import AccountType, DataScope
 from app.core.security.data_scope import build_data_scope_filter, list_dept_and_child_ids
 from app.core.security.session import SessionPayload
 from app.modules.iam.dept.model import SysDept
+from app.modules.iam.dept.resolver import resolver as dept_data_scope_resolver
 from app.modules.iam.enums import IamRelationType
 from app.modules.iam.relation.model import SysIamRelation
+from app.platform.interfaces import register_data_scope_resolver
 from tests.iam_relation_helpers import account_dept
+
+register_data_scope_resolver(dept_data_scope_resolver)
 
 
 async def test_data_scope_defaults_to_self(db_session):
@@ -33,13 +39,17 @@ async def test_data_scope_defaults_to_self(db_session):
         dept_column=SysIamRelation.target_id,
     )
     rows = (
-        await db_session.execute(
-            select(SysIamRelation.subject_id).where(
-                SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
-                condition,
+        (
+            await db_session.execute(
+                select(SysIamRelation.subject_id).where(
+                    SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
+                    condition,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert rows == ["account_1"]
 
@@ -77,13 +87,17 @@ async def test_data_scope_all_returns_all_rows(db_session):
         dept_column=SysIamRelation.target_id,
     )
     rows = (
-        await db_session.execute(
-            select(SysIamRelation.subject_id).where(
-                SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
-                condition,
+        (
+            await db_session.execute(
+                select(SysIamRelation.subject_id).where(
+                    SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
+                    condition,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert rows == ["account_1", "account_2"]
 
@@ -121,13 +135,17 @@ async def test_data_scope_custom_uses_custom_dept_ids(db_session):
         dept_column=SysIamRelation.target_id,
     )
     rows = (
-        await db_session.execute(
-            select(SysIamRelation.subject_id).where(
-                SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
-                condition,
+        (
+            await db_session.execute(
+                select(SysIamRelation.subject_id).where(
+                    SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
+                    condition,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert rows == ["account_2"]
 
@@ -135,10 +153,10 @@ async def test_data_scope_custom_uses_custom_dept_ids(db_session):
 async def test_data_scope_dept_and_child_loads_depts_in_batch(db_session):
     db_session.add_all(
         [
-            SysDept(id="dept_1", code="dept_1", name="Dept 1", category="SYS"),
-            SysDept(id="dept_2", parent_id="dept_1", code="dept_2", name="Dept 2", category="SYS"),
-            SysDept(id="dept_3", parent_id="dept_2", code="dept_3", name="Dept 3", category="SYS"),
-            SysDept(id="dept_4", code="dept_4", name="Dept 4", category="SYS"),
+            SysDept(id="dept_1", name="Dept 1", category="SYS"),
+            SysDept(id="dept_2", parent_id="dept_1", name="Dept 2", category="SYS"),
+            SysDept(id="dept_3", parent_id="dept_2", name="Dept 3", category="SYS"),
+            SysDept(id="dept_4", name="Dept 4", category="SYS"),
             account_dept("account_1", "dept_1"),
             account_dept("account_2", "dept_2"),
             account_dept("account_3", "dept_3"),
@@ -174,12 +192,16 @@ async def test_data_scope_dept_and_child_loads_depts_in_batch(db_session):
         dept_column=SysIamRelation.target_id,
     )
     rows = (
-        await db_session.execute(
-            select(SysIamRelation.subject_id).where(
-                SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
-                condition,
+        (
+            await db_session.execute(
+                select(SysIamRelation.subject_id).where(
+                    SysIamRelation.relation_type == IamRelationType.ACCOUNT_DEPT.value,
+                    condition,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert rows == ["account_1", "account_2", "account_3"]

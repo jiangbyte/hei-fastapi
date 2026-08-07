@@ -47,12 +47,12 @@ COPY scripts/seed ./scripts/seed
 COPY gunicorn.conf.py ./
 COPY entrypoint.sh ./
 
-RUN chmod +x entrypoint.sh && mkdir -p /app/storage /app/.runtime
+RUN chmod +x entrypoint.sh && mkdir -p /app/storage /app/.runtime/storage
 
 RUN chown -R appuser:appgroup /app/storage /app/.runtime
 USER appuser
 
-VOLUME ["/app/storage"]
+VOLUME ["/app/storage", "/app/.runtime"]
 EXPOSE 8000
 
 ENTRYPOINT ["tini", "-g", "--", "/app/entrypoint.sh"]

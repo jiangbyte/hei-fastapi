@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from datetime import UTC, datetime
 
 from app.core.schema.datetime import format_utc_iso8601
@@ -5,9 +7,9 @@ from app.core.schema.datetime import format_utc_iso8601
 
 def test_format_utc_iso8601_uses_z_suffix():
     value = datetime(2026, 6, 17, 12, 0, 0, tzinfo=UTC)
-    assert format_utc_iso8601(value) == "2026-06-17T12:00:00Z"
+    assert format_utc_iso8601(value) == "2026-06-17T12:00:00.000Z"
 
 
-def test_format_utc_iso8601_truncates_microseconds():
+def test_format_utc_iso8601_uses_millisecond_precision():
     value = datetime(2026, 6, 17, 12, 0, 0, 123456, tzinfo=UTC)
-    assert format_utc_iso8601(value) == "2026-06-17T12:00:00Z"
+    assert format_utc_iso8601(value) == "2026-06-17T12:00:00.123Z"

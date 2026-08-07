@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { defineStore } from 'pinia'
 import { nextTick, ref } from 'vue'
 import { useColorMode, useFullscreen, useMediaQuery, usePreferredDark } from '@vueuse/core'

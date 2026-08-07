@@ -1,3 +1,5 @@
+<!-- Author: Charlie -->
+
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { messageApi } from '@/api'
@@ -6,8 +8,11 @@ import { formatDateTime, resolveFileUrl } from '@/utils'
 import { NAvatar } from 'naive-ui'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 import NoticeList, { type NoticeItem } from '../common/NoticeList.vue'
-import { useWebSocket } from '../../../views/message/use-websocket'
-import { useImCenterStore } from '@/stores'
+import { useImClient } from '../../../views/message/useImClient'
+import { useAuthStore, useImCenterStore } from '@/stores'
+import { readPageMeta, wireInt } from '@/utils/wire'
+
+const authStore = useAuthStore()
 
 const pageSize = 8
 
@@ -92,7 +97,7 @@ function scheduleWsRefresh(delay = 400) {
   }, delay)
 }
 
-const ws = useWebSocket({
+const ws = useImClient({
   onNewMessage() {
     unreadCounts.message += 1
     scheduleWsRefresh()
@@ -109,6 +114,10 @@ const ws = useWebSocket({
     unreadCounts.joinRequest += 1
     scheduleWsRefresh(200)
   },
+  onKick() {
+    window.$message?.warning?.('会话已失效，请重新登录')
+    void authStore.logout('/auth/login')
+  },
 })
 
 watch(currentTab, (type) => {
@@ -124,7 +133,7 @@ async function refreshUnreadCounts() {
     const nRes = await messageApi.notificationUnreadCount()
     unreadCounts.notification = nRes.data ?? 0
   } catch {
-    /* ignore */
+    /* 忽略 */
   }
   try {
     const convList = await messageApi.conversationList()
@@ -133,21 +142,25 @@ async function refreshUnreadCounts() {
       0,
     )
   } catch {
-    /* ignore */
+    /* 忽略 */
   }
   try {
     const fRes = await messageApi.myFriendRequestCount()
-    const raw = fRes.data
+    const raw = fRes.data as { pending_count?: string } | string | undefined
     unreadCounts.friendRequest =
-      typeof raw === 'number' ? raw : Number(raw?.pending_count ?? 0)
+      typeof raw === 'string'
+        ? wireInt(raw)
+        : raw?.pending_count
+          ? wireInt(raw.pending_count)
+          : 0
   } catch {
-    /* ignore */
+    /* 忽略 */
   }
   try {
     const jRes = await messageApi.pendingJoinRequestCount()
-    unreadCounts.joinRequest = Number(jRes.data ?? 0)
+    unreadCounts.joinRequest = jRes.data != null && jRes.data !== '' ? wireInt(String(jRes.data)) : 0
   } catch {
-    /* ignore */
+    /* 忽略 */
   }
 }
 
@@ -174,9 +187,10 @@ async function loadTab(type: NoticeTab, page = 1, mode: LoadMode = 'replace') {
     const data = response.data ?? {}
     const incoming = (data.records ?? []).map((item: any) => mapHistoryItem(type, item))
     state.records = mergeNoticeRecords(state.records, incoming, mode)
-    state.total = data.total ?? state.records.length
-    state.current = data.current ?? page
-    state.size = data.size ?? state.size
+    const pageMeta = readPageMeta(data, { current: page, size: state.size })
+    state.total = pageMeta.total || state.records.length
+    state.current = pageMeta.current
+    state.size = pageMeta.size
     state.loaded = true
   } finally {
     state.loading = false

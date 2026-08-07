@@ -1,1 +1,4 @@
-"""ID generator package."""
+""" Author: Charlie
+
+ID 生成器包。
+"""

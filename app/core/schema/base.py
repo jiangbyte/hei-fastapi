@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 from collections.abc import Iterable
 from typing import Annotated, TypeVar
 
@@ -7,15 +9,15 @@ from app.core.schema.datetime import (
     ensure_utc_datetime,
     is_datetime_annotation,
     normalize_orm_datetimes,
-    serialize_datetime_value,
 )
+from app.core.schema.wire import serialize_wire_value
 
 SchemaT = TypeVar("SchemaT", bound="ApiSchema")
 Id = Annotated[str, Field(min_length=1, max_length=64)]
 
 
 class ApiSchema(BaseModel):
-    """全局基础 DTO，统一承担时间标准化与 JSON 序列化策略。"""
+    """全局基础 DTO：内部保留真实类型，JSON 标量统一字符串化。"""
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -23,9 +25,9 @@ class ApiSchema(BaseModel):
     )
 
     @field_serializer("*", when_used="json")
-    def serialize_datetime_fields(self, value):
-        """在响应序列化阶段将所有 datetime 字段统一转成 ISO 8601 UTC 字符串。"""
-        return serialize_datetime_value(value)
+    def serialize_wire_fields(self, value):
+        """JSON 出站：datetime / bool / int / float / Decimal / Enum → 字符串。"""
+        return serialize_wire_value(value)
 
     @model_validator(mode="after")
     def normalize_datetimes(self):
@@ -52,11 +54,11 @@ class KeywordQuery(ApiSchema):
 
 
 def to_schema(schema_cls: type[SchemaT], item: object) -> SchemaT:
-    """Convert ORM/entity objects to API schemas through Pydantic attributes mode."""
+    """通过 Pydantic attributes 模式将 ORM/实体对象转换为 API schema。"""
     normalize_orm_datetimes(item)
     return schema_cls.model_validate(item)
 
 
 def to_schema_list(schema_cls: type[SchemaT], items: Iterable[object]) -> list[SchemaT]:
-    """Convert a list of ORM/entity objects to API schemas."""
+    """将 ORM/实体对象列表转换为 API schema 列表。"""
     return [to_schema(schema_cls, item) for item in items]

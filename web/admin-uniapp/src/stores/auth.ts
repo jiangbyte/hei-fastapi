@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as authApi from '@/api/auth'
@@ -59,6 +61,12 @@ export const useAuthStore = defineStore('auth', () => {
       captcha_id: payload.captcha_id,
       captcha_value: payload.captcha_value,
     })
+    if (response?.mfa_required) {
+      throw new Error('该账号已开启 MFA，请使用 Web 管理端登录完成二次验证')
+    }
+    if (!response?.token) {
+      throw new Error('登录失败：未返回会话令牌')
+    }
     token.value = response.token
     setToken(response.token)
     await refreshUserInfo()

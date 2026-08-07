@@ -1,7 +1,8 @@
-"""Daily rotating file handler — writes logs to logs/YYYY/MM/DD-{pid}.log.
+""" Author: Charlie
 
-Supports size-based rotation and multi-process safety through PID-based
-file naming (no file locking needed).
+按日轮转文件处理器——写入 logs/YYYY/MM/DD-{pid}.log。
+
+支持按大小轮转；通过 PID 文件名实现多进程安全（无需文件锁）。
 """
 import logging
 import os
@@ -21,7 +22,7 @@ class DailyFileHandler(logging.Handler):
         self._current_path: str | None = None
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Write a log record to the current day's file."""
+        """将日志记录写入当日文件。"""
         path = self._daily_path()
         if path != self._current_path:
             self._close()
@@ -44,7 +45,7 @@ class DailyFileHandler(logging.Handler):
                 self.handleError(record)
 
     def _daily_path(self) -> str:
-        """Build the daily log file path."""
+        """构建当日日志文件路径。"""
         now = datetime.now()
         return os.path.join(
             self._log_dir,
@@ -62,7 +63,7 @@ class DailyFileHandler(logging.Handler):
                 pass
 
     def _check_rollover(self) -> bool:
-        """Check if current file exceeds max size."""
+        """检查当前文件是否超过最大大小。"""
         if not self._file:
             return False
         try:
@@ -71,7 +72,7 @@ class DailyFileHandler(logging.Handler):
             return False
 
     def _rotate(self, path: str) -> None:
-        """Rename current file to .1, .2, etc."""
+        """将当前文件重命名为 .1、.2 等。"""
         counter = 1
         while os.path.exists(f"{path}.{counter}"):
             counter += 1

@@ -1,23 +1,33 @@
+""" Author: Charlie """
+
+from sqlalchemy import select
+
 from app.core.config.enums import (
     AccountStatusEnum,
     AccountType,
 )
-from sqlalchemy import select
-
-from app.modules.iam.enums import ResourceType, RoleScopeType
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.schema import AccountRoleAssignRequest
 from app.modules.iam.account.service import AccountService
+from app.modules.iam.enums import (
+    IamRelationTargetType,
+    IamRelationType,
+    ResourceType,
+    RoleScopeType,
+)
+from app.modules.iam.group.model import SysGroup
 from app.modules.iam.group.schema import GroupCreateRequest, GroupRoleAssignRequest
 from app.modules.iam.group.service import GroupService
-from app.modules.iam.group.model import SysGroup
-from app.modules.iam.enums import IamRelationTargetType, IamRelationType
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.resource.schema import ResourceCreateRequest, ResourcePermissionBindRequest
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
-from app.modules.iam.role.schema import RoleCreateRequest, RoleGrantResourceRequest, RoleResourceGrantInfo
+from app.modules.iam.role.schema import (
+    RoleCreateRequest,
+    RoleGrantResourceRequest,
+    RoleResourceGrantInfo,
+)
 from app.modules.iam.role.service import RoleService
 
 

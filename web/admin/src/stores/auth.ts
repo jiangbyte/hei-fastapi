@@ -1,3 +1,5 @@
+/** Author: Charlie */
+
 import { defineStore } from 'pinia'
 import { router } from '@/router'
 import { authApi } from '@/api'
@@ -25,13 +27,13 @@ interface AuthUserInfo {
 }
 
 interface AuthState {
-  token: string
   userInfo: AuthUserInfo | null
+  sessionChecked: boolean
 }
 
-const tokenKey = 'token'
 const userInfoKey = 'userInfo'
 const loginPath = '/auth/login'
+const userCenterPasswordPath = '/usercenter?tab=password'
 
 function getStoredUserInfo() {
   const raw = localStorage.getItem(userInfoKey)
@@ -56,13 +58,27 @@ function getSafeRedirect(redirect?: string) {
 
 export const useAuthStore = defineStore('auth-store', {
   state: (): AuthState => ({
-    token: localStorage.getItem(tokenKey) ?? '',
     userInfo: getStoredUserInfo(),
+    sessionChecked: false,
   }),
   getters: {
-    isLogin: (state) => Boolean(state.token),
+    isLogin: (state) => Boolean(state.userInfo?.accountId),
   },
   actions: {
+    async ensureSession() {
+      if (this.sessionChecked) {
+        return this.isLogin
+      }
+      this.sessionChecked = true
+      try {
+        await this.refreshUserInfo()
+        return true
+      } catch {
+        this.clearAuthStorage()
+        return false
+      }
+    },
+
     async login(
       account: string,
       password: string,
@@ -70,7 +86,10 @@ export const useAuthStore = defineStore('auth-store', {
       rememberMe?: boolean,
       identityType = 'ACCOUNT',
       security?: { password_key_id: string; captcha_id: string; captcha_value: string },
-    ) {
+    ): Promise<
+      | { mfaRequired: true; challengeId: string; webauthnOptions?: Record<string, unknown> | null }
+      | { mfaRequired: false }
+    > {
       const response = await authApi.login({
         account,
         password,
@@ -80,41 +99,47 @@ export const useAuthStore = defineStore('auth-store', {
         captcha_id: security?.captcha_id,
         captcha_value: security?.captcha_value,
       })
-      const token = response.data.token
-      localStorage.setItem(tokenKey, token)
-      this.token = token
+      if (response.data?.mfa_required && response.data?.challenge_id) {
+        return {
+          mfaRequired: true,
+          challengeId: String(response.data.challenge_id),
+          webauthnOptions: response.data.webauthn_options ?? null,
+        }
+      }
 
-      // 检查密码是否过期
+      this.sessionChecked = true
+
       const passwordExpired = response.data.password_expired ?? false
       if (passwordExpired) {
-        // 跳转到修改密码页
-        await router.push('/auth/change-password')
+        await this.finishLogin(userCenterPasswordPath)
+        return { mfaRequired: false }
+      }
+
+      await this.finishLogin(redirect)
+      return { mfaRequired: false }
+    },
+
+    async completeMfaLogin(
+      challengeId: string,
+      code: string,
+      redirect?: string,
+      webauthnCredential?: Record<string, unknown>,
+    ) {
+      const response = await authApi.loginMfa({
+        challenge_id: challengeId,
+        code: code || undefined,
+        webauthn_credential: webauthnCredential,
+      })
+      this.sessionChecked = true
+      if (response.data.password_expired) {
+        await this.finishLogin(userCenterPasswordPath)
         return
       }
+      await this.finishLogin(redirect)
+    },
 
-      const meResponse = await authApi.me()
-      const now = Date.now()
-      const userInfo: AuthUserInfo = {
-        accountId: meResponse.data.account_id,
-        account: meResponse.data.account,
-        accountType: meResponse.data.account_type,
-        name: meResponse.data.name,
-        nickname: meResponse.data.nickname,
-        avatar: meResponse.data.avatar,
-        roleIds: meResponse.data.role_ids ?? [],
-        deptIds: meResponse.data.dept_ids ?? [],
-        groupIds: meResponse.data.group_ids ?? [],
-        roleIdNames: meResponse.data.role_id_names ?? [],
-        deptIdNames: meResponse.data.dept_id_names ?? [],
-        groupIdNames: meResponse.data.group_id_names ?? [],
-        permissionKeys: meResponse.data.permission_keys ?? [],
-        buttonCodes: meResponse.data.button_codes ?? [],
-        profile: meResponse.data.profile ?? null,
-        loginAt: now,
-      }
-
-      localStorage.setItem(userInfoKey, JSON.stringify(userInfo))
-      this.userInfo = userInfo
+    async finishLogin(redirect?: string) {
+      await this.refreshUserInfo()
 
       const routeStore = useRouteStore()
       await routeStore.initAuthRoute()
@@ -142,6 +167,7 @@ export const useAuthStore = defineStore('auth-store', {
         permissionKeys: meResponse.data.permission_keys ?? [],
         buttonCodes: meResponse.data.button_codes ?? [],
         profile: meResponse.data.profile ?? null,
+        loginAt: this.userInfo?.loginAt ?? Date.now(),
       }
 
       localStorage.setItem(userInfoKey, JSON.stringify(userInfo))
@@ -160,14 +186,13 @@ export const useAuthStore = defineStore('auth-store', {
     },
 
     clearAuthStorage() {
-      localStorage.removeItem(tokenKey)
       localStorage.removeItem(userInfoKey)
-      this.token = ''
       this.userInfo = null
     },
 
     resetSession() {
       this.clearAuthStorage()
+      this.sessionChecked = true
 
       const routeStore = useRouteStore()
       routeStore.resetRouteStore()

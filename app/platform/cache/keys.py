@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 def login_token_key(token: str) -> str:
     return f"login:token:{token}"
 

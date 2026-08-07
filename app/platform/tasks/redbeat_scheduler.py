@@ -1,3 +1,5 @@
+""" Author: Charlie """
+
 import logging
 
 from redbeat.schedulers import RedBeatSchedulerEntry
