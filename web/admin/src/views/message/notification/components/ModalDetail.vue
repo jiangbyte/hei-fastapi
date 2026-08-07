@@ -80,7 +80,7 @@ defineExpose({
             </NTag>
           </NDescriptionsItem>
           <NDescriptionsItem label="内容格式">
-            <NTag bordered="false">
+            <NTag :bordered="false">
               {{
                 dictTypeData('CONTENT_TYPE', state.detail.content_type) ||
                 displayValue(state.detail.content_type)

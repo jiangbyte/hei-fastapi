@@ -376,7 +376,7 @@ defineExpose({ open })
                           height="160"
                           class="max-w-full"
                           object-fit="cover"
-                          :img-props="{ referrerPolicy: 'no-referrer', loading: 'lazy' }"
+                          :img-props="{ referrerpolicy: 'no-referrer', loading: 'lazy' }"
                         />
                         <a
                           :href="resolveFileUrl(attachment.url)"
@@ -408,7 +408,7 @@ defineExpose({ open })
                         <div class="min-w-0 flex-1">
                           <div class="message-ellipsis text-xs font-600">{{ attachment.name }}</div>
                           <div class="mt-0.5 text-[10px] opacity-80">
-                            {{ formatFileSize(attachment.size) }}
+                            {{ formatFileSize(attachment.size ?? 0) }}
                           </div>
                         </div>
                       </a>

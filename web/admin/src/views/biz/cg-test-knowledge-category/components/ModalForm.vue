@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
 import { cgTestKnowledgeCategoryApi } from '@/api'
-import { wireBool, wireFloat, wireInt } from '@/utils/wire'
+import { wireBool, wireInt } from '@/utils/wire'
 import { createRequiredRule } from '@/utils'
 import { computed, reactive, ref } from 'vue'
 
@@ -104,7 +104,7 @@ async function fetchDetail(id: string) {
   }
 }
 
-function normalizeFormData(data: Record<string, any> = {}) {
+function normalizeFormData(data: Record<string, any> = {}): Record<string, any> {
   return {
     ...defaultFormData,
     ...data,
@@ -114,7 +114,7 @@ function normalizeFormData(data: Record<string, any> = {}) {
   }
 }
 
-function normalizeSubmitData(data: Record<string, any>) {
+function normalizeSubmitData(data: Record<string, any>): Record<string, any> {
   return {
     ...data,
     parent_id: data.parent_id === '' ? null : (data.parent_id ?? null),

@@ -83,7 +83,7 @@ async function fetchDetail(id: string) {
   }
 }
 
-function normalizeFormData(data: Record<string, any> = {}) {
+function normalizeFormData(data: Record<string, any> = {}): Record<string, any> {
   return {
     ...defaultFormData,
     ...data,
@@ -93,7 +93,7 @@ function normalizeFormData(data: Record<string, any> = {}) {
   }
 }
 
-function normalizeSubmitData(data: Record<string, any>) {
+function normalizeSubmitData(data: Record<string, any>): Record<string, any> {
   const r = { ...data }
   const n = (v: unknown) => {
     const t = formatDateTime(v, '')

@@ -7,7 +7,7 @@ import MessageDetailModal from '@/components/message/MessageDetailModal.vue'
 import { formatDateTime, resolveFileUrl } from '@/utils'
 import { NAvatar } from 'naive-ui'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
-import NoticeList, { type NoticeItem } from '../common/NoticeList.vue'
+import NoticeList, { type BannerItem } from '../common/NoticeList.vue'
 import { useImClient } from '../../../views/message/useImClient'
 import { useAuthStore, useImCenterStore } from '@/stores'
 import { readPageMeta, wireInt } from '@/utils/wire'
@@ -27,7 +27,7 @@ interface NoticeSource {
   avatar?: string
   unreadCount?: number
   tagTitle?: string
-  tagType?: NoticeItem['tagType']
+  tagType?: BannerItem['tagType']
   description?: string
   date: string
   sourceType: string
@@ -277,6 +277,7 @@ function mapHistoryItem(type: NoticeTab, item: any): NoticeSource {
     id: `message:${item.id}`,
     type,
     title: item.title || '会话',
+    icon: 'icon-park-outline:message',
     avatar: item.avatar,
     conversationType: item.conversation_type,
     description: item.last_message || '',
@@ -288,7 +289,7 @@ function mapHistoryItem(type: NoticeTab, item: any): NoticeSource {
   }
 }
 
-function toNoticeItem(item: NoticeSource): NoticeItem {
+function toNoticeItem(item: NoticeSource): BannerItem {
   return { ...item, isRead: item.isRead }
 }
 </script>

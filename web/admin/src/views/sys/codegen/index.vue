@@ -2,6 +2,7 @@
 
 <script setup lang="tsx">
 import type { FormRules, PaginationProps } from 'naive-ui'
+import type { SelectMixedOption } from 'naive-ui/es/select/src/interface'
 import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { codegenApi, resourceModuleApi } from '@/api'
@@ -68,7 +69,7 @@ const operatorOptions = [
   { label: '不查询', value: null },
   { label: '等于', value: 'EQ' },
   { label: '模糊', value: 'LIKE' },
-]
+] as SelectMixedOption[]
 
 interface ColumnOption {
   label: string

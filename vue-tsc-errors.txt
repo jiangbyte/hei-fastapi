@@ -1,0 +1,127 @@
+﻿src/components/common/IconSelect.vue(127,3): error TS2322: Type 'number' is not assignable to type 'Timeout'.
+src/components/editor/RichTextEditor.vue(6,33): error TS7016: Could not find a declaration file for module '@wangeditor/editor-for-vue'. 'E:/projects/mine/hei/hei-fastapi/web/admin/node_modules/.pnpm/@wangeditor+editor-for-vue@_c4c44ed1731c9e45194452433b2164ae/node_modules/@wangeditor/editor-for-vue/dist/index.esm.js' implicitly has an 'any' type.
+  There are types at 'E:/projects/mine/hei/hei-fastapi/web/admin/node_modules/@wangeditor/editor-for-vue/dist/src/index.d.ts', but this result could not be resolved when respecting package.json "exports". The '@wangeditor/editor-for-vue' library may need to update its package.json or typings.
+src/components/message/ChatModalPane.vue(379,41): error TS2561: Object literal may only specify known properties, but 'referrerPolicy' does not exist in type 'ImgHTMLAttributes'. Did you mean to write 'referrerpolicy'?
+src/components/message/ChatModalPane.vue(411,47): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+src/layouts/components/header/Notices.vue(10,27): error TS2614: Module '"../common/NoticeList.vue"' has no exported member 'NoticeItem'. Did you mean to use 'import NoticeItem from "../common/NoticeList.vue"' instead?
+src/layouts/components/header/Notices.vue(276,3): error TS2741: Property 'icon' is missing in type '{ id: string; type: 1; title: any; avatar: any; conversationType: any; description: any; date: string; sourceType: string; sourceId: any; unreadCount: any; isRead: boolean; }' but required in type 'NoticeSource'.
+src/router/routes.static.ts(1272,5): error TS2322: Type 'string' is not assignable to type 'number'.
+src/router/routes.static.ts(1740,5): error TS2322: Type 'string' is not assignable to type 'number'.
+src/router/routes.static.ts(1766,5): error TS2322: Type 'string' is not assignable to type 'number'.
+src/router/routes.static.ts(2442,5): error TS2322: Type 'string' is not assignable to type 'number'.
+src/stores/route/helper.ts(63,3): error TS2322: Type '{ path: string; name: string; component: RawRouteComponent | null | undefined; meta: RouteMeta; }[]' is not assignable to type 'RouteRecordRaw[]'.
+  Type '{ path: string; name: string; component: RawRouteComponent | null | undefined; meta: RouteMeta; }' is not assignable to type 'RouteRecordRaw'.
+    Property 'redirect' is missing in type '{ path: string; name: string; component: RawRouteComponent | null | undefined; meta: RouteMeta; }' but required in type 'RouteRecordRedirect'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(228,52): error TS2339: Property 'code' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(231,52): error TS2339: Property 'name' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(234,52): error TS2339: Property 'category' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(237,52): error TS2339: Property 'type' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(240,52): error TS2339: Property 'status' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(243,52): error TS2339: Property 'cover_url' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/components/ModalForm.vue(246,52): error TS2339: Property 'description' does not exist on type '{ is_public: any; need_approval: any; max_participants: any; price: any; start_at: string | null; end_at: string | null; rule_config: string; extra: string; }'.
+src/views/biz/cg-test-activity/index.vue(14,33): error TS6133: 'NTag' is declared but its value is never read.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(10,20): error TS6133: 'wireFloat' is declared but its value is never read.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(219,46): error TS2339: Property 'parent_id' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(231,52): error TS2339: Property 'code' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(234,52): error TS2339: Property 'name' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(237,52): error TS2339: Property 'category' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(240,52): error TS2339: Property 'status' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(249,52): error TS2339: Property 'icon' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/components/ModalForm.vue(252,52): error TS2339: Property 'description' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-catalog/index.vue(11,1): error TS6133: 'readPageMeta' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(10,20): error TS6133: 'wireFloat' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(217,52): error TS2339: Property 'category_id' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(220,52): error TS2339: Property 'code' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(223,52): error TS2339: Property 'title' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(226,52): error TS2339: Property 'type' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(229,52): error TS2339: Property 'status' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(232,52): error TS2339: Property 'summary' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(235,52): error TS2339: Property 'content' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/children/ChildModalForm.vue(238,52): error TS2339: Property 'author' does not exist on type '{ is_top: any; view_count: any; sort: any; published_at: string | null; settings: string; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/ModalForm.vue(10,20): error TS6133: 'wireFloat' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/components/ModalForm.vue(217,46): error TS2339: Property 'parent_id' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/ModalForm.vue(229,52): error TS2339: Property 'code' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/ModalForm.vue(232,52): error TS2339: Property 'name' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/ModalForm.vue(235,52): error TS2339: Property 'status' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/components/ModalForm.vue(244,52): error TS2339: Property 'description' does not exist on type '{ is_visible: any; sort: any; extra: string; }'.
+src/views/biz/cg-test-knowledge-category/index.vue(19,1): error TS6133: 'ModalDetail' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(20,1): error TS6133: 'ModalForm' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(48,7): error TS6133: 'hasCheckedRows' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(53,7): error TS6133: 'searchForm' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(67,7): error TS6133: 'searchColumns' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(73,7): error TS6133: 'pagination' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(131,7): error TS6133: 'tableColumns' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(309,10): error TS6133: 'openCreateModal' is declared but its value is never read.
+src/views/biz/cg-test-knowledge-category/index.vue(329,10): error TS6133: 'handleCheckedRowKeys' is declared but its value is never read.
+src/views/biz/cg-test-order/components/children/ChildModalForm.vue(212,52): error TS2339: Property 'order_id' does not exist on type '{ is_gift: any; quantity: any; unit_price: any; shipped_at: string | null; item_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/children/ChildModalForm.vue(215,52): error TS2339: Property 'sku_code' does not exist on type '{ is_gift: any; quantity: any; unit_price: any; shipped_at: string | null; item_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/children/ChildModalForm.vue(218,52): error TS2339: Property 'name' does not exist on type '{ is_gift: any; quantity: any; unit_price: any; shipped_at: string | null; item_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/children/ChildModalForm.vue(221,52): error TS2339: Property 'category' does not exist on type '{ is_gift: any; quantity: any; unit_price: any; shipped_at: string | null; item_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/children/ChildModalForm.vue(224,52): error TS2339: Property 'status' does not exist on type '{ is_gift: any; quantity: any; unit_price: any; shipped_at: string | null; item_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/children/ChildModalForm.vue(242,52): error TS2339: Property 'remark' does not exist on type '{ is_gift: any; quantity: any; unit_price: any; shipped_at: string | null; item_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(222,52): error TS2339: Property 'order_no' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(225,52): error TS2339: Property 'name' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(228,52): error TS2339: Property 'customer_name' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(231,52): error TS2339: Property 'customer_phone' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(234,52): error TS2339: Property 'status' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(237,52): error TS2339: Property 'type' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/components/ModalForm.vue(258,52): error TS2339: Property 'remark' does not exist on type '{ need_invoice: any; item_count: any; total_amount: any; ordered_at: string | null; paid_at: string | null; invoice_config: string; extra: string; }'.
+src/views/biz/cg-test-order/index.vue(14,33): error TS6133: 'NTag' is declared but its value is never read.
+src/views/iam/dept/components/ModalForm.vue(68,21): error TS2339: Property 'master_name' does not exist on type '{ name: string; category: string | null; parent_id: string | null; master_id: string | null; deputy_master_id: string | null; sort: number; is_virtual: boolean; status: string; extra: {}; }'.
+src/views/iam/dept/components/ModalForm.vue(71,21): error TS2551: Property 'deputy_master_name' does not exist on type '{ name: string; category: string | null; parent_id: string | null; master_id: string | null; deputy_master_id: string | null; sort: number; is_virtual: boolean; status: string; extra: {}; }'. Did you mean 'deputy_master_id'?
+src/views/iam/dept/components/ModalForm.vue(229,41): error TS2339: Property 'master_name' does not exist on type '{ name: string; category: string | null; parent_id: string | null; master_id: string | null; deputy_master_id: string | null; sort: number; is_virtual: boolean; status: string; extra: {}; }'.
+src/views/iam/dept/components/ModalForm.vue(243,37): error TS2339: Property 'master_name' does not exist on type '{ name: string; category: string | null; parent_id: string | null; master_id: string | null; deputy_master_id: string | null; sort: number; is_virtual: boolean; status: string; extra: {}; }'.
+src/views/iam/dept/components/ModalForm.vue(256,41): error TS2551: Property 'deputy_master_name' does not exist on type '{ name: string; category: string | null; parent_id: string | null; master_id: string | null; deputy_master_id: string | null; sort: number; is_virtual: boolean; status: string; extra: {}; }'. Did you mean 'deputy_master_id'?
+src/views/iam/dept/components/ModalForm.vue(270,37): error TS2551: Property 'deputy_master_name' does not exist on type '{ name: string; category: string | null; parent_id: string | null; master_id: string | null; deputy_master_id: string | null; sort: number; is_virtual: boolean; status: string; extra: {}; }'. Did you mean 'deputy_master_id'?
+src/views/message/announcement/components/ModalForm.vue(158,19): error TS2339: Property 'target_account_ids' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(164,19): error TS2339: Property 'publish_locations' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(164,60): error TS2339: Property 'publish_locations' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(193,56): error TS2339: Property 'title' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(198,54): error TS2339: Property 'content_type' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(203,54): error TS2339: Property 'severity' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(209,44): error TS2339: Property 'status' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(218,44): error TS2339: Property 'target_scope' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(224,40): error TS2339: Property 'target_scope' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(227,44): error TS2339: Property 'target_account_types' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(234,40): error TS2339: Property 'target_scope' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(254,40): error TS2339: Property 'target_scope' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(274,40): error TS2339: Property 'target_scope' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(319,57): error TS2339: Property 'is_pinned' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(322,40): error TS2339: Property 'is_pinned' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(337,40): error TS2339: Property 'content_type' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(339,48): error TS2339: Property 'content' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(345,42): error TS2339: Property 'content_type' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(346,46): error TS2339: Property 'content' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(349,67): error TS2339: Property 'content' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(358,45): error TS2339: Property 'publish_locations' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(382,25): error TS2339: Property 'target_dept_ids' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/announcement/components/ModalForm.vue(393,25): error TS2339: Property 'target_role_ids' does not exist on type '{ pinned_until: string | null; publish_at: string | null; expire_at: string | null; }'.
+src/views/message/components/ChatPane.vue(337,12): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/views/message/components/ChatPane.vue(419,39): error TS2561: Object literal may only specify known properties, but 'referrerPolicy' does not exist in type 'ImgHTMLAttributes'. Did you mean to write 'referrerpolicy'?
+src/views/message/components/ChatPane.vue(451,45): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'number'.
+  Type 'null' is not assignable to type 'number'.
+src/views/message/notification/components/ModalDetail.vue(83,19): error TS2322: Type 'string' is not assignable to type 'boolean | undefined'.
+src/views/message/notification/components/ModalForm.vue(135,19): error TS2339: Property 'target_account_ids' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(166,56): error TS2339: Property 'title' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(171,54): error TS2339: Property 'content_type' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(176,54): error TS2339: Property 'category' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(181,54): error TS2339: Property 'severity' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(187,44): error TS2339: Property 'target_scope' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(196,44): error TS2339: Property 'target_account_types' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(205,44): error TS2339: Property 'status' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(224,40): error TS2339: Property 'target_scope' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(244,40): error TS2339: Property 'target_scope' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(264,40): error TS2339: Property 'target_scope' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(287,40): error TS2339: Property 'content_type' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(289,48): error TS2339: Property 'content' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(295,42): error TS2339: Property 'content_type' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(296,46): error TS2339: Property 'content' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(299,67): error TS2339: Property 'content' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(318,25): error TS2339: Property 'target_dept_ids' does not exist on type '{ publish_at: string | null; }'.
+src/views/message/notification/components/ModalForm.vue(329,25): error TS2339: Property 'target_role_ids' does not exist on type '{ publish_at: string | null; }'.
+src/views/sys/codegen/index.vue(291,9): error TS2322: Type '({ label: string; value: null; } | { label: string; value: string; })[]' is not assignable to type 'SelectMixedOption[]'.
+  Type '{ label: string; value: null; } | { label: string; value: string; }' is not assignable to type 'SelectMixedOption'.
+    Type '{ label: string; value: null; }' is not assignable to type 'SelectMixedOption'.
+      Property 'type' is missing in type '{ label: string; value: null; }' but required in type 'SelectIgnoredOption'.

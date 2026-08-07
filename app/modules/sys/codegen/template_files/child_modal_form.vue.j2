@@ -8,7 +8,13 @@
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
 import { {{ plan.main_entity_name | ts_api_name }} } from '@/api'
-import { wireBool, wireFloat, wireInt } from '@/utils/wire'
+{% if target.has_form_bool or target.has_form_int or target.has_form_float %}
+import { {{ [
+  'wireBool' if target.has_form_bool else none,
+  'wireInt' if target.has_form_int else none,
+  'wireFloat' if target.has_form_float else none,
+] | reject('none') | join(', ') }} } from '@/utils/wire'
+{% endif %}
 import { createRequiredRule{{ ", toApiDateTime, toFormDateTime" if target.has_form_datetime else "" }} } from '@/utils'
 import { computed, reactive, ref } from 'vue'
 
@@ -81,7 +87,7 @@ async function fetchDetail(id: string) {
   }
 }
 
-function normalizeFormData(data: Record<string, any> = {}) {
+function normalizeFormData(data: Record<string, any> = {}): Record<string, any> {
   return {
     ...defaultFormData,
     ...data,
@@ -104,7 +110,7 @@ function normalizeFormData(data: Record<string, any> = {}) {
 }
 {% if target.needs_submit_normalize %}
 
-function normalizeSubmitData(data: Record<string, any>) {
+function normalizeSubmitData(data: Record<string, any>): Record<string, any> {
   return {
     ...data,
 {% for field in target.form_fields if field.is_datetime %}

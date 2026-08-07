@@ -67,7 +67,7 @@ export function createFullscreenRoutes(resources: AppRoute.RowRoute[]): RouteRec
       component: item.component,
       meta: item.meta,
     }),
-  )
+  ) as RouteRecordRaw[]
 }
 
 /**

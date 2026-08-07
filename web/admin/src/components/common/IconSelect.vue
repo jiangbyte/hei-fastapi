@@ -39,7 +39,7 @@ const showPanel = ref(false)
 const searchKey = ref('')
 const deferredSearchKey = ref('')
 const page = ref(1)
-let searchTimer: ReturnType<typeof window.setTimeout> | null = null
+let searchTimer: number | null = null
 const currentIcon = computed(() => normalizeIconValue(props.value))
 const columnCount = computed(() => Math.max(1, Math.floor(Number(props.columns) || 1)))
 const normalizedPageSize = computed(() => Math.max(1, Math.floor(Number(props.pageSize) || 1)))

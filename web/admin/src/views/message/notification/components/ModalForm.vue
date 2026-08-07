@@ -80,11 +80,11 @@ async function fetchDetail(id: string) {
   }
 }
 
-function normalizeFormData(data: Record<string, any> = {}) {
+function normalizeFormData(data: Record<string, any> = {}): Record<string, any> {
   return { ...defaultFormData, ...data, publish_at: formatDateTime(data.publish_at, '') || null }
 }
 
-function normalizeSubmitData(data: Record<string, any>) {
+function normalizeSubmitData(data: Record<string, any>): Record<string, any> {
   const r = { ...data }
   r.publish_at = ((v) => {
     const t = formatDateTime(v, '')
