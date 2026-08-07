@@ -7,7 +7,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import time
-from urllib.parse import quote, urlencode, urljoin
+from urllib.parse import quote, urlencode
 
 from app.core.config.settings import settings
 
@@ -23,7 +23,7 @@ def _signing_secret() -> bytes:
 def sign_object_access(object_name: str, *, expires_at: int | None = None, ttl_seconds: int = 3600) -> tuple[int, str]:
     """返回 (expires_unix, hex_signature)。"""
     expires = expires_at if expires_at is not None else int(time.time()) + max(60, ttl_seconds)
-    message = f"{object_name.strip('/')}:{expires}".encode("utf-8")
+    message = f"{object_name.strip('/')}:{expires}".encode()
     sig = hmac.new(_signing_secret(), message, hashlib.sha256).hexdigest()
     return expires, sig
 
