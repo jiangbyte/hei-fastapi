@@ -1,6 +1,6 @@
 /** Author: Charlie */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Empty, Skeleton, Tag } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { Link, useParams } from 'react-router-dom'
