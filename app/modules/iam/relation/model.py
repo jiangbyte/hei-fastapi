@@ -29,10 +29,12 @@ class SysIamRelation(Base, TimestampMixin):
             "target_type",
             "target_id",
             "target_key",
+            "account_type",
             name="uq_sys_iam_relation_subject_relation_target",
         ),
         Index("ix_sys_iam_relation_subject", "subject_type", "subject_id", "relation_type"),
         Index("ix_sys_iam_relation_target", "target_type", "target_id", "target_key"),
+        Index("ix_sys_iam_relation_account_type_relation", "account_type", "relation_type"),
     )
 
     id: Mapped[str] = mapped_column(
@@ -43,6 +45,7 @@ class SysIamRelation(Base, TimestampMixin):
     )
     subject_type: Mapped[str] = mapped_column(String(32), nullable=False, comment="主体类型")
     subject_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="主体ID")
+    account_type: Mapped[str] = mapped_column(String(32), nullable=False, comment="账户类型")
     relation_type: Mapped[str] = mapped_column(String(64), nullable=False, comment="关系类型")
     target_type: Mapped[str] = mapped_column(String(32), nullable=False, comment="目标类型")
     target_id: Mapped[str] = mapped_column(String(64), nullable=False, default="", comment="目标ID")
