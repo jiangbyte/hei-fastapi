@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import CaptchaInput from '@/components/common/CaptchaInput.vue'
 import { authApi } from '@/api'
 import { useAuthStore } from '@/stores'

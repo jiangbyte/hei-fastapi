@@ -7,6 +7,7 @@ import CaptchaInput from '@/components/common/CaptchaInput.vue'
 import { isValidEmail } from '@/utils'
 import { encryptPasswords } from '@/utils/security'
 import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AuthLayout from './AuthLayout.vue'
 
 const route = useRoute()

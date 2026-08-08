@@ -155,7 +155,7 @@ function toNoticeItem(item: NoticeSource): BannerItem {
     trigger="click"
     arrow-point-to-center
     class="!p-0"
-    @update:show="(show) => show && refresh()"
+    @update:show="(show: boolean) => show && refresh()"
   >
     <template #trigger>
       <n-tooltip

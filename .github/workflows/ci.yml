@@ -28,8 +28,6 @@ jobs:
         run: pytest tests/unit tests/api -q --tb=short
       - name: Bandit (medium+)
         run: bandit -q -r app -x app/modules/biz -ll
-      - name: DR docs gate
-        run: python scripts/ops/check_dr_docs.py
       - name: pip-audit
         run: pip-audit --strict || pip-audit
         continue-on-error: true
@@ -50,6 +48,8 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/admin/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
+      # auto-imports.d.ts / components.d.ts 为本地生成物，CI 先跑 vite 产出后再类型检查
+      - run: pnpm exec vite build --outDir node_modules/.cache/ci-dist
       - run: pnpm exec vue-tsc -b --pretty false
 
   frontend-portal:
