@@ -57,7 +57,7 @@ export function createRoutes(resources: AppRoute.RowRoute[]): RouteRecordRaw {
 /**
  * 提取独立全屏路由。
  *
- * 这些路由不挂载到后台 Layout 下，适合 IM、登录页之外的独立工作区页面。
+ * 这些路由不挂载到后台 Layout 下，适合登录页之外的独立工作区页面。
  */
 export function createFullscreenRoutes(resources: AppRoute.RowRoute[]): RouteRecordRaw[] {
   return buildRoutes(resources.filter((resource) => isFullscreenResource(resource))).map(

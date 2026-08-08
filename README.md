@@ -21,10 +21,10 @@ HEI FastAPI 是一个面向中后台和通用业务系统的全栈脚手架，�
 
 - 异步后端：FastAPI / SQLAlchemy 2.0 Async / Pydantic v2；自定义中间件纯 ASGI
 - 权限体系：账号、角色、部门、用户组、资源菜单、数据范围（`owner_dept_id`）
-- 会话安全：Cookie 优先（Web）；原生裸 Authorization token；Admin TOTP / WebAuthn MFA；IM 短时 ticket
+- 会话安全：Cookie 优先（Web）；原生裸 Authorization token；Admin TOTP / WebAuthn MFA
 - 密钥托管：Fernet / Vault KV；生产可强制 Vault
 - 系统能力：字典、配置、文件、Banner、审计 outbox、代码生成
-- 消息能力：站内消息、通知、公告、反馈、IM 双通道（WS Binary + TCP）
+- 消息能力：通知、公告、反馈
 - 文件存储：Local / MinIO / S3 / OSS
 - 前端应用：Vue 3 管理端、React 门户端、uni-app 管理端（原生本地存储会话 token）
 - 工程能力：Alembic、Celery（Redis broker）、RedBeat、Docker、Prometheus、OpenTelemetry、DR 演练门禁

@@ -9,7 +9,6 @@ import { ForgotPasswordPage } from '@/pages/auth/forgot-password'
 import { NotFoundPage } from '@/pages/error/not-found'
 import { UserCenterPage } from '@/pages/usercenter'
 import { ProfilePage } from '@/pages/profile'
-import { MessagesPage } from '@/pages/messages'
 import { AnnouncementListPage } from '@/pages/announcements'
 import { AnnouncementDetailPage } from '@/pages/announcements/detail'
 import { guestOnly, requireAuth } from './guard'
@@ -20,11 +19,6 @@ export const routes: RouteObject[] = [
     element: <MainLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      {
-        path: 'messages',
-        loader: requireAuth,
-        element: <MessagesPage />,
-      },
       {
         path: 'profile',
         element: <ProfilePage />,

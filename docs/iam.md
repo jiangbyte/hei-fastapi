@@ -92,7 +92,7 @@ HEI FastAPI 的 IAM（Identity and Access Management）基于 RBAC 模型扩展�
 | 特性 | 说明 |
 |---|---|
 | Token 存储 | Redis，支持集群共享 |
-| 传输形态 | HttpOnly Cookie 优先（Web）；原生可传裸 token 于 `Authorization`（无 Bearer）；IM 用短时 `imt_` ticket |
+| 传输形态 | HttpOnly Cookie 优先（Web）；原生可传裸 token 于 `Authorization`（无 Bearer） |
 | Token 绑定 | 可选 IP 绑定、User-Agent 绑定 |
 | 并发限制 | 可配置最大并发会话数 |
 | 空闲超时 | 可配置空闲超时时间 |

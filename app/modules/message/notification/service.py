@@ -60,7 +60,6 @@ class MsgNotificationService:
 
     async def publish(self, payload: IdsRequest) -> None:
         """设置 status=PUBLISHED 且 publish_at=now（仅从 DRAFT）。"""
-        published = []
         async with transactional(self.db):
             for nid in payload.ids:
                 notification = await self.repo.get_required(nid)
@@ -69,31 +68,7 @@ class MsgNotificationService:
                 notification.status = NotificationStatus.PUBLISHED
                 notification.publish_at = datetime.utcnow()
                 self.db.add(notification)
-                published.append(notification)
             await self.db.flush()
-
-        # 提交后通过 IM 推送给目标用户
-        try:
-            from app.modules.message.im import PushEvent, im_router
-
-            for notification in published:
-                if notification.target_scope == "SPECIFIC" and notification.target_account_ids:
-                    schema = to_schema(MsgNotificationSchema, notification)
-                    payload = schema.model_dump(mode="json")
-                    acct_types = notification.target_account_types or []
-                    targets: list[tuple[str, str]] = []
-                    for i, acct_id in enumerate(notification.target_account_ids):
-                        acct_type = acct_types[i] if i < len(acct_types) else None
-                        if acct_type:
-                            targets.append((acct_type, acct_id))
-                    await im_router.push_many(
-                        targets,
-                        PushEvent.NOTIFICATION,
-                        payload,
-                        enqueue_offline_if_absent=False,
-                    )
-        except Exception:
-            pass
 
     async def revoke(self, payload: IdsRequest) -> None:
         """设置 status=REVOKED 且 revoked_at=now（仅从 PUBLISHED）。"""

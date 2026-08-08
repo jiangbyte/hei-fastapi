@@ -10,7 +10,7 @@
 - 动态路由和菜单：根据后端资源树生成菜单、页面和按钮权限。
 - IAM/RBAC：账号、角色、部门、用户组、岗位、资源、权限注册与角色授权。
 - 系统模块：字典、Banner、文件管理、操作审计。
-- 消息模块：站内消息、通知、待办、实时事件。
+- 消息模块：通知、公告、反馈。
 - 会话管理：在线账号、在线 token、强制下线。
 - Dashboard 和常规错误页。
 
@@ -69,7 +69,7 @@ VITE_API_URL=""
 ```
 
 这表示前端产物使用同源 `/api/` 请求，由 nginx 在容器内反向代理到后端。不要在浏览器端写死后端
-内网地址；容器启动时用 `BACKEND_URL` 指定后端。IM 长连接走同源 `/ws`，容器启动时用 `IM_WS_URL`（默认 `http://…:18080`）指向 IM 网关。
+内网地址；容器启动时用 `BACKEND_URL` 指定后端。
 
 ## Docker
 
@@ -80,7 +80,6 @@ docker build -t hei-fastapi-admin .
 docker run -d \
   --name hei-fastapi-admin \
   -e BACKEND_URL="http://host.docker.internal:8000" \
-  -e IM_WS_URL="http://host.docker.internal:18080" \
   -p 8081:81 \
   hei-fastapi-admin
 ```

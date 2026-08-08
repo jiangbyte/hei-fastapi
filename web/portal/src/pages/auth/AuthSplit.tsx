@@ -14,8 +14,8 @@ const brandName = import.meta.env.VITE_APP_TITLE || 'HEI'
 
 const features = [
   '统一认证与账号中心',
-  '站内消息与即时通讯',
   '平台公告与通知',
+  '个人中心与账号设置',
 ]
 
 /** 登录 / 注册：左右分栏卡片 */
@@ -32,7 +32,7 @@ export function AuthSplit({ title, headerExtra, children }: SplitProps) {
             </Link>
             <h2 className="auth-card__headline">HEI 门户脚手架</h2>
             <p className="auth-card__lead">
-              基于 FastAPI + React 的门户起点：登录注册、个人中心、消息与公告开箱即用。
+              基于 FastAPI + React 的门户起点：登录注册、个人中心与公告开箱即用。
             </p>
             <ul className="auth-card__features">
               {features.map((item) => (

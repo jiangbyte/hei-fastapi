@@ -46,8 +46,6 @@ services:
     command: ["api"]
     expose:
       - "8000"
-      - "18080"
-      - "18081"
     volumes:
       - backend_storage:/app/storage
     depends_on:
@@ -85,7 +83,6 @@ services:
       context: ./web/admin
     environment:
       BACKEND_URL: http://gateway:8000
-      IM_WS_URL: http://gateway:8000
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
       HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:
@@ -100,7 +97,6 @@ services:
       context: ./web/portal
     environment:
       BACKEND_URL: http://gateway:8000
-      IM_WS_URL: http://gateway:8000
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
       HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:

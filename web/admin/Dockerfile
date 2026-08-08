@@ -28,9 +28,8 @@ COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 
 # 后端地址默认值，可在启动时用 -e BACKEND_URL=... 覆盖。
 ENV BACKEND_URL="http://127.0.0.1:8000" \
-    IM_WS_URL="http://127.0.0.1:18080" \
     CLIENT_MAX_BODY_SIZE="10m" \
-    CONTENT_SECURITY_POLICY="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" \
+    CONTENT_SECURITY_POLICY="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" \
     HSTS_HEADER=""
 
 EXPOSE 81

@@ -47,7 +47,7 @@ export CELERY__BROKER_URL="redis://redis.example:6379/1"
 
 API 和 worker 可以横向扩容；beat 只运行一个实例。Celery 定时任务使用 RedBeat，仍建议在编排层保证 beat 单副本，避免 Redis 锁异常时重复调度。
 
-单机多 Docker 模板通过 `api` 和 `worker` 服务的 `--scale` 参数复制实例，并通过 `gateway` 暴露 `8000` 端口，适合在单机 Docker 环境模拟 API 横向扩展、配置同步和 IM 跨实例投递。IM 网关端口由 Redis 分布式锁保证同一主机上仅一个 worker 绑定 `18080/18081`；生产建议 `APP__WORKERS=1` 并水平扩展 api 副本。
+单机多 Docker 模板通过 `api` 和 `worker` 服务的 `--scale` 参数复制实例，并通过 `gateway` 暴露 `8000` 端口，适合在单机 Docker 环境模拟 API 横向扩展与配置同步。生产建议 `APP__WORKERS=1` 并水平扩展 api 副本。
 
 ## 配置一致性
 
@@ -67,7 +67,7 @@ api_replicas * api_workers * (DB__POOL_SIZE + DB__MAX_OVERFLOW)
 + worker_replicas * worker_concurrency * task_db_connection_budget
 ```
 
-生产配置必须小于数据库 `max_connections`，并预留迁移、运维、监控连接。Redis 连接数同样要按 API worker、Celery worker、WebSocket 连接和 Pub/Sub 订阅估算。
+生产配置必须小于数据库 `max_connections`，并预留迁移、运维、监控连接。Redis 连接数同样要按 API worker、Celery worker 和 Pub/Sub 订阅估算。
 
 ## 真实客户端 IP
 
@@ -82,7 +82,7 @@ APP__TRUSTED_PROXY_IPS='["10.0.0.0/24","127.0.0.1"]'
 ## 会话与 Cookie
 
 - 登录同时返回 JSON `token`（兼容原生/旧客户端）并设置 HttpOnly Cookie `hei_session`。
-- Web Admin/Portal：**不再把 token 写入 localStorage**；API 依赖 Cookie（`withCredentials`）；IM 仅用一次性 `imt_` ticket。
+- Web Admin/Portal：**不再把 token 写入 localStorage**；API 依赖 Cookie（`withCredentials`）。
 - API 鉴权：Cookie 优先；原生客户端可传**裸**会话 token 于 `Authorization`（或 `AUTH__TOKEN_NAME`）。不支持 `Bearer` 方案。
 - 生产建议：`AUTH__SESSION_COOKIE_SECURE=true`、`AUTH__SESSION_IDLE_TIMEOUT_SECONDS=1800`。
 - 跨站（不同域）部署需 `SameSite=None` + Secure，并保证 CORS `allow_credentials` 与显式 Origin。
@@ -109,7 +109,7 @@ APP__TRUSTED_PROXY_IPS='["10.0.0.0/24","127.0.0.1"]'
 最低要求（生产上线前勾选）：
 
 1. **PostgreSQL**：开启持续归档 / PITR（或云厂商自动备份）；每日全量 + WAL；保留 ≥ 7 天。
-2. **Redis**：RDB/AOF 至少一种；会话与 IM 绑锁可接受短暂丢失，但需监控重启后会话重建。
+2. **Redis**：RDB/AOF 至少一种；会话可接受短暂丢失，但需监控重启后会话重建。
 3. **对象存储**：Local 根目录纳入卷备份；S3/OSS 开启版本控制与跨区域复制（按合规要求）。
 4. **RTO / RPO 目标（建议内网中台）**：RPO ≤ 15min，RTO ≤ 2h；每季度做一次恢复演练并记录。
 5. **演练步骤**：停写 → 从备份恢复到隔离实例 → 跑 `alembic upgrade head` 校验 → `ready` 探针与登录冒烟 → 切流。
@@ -136,4 +136,4 @@ python scripts/ops/loadtest_http.py \
 - Redis QPS、连接数、慢命令
 - Celery 队列积压和任务耗时
 
-业务压测需要补充登录、分页列表、配置保存、文件上传、WebSocket 消息和审计写入场景。发现列表接口慢或 SQL 数量随行数线性增长时，优先排查 N+1、缺索引和分页查询计划。
+业务压测需要补充登录、分页列表、配置保存、文件上传和审计写入场景。发现列表接口慢或 SQL 数量随行数线性增长时，优先排查 N+1、缺索引和分页查询计划。

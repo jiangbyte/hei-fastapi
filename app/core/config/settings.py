@@ -66,14 +66,12 @@ class AuthSettings(BaseSettings):
     session_bind_user_agent: bool = False
     max_concurrent_sessions: int = 5
     # Cookie 优先的 Web 会话；原生客户端可在 token_name 头发送不透明 token
-    # （非 HTTP Bearer）。IM 使用短效 imt_ 票据。
+    # （非 HTTP Bearer）。
     session_cookie_enabled: bool = True
     session_cookie_name: str = "hei_session"
     session_cookie_secure: bool = False
     session_cookie_samesite: str = "lax"
     session_cookie_path: str = "/"
-    # IM AUTH 短效票据 TTL（秒）；避免在 WS 上携带长会话 token。
-    im_ticket_ttl_seconds: int = 120
     # 额外鉴权豁免路径（精确或 fnmatch），与内置白名单合并。
     auth_whitelist: list[str] = []
     # 管理端 TOTP MFA（portal 登录不走 MFA）。

@@ -24,21 +24,6 @@ server {
         add_header Expires "0" always;
     }
 
-    # IM WebSocket Binary（同进程网关 IM__WS_PORT，默认 18080）
-    # 前端 VITE_IM_WS_URL 可设为同源 /ws，由本 location 反代到 IM 网关。
-    location /ws {
-        proxy_pass ${IM_WS_URL};
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
-    }
-
     location /api/ {
         proxy_pass ${BACKEND_URL};
         proxy_set_header Host $host;

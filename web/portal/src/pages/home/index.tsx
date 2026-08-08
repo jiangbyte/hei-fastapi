@@ -65,7 +65,7 @@ export function HomePage() {
           {loggedIn ? `${displayName}，欢迎回来` : `欢迎使用 ${brand}`}
         </h1>
         <p className="muted-text mt-3 max-w-2xl text-sm leading-6 md:text-base">
-          这是 HEI FastAPI 门户脚手架。账号认证、个人中心、站内消息与公告已就绪，可在此基础上扩展业务模块。
+          这是 HEI FastAPI 门户脚手架。账号认证、个人中心与公告已就绪，可在此基础上扩展业务模块。
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link

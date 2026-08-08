@@ -14,7 +14,6 @@ class LiveHealthResponse(ApiSchema):
     """存活探针响应结构。"""
 
     status: str
-    im: dict | None = None
 
 
 class HealthCheckItem(ApiSchema):

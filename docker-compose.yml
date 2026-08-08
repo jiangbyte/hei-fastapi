@@ -25,8 +25,6 @@ services:
     command: ["all"]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
-      - "${IM_WS_PORT:-18080}:18080"
-      - "${IM_TCP_PORT:-18081}:18081"
     volumes:
       - backend_storage:/app/storage
     healthcheck:
@@ -46,7 +44,6 @@ services:
       context: ./web/admin
     environment:
       BACKEND_URL: http://hei:8000
-      IM_WS_URL: http://hei:18080
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
       HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:
@@ -62,7 +59,6 @@ services:
       context: ./web/portal
     environment:
       BACKEND_URL: http://hei:8000
-      IM_WS_URL: http://hei:18080
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
       HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:

@@ -104,7 +104,6 @@ services:
     image: ${ADMIN_IMAGE:-hei-fastapi-admin:latest}
     environment:
       BACKEND_URL: http://gateway:8000
-      IM_WS_URL: http://gateway:8000
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
       HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:
@@ -124,7 +123,6 @@ services:
     image: ${PORTAL_IMAGE:-hei-fastapi-portal:latest}
     environment:
       BACKEND_URL: http://gateway:8000
-      IM_WS_URL: http://gateway:8000
       CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-10m}
       HSTS_HEADER: ${HSTS_HEADER:-max-age=31536000; includeSubDomains}
     ports:

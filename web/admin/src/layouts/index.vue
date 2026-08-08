@@ -18,7 +18,6 @@ import {
   UserCenter,
 } from './components'
 import Content from './Content.vue'
-import ImCenterModal from '@/components/message/ImCenterModal.vue'
 
 const appStore = useAppStore()
 const routeStore = useRouteStore()
@@ -117,7 +116,6 @@ const showMobileDrawer = ref(false)
 
     <Content />
     <BackTop class="z-999" />
-    <ImCenterModal />
 
     <MobileDrawer v-model:show="showMobileDrawer">
       <div class="mt-3 mb-2 px-3">

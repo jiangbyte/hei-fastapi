@@ -1,20 +1,17 @@
 /** Author: Charlie */
 
 import { useEffect } from 'react'
-import { Avatar, Badge, Button, Dropdown, Modal, Space, Tooltip, Typography, message } from 'antd'
+import { Avatar, Button, Dropdown, Modal, Space, Tooltip, Typography, message } from 'antd'
 import {
   HomeOutlined,
   LogoutOutlined,
-  MessageOutlined,
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import type { DropdownProps, MenuProps } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useImWebSocket } from '@/hooks/useImWebSocket'
 import { resolveFileUrl } from '@/utils/file'
 import { useAuthStore } from '@/stores/auth'
-import { useImUnreadStore } from '@/stores/imUnread'
 
 type Props = {
   compact?: boolean
@@ -27,51 +24,12 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
   const userInfo = useAuthStore((s) => s.userInfo)
   const ensureSession = useAuthStore((s) => s.ensureSession)
   const logout = useAuthStore((s) => s.logout)
-  const messageUnread = useImUnreadStore((s) => s.messageUnread)
-  const friendRequestPending = useImUnreadStore((s) => s.friendRequestPending)
-  const joinRequestPending = useImUnreadStore((s) => s.joinRequestPending)
-  const refreshUnread = useImUnreadStore((s) => s.refresh)
-  const bumpMessage = useImUnreadStore((s) => s.bumpMessage)
-  const bumpFriendRequest = useImUnreadStore((s) => s.bumpFriendRequest)
-  const bumpJoinRequest = useImUnreadStore((s) => s.bumpJoinRequest)
-  const resetUnread = useImUnreadStore((s) => s.reset)
 
-  const badgeTotal = messageUnread + friendRequestPending + joinRequestPending
   const loggedIn = Boolean(userInfo?.accountId)
 
   useEffect(() => {
     void ensureSession()
   }, [ensureSession])
-
-  useEffect(() => {
-    if (!loggedIn) {
-      resetUnread()
-      return
-    }
-    void refreshUnread()
-  }, [loggedIn, location.pathname, refreshUnread, resetUnread])
-
-  useImWebSocket(loggedIn, {
-    onNewMessage: () => {
-      bumpMessage(1)
-      void refreshUnread()
-    },
-    onOfflineMessages: () => {
-      void refreshUnread()
-    },
-    onNewFriendRequest: () => {
-      bumpFriendRequest(1)
-      void refreshUnread()
-    },
-    onNewJoinRequest: () => {
-      bumpJoinRequest(1)
-      void refreshUnread()
-    },
-    onKick: () => {
-      message.warning('会话已失效，请重新登录')
-      void logout('/auth/login')
-    },
-  })
 
   if (!loggedIn) {
     if (compact) {
@@ -146,35 +104,11 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
         cancelText: '取消',
         onOk: async () => {
           await logout(location.pathname)
-          resetUnread()
           message.success('已退出登录')
         },
       })
     }
   }
-
-  const messageIcon = (
-    <Tooltip
-      title={
-        friendRequestPending + joinRequestPending > 0
-          ? `好友申请 ${friendRequestPending} · 入群申请 ${joinRequestPending}`
-          : badgeTotal > 0
-            ? `${badgeTotal} 条未读`
-            : '消息'
-      }
-      placement={compact ? 'right' : undefined}
-    >
-      <Badge count={badgeTotal} size="small" offset={[-2, 2]}>
-        <Button
-          type="text"
-          className={compact ? '!h-10 !w-10 !px-0' : undefined}
-          icon={<MessageOutlined />}
-          aria-label="消息"
-          onClick={() => navigate('/messages')}
-        />
-      </Badge>
-    </Tooltip>
-  )
 
   const avatarBtn = (
     <Dropdown menu={{ items, onClick }} trigger={['click']} placement={placement}>
@@ -190,18 +124,8 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
   )
 
   if (compact) {
-    return (
-      <div className="flex flex-col items-center gap-2">
-        {messageIcon}
-        {avatarBtn}
-      </div>
-    )
+    return <div className="flex flex-col items-center gap-2">{avatarBtn}</div>
   }
 
-  return (
-    <Space size={8}>
-      {messageIcon}
-      {avatarBtn}
-    </Space>
-  )
+  return <Space size={8}>{avatarBtn}</Space>
 }
