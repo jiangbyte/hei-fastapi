@@ -53,9 +53,7 @@ export function CustomTabs({
             key={item.key}
             type="button"
             className={`tabs-btn flex h-9 cursor-pointer items-center gap-1 border-b-2 px-4 text-sm transition-colors ${
-              current === item.key
-                ? 'tabs-btn-active font-medium'
-                : 'border-transparent'
+              current === item.key ? 'tabs-btn-active font-medium' : 'border-transparent'
             }`}
             style={
               current === item.key

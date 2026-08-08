@@ -203,17 +203,26 @@ defineExpose({ openModal })
           label-width="110"
           :disabled="state.loading || state.treeLoading || state.submitLoading"
         >
-          <NFormItem :label="'部门名称'" path="name">
+          <NFormItem
+            :label="'部门名称'"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem :label="'部门分类'" path="category">
+          <NFormItem
+            :label="'部门分类'"
+            path="category"
+          >
             <DictSelect
               v-model="state.formModel.category"
               dict-code="DEPT_CATEGORY"
               :placeholder="'请选择部门分类'"
             />
           </NFormItem>
-          <NFormItem :label="'父级部门'" path="parent_id">
+          <NFormItem
+            :label="'父级部门'"
+            path="parent_id"
+          >
             <NTreeSelect
               v-model:value="state.formModel.parent_id"
               clearable
@@ -225,16 +234,25 @@ defineExpose({ openModal })
               children-field="children"
             />
           </NFormItem>
-          <NFormItem :label="'负责人'" path="master_id">
+          <NFormItem
+            :label="'负责人'"
+            path="master_id"
+          >
             <NInputGroup>
               <NInput
                 :value="state.formModel.master_name || ''"
                 readonly
                 :placeholder="'点击右侧按钮选择负责人'"
               />
-              <NButton type="primary" @click="openUserSelector('master_id')">
+              <NButton
+                type="primary"
+                @click="openUserSelector('master_id')"
+              >
                 <template #icon>
-                  <NovaIcon icon="icon-park-outline:search" :size="16" />
+                  <NovaIcon
+                    icon="icon-park-outline:search"
+                    :size="16"
+                  />
                 </template>
               </NButton>
               <NButton
@@ -247,21 +265,33 @@ defineExpose({ openModal })
                 "
               >
                 <template #icon>
-                  <NovaIcon icon="icon-park-outline:close" :size="16" />
+                  <NovaIcon
+                    icon="icon-park-outline:close"
+                    :size="16"
+                  />
                 </template>
               </NButton>
             </NInputGroup>
           </NFormItem>
-          <NFormItem :label="'副负责人'" path="deputy_master_id">
+          <NFormItem
+            :label="'副负责人'"
+            path="deputy_master_id"
+          >
             <NInputGroup>
               <NInput
                 :value="state.formModel.deputy_master_name || ''"
                 readonly
                 :placeholder="'点击右侧按钮选择副负责人'"
               />
-              <NButton type="primary" @click="openUserSelector('deputy_master_id')">
+              <NButton
+                type="primary"
+                @click="openUserSelector('deputy_master_id')"
+              >
                 <template #icon>
-                  <NovaIcon icon="icon-park-outline:search" :size="16" />
+                  <NovaIcon
+                    icon="icon-park-outline:search"
+                    :size="16"
+                  />
                 </template>
               </NButton>
               <NButton
@@ -274,28 +304,59 @@ defineExpose({ openModal })
                 "
               >
                 <template #icon>
-                  <NovaIcon icon="icon-park-outline:close" :size="16" />
+                  <NovaIcon
+                    icon="icon-park-outline:close"
+                    :size="16"
+                  />
                 </template>
               </NButton>
             </NInputGroup>
           </NFormItem>
-          <NFormItem :label="'排序'" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" :min="0" />
+          <NFormItem
+            :label="'排序'"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+              :min="0"
+            />
           </NFormItem>
-          <NFormItem :label="'虚拟部门'" path="is_virtual">
+          <NFormItem
+            :label="'虚拟部门'"
+            path="is_virtual"
+          >
             <NSwitch v-model:value="state.formModel.is_virtual" />
           </NFormItem>
-          <NFormItem :label="'状态'" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" type="radio" />
+          <NFormItem
+            :label="'状态'"
+            path="status"
+          >
+            <DictSelect
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
+              type="radio"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

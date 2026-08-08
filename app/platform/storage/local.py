@@ -1,10 +1,19 @@
 """ Author: Charlie """
 
+import sys
 from pathlib import Path
 
 from app.core.config.settings import PROJECT_ROOT
 from app.platform.storage.config import DEFAULT_LOCAL_STORAGE_ROOT, StorageConfig
 from app.platform.storage.url import build_file_access_url
+
+
+def _resolve_local_root(config: StorageConfig | None, fallback: str) -> str:
+    if config is None:
+        return fallback
+    if sys.platform.startswith("win") and (config.windows_root or "").strip():
+        return config.windows_root.strip()
+    return (config.local_root or "").strip() or fallback
 
 
 class LocalStorage:
@@ -14,7 +23,7 @@ class LocalStorage:
         root: str = DEFAULT_LOCAL_STORAGE_ROOT,
     ) -> None:
         self.config = config
-        root = config.local_root if config is not None else root
+        root = _resolve_local_root(config, root)
         root_path = Path(root)
         self.root = root_path if root_path.is_absolute() else PROJECT_ROOT / root_path
         self.root = self.root.resolve()

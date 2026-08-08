@@ -49,7 +49,17 @@ export function isValidEmail(value: unknown) {
 export function createRequiredRule(field: string, trigger: 'input' | 'change') {
   return {
     required: true,
-    message: `请输入${field}`,
+    message: trigger === 'change' ? `请选择${field}` : `请输入${field}`,
     trigger,
+  }
+}
+
+export function createRequiredArrayRule(field: string) {
+  return {
+    type: 'array' as const,
+    required: true,
+    trigger: 'change' as const,
+    min: 1,
+    message: `请选择${field}`,
   }
 }

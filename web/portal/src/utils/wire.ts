@@ -1,7 +1,10 @@
 /** Author: Charlie */
 
 /** HTTP JSON wire 辅助 — 标量仅为字符串（无旧版 number/bool 路径）。 */
-export function wireBool(value: string): boolean {
+export function wireBool(value: string | boolean): boolean {
+  if (typeof value === 'boolean') {
+    return value
+  }
   return value === 'true'
 }
 

@@ -30,8 +30,17 @@ const state = reactive({
 
 const modalTitle = computed(() => (state.dataId ? '编辑系统配置' : '新增系统配置'))
 
+const KEY_PATTERN = /^[A-Z][A-Z0-9_]*$/
+
 const rules = computed<FormRules>(() => ({
-  config_key: createRequiredRule('配置键', 'input'),
+  config_key: [
+    createRequiredRule('配置键', 'input'),
+    {
+      validator: (_rule, value: string) => KEY_PATTERN.test(String(value || '').trim()),
+      message: '配置键须匹配 ^[A-Z][A-Z0-9_]*$',
+      trigger: ['input', 'blur'],
+    },
+  ],
   ext_json: [
     {
       validator: isValidExtJson,
@@ -158,10 +167,20 @@ defineExpose({
           label-width="110"
           :disabled="state.loading || state.submitLoading"
         >
-          <NFormItem :label="'配置键'" path="config_key">
-            <NInput v-model:value="state.formModel.config_key" />
+          <NFormItem
+            :label="'配置键'"
+            path="config_key"
+          >
+            <NInput
+              v-model:value="state.formModel.config_key"
+              placeholder="如 CUSTOM_FEATURE_FLAG"
+              :disabled="!!state.dataId"
+            />
           </NFormItem>
-          <NFormItem :label="'配置值'" path="config_value">
+          <NFormItem
+            :label="'配置值'"
+            path="config_value"
+          >
             <NInput
               v-model:value="state.formModel.config_value"
               type="textarea"
@@ -169,13 +188,26 @@ defineExpose({
             />
           </NFormItem>
 
-          <NFormItem :label="'备注'" path="remark">
+          <NFormItem
+            :label="'备注'"
+            path="remark"
+          >
             <NInput v-model:value="state.formModel.remark" />
           </NFormItem>
-          <NFormItem :label="'排序码'" path="sort_code">
-            <NInputNumber v-model:value="state.formModel.sort_code" class="w-full" :min="0" />
+          <NFormItem
+            :label="'排序码'"
+            path="sort_code"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort_code"
+              class="w-full"
+              :min="0"
+            />
           </NFormItem>
-          <NFormItem :label="'扩展信息'" path="ext_json">
+          <NFormItem
+            :label="'扩展信息'"
+            path="ext_json"
+          >
             <NInput
               v-model:value="state.formModel.ext_json"
               type="textarea"
@@ -187,9 +219,20 @@ defineExpose({
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

@@ -159,12 +159,18 @@ function handleSelect(key: string | number) {
             @click="handleTab(item)"
           >
             <template #icon>
-              <NovaIcon v-if="item.meta.icon" :icon="item.meta.icon" />
+              <NovaIcon
+                v-if="item.meta.icon"
+                :icon="item.meta.icon"
+              />
             </template>
             {{ getRouteTitle(item) }}
           </n-tag>
         </div>
-        <div ref="el" class="flex items-center gap-1 flex-1">
+        <div
+          ref="el"
+          class="flex items-center gap-1 flex-1"
+        >
           <n-tag
             v-for="item in tabStore.tabs"
             :key="item.fullPath"
@@ -176,7 +182,10 @@ function handleSelect(key: string | number) {
             @click="handleTab(item)"
           >
             <template #icon>
-              <NovaIcon v-if="item.meta.icon" :icon="item.meta.icon" />
+              <NovaIcon
+                v-if="item.meta.icon"
+                :icon="item.meta.icon"
+              />
             </template>
             {{ getRouteTitle(item) }}
           </n-tag>

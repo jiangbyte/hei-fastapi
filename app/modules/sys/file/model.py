@@ -27,15 +27,10 @@ class SysFile(Base, TimestampMixin):
         comment="对象存储路径",
     )
     original_name: Mapped[str] = mapped_column(String(255), nullable=False, comment="原始文件名")
-    storage_config_id: Mapped[str] = mapped_column(
-        String(64),
-        nullable=False,
-        comment="存储配置 ID",
-    )
     storage_provider: Mapped[StorageProvider] = mapped_column(
         String(32),
         nullable=False,
-        comment="存储服务商",
+        comment="存储服务商：local/minio/oss/s3",
     )
     bucket: Mapped[str | None] = mapped_column(String(255), comment="存储桶")
     content_type: Mapped[str] = mapped_column(String(128), nullable=False, comment="文件类型")

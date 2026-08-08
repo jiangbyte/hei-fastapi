@@ -3,6 +3,11 @@
 from enum import StrEnum
 
 
+class NoticeKind(StrEnum):
+    NOTIFICATION = "NOTIFICATION"
+    ANNOUNCEMENT = "ANNOUNCEMENT"
+
+
 class NotificationCategory(StrEnum):
     ORDER = "ORDER"
     APPROVAL = "APPROVAL"
@@ -11,7 +16,7 @@ class NotificationCategory(StrEnum):
     BIZ = "BIZ"
 
 
-class NotificationStatus(StrEnum):
+class NoticeStatus(StrEnum):
     DRAFT = "DRAFT"
     PUBLISHED = "PUBLISHED"
     REVOKED = "REVOKED"
@@ -29,12 +34,6 @@ class TargetScope(StrEnum):
     ALL = "ALL"
     ACCOUNT_TYPE = "ACCOUNT_TYPE"
     SPECIFIC = "SPECIFIC"
-
-
-class AnnouncementStatus(StrEnum):
-    DRAFT = "DRAFT"
-    PUBLISHED = "PUBLISHED"
-    REVOKED = "REVOKED"
 
 
 class FeedbackStatus(StrEnum):

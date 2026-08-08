@@ -19,11 +19,12 @@ class MsgFeedback(Base, TimestampMixin):
     id: Mapped[str] = mapped_column(
         String(64), primary_key=True, nullable=False, default=generate_snowflake_id, comment="主键"
     )
+    title: Mapped[str] = mapped_column(String(255), nullable=False, comment="反馈标题")
     content: Mapped[str] = mapped_column(Text, nullable=False, comment="反馈内容")
     category: Mapped[str] = mapped_column(String(64), nullable=False, comment="反馈分类")
     contact: Mapped[str | None] = mapped_column(String(255), comment="联系方式")
-    attach_urls: Mapped[list] = mapped_column(
-        JSON, nullable=False, default=list, comment="附件URL列表"
+    attach_object_names: Mapped[list] = mapped_column(
+        JSON, nullable=False, default=list, comment="附件 object_name 列表"
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, comment="状态")
     reply: Mapped[str | None] = mapped_column(Text, comment="管理员回复")

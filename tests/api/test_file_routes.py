@@ -68,10 +68,16 @@ async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
         uploaded = upload_response.json()["data"]
         assert uploaded["original_name"] == "report.png"
         assert uploaded["content_type"] == "image/png"
-        assert uploaded["url"].startswith("/api/v1/files?object_name=")
-        assert "expires=" in uploaded["url"]
-        assert "sig=" in uploaded["url"]
+        assert uploaded["url"].startswith("/api/v1/files/")
+        assert "?" not in uploaded["url"]
+        assert uploaded["object_name"] in uploaded["url"] or uploaded["url"].endswith(
+            uploaded["object_name"].split("/")[-1]
+        )
         assert (tmp_path / uploaded["object_name"]).exists()
+
+        public_response = await client.get(uploaded["url"])
+        assert public_response.status_code == 200
+        assert public_response.content == b"image-bytes"
 
         page_response = await client.get(
             "/api/v1/admin/sys/file/page?current=1&size=20&original_name=report&content_type=image",

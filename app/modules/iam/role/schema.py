@@ -82,6 +82,22 @@ class RoleGrantResourceRequest(ApiSchema):
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 
+class RoleOwnClientResourceQuery(IdQuery):
+    account_type: AccountType
+
+
+class RoleOwnClientResourceResponse(ApiSchema):
+    id: str
+    modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
+    grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
+
+
+class RoleGrantClientResourceRequest(ApiSchema):
+    id: str = Field(min_length=1, max_length=64)
+    account_type: AccountType
+    grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
+
+
 class RoleOwnUserResponse(ApiSchema):
     id: str
     users: list[SysAccountSchema] = Field(default_factory=list)

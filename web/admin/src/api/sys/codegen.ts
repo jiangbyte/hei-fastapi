@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { getFilenameFromContentDisposition, http, saveBlob } from '@/utils'
 
-const prefix = '/api/v1/admin/sys/codegen'
+const prefix = `${API_PREFIX}/sys/codegen`
 
 export function page(params: any) {
   return http.get<any>(`${prefix}/page`, { params })

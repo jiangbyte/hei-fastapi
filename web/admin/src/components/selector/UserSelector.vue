@@ -3,7 +3,7 @@
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { accountApi } from '@/api'
-import { resolveFileUrl, renderButtonIcon } from '@/utils'
+import { renderButtonIcon } from '@/utils'
 import { NAvatar, NButton } from 'naive-ui'
 import { computed, reactive, watch } from 'vue'
 
@@ -48,7 +48,7 @@ const singleColumns = computed<DataTableColumns<any>>(() => [
     key: 'avatar',
     width: 60,
     render: (row) => {
-      const url = resolveFileUrl(row.avatar)
+      const url = row.avatar || undefined
       if (url) {
         return <NAvatar round size={36} src={url} imgProps={avatarImgProps} />
       }
@@ -107,7 +107,7 @@ const multipleLeftColumns = computed<DataTableColumns<any>>(() => [
     key: 'avatar',
     width: 56,
     render: (row) => {
-      const url = resolveFileUrl(row.avatar)
+      const url = row.avatar || undefined
       if (url) {
         return <NAvatar size="small" src={url} imgProps={avatarImgProps} />
       }
@@ -259,7 +259,11 @@ function resetSearch() {
     :mask-closable="false"
     @update:show="(val: boolean) => emit('update:visible', val)"
   >
-    <NDrawerContent :title="title" closable :native-scrollbar="false">
+    <NDrawerContent
+      :title="title"
+      closable
+      :native-scrollbar="false"
+    >
       <!-- 单选模式 -->
       <template v-if="mode === 'single'">
         <NSpace vertical>
@@ -291,7 +295,10 @@ function resetSearch() {
 
       <!-- 多选模式 -->
       <template v-else>
-        <NGrid :cols="24" :x-gap="10">
+        <NGrid
+          :cols="24"
+          :x-gap="10"
+        >
           <NGi :span="16">
             <NSpace vertical>
               <NInputGroup>
@@ -302,12 +309,28 @@ function resetSearch() {
                   @keyup.enter="doSearch"
                   @clear="resetSearch"
                 />
-                <NButton type="primary" @click="doSearch"> 搜索 </NButton>
-                <NButton @click="resetSearch"> 重置 </NButton>
+                <NButton
+                  type="primary"
+                  @click="doSearch"
+                >
+                  搜索
+                </NButton>
+                <NButton @click="resetSearch">
+                  重置
+                </NButton>
               </NInputGroup>
-              <NFlex justify="space-between" align="center">
+              <NFlex
+                justify="space-between"
+                align="center"
+              >
                 <NText>{{ `待处理列表: ${state.total}` }}</NText>
-                <NButton dashed size="small" @click="addAllPage"> 新增当前页 </NButton>
+                <NButton
+                  dashed
+                  size="small"
+                  @click="addAllPage"
+                >
+                  新增当前页
+                </NButton>
               </NFlex>
               <NDataTable
                 :row-key="(row: any) => row.id"
@@ -329,9 +352,19 @@ function resetSearch() {
           </NGi>
           <NGi :span="8">
             <NSpace vertical>
-              <NFlex justify="space-between" align="center">
+              <NFlex
+                justify="space-between"
+                align="center"
+              >
                 <NText>已选择：{{ state.selectedData.length }}</NText>
-                <NButton dashed type="error" size="small" @click="delAll"> 全部移除 </NButton>
+                <NButton
+                  dashed
+                  type="error"
+                  size="small"
+                  @click="delAll"
+                >
+                  全部移除
+                </NButton>
               </NFlex>
               <NDataTable
                 :row-key="(row: any) => row.id"
@@ -347,9 +380,20 @@ function resetSearch() {
       </template>
 
       <template #footer>
-        <NSpace justify="end" align="center">
-          <NButton @click="close"> 关闭 </NButton>
-          <NButton v-if="mode === 'multiple'" type="primary" @click="handleConfirm"> 确认 </NButton>
+        <NSpace
+          justify="end"
+          align="center"
+        >
+          <NButton @click="close">
+            关闭
+          </NButton>
+          <NButton
+            v-if="mode === 'multiple'"
+            type="primary"
+            @click="handleConfirm"
+          >
+            确认
+          </NButton>
         </NSpace>
       </template>
     </NDrawerContent>

@@ -12,11 +12,19 @@ import Icons from 'unplugin-icons/vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const port = Number(env.VITE_PORT || 5173)
+  // Cookie 会话需同源；开发时由 Vite 反代到后端，避免跨域丢 hei_session。
+  const proxyTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000'
 
   return {
     server: {
       host: '0.0.0.0',
       port,
+      proxy: {
+        '/api': {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+      },
     },
     resolve: {
       alias: {

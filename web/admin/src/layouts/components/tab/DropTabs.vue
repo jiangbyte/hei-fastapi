@@ -27,7 +27,12 @@ function handleDropTabs(key: string | number) {
 </script>
 
 <template>
-  <n-dropdown :options="options" trigger="click" size="small" @select="handleDropTabs">
+  <n-dropdown
+    :options="options"
+    trigger="click"
+    size="small"
+    @select="handleDropTabs"
+  >
     <CommonWrapper>
       <NovaIcon icon="icon-park-outline:application-menu" />
     </CommonWrapper>

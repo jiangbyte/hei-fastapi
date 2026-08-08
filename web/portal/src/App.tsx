@@ -39,8 +39,7 @@ export default function App() {
   const theme = useMemo(
     () => ({
       cssVar: { key: 'portal' },
-      algorithm:
-        resolvedTheme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+      algorithm: resolvedTheme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
       token: {
         ...portalSeedToken,
         ...(resolvedTheme === 'dark'

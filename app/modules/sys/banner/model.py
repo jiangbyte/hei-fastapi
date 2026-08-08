@@ -41,7 +41,9 @@ class SysBanner(Base, TimestampMixin):
         comment="主键",
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False, comment="标题")
-    image: Mapped[str] = mapped_column(String(500), nullable=False, comment="图片地址")
+    image: Mapped[str] = mapped_column(
+        String(500), nullable=False, comment="图片 object_name（读取时由服务层解析为 URL）"
+    )
     url: Mapped[str | None] = mapped_column(String(500), comment="跳转地址")
     link_type: Mapped[str] = mapped_column(
         String(16),

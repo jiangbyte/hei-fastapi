@@ -15,12 +15,16 @@ from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.group.repository import GroupRepository
+from app.modules.iam.client.service import ClientResourceService
 from app.modules.iam.group.schema import (
     GroupAdminPageQuery,
     GroupCreateRequest,
+    GroupGrantClientResourceRequest,
     GroupGrantResourceRequest,
     GroupGrantRoleRequest,
     GroupGrantUserRequest,
+    GroupOwnClientResourceQuery,
+    GroupOwnClientResourceResponse,
     GroupOwnResourceQuery,
     GroupOwnResourceResponse,
     GroupOwnRoleQuery,
@@ -190,7 +194,9 @@ class GroupService:
             await self._ensure_groups_visible(session, "iam:group:ownresource", [query.id])
         return GroupOwnResourceResponse(
             id=query.id,
-            modules=await ResourceService(self.db).list_grant_modules(),
+            modules=await ResourceService(self.db).list_grant_modules(
+                module_client=query.account_type,
+            ),
             grant_info_list=[
                 GroupResourceGrantInfo.model_validate(grant)
                 for grant in await self.relation_repo.list_subject_resource_grants(
@@ -211,6 +217,43 @@ class GroupService:
         async with transactional(self.db):
             account_ids = await self.repo.list_account_ids_by_group(payload.id)
             await self.relation_repo.replace_subject_resource_grant_infos(
+                GrantSubjectType.GROUP,
+                payload.id,
+                payload.grant_info_list,
+                account_type=payload.account_type,
+            )
+        await self._refresh_accounts(account_ids)
+
+    async def own_client_resource(
+        self,
+        query: GroupOwnClientResourceQuery,
+        session: SessionPayload | None = None,
+    ) -> GroupOwnClientResourceResponse:
+        if session is not None:
+            await self._ensure_groups_visible(session, "iam:group:ownclientresource", [query.id])
+        return GroupOwnClientResourceResponse(
+            id=query.id,
+            modules=await ClientResourceService(self.db).list_grant_modules(query.account_type),
+            grant_info_list=[
+                GroupResourceGrantInfo.model_validate(grant)
+                for grant in await self.relation_repo.list_subject_client_resource_grants(
+                    GrantSubjectType.GROUP,
+                    query.id,
+                    account_type=query.account_type,
+                )
+            ],
+        )
+
+    async def grant_client_resource(
+        self,
+        payload: GroupGrantClientResourceRequest,
+        session: SessionPayload | None = None,
+    ) -> None:
+        if session is not None:
+            await self._ensure_groups_visible(session, "iam:group:grantclientresource", [payload.id])
+        async with transactional(self.db):
+            account_ids = await self.repo.list_account_ids_by_group(payload.id)
+            await self.relation_repo.replace_subject_client_resource_grant_infos(
                 GrantSubjectType.GROUP,
                 payload.id,
                 payload.grant_info_list,

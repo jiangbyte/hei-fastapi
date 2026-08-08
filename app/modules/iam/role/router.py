@@ -15,8 +15,11 @@ from app.deps.db import get_db_session
 from app.modules.iam.role.schema import (
     RoleAdminPageQuery,
     RoleCreateRequest,
+    RoleGrantClientResourceRequest,
     RoleGrantResourceRequest,
     RoleGrantUserRequest,
+    RoleOwnClientResourceQuery,
+    RoleOwnClientResourceResponse,
     RoleOwnResourceQuery,
     RoleOwnResourceResponse,
     RoleOwnUserResponse,
@@ -143,6 +146,41 @@ async def grant_resource(
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
     await RoleService(db).grant_resource(payload, session)
+    return success()
+
+
+@router.get(
+    "/v1/admin/sys/roles/own-client-resource",
+    dependencies=[
+        Depends(require_account_type(AccountType.ADMIN)),
+        Depends(require_permission("iam:role:ownclientresource")),
+    ],
+    response_model=ApiResponse[RoleOwnClientResourceResponse],
+    summary="获取角色拥有客户端资源",
+)
+async def own_client_resource(
+    query: Annotated[RoleOwnClientResourceQuery, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[RoleOwnClientResourceResponse]:
+    return success(await RoleService(db).own_client_resource(query, session))
+
+
+@router.post(
+    "/v1/admin/sys/roles/grant-client-resource",
+    dependencies=[
+        Depends(require_account_type(AccountType.ADMIN)),
+        Depends(require_permission("iam:role:grantclientresource")),
+    ],
+    response_model=ApiResponse[None],
+    summary="给角色授权客户端资源",
+)
+async def grant_client_resource(
+    payload: RoleGrantClientResourceRequest,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[None]:
+    await RoleService(db).grant_client_resource(payload, session)
     return success()
 
 

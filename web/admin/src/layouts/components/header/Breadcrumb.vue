@@ -13,9 +13,21 @@ const routes = computed(() => route.matched.filter((item) => item.meta.name))
 </script>
 
 <template>
-  <TransitionGroup name="list" tag="ul" class="flex items-center gap-2">
-    <template v-for="(item, index) in routes" :key="item.path">
-      <li v-if="index > 0" class="breadcrumb-separator">/</li>
+  <TransitionGroup
+    name="list"
+    tag="ul"
+    class="flex items-center gap-2"
+  >
+    <template
+      v-for="(item, index) in routes"
+      :key="item.path"
+    >
+      <li
+        v-if="index > 0"
+        class="breadcrumb-separator"
+      >
+        /
+      </li>
       <n-el
         tag="li"
         class="flex items-center gap-1 breadcrumb-item cursor-pointer"

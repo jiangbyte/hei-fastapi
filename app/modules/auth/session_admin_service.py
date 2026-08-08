@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData, build_page
 from app.core.security.session import SessionPayload, session_store
 from app.modules.auth.session_schema import (
@@ -38,8 +39,8 @@ class SessionAdminService:
         return SessionAnalysisResponse(
             online_account_count=len(grouped),
             online_token_count=sum(token_counts),
-            admin_account_count=account_types.get("ADMIN", 0),
-            portal_account_count=account_types.get("PORTAL", 0),
+            admin_account_count=account_types.get(AccountType.ADMIN.value, 0),
+            portal_account_count=account_types.get(AccountType.PORTAL.value, 0),
             one_hour_new_count=one_hour_new_count,
             max_token_count=max(token_counts, default=0),
         )

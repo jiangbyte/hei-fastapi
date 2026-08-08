@@ -73,7 +73,6 @@ async def test_data_scope_all_returns_all_rows(db_session):
                 "permission_key": "sys:file:page",
                 "data_scope": DataScope.ALL.value,
                 "custom_scope_dept_ids": [],
-                "effect": "ALLOW",
                 "source_type": "ROLE",
                 "source_id": "role_1",
             }
@@ -121,7 +120,6 @@ async def test_data_scope_custom_uses_custom_dept_ids(db_session):
                 "permission_key": "sys:file:page",
                 "data_scope": DataScope.CUSTOM.value,
                 "custom_scope_dept_ids": ["dept_2"],
-                "effect": "ALLOW",
                 "source_type": "ACCOUNT",
                 "source_id": "account_1",
             }
@@ -178,7 +176,6 @@ async def test_data_scope_dept_and_child_loads_depts_in_batch(db_session):
                 "permission_key": "sys:file:page",
                 "data_scope": DataScope.DEPT_AND_CHILD.value,
                 "custom_scope_dept_ids": [],
-                "effect": "ALLOW",
                 "source_type": "GROUP",
                 "source_id": "group_1",
             }

@@ -47,6 +47,13 @@ class FileRepository:
         stmt = select(SysFile).where(SysFile.id.in_(unique_ids))
         return list((await self.db.execute(stmt)).scalars().all())
 
+    async def list_by_object_names(self, object_names: list[str]) -> list[SysFile]:
+        unique_names = list(dict.fromkeys(object_names))
+        if not unique_names:
+            return []
+        stmt = select(SysFile).where(SysFile.object_name.in_(unique_names))
+        return list((await self.db.execute(stmt)).scalars().all())
+
     async def delete_many(self, file_ids: list[str]) -> None:
         unique_ids = list(dict.fromkeys(file_ids))
         await self.db.execute(delete(SysFile).where(SysFile.id.in_(unique_ids)))
@@ -64,8 +71,6 @@ class FileRepository:
             filters.append(SysFile.original_name.ilike(f"%{query.original_name}%"))
         if query.object_name:
             filters.append(SysFile.object_name.ilike(f"%{query.object_name}%"))
-        if query.storage_config_id:
-            filters.append(SysFile.storage_config_id == query.storage_config_id)
         if query.storage_provider:
             filters.append(SysFile.storage_provider == query.storage_provider)
         if query.content_type:

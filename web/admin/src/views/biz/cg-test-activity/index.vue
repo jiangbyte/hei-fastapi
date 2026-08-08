@@ -1,7 +1,7 @@
 <!--
   由 HEI 代码生成器生成。
   Author: Charlie
-  生成时间：2026-08-07 07:26:15
+  生成时间：2026-08-08 21:09:52
 -->
 
 <script setup lang="tsx">
@@ -81,13 +81,18 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
   { title: '状态', path: 'status', width: 150, ellipsis: { tooltip: true } },
   { title: '封面地址', path: 'cover_url', width: 150, ellipsis: { tooltip: true } },
   { title: '活动描述', path: 'description', width: 150, ellipsis: { tooltip: true } },
-  { title: '更新时间', path: 'updated_at', width: 190, render: row => formatDateTime(row.updated_at) },
+  {
+    title: '更新时间',
+    path: 'updated_at',
+    width: 190,
+    render: (row) => formatDateTime(row.updated_at),
+  },
   {
     title: '操作',
     key: 'actions',
     width: 130,
     fixed: 'right',
-    render: row => (
+    render: (row) => (
       <NFlex size={12}>
         {hasPermission('biz:cgtestactivity:detail') ? (
           <NButton type="info" size="small" text={true} onClick={() => openDetailModal(row.id)}>
@@ -116,14 +121,20 @@ onMounted(() => {
 async function fetchPage() {
   state.loading = true
   try {
-    const response = await cgTestActivityApi.page({ current: state.page, size: state.pageSize, ...state.searchValues })
+    const response = await cgTestActivityApi.page({
+      current: state.page,
+      size: state.pageSize,
+      ...state.searchValues,
+    })
     const data = response.data ?? {}
     state.rows = data.records ?? []
     const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
     state.total = pageMeta.total
     state.page = pageMeta.current
     state.pageSize = pageMeta.size
-    state.checkedRowKeys = state.checkedRowKeys.filter(key => state.rows.some(item => item.id === key))
+    state.checkedRowKeys = state.checkedRowKeys.filter((key) =>
+      state.rows.some((item) => item.id === key),
+    )
   } finally {
     state.loading = false
   }
@@ -161,14 +172,17 @@ function confirmDelete(value: string | string[]) {
 
 async function deleteRows(ids: string[]) {
   await cgTestActivityApi.remove({ ids })
-  state.checkedRowKeys = state.checkedRowKeys.filter(key => !ids.includes(key))
+  state.checkedRowKeys = state.checkedRowKeys.filter((key) => !ids.includes(key))
   window.$message.success('删除成功')
   await fetchPage()
 }
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -193,20 +207,44 @@ async function deleteRows(ids: string[]) {
     >
       <template #toolbar>
         <NFlex>
-          <NButton v-if="hasPermission('biz:cgtestactivity:create')" type="primary" text @click="openCreateModal">
-            <template #icon><NIcon><Icon icon="icon-park-outline:plus" /></NIcon></template>
+          <NButton
+            v-if="hasPermission('biz:cgtestactivity:create')"
+            type="primary"
+            text
+            @click="openCreateModal"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
+            </template>
           </NButton>
-          <NButton text :loading="state.loading" @click="fetchPage">
-            <template #icon><NIcon><Icon icon="icon-park-outline:refresh" /></NIcon></template>
+          <NButton
+            text
+            :loading="state.loading"
+            @click="fetchPage"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
+            </template>
           </NButton>
-          <NButton v-if="hasPermission('biz:cgtestactivity:delete')" type="error" text :disabled="!hasCheckedRows" @click="confirmDelete(state.checkedRowKeys)">
-            <template #icon><NIcon><Icon icon="icon-park-outline:delete" /></NIcon></template>
+          <NButton
+            v-if="hasPermission('biz:cgtestactivity:delete')"
+            type="error"
+            text
+            :disabled="!hasCheckedRows"
+            @click="confirmDelete(state.checkedRowKeys)"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:delete" /></NIcon>
+            </template>
           </NButton>
         </NFlex>
       </template>
     </ProDataTable>
 
     <ModalDetail ref="detailModalRef" />
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
   </NFlex>
 </template>

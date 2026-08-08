@@ -191,7 +191,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     width: 120,
     render: (row) =>
       row.color ? (
-        <NTag color={createTagColor(row.color)} bordered={false}>
+        <NTag size="small" color={createTagColor(row.color)} bordered={false}>
           {row.color}
         </NTag>
       ) : (
@@ -214,7 +214,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 100,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -428,7 +432,10 @@ function flattenResourceTree(items: any[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -441,7 +448,10 @@ function flattenResourceTree(items: any[]) {
       />
     </ProCard>
 
-    <ProCard v-if="state.moduleOptions.length" content-class="py-12px!">
+    <ProCard
+      v-if="state.moduleOptions.length"
+      content-class="py-12px!"
+    >
       <div class="max-w-full overflow-x-auto">
         <NButtonGroup>
           <NButton
@@ -519,7 +529,10 @@ function flattenResourceTree(items: any[]) {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchTree" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchTree"
+    />
     <ModalDetail ref="detailModalRef" />
     <ModalButtonPermission ref="buttonPermissionModalRef" />
   </NFlex>

@@ -28,7 +28,6 @@ export interface AuthUserInfo {
   deptIdNames: any[]
   groupIdNames: any[]
   permissionKeys: string[]
-  buttonCodes: string[]
   profile?: Record<string, any> | null
 }
 
@@ -61,9 +60,6 @@ export const useAuthStore = defineStore('auth', () => {
       captcha_id: payload.captcha_id,
       captcha_value: payload.captcha_value,
     })
-    if (response?.mfa_required) {
-      throw new Error('该账号已开启 MFA，请使用 Web 管理端登录完成二次验证')
-    }
     if (!response?.token) {
       throw new Error('登录失败：未返回会话令牌')
     }
@@ -88,7 +84,6 @@ export const useAuthStore = defineStore('auth', () => {
       deptIdNames: data.dept_id_names ?? [],
       groupIdNames: data.group_id_names ?? [],
       permissionKeys: data.permission_keys ?? [],
-      buttonCodes: data.button_codes ?? [],
       profile: data.profile ?? null,
     }
     userInfo.value = nextUser
@@ -101,12 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
       return true
     }
     const keys = userInfo.value?.permissionKeys ?? []
-    const buttons = userInfo.value?.buttonCodes ?? []
-    return (
-      keys.includes('*:*:*') ||
-      keys.includes(permissionKey) ||
-      buttons.includes(permissionKey)
-    )
+    return keys.includes('*:*:*') || keys.includes(permissionKey)
   }
 
   function resetSession() {

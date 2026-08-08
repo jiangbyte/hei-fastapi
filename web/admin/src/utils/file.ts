@@ -1,31 +1,6 @@
 /** Author: Charlie */
 
-const PUBLIC_FILE_PATH = '/api/v1/files'
-
-function isAbsoluteUrl(value: string) {
-  return /^(https?:|data:|blob:)/i.test(value)
-}
-
-export function toPublicFilePath(value: string) {
-  const rawValue = value.trim()
-  if (!rawValue || isAbsoluteUrl(rawValue)) {
-    return rawValue
-  }
-  if (rawValue.startsWith(`${PUBLIC_FILE_PATH}?`)) {
-    return rawValue
-  }
-  const legacyPrefix = `${PUBLIC_FILE_PATH}/`
-  if (rawValue.startsWith(legacyPrefix)) {
-    const objectName = rawValue.slice(legacyPrefix.length).replace(/^\/+/, '')
-    return objectName
-      ? `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(objectName)}`
-      : PUBLIC_FILE_PATH
-  }
-  if (!rawValue.startsWith('/')) {
-    return `${PUBLIC_FILE_PATH}?object_name=${encodeURIComponent(rawValue)}`
-  }
-  return rawValue
-}
+import { API_PREFIX, FILES_PUBLIC_PATH } from '@/constants/api'
 
 export type UploadedFileValueType = 'auto' | 'url' | 'object_name'
 
@@ -53,30 +28,24 @@ export interface NormalizedUploadedFile {
   size: number | null
 }
 
-export function resolveFileUrl(value?: string | null) {
-  if (!value) {
-    return undefined
-  }
-  const rawValue = String(value).trim()
-  if (!rawValue) {
-    return undefined
-  }
-  if (isAbsoluteUrl(rawValue)) {
-    return rawValue
-  }
-  const path = toPublicFilePath(rawValue)
-  const baseURL = import.meta.env.VITE_API_URL || ''
-  if (!baseURL) {
-    return path
-  }
-  return `${baseURL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
-}
+/** 管理端按 id 下载（非公开文件路径）。 */
 export function buildAdminFileDownloadUrl(id?: string | number | null) {
   const rawId = String(id ?? '').trim()
   if (!rawId) {
     return undefined
   }
-  return resolveFileUrl(`/api/v1/admin/sys/file/download?id=${encodeURIComponent(rawId)}`)
+  return `${API_PREFIX}/sys/file/download?id=${encodeURIComponent(rawId)}`
+}
+
+/** object_name -> 公开访问路径。 */
+export function buildPublicFileUrl(objectName?: string | null) {
+  const name = String(objectName ?? '')
+    .replace(/^\/+/, '')
+    .trim()
+  if (!name) {
+    return undefined
+  }
+  return `${FILES_PUBLIC_PATH}/${name}`
 }
 
 export function formatFileSize(size?: number | string | null) {
@@ -123,7 +92,6 @@ export function normalizeUploadedFile(
     getStringValue(fallbackRecord, 'object_name') ||
     getStringValue(fallbackRecord, 'objectName')
   const rawUrl = getStringValue(raw, 'url') || getStringValue(fallbackRecord, 'url')
-  const resolvedUrl = resolveFileUrl(rawUrl || objectName) || rawUrl || objectName
   const name =
     getStringValue(raw, 'original_name') ||
     getStringValue(raw, 'originalName') ||
@@ -144,7 +112,7 @@ export function normalizeUploadedFile(
   return {
     raw,
     value: normalizeFileValue({ url: rawUrl, object_name: objectName }, valueType),
-    url: resolvedUrl,
+    url: rawUrl || objectName,
     objectName,
     name,
     contentType,
@@ -162,7 +130,7 @@ export function normalizeFileValue(
     return objectName
   }
   if (valueType === 'url') {
-    return rawUrl || resolveFileUrl(objectName) || objectName
+    return rawUrl || objectName
   }
   return rawUrl || objectName
 }

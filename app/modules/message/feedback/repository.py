@@ -7,6 +7,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions.business import NotFoundError
+from app.modules.message.enums import FeedbackStatus
 from app.modules.message.feedback.model import MsgFeedback
 from app.modules.message.feedback.schema import (
     MsgFeedbackAdminPageQuery,
@@ -20,8 +21,26 @@ class MsgFeedbackRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, payload: MsgFeedbackCreateRequest) -> MsgFeedback:
-        entity = MsgFeedback(**payload.model_dump())
+    async def create(
+        self,
+        payload: MsgFeedbackCreateRequest,
+        *,
+        submitter_account_type: str,
+        submitter_account_id: str,
+        attach_object_names: list[str] | None = None,
+    ) -> MsgFeedback:
+        data = payload.model_dump()
+        data["attach_object_names"] = (
+            attach_object_names
+            if attach_object_names is not None
+            else data.get("attach_object_names") or []
+        )
+        entity = MsgFeedback(
+            **data,
+            status=FeedbackStatus.PENDING.value,
+            submitter_account_type=submitter_account_type,
+            submitter_account_id=submitter_account_id,
+        )
         self.db.add(entity)
         await self.db.flush()
         return entity
@@ -54,12 +73,16 @@ class MsgFeedbackRepository:
         stmt: Select[tuple[MsgFeedback]] = select(MsgFeedback)
         count_stmt = select(func.count(MsgFeedback.id))
         filters = []
-        if query.content:
-            filters.append(MsgFeedback.content.ilike(f"%{query.content}%"))
+        if query.title:
+            filters.append(MsgFeedback.title.ilike(f"%{query.title}%"))
         if query.category:
             filters.append(MsgFeedback.category == query.category)
         if query.status:
             filters.append(MsgFeedback.status == query.status)
+        if query.submitter_account_type is not None:
+            filters.append(
+                MsgFeedback.submitter_account_type == query.submitter_account_type.value
+            )
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)

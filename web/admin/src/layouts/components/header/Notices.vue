@@ -2,15 +2,19 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { messageApi } from '@/api'
 import MessageDetailModal from '@/components/message/MessageDetailModal.vue'
-import { formatDateTime } from '@/utils'
+import { useMessageUnreadStore } from '@/stores'
+import { formatDateTime, wireBool } from '@/utils'
 import NoticeList, { type BannerItem } from '../common/NoticeList.vue'
 import { readPageMeta } from '@/utils/wire'
 
 const pageSize = 8
+const router = useRouter()
 
 type LoadMode = 'replace' | 'merge' | 'append'
+type NoticeKind = 'NOTIFICATION' | 'ANNOUNCEMENT'
 
 interface NoticeSource {
   id: string
@@ -20,96 +24,89 @@ interface NoticeSource {
   tagType?: BannerItem['tagType']
   description?: string
   date: string
-  sourceType: string
+  sourceType: NoticeKind
   sourceId: string
   isRead: boolean
 }
 
-interface NoticeTabState {
-  records: NoticeSource[]
-  current: number
-  size: number
-  total: number
-  loading: boolean
-  loaded: boolean
-}
-
-function createTabState(): NoticeTabState {
-  return { records: [], current: 0, size: pageSize, total: 0, loading: false, loaded: false }
-}
-
-const state = reactive(createTabState())
-const unreadCount = ref(0)
+const listState = reactive({
+  records: [] as NoticeSource[],
+  current: 0,
+  size: pageSize,
+  total: 0,
+  loading: false,
+  loaded: false,
+})
+const unreadStore = useMessageUnreadStore()
+const showPopover = ref(false)
 const detailModalRef = ref<InstanceType<typeof MessageDetailModal> | null>(null)
 
-const list = computed(() => state.records.map(toNoticeItem))
-const hasMore = computed(() => state.records.length < state.total)
+const list = computed(() => listState.records.map(toNoticeItem))
+const hasMore = computed(() => listState.records.length < listState.total)
+const unreadTotal = computed(() => unreadStore.unreadTotal)
 
 onMounted(() => {
-  void refresh()
+  void unreadStore.refresh()
 })
 
 async function refresh() {
-  await Promise.all([refreshUnreadCount(), loadTab(1, state.loaded ? 'merge' : 'replace')])
-}
-
-async function refreshUnreadCount() {
-  try {
-    const nRes = await messageApi.notificationUnreadCount()
-    unreadCount.value = nRes.data ?? 0
-  } catch {
-    /* 忽略 */
-  }
+  await Promise.all([unreadStore.refresh(), loadList(1, listState.loaded ? 'merge' : 'replace')])
 }
 
 async function loadMore() {
-  if (state.loading || state.records.length >= state.total) return
-  await loadTab(state.current + 1, 'append')
+  if (listState.loading || listState.records.length >= listState.total) return
+  await loadList(listState.current + 1, 'append')
 }
 
-async function loadTab(page = 1, mode: LoadMode = 'replace') {
-  if (state.loading) return
-  state.loading = true
+async function loadList(page = 1, mode: LoadMode = 'replace') {
+  if (listState.loading) return
+  listState.loading = true
   try {
-    const response = await messageApi.notificationMyPage({ current: page, size: state.size })
+    const response = await messageApi.myPage({ current: page, size: listState.size })
     const data = response.data ?? {}
     const incoming = (data.records ?? []).map((item: any) => mapHistoryItem(item))
-    state.records = mergeNoticeRecords(state.records, incoming, mode)
-    const pageMeta = readPageMeta(data, { current: page, size: state.size })
-    state.total = pageMeta.total || state.records.length
-    state.current = pageMeta.current
-    state.size = pageMeta.size
-    state.loaded = true
+    listState.records = mergeNoticeRecords(listState.records, incoming, mode)
+    const pageMeta = readPageMeta(data, { current: page, size: listState.size })
+    listState.total = pageMeta.total || listState.records.length
+    listState.current = pageMeta.current
+    listState.size = pageMeta.size
+    listState.loaded = true
   } finally {
-    state.loading = false
+    listState.loading = false
   }
 }
 
 async function handleOpen(id: string) {
-  const item = state.records.find((notice) => notice.id === id)
+  const item = listState.records.find((notice) => notice.id === id)
   if (!item) return
-  await detailModalRef.value?.open({ ...item, id: item.sourceId, is_read: item.isRead })
+  await detailModalRef.value?.open({
+    ...item,
+    id: item.sourceId,
+    sourceType: item.sourceType,
+    is_read: item.isRead,
+  })
 }
 
-async function handleDetailChanged(payload: { type: string; id: string }) {
-  const item = state.records.find((notice) => notice.id === `${payload.type}:${payload.id}`)
-  if (item && !item.isRead) {
-    item.isRead = true
-    unreadCount.value = Math.max(0, unreadCount.value - 1)
-  }
-  await refreshUnreadCount()
+function handleDetailChanged(payload: { type: string; id: string }) {
+  const item = listState.records.find((notice) => notice.id === `${payload.type}:${payload.id}`)
+  if (item) item.isRead = true
 }
 
 async function markAllRead() {
   try {
-    await messageApi.readAllNotification()
-    state.records.forEach((item) => {
+    await messageApi.readAll()
+    listState.records.forEach((item) => {
       item.isRead = true
     })
-    unreadCount.value = 0
+    unreadStore.notifyReadAll()
   } catch {
     /* 忽略 */
   }
+}
+
+function goMore() {
+  showPopover.value = false
+  void router.push({ path: '/usercenter', query: { tab: 'my_messages' } })
 }
 
 function mergeNoticeRecords(
@@ -130,61 +127,94 @@ function mergeNoticeRecords(
 }
 
 function mapHistoryItem(item: any): NoticeSource {
+  const kind: NoticeKind = item.kind === 'ANNOUNCEMENT' ? 'ANNOUNCEMENT' : 'NOTIFICATION'
   return {
-    id: `notification:${item.id}`,
+    id: `${kind}:${item.id}`,
     title: item.title,
-    icon: 'icon-park-outline:tips-one',
-    tagTitle: item.severity,
-    tagType: (['success', 'warning', 'error'] as any[]).includes(
-      (item.severity || '').toLowerCase(),
-    )
-      ? ((item.severity || '').toLowerCase() as any)
-      : 'info',
+    icon:
+      kind === 'ANNOUNCEMENT' ? 'icon-park-outline:volume-notice' : 'icon-park-outline:tips-one',
+    tagTitle: kind === 'ANNOUNCEMENT' ? '公告' : '通知',
+    tagType: kind === 'ANNOUNCEMENT' ? 'warning' : 'info',
     description: item.content,
     date: formatDateTime(item.publish_at || item.created_at),
-    sourceType: 'notification',
+    sourceType: kind,
     sourceId: item.id,
-    isRead: Boolean(item.is_read),
+    isRead: wireBool(item.is_read ?? false),
   }
 }
 
 function toNoticeItem(item: NoticeSource): BannerItem {
-  return { ...item, isRead: item.isRead }
+  return { ...item, isRead: item.isRead } as BannerItem
 }
 </script>
 
 <template>
-  <n-popover placement="bottom" trigger="click" arrow-point-to-center class="!p-0">
+  <n-popover
+    v-model:show="showPopover"
+    placement="bottom"
+    trigger="click"
+    arrow-point-to-center
+    class="!p-0"
+    @update:show="(show) => show && refresh()"
+  >
     <template #trigger>
-      <n-tooltip placement="bottom" trigger="hover">
+      <n-tooltip
+        placement="bottom"
+        trigger="hover"
+      >
         <template #trigger>
           <CommonWrapper>
-            <n-badge :value="unreadCount" :max="99" style="color: unset">
+            <n-badge
+              :value="unreadTotal"
+              :max="99"
+              style="color: unset"
+            >
               <NovaIcon icon="icon-park-outline:remind" />
             </n-badge>
           </CommonWrapper>
         </template>
-        通知
+        消息
       </n-tooltip>
     </template>
-    <div class="w-390px">
-      <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-        <span class="text-sm font-600">通知</span>
-        <n-badge type="info" :value="unreadCount" :max="99" :show-zero="false" />
+    <NSpace
+      vertical
+      :size="0"
+      style="width: 390px"
+    >
+      <div style="padding: 12px 12px 0; font-weight: 600">
+        我的消息
       </div>
       <NoticeList
         :list="list"
-        :loading="state.loading"
+        :loading="listState.loading"
         :has-more="hasMore"
         @open="handleOpen"
         @load-more="loadMore"
       />
-      <div class="border-t border-gray-100 px-3 py-2">
-        <n-button block tertiary size="small" :disabled="unreadCount <= 0" @click="markAllRead">
+      <NDivider style="margin: 0" />
+      <div class="flex gap-2 p-2">
+        <NButton
+          class="flex-1"
+          tertiary
+          size="small"
+          :disabled="unreadTotal <= 0"
+          @click="markAllRead"
+        >
           全部已读
-        </n-button>
+        </NButton>
+        <NButton
+          class="flex-1"
+          tertiary
+          size="small"
+          @click="goMore"
+        >
+          查看更多
+        </NButton>
       </div>
-    </div>
+    </NSpace>
   </n-popover>
-  <MessageDetailModal ref="detailModalRef" @changed="handleDetailChanged" />
+  <MessageDetailModal
+    ref="detailModalRef"
+    @changed="handleDetailChanged"
+  />
 </template>

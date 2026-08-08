@@ -64,7 +64,9 @@ export const CaptchaInput = forwardRef<CaptchaInputHandle, Props>(function Captc
         onClick={() => void refresh()}
       >
         <Spin spinning={loading}>
-          {imageSrc ? <img src={imageSrc} alt="验证码" className={`block ${imageHeight} w-140px`} /> : null}
+          {imageSrc ? (
+            <img src={imageSrc} alt="验证码" className={`block ${imageHeight} w-140px`} />
+          ) : null}
         </Spin>
       </button>
     </div>

@@ -3,69 +3,150 @@
 <script setup lang="ts">
 import { Chart } from '@antv/g2'
 import { dashboardApi } from '@/api'
+import { useAuthStore } from '@/stores'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { Icon } from '@iconify/vue/offline'
 
 type ChartInstance = InstanceType<typeof Chart>
 
-const trendChartRef = ref<HTMLDivElement | null>(null)
+const authStore = useAuthStore()
+const router = useRouter()
+const accountTrendRef = ref<HTMLDivElement | null>(null)
+const auditTrendRef = ref<HTMLDivElement | null>(null)
 const fileChartRef = ref<HTMLDivElement | null>(null)
 const charts: ChartInstance[] = []
+const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
+
 const state = reactive({
   loading: false,
   chartLoadError: false,
   overview: {
-    metrics: [] as any[],
-    account_trend: [] as any[],
-    file_type_share: [] as any[],
+    summary: {
+      account_total: 0,
+      online_sessions: 0,
+      file_total: 0,
+      storage_bytes: 0,
+    },
+    accounts: {
+      enabled: 0,
+      disabled: 0,
+      today_new: 0,
+      by_type: [] as Array<{ name: string; value: number }>,
+    },
+    iam: {
+      role_count: 0,
+      dept_count: 0,
+      group_count: 0,
+      menu_count: 0,
+    },
+    ops_today: {
+      audit_total: 0,
+      audit_failed: 0,
+      feedback_pending: 0,
+    },
+    trends: {
+      account_trend: [] as any[],
+      audit_trend: [] as any[],
+    },
+    files: {
+      by_content_type: [] as Array<{ name: string; value: number }>,
+    },
   },
 })
 
-const metricMeta: Record<string, { icon: string; color: string }> = {
-  accounts: { icon: 'icon-park-outline:people', color: '#2563eb' },
-  online_sessions: { icon: 'icon-park-outline:connection', color: '#0891b2' },
-  files: { icon: 'icon-park-outline:file-code', color: '#0f766e' },
-}
-const metricTitleMap: Record<string, string> = {
-  accounts: '账号',
-  online_sessions: '在线设备数',
-  files: '文件',
-}
-const metricHelperMap: Record<string, string> = {
-  accounts: '今日新增账号单独统计',
-  online_sessions: '当前 Redis 在线令牌数',
-  files: '文件数量与存储用量',
-}
-const metricUnitMap: Record<string, { one: string; other: string }> = {
-  accounts: { one: '个账号', other: '个账号' },
-  online_sessions: { one: '台设备', other: '台设备' },
-  files: { one: '个文件', other: '个文件' },
-}
-const visibleMetricKeys = new Set(['accounts', 'online_sessions', 'files'])
+const bannerMetrics = computed(() => [
+  {
+    key: 'account_total',
+    label: '账号总数',
+    value: Number(state.overview.summary.account_total ?? 0),
+    hint: `今日新增 ${Number(state.overview.accounts.today_new ?? 0)}`,
+  },
+  {
+    key: 'online_sessions',
+    label: '在线设备',
+    value: Number(state.overview.summary.online_sessions ?? 0),
+    hint: '当前会话',
+  },
+  {
+    key: 'file_total',
+    label: '文件数量',
+    value: Number(state.overview.summary.file_total ?? 0),
+    hint: '个文件',
+  },
+  {
+    key: 'storage_bytes',
+    label: '存储用量',
+    value: formatFileSize(state.overview.summary.storage_bytes),
+    hint: '累计占用',
+  },
+])
 
-const metricCards = computed(() =>
-  state.overview.metrics
-    .filter((item) => visibleMetricKeys.has(item.key))
-    .map((item) => {
-      const meta = metricMeta[item.key] ?? { icon: 'icon-park-outline:analysis', color: '#64748b' }
-      return {
-        ...item,
-        title: metricTitleMap[item.key] ?? item.key,
-        helper: metricHelperMap[item.key] ?? '',
-        value: item.value ?? 0,
-        unitText: formatMetricUnit(item),
-        ...meta,
-      }
-    }),
-)
+const accountStats = computed(() => [
+  { key: 'enabled', label: '启用账号', value: Number(state.overview.accounts.enabled ?? 0) },
+  { key: 'disabled', label: '禁用账号', value: Number(state.overview.accounts.disabled ?? 0) },
+  { key: 'today_new', label: '今日新增', value: Number(state.overview.accounts.today_new ?? 0) },
+  ...state.overview.accounts.by_type.map((item) => ({
+    key: `type_${item.name}`,
+    label: `类型 ${item.name}`,
+    value: Number(item.value ?? 0),
+  })),
+])
 
-const trendData = computed(() => [
-  ...state.overview.account_trend.map((item) => ({
+const iamStats = computed(() => [
+  { key: 'role', label: '角色', value: Number(state.overview.iam.role_count ?? 0) },
+  { key: 'dept', label: '部门', value: Number(state.overview.iam.dept_count ?? 0) },
+  { key: 'group', label: '用户组', value: Number(state.overview.iam.group_count ?? 0) },
+  { key: 'menu', label: '菜单', value: Number(state.overview.iam.menu_count ?? 0) },
+])
+
+const opsTodayStats = computed(() => [
+  {
+    key: 'audit_total',
+    label: '今日审计',
+    value: Number(state.overview.ops_today.audit_total ?? 0),
+  },
+  {
+    key: 'audit_failed',
+    label: '今日失败',
+    value: Number(state.overview.ops_today.audit_failed ?? 0),
+  },
+  {
+    key: 'feedback_pending',
+    label: '待处理反馈',
+    value: Number(state.overview.ops_today.feedback_pending ?? 0),
+  },
+])
+
+const accountTrendData = computed(() =>
+  state.overview.trends.account_trend.map((item) => ({
     ...item,
     type: '新增账号',
   })),
-])
+)
+
+const auditTrendData = computed(() =>
+  state.overview.trends.audit_trend.map((item) => ({
+    ...item,
+    type: '审计量',
+  })),
+)
+
+const displayName = computed(() => {
+  const user = authStore.userInfo
+  const nickname = String(user?.nickname ?? '').trim()
+  const name = String(user?.name ?? '').trim()
+  if (nickname && name && nickname !== name) {
+    return `${nickname}（${name}）`
+  }
+  return nickname || name || user?.account || '-'
+})
+
+const avatarUrl = computed(() => authStore.userInfo?.avatar || undefined)
+const roleText = computed(() => mapNames(authStore.userInfo?.roleIdNames))
+const deptText = computed(() => mapNames(authStore.userInfo?.deptIdNames))
+const groupText = computed(() => mapNames(authStore.userInfo?.groupIdNames))
 
 onMounted(fetchOverview)
 
@@ -74,7 +155,7 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => [trendData.value, state.overview.file_type_share],
+  () => [accountTrendData.value, auditTrendData.value, state.overview.files.by_content_type],
   async () => {
     await nextTick()
     await renderCharts()
@@ -93,17 +174,16 @@ async function fetchOverview() {
   }
 }
 
-function formatMetricUnit(item: any) {
-  if (item.key === 'files') {
-    return `${formatMetricUnitName(item.value, item.key)} / ${formatFileSize(item.trend_value)}`
-  }
-  return formatMetricUnitName(item.value, item.key)
+function mapNames(items?: Array<{ id?: string; name?: string }>) {
+  return (items ?? [])
+    .map((item) => item.name)
+    .filter(Boolean)
+    .join(' / ')
 }
 
-function formatMetricUnitName(value: number | string | null | undefined, key: string) {
-  const count = Number(value ?? 0)
-  const unitType = count === 1 ? 'one' : 'other'
-  return metricUnitMap[key]?.[unitType] ?? key
+function displayValue(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text || '未设置'
 }
 
 function formatFileSize(size?: number | string | null) {
@@ -125,7 +205,7 @@ async function renderCharts() {
   destroyCharts()
   state.chartLoadError = false
   try {
-    await Promise.all([renderTrendChart(), renderFileChart()])
+    await Promise.all([renderAccountTrend(), renderAuditTrend(), renderFileChart()])
   } catch {
     state.chartLoadError = true
   }
@@ -137,16 +217,16 @@ function destroyCharts() {
   }
 }
 
-async function renderTrendChart() {
-  if (!trendChartRef.value) {
+async function renderLineChart(container: HTMLDivElement | null, data: any[], color: string) {
+  if (!container) {
     return
   }
-  const chart = new Chart({ container: trendChartRef.value, autoFit: true, height: 280 })
+  const chart = new Chart({ container, autoFit: true, height: 260 })
   chart.options({
     type: 'line',
-    data: trendData.value,
+    data,
     encode: { x: 'date', y: 'value', color: 'type' },
-    scale: { color: { range: ['#2563eb'] } },
+    scale: { color: { range: [color] } },
     style: { lineWidth: 2.4 },
     axis: { x: { title: false }, y: { title: false, grid: true } },
     legend: { color: { position: 'top' } },
@@ -155,15 +235,23 @@ async function renderTrendChart() {
   await chart.render()
 }
 
+async function renderAccountTrend() {
+  await renderLineChart(accountTrendRef.value, accountTrendData.value, '#2563eb')
+}
+
+async function renderAuditTrend() {
+  await renderLineChart(auditTrendRef.value, auditTrendData.value, '#0f766e')
+}
+
 async function renderFileChart() {
   if (!fileChartRef.value) {
     return
   }
-  const chart = new Chart({ container: fileChartRef.value, autoFit: true, height: 280 })
+  const chart = new Chart({ container: fileChartRef.value, autoFit: true, height: 220 })
   chart.options({
     type: 'interval',
     coordinate: { type: 'theta' },
-    data: state.overview.file_type_share,
+    data: state.overview.files.by_content_type,
     encode: { y: 'value', color: 'name' },
     transform: [{ type: 'stackY' }],
     legend: { color: { position: 'bottom' } },
@@ -172,64 +260,253 @@ async function renderFileChart() {
   charts.push(chart)
   await chart.render()
 }
+
+function go(path: string) {
+  router.push(path)
+}
 </script>
 
 <template>
   <NSpin :show="state.loading">
     <n-el class="dashboard-page">
-      <div class="dashboard-header">
-        <div class="min-w-0">
-          <h1>运营工作台</h1>
-          <p>实时查看账号、在线会话和文件的系统概览。</p>
-        </div>
-        <NButton text :loading="state.loading" @click="fetchOverview">
-          <template #icon>
-            <NIcon>
-              <Icon icon="icon-park-outline:reload" />
-            </NIcon>
-          </template>
-        </NButton>
-      </div>
-
-      <NGrid cols="1 s:2 m:3 xl:3" responsive="screen" :x-gap="16" :y-gap="16">
-        <NGridItem v-for="item in metricCards" :key="item.key">
-          <NCard class="metric-card" :bordered="false">
-            <div class="metric-card__top">
-              <span
-                class="metric-card__icon"
-                :style="{ color: item.color, backgroundColor: `${item.color}14` }"
+      <NGrid
+        cols="1 m:24"
+        responsive="screen"
+        :x-gap="16"
+        :y-gap="16"
+      >
+        <NGridItem span="1 m:16">
+          <NSpace
+            vertical
+            :size="16"
+            style="width: 100%"
+          >
+            <NCard
+              class="dashboard-banner"
+              :bordered="false"
+              size="small"
+            >
+              <NGrid
+                cols="2 s:4"
+                responsive="screen"
+                :x-gap="12"
+                :y-gap="12"
               >
-                <NovaIcon :icon="item.icon" :size="22" />
-              </span>
-            </div>
-            <div class="metric-card__title">
-              {{ item.title }}
-            </div>
-            <div class="metric-card__value">
-              <span class="metric-card__number">{{ item.value }}</span>
-              <span class="metric-card__unit">{{ item.unitText }}</span>
-            </div>
-            <div class="metric-card__helper">
-              {{ item.helper }}
-            </div>
-          </NCard>
+                <NGridItem
+                  v-for="item in bannerMetrics"
+                  :key="item.key"
+                >
+                  <div class="dashboard-banner__item">
+                    <div class="dashboard-banner__label">
+                      {{ item.label }}
+                    </div>
+                    <div class="dashboard-banner__value">
+                      {{ item.value }}
+                    </div>
+                    <div class="dashboard-banner__hint">
+                      {{ item.hint }}
+                    </div>
+                  </div>
+                </NGridItem>
+              </NGrid>
+            </NCard>
+
+            <NCard
+              title="账号健康度"
+              :bordered="false"
+              size="small"
+            >
+              <template #header-extra>
+                <NButton
+                  text
+                  :loading="state.loading"
+                  @click="fetchOverview"
+                >
+                  <template #icon>
+                    <NIcon>
+                      <Icon icon="icon-park-outline:reload" />
+                    </NIcon>
+                  </template>
+                  刷新
+                </NButton>
+              </template>
+              <NGrid
+                cols="2 s:4"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
+                <NGridItem
+                  v-for="item in accountStats"
+                  :key="item.key"
+                >
+                  <NStatistic
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </NGridItem>
+              </NGrid>
+            </NCard>
+
+            <NCard
+              title="组织与菜单"
+              :bordered="false"
+              size="small"
+            >
+              <NGrid
+                cols="2 s:4"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
+                <NGridItem
+                  v-for="item in iamStats"
+                  :key="item.key"
+                >
+                  <NStatistic
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </NGridItem>
+              </NGrid>
+            </NCard>
+
+            <NCard
+              title="今日运维"
+              :bordered="false"
+              size="small"
+            >
+              <NGrid
+                cols="1 s:3"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
+                <NGridItem
+                  v-for="item in opsTodayStats"
+                  :key="item.key"
+                >
+                  <NStatistic
+                    :label="item.label"
+                    :value="item.value"
+                  />
+                </NGridItem>
+              </NGrid>
+            </NCard>
+
+            <NCard
+              title="近 7 日新增账号"
+              :bordered="false"
+            >
+              <div
+                ref="accountTrendRef"
+                class="chart-box"
+              />
+            </NCard>
+
+            <NCard
+              title="近 7 日审计量"
+              :bordered="false"
+            >
+              <div
+                ref="auditTrendRef"
+                class="chart-box"
+              />
+            </NCard>
+          </NSpace>
+        </NGridItem>
+
+        <NGridItem span="1 m:8">
+          <NSpace
+            vertical
+            :size="16"
+            style="width: 100%"
+          >
+            <NCard
+              title="当前账号"
+              :bordered="false"
+              size="small"
+            >
+              <NThing>
+                <template #avatar>
+                  <NAvatar
+                    v-if="avatarUrl"
+                    round
+                    :size="56"
+                    :src="avatarUrl"
+                    :img-props="avatarImgProps"
+                  />
+                  <NAvatar
+                    v-else
+                    round
+                    :size="56"
+                  >
+                    <NovaIcon
+                      icon="icon-park-outline:user"
+                      :size="28"
+                    />
+                  </NAvatar>
+                </template>
+                <template #header>
+                  {{ displayName }}
+                </template>
+                <template #description>
+                  {{ authStore.userInfo?.account || '-' }}
+                </template>
+              </NThing>
+
+              <NSpace
+                class="mt-3"
+                :size="8"
+              >
+                <NButton
+                  size="small"
+                  type="primary"
+                  ghost
+                  @click="go('/usercenter')"
+                >
+                  个人中心
+                </NButton>
+              </NSpace>
+
+              <NDescriptions
+                class="mt-3"
+                :column="1"
+                label-placement="left"
+                size="small"
+              >
+                <NDescriptionsItem label="部门">
+                  {{ displayValue(deptText) }}
+                </NDescriptionsItem>
+                <NDescriptionsItem label="角色">
+                  {{ displayValue(roleText) }}
+                </NDescriptionsItem>
+                <NDescriptionsItem label="用户组">
+                  {{ displayValue(groupText) }}
+                </NDescriptionsItem>
+              </NDescriptions>
+            </NCard>
+
+            <NCard
+              title="文件类型分布"
+              :bordered="false"
+              size="small"
+            >
+              <div
+                ref="fileChartRef"
+                class="chart-box chart-box--side"
+              />
+            </NCard>
+          </NSpace>
         </NGridItem>
       </NGrid>
 
-      <NGrid class="mt-4" cols="1 xl:24" responsive="screen" :x-gap="16" :y-gap="16">
-        <NGridItem span="1 xl:16">
-          <NCard class="dashboard-card" title="最近 7 天" :bordered="false">
-            <div ref="trendChartRef" class="chart-box" />
-          </NCard>
-        </NGridItem>
-        <NGridItem span="1 xl:8">
-          <NCard class="dashboard-card" title="文件类型" :bordered="false">
-            <div ref="fileChartRef" class="chart-box chart-box--small" />
-          </NCard>
-        </NGridItem>
-      </NGrid>
-
-      <NAlert v-if="state.chartLoadError" class="mt-4" type="warning" :show-icon="false">
+      <NAlert
+        v-if="state.chartLoadError"
+        class="mt-4"
+        type="warning"
+        :show-icon="false"
+      >
         图表运行时加载失败，请刷新页面或重启开发服务。
       </NAlert>
     </n-el>
@@ -242,90 +519,41 @@ async function renderFileChart() {
   min-width: 0;
 }
 
-.dashboard-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+.dashboard-banner {
+  color: #fff;
+  background-color: var(--primary-color);
 }
 
-.dashboard-header h1 {
-  margin: 0;
-  font-size: 26px;
-  line-height: 1.25;
+.dashboard-banner :deep(.n-card__content) {
+  color: #fff;
 }
 
-.dashboard-header p {
-  margin: 8px 0 0;
-  color: var(--text-color-3);
-}
-
-.metric-card :deep(.n-card__content) {
-  display: grid;
-  gap: 10px;
-  min-height: 138px;
-}
-
-.metric-card__top {
-  display: flex;
-  align-items: center;
-}
-
-.metric-card__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-}
-
-.metric-card__title,
-.metric-card__helper {
-  color: var(--text-color-3);
-  font-size: 13px;
-}
-
-.metric-card__value {
-  display: grid;
-  gap: 4px;
-  color: var(--text-color-base);
-  word-break: break-word;
-}
-
-.metric-card__number {
+.dashboard-banner__item {
   min-width: 0;
-  overflow-wrap: anywhere;
-  font-size: 26px;
+}
+
+.dashboard-banner__label,
+.dashboard-banner__hint {
+  opacity: 0.86;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.dashboard-banner__value {
+  margin: 6px 0 2px;
+  font-size: 28px;
   font-weight: 700;
-  line-height: 1.1;
-}
-
-.metric-card__unit {
-  min-width: 0;
-  color: var(--text-color-3);
-  font-size: 13px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-
-.dashboard-card {
-  height: 100%;
-}
-
-.dashboard-card :deep(.n-card__content) {
-  min-width: 0;
-  min-height: 290px;
+  line-height: 1.15;
+  word-break: break-word;
 }
 
 .chart-box {
   width: 100%;
   min-width: 0;
-  height: 280px;
+  height: 260px;
 }
 
-.chart-box--small {
-  height: 280px;
+.chart-box--side {
+  height: 240px;
 }
 </style>

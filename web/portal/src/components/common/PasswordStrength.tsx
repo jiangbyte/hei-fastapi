@@ -69,9 +69,7 @@ export function PasswordStrength({ password }: Props) {
             <span
               key={item.label}
               className={`inline-flex items-center gap-0.5 text-[11px] ${
-                met
-                  ? 'text-[var(--ant-color-text)]'
-                  : 'text-[var(--ant-color-text-quaternary)]'
+                met ? 'text-[var(--ant-color-text)]' : 'text-[var(--ant-color-text-quaternary)]'
               }`}
             >
               <span

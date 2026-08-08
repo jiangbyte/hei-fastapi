@@ -13,7 +13,6 @@ from app.core.config.enums import AccountType, DataScope, StatusEnum
 from app.core.exceptions.business import NotFoundError
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.enums import (
-    GrantEffect,
     GrantMode,
     GrantSubjectType,
     IamRelationSubjectType,
@@ -22,6 +21,7 @@ from app.modules.iam.enums import (
 )
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.relation.model import SysIamRelation
+from app.modules.iam.client.model import SysClientResource
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.model import SysRole
 
@@ -31,14 +31,12 @@ class AccountResourceGrantRecord(TypedDict):
     subject_id: str
     resource_id: str
     grant_mode: GrantMode | str
-    effect: GrantEffect | str
 
 
 class PermissionGrantRecord(TypedDict):
     permission_key: str
     data_scope: DataScope | str
     custom_scope_dept_ids: list[str]
-    effect: GrantEffect | str
     source_type: GrantSubjectType | Literal["RESOURCE"] | str
     source_id: str
 
@@ -49,9 +47,10 @@ class AccountAuthorizationRecord(TypedDict):
     group_ids: list[str]
     dept_ids: list[str]
     resource_ids: list[str]
-    button_codes: list[str]
     permission_keys: list[str]
     permission_grants: list[PermissionGrantRecord]
+    client_resource_ids: list[str]
+    client_permission_keys: list[str]
 
 
 _PERMISSION_PRIORITY_RESOURCE = 0
@@ -197,7 +196,6 @@ class IamRelationRepository:
         resource_id: str,
         account_type: AccountType | str,
         grant_mode: GrantMode = GrantMode.CASCADE,
-        effect: GrantEffect = GrantEffect.ALLOW,
     ) -> SysIamRelation:
         return SysIamRelation(
             subject_type=subject_type.value,
@@ -207,29 +205,6 @@ class IamRelationRepository:
             target_type=IamRelationTargetType.RESOURCE.value,
             target_id=resource_id,
             grant_mode=grant_mode.value,
-            effect=effect.value,
-        )
-
-    def subject_permission_grant(
-        self,
-        subject_type: GrantSubjectType,
-        subject_id: str,
-        permission_key: str,
-        account_type: AccountType | str,
-        data_scope: DataScope | str = DataScope.SELF,
-        custom_scope_dept_ids: list[str] | None = None,
-        effect: GrantEffect = GrantEffect.ALLOW,
-    ) -> SysIamRelation:
-        return SysIamRelation(
-            subject_type=subject_type.value,
-            subject_id=subject_id,
-            account_type=_as_account_type(account_type),
-            relation_type=IamRelationType.SUBJECT_PERMISSION_GRANT.value,
-            target_type=IamRelationTargetType.PERMISSION.value,
-            target_key=permission_key,
-            data_scope=data_scope.value if isinstance(data_scope, DataScope) else data_scope,
-            custom_scope_dept_ids=list(custom_scope_dept_ids or []),
-            effect=effect.value,
         )
 
     def resource_permission(
@@ -248,6 +223,49 @@ class IamRelationRepository:
             subject_id=resource_id,
             account_type=_as_account_type(account_type),
             relation_type=IamRelationType.RESOURCE_PERMISSION.value,
+            target_type=IamRelationTargetType.PERMISSION.value,
+            target_key=permission_key,
+            data_scope=data_scope.value if isinstance(data_scope, DataScope) else data_scope,
+            custom_scope_dept_ids=list(custom_scope_dept_ids or []),
+            sort=sort,
+            status=status.value if isinstance(status, StatusEnum) else status,
+            description=description,
+        )
+
+    def subject_client_resource_grant(
+        self,
+        subject_type: GrantSubjectType,
+        subject_id: str,
+        resource_id: str,
+        account_type: AccountType | str,
+        grant_mode: GrantMode = GrantMode.CASCADE,
+    ) -> SysIamRelation:
+        return SysIamRelation(
+            subject_type=subject_type.value,
+            subject_id=subject_id,
+            account_type=_as_account_type(account_type),
+            relation_type=IamRelationType.SUBJECT_CLIENT_RESOURCE_GRANT.value,
+            target_type=IamRelationTargetType.CLIENT_RESOURCE.value,
+            target_id=resource_id,
+            grant_mode=grant_mode.value,
+        )
+
+    def client_resource_permission(
+        self,
+        resource_id: str,
+        permission_key: str,
+        account_type: AccountType | str,
+        data_scope: DataScope | str = DataScope.SELF,
+        custom_scope_dept_ids: list[str] | None = None,
+        sort: int = 99,
+        status: StatusEnum | str = StatusEnum.ENABLED,
+        description: str | None = None,
+    ) -> SysIamRelation:
+        return SysIamRelation(
+            subject_type=IamRelationSubjectType.CLIENT_RESOURCE.value,
+            subject_id=resource_id,
+            account_type=_as_account_type(account_type),
+            relation_type=IamRelationType.CLIENT_RESOURCE_PERMISSION.value,
             target_type=IamRelationTargetType.PERMISSION.value,
             target_key=permission_key,
             data_scope=data_scope.value if isinstance(data_scope, DataScope) else data_scope,
@@ -287,20 +305,13 @@ class IamRelationRepository:
                 "subject_id": grant.subject_id,
                 "resource_id": grant.target_id,
                 "grant_mode": grant.grant_mode,
-                "effect": grant.effect,
             }
             for grant in (await self.db.execute(stmt)).scalars().all()
         ]
 
     async def get_account_resource_ids(self, account_id: str) -> list[str]:
         resource_grants = await self.get_account_resource_grants(account_id)
-        return sorted(
-            {
-                grant["resource_id"]
-                for grant in resource_grants
-                if grant["effect"] != GrantEffect.DENY.value
-            }
-        )
+        return sorted({grant["resource_id"] for grant in resource_grants})
 
     async def get_account_authorization(self, account_id: str) -> AccountAuthorizationRecord:
         return (await self.get_accounts_authorization([account_id]))[account_id]
@@ -317,9 +328,10 @@ class IamRelationRepository:
                 group_ids=[],
                 dept_ids=[],
                 resource_ids=[],
-                button_codes=[],
                 permission_keys=[],
                 permission_grants=[],
+                client_resource_ids=[],
+                client_permission_keys=[],
             )
             for account_id in unique_account_ids
         }
@@ -448,9 +460,20 @@ class IamRelationRepository:
             resource_grants_by_account,
             account_type_map,
         )
+        client_resource_grants_by_account = await self._list_client_resource_grants_by_account(
+            unique_account_ids,
+            account_ids_by_group,
+            account_ids_by_role,
+            account_type_map,
+        )
+        client_permission_keys_by_account = await self._list_client_permission_keys_by_account(
+            client_resource_grants_by_account,
+            account_type_map,
+        )
         for account_id in unique_account_ids:
             resource_grants = resource_grants_by_account.get(account_id, [])
             permission_grants = permission_grants_by_account.get(account_id, [])
+            client_resource_grants = client_resource_grants_by_account.get(account_id, [])
             authorizations[account_id]["group_ids"] = sorted(
                 set(authorizations[account_id]["group_ids"])
             )
@@ -458,19 +481,18 @@ class IamRelationRepository:
                 set(authorizations[account_id]["dept_ids"])
             )
             authorizations[account_id]["resource_ids"] = sorted(
-                {
-                    grant["resource_id"]
-                    for grant in resource_grants
-                    if grant["effect"] != GrantEffect.DENY.value
-                }
+                {grant["resource_id"] for grant in resource_grants}
             )
             authorizations[account_id]["permission_grants"] = permission_grants
             authorizations[account_id]["permission_keys"] = sorted(
                 {grant["permission_key"] for grant in permission_grants}
             )
-            authorizations[account_id]["button_codes"] = authorizations[account_id][
-                "permission_keys"
-            ].copy()
+            authorizations[account_id]["client_resource_ids"] = sorted(
+                {grant["resource_id"] for grant in client_resource_grants}
+            )
+            authorizations[account_id]["client_permission_keys"] = sorted(
+                client_permission_keys_by_account.get(account_id, set())
+            )
         return authorizations
 
     async def list_subject_resource_grants(
@@ -615,6 +637,149 @@ class IamRelationRepository:
             )
         await self.db.flush()
 
+    async def list_subject_client_resource_grants(
+        self,
+        subject_type: GrantSubjectType,
+        subject_id: str,
+        account_type: AccountType | str | None = None,
+    ) -> list[dict[str, object]]:
+        await self._ensure_subject_exists(subject_type.value, subject_id)
+        filters = [
+            SysIamRelation.subject_type == subject_type.value,
+            SysIamRelation.subject_id == subject_id,
+            SysIamRelation.relation_type == IamRelationType.SUBJECT_CLIENT_RESOURCE_GRANT.value,
+            SysIamRelation.target_type == IamRelationTargetType.CLIENT_RESOURCE.value,
+        ]
+        if account_type is not None:
+            filters.append(SysIamRelation.account_type == _as_account_type(account_type))
+        stmt = select(SysIamRelation).where(*filters).order_by(SysIamRelation.id.asc())
+        grants = list((await self.db.execute(stmt)).scalars().all())
+        resource_ids = [grant.target_id for grant in grants]
+        if not resource_ids:
+            return []
+        resources = list(
+            (
+                await self.db.execute(
+                    select(SysClientResource).where(SysClientResource.id.in_(resource_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        resource_map = {resource.id: resource for resource in resources}
+        permission_stmt = select(SysIamRelation).where(
+            SysIamRelation.subject_type == IamRelationSubjectType.CLIENT_RESOURCE.value,
+            SysIamRelation.relation_type == IamRelationType.CLIENT_RESOURCE_PERMISSION.value,
+            SysIamRelation.target_type == IamRelationTargetType.PERMISSION.value,
+            SysIamRelation.subject_id.in_(resource_ids),
+        )
+        permission_map: dict[str, list[str]] = defaultdict(list)
+        for permission in (await self.db.execute(permission_stmt)).scalars().all():
+            permission_map[permission.subject_id].append(permission.target_key)
+
+        grant_map: dict[str, set[str]] = defaultdict(set)
+        for resource_id in resource_ids:
+            resource = resource_map.get(resource_id)
+            if not resource:
+                continue
+            if resource.resource_type in {"BUTTON", "ACTION"}:
+                grant_map[resource.parent_id or resource.id].update(
+                    permission_map.get(resource.id) or [resource.code]
+                )
+            else:
+                grant_map[resource.id]
+        return [
+            {"resource_id": resource_id, "permission_keys": sorted(permission_keys)}
+            for resource_id, permission_keys in sorted(grant_map.items())
+        ]
+
+    async def replace_subject_client_resource_grant_infos(
+        self,
+        subject_type: GrantSubjectType,
+        subject_id: str,
+        grant_info_list,
+        account_type: AccountType | str,
+    ) -> None:
+        account_type = _as_account_type(account_type)
+        await self._ensure_subject_exists(subject_type.value, subject_id)
+        resource_ids = list(dict.fromkeys(item.resource_id for item in grant_info_list))
+        original_resource_ids = set(resource_ids)
+        permission_keys = list(
+            dict.fromkeys(
+                permission_key
+                for item in grant_info_list
+                for permission_key in item.permission_keys
+            )
+        )
+        if resource_ids:
+            existing_ids = set(
+                (
+                    await self.db.execute(
+                        select(SysClientResource.id).where(SysClientResource.id.in_(resource_ids))
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if len(existing_ids) != len(resource_ids):
+                raise NotFoundError("Client resource not found")
+        if permission_keys:
+            permission_resource_rows = list(
+                (
+                    await self.db.execute(
+                        select(SysIamRelation.target_key, SysIamRelation.subject_id).where(
+                            SysIamRelation.subject_type
+                            == IamRelationSubjectType.CLIENT_RESOURCE.value,
+                            SysIamRelation.relation_type
+                            == IamRelationType.CLIENT_RESOURCE_PERMISSION.value,
+                            SysIamRelation.target_type == IamRelationTargetType.PERMISSION.value,
+                            SysIamRelation.account_type == account_type,
+                            SysIamRelation.target_key.in_(permission_keys),
+                        )
+                    )
+                ).all()
+            )
+            code_resource_rows = list(
+                (
+                    await self.db.execute(
+                        select(SysClientResource.code, SysClientResource.id).where(
+                            SysClientResource.code.in_(permission_keys),
+                            SysClientResource.resource_type.in_(["BUTTON", "ACTION"]),
+                        )
+                    )
+                ).all()
+            )
+            permission_resource_map: dict[str, set[str]] = defaultdict(set)
+            for permission_key, resource_id in permission_resource_rows + code_resource_rows:
+                permission_resource_map[str(permission_key)].add(str(resource_id))
+            missing_permission_keys = [
+                permission_key
+                for permission_key in permission_keys
+                if permission_key not in permission_resource_map
+            ]
+            if missing_permission_keys:
+                raise NotFoundError("Client permission resource not found")
+            for permission_key in permission_keys:
+                resource_ids.extend(permission_resource_map[permission_key])
+        resource_ids = list(dict.fromkeys(resource_ids))
+        await self.delete_subject_relations(
+            subject_type.value,
+            subject_id,
+            IamRelationType.SUBJECT_CLIENT_RESOURCE_GRANT,
+            account_type=account_type,
+        )
+        for resource_id in resource_ids:
+            self.db.add(
+                self.subject_client_resource_grant(
+                    subject_type,
+                    subject_id,
+                    resource_id,
+                    account_type,
+                    GrantMode.DIRECT if resource_id in original_resource_ids else GrantMode.CASCADE,
+                )
+            )
+        await self.db.flush()
+
     async def _get_account_role_and_group_ids(self, account_id: str) -> tuple[list[str], list[str]]:
         account = await self.db.get(SysAccount, account_id)
         if account is None:
@@ -715,7 +880,6 @@ class IamRelationRepository:
                 "subject_id": grant.subject_id,
                 "resource_id": grant.target_id,
                 "grant_mode": grant.grant_mode,
-                "effect": grant.effect,
             }
             for account_id in target_account_ids:
                 if account_type_map.get(account_id) != grant.account_type:
@@ -734,7 +898,6 @@ class IamRelationRepository:
                 for grants in resource_grants_by_account.values()
                 for grant in grants
                 if grant["grant_mode"] == GrantMode.CASCADE.value
-                and grant["effect"] != GrantEffect.DENY.value
             }
         )
         permission_rows_by_resource: dict[str, list[SysIamRelation]] = defaultdict(list)
@@ -756,10 +919,7 @@ class IamRelationRepository:
         for account_id, resource_grants in resource_grants_by_account.items():
             account_type = account_type_map.get(account_id)
             for grant in resource_grants:
-                if (
-                    grant["grant_mode"] != GrantMode.CASCADE.value
-                    or grant["effect"] == GrantEffect.DENY.value
-                ):
+                if grant["grant_mode"] != GrantMode.CASCADE.value:
                     continue
                 for row in permission_rows_by_resource.get(grant["resource_id"], []):
                     if account_type is not None and row.account_type != account_type:
@@ -771,7 +931,6 @@ class IamRelationRepository:
                             "permission_key": row.target_key,
                             "data_scope": row.data_scope,
                             "custom_scope_dept_ids": list(row.custom_scope_dept_ids),
-                            "effect": GrantEffect.ALLOW.value,
                             "source_type": grant["subject_type"],
                             "source_id": grant["subject_id"],
                         },
@@ -784,10 +943,96 @@ class IamRelationRepository:
                     permission_map.values(),
                     key=lambda item: item[1]["permission_key"],
                 )
-                if record["effect"] != GrantEffect.DENY.value
             ]
             for account_id, permission_map in permission_map_by_account.items()
         }
+
+    async def _list_client_resource_grants_by_account(
+        self,
+        account_ids: list[str],
+        account_ids_by_group: dict[str, set[str]],
+        account_ids_by_role: dict[str, set[str]],
+        account_type_map: dict[str, str],
+    ) -> dict[str, list[AccountResourceGrantRecord]]:
+        subject_conditions = [
+            (SysIamRelation.subject_type == GrantSubjectType.ACCOUNT.value)
+            & (SysIamRelation.subject_id.in_(account_ids))
+        ]
+        if account_ids_by_group:
+            subject_conditions.append(
+                (SysIamRelation.subject_type == GrantSubjectType.GROUP.value)
+                & (SysIamRelation.subject_id.in_(account_ids_by_group.keys()))
+            )
+        if account_ids_by_role:
+            subject_conditions.append(
+                (SysIamRelation.subject_type == GrantSubjectType.ROLE.value)
+                & (SysIamRelation.subject_id.in_(account_ids_by_role.keys()))
+            )
+        stmt = select(SysIamRelation).where(
+            SysIamRelation.relation_type == IamRelationType.SUBJECT_CLIENT_RESOURCE_GRANT.value,
+            SysIamRelation.target_type == IamRelationTargetType.CLIENT_RESOURCE.value,
+            SysIamRelation.status == StatusEnum.ENABLED.value,
+            or_(SysIamRelation.expired_at.is_(None), SysIamRelation.expired_at > datetime.now(UTC)),
+            or_(*subject_conditions),
+        )
+        grants_by_account: dict[str, list[AccountResourceGrantRecord]] = defaultdict(list)
+        for grant in (await self.db.execute(stmt)).scalars().all():
+            if grant.subject_type == GrantSubjectType.ACCOUNT.value:
+                target_account_ids = {grant.subject_id}
+            elif grant.subject_type == GrantSubjectType.GROUP.value:
+                target_account_ids = account_ids_by_group.get(grant.subject_id, set())
+            elif grant.subject_type == GrantSubjectType.ROLE.value:
+                target_account_ids = account_ids_by_role.get(grant.subject_id, set())
+            else:
+                target_account_ids = set()
+            record: AccountResourceGrantRecord = {
+                "subject_type": grant.subject_type,
+                "subject_id": grant.subject_id,
+                "resource_id": grant.target_id,
+                "grant_mode": grant.grant_mode,
+            }
+            for account_id in target_account_ids:
+                if account_type_map.get(account_id) != grant.account_type:
+                    continue
+                grants_by_account[account_id].append(record)
+        return grants_by_account
+
+    async def _list_client_permission_keys_by_account(
+        self,
+        client_resource_grants_by_account: dict[str, list[AccountResourceGrantRecord]],
+        account_type_map: dict[str, str],
+    ) -> dict[str, set[str]]:
+        cascade_resource_ids = sorted(
+            {
+                grant["resource_id"]
+                for grants in client_resource_grants_by_account.values()
+                for grant in grants
+                if grant["grant_mode"] == GrantMode.CASCADE.value
+            }
+        )
+        permission_rows_by_resource: dict[str, list[SysIamRelation]] = defaultdict(list)
+        if cascade_resource_ids:
+            permission_stmt = select(SysIamRelation).where(
+                SysIamRelation.subject_type == IamRelationSubjectType.CLIENT_RESOURCE.value,
+                SysIamRelation.relation_type == IamRelationType.CLIENT_RESOURCE_PERMISSION.value,
+                SysIamRelation.target_type == IamRelationTargetType.PERMISSION.value,
+                SysIamRelation.status == StatusEnum.ENABLED.value,
+                SysIamRelation.subject_id.in_(cascade_resource_ids),
+            )
+            for row in (await self.db.execute(permission_stmt)).scalars().all():
+                permission_rows_by_resource[row.subject_id].append(row)
+
+        keys_by_account: dict[str, set[str]] = defaultdict(set)
+        for account_id, resource_grants in client_resource_grants_by_account.items():
+            account_type = account_type_map.get(account_id)
+            for grant in resource_grants:
+                if grant["grant_mode"] != GrantMode.CASCADE.value:
+                    continue
+                for row in permission_rows_by_resource.get(grant["resource_id"], []):
+                    if account_type is not None and row.account_type != account_type:
+                        continue
+                    keys_by_account[account_id].add(row.target_key)
+        return keys_by_account
 
     def _apply_permission_record(
         self,

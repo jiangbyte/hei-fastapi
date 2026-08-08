@@ -3,8 +3,7 @@
 from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.config.enums import StatusEnum
-from app.modules.iam.enums import ResourceModuleClient
+from app.core.config.enums import AccountType, StatusEnum
 from app.platform.db.base import Base
 from app.platform.db.mixins import TimestampMixin
 from app.platform.id_generator.snowflake import generate_snowflake_id
@@ -80,7 +79,7 @@ class SysResourceModule(Base, TimestampMixin):
     client: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
-        default=ResourceModuleClient.ADMIN.value,
+        default=AccountType.ADMIN.value,
         comment="所属端",
     )
     icon: Mapped[str | None] = mapped_column(String(255), comment="图标")

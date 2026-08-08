@@ -6,6 +6,7 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { resourceModuleApi } from '@/api'
 import NovaIcon from '@/components/common/NovaIcon.vue'
+import { ACCOUNT_TYPE_OPTIONS, accountTypeLabel } from '@/constants/account'
 import {
   createTagColor,
   formatDateTime,
@@ -67,7 +68,7 @@ const searchColumns = computed<ProSearchFormColumns<any>>(() => [
     path: 'client',
     field: 'select',
     fieldProps: {
-      options: dictList('RESOURCE_MODULE_CLIENT'),
+      options: ACCOUNT_TYPE_OPTIONS,
     },
   },
   {
@@ -163,7 +164,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     title: '客户端',
     path: 'client',
     width: 120,
-    render: (row) => dictTypeData('RESOURCE_MODULE_CLIENT', row.client) || row.client,
+    render: (row) => accountTypeLabel(row.client) || row.client,
   },
   {
     title: '颜色',
@@ -171,7 +172,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     width: 110,
     render: (row) =>
       row.color ? (
-        <NTag color={createTagColor(row.color)} bordered={false}>
+        <NTag size="small" color={createTagColor(row.color)} bordered={false}>
           {row.color}
         </NTag>
       ) : (
@@ -188,7 +189,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -305,7 +310,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -379,7 +387,10 @@ async function deleteData(ids: string[]) {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
     <ModalDetail ref="detailModalRef" />
   </NFlex>
 </template>

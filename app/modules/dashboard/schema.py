@@ -1,19 +1,13 @@
 """ Author: Charlie """
 
 from app.core.schema.base import ApiSchema
-from app.core.schema.wire import WireFloat, WireInt
-
-
-class DashboardMetric(ApiSchema):
-    key: str
-    value: WireInt | float
-    trend_value: WireFloat | None = None
+from app.core.schema.wire import WireInt
 
 
 class DashboardTrendPoint(ApiSchema):
     date: str
     type: str
-    value: WireInt | float
+    value: WireInt
 
 
 class DashboardStatusItem(ApiSchema):
@@ -21,7 +15,46 @@ class DashboardStatusItem(ApiSchema):
     value: WireInt
 
 
-class DashboardOverviewResponse(ApiSchema):
-    metrics: list[DashboardMetric]
+class DashboardSummary(ApiSchema):
+    account_total: WireInt
+    online_sessions: WireInt
+    file_total: WireInt
+    storage_bytes: WireInt
+
+
+class DashboardAccounts(ApiSchema):
+    enabled: WireInt
+    disabled: WireInt
+    today_new: WireInt
+    by_type: list[DashboardStatusItem]
+
+
+class DashboardIam(ApiSchema):
+    role_count: WireInt
+    dept_count: WireInt
+    group_count: WireInt
+    menu_count: WireInt
+
+
+class DashboardOpsToday(ApiSchema):
+    audit_total: WireInt
+    audit_failed: WireInt
+    feedback_pending: WireInt
+
+
+class DashboardTrends(ApiSchema):
     account_trend: list[DashboardTrendPoint]
-    file_type_share: list[DashboardStatusItem]
+    audit_trend: list[DashboardTrendPoint]
+
+
+class DashboardFiles(ApiSchema):
+    by_content_type: list[DashboardStatusItem]
+
+
+class DashboardOverviewResponse(ApiSchema):
+    summary: DashboardSummary
+    accounts: DashboardAccounts
+    iam: DashboardIam
+    ops_today: DashboardOpsToday
+    trends: DashboardTrends
+    files: DashboardFiles

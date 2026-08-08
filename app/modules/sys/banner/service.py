@@ -19,6 +19,7 @@ from app.modules.sys.banner.schema import (
 from app.platform.cache.keys import banner_interaction_delta_key
 from app.platform.cache.redis import get_redis
 from app.platform.db.transaction import transactional
+from app.platform.storage.url import resolve_file_url
 
 
 class BannerService:
@@ -43,18 +44,22 @@ class BannerService:
     async def detail(self, query: IdQuery) -> SysBannerSchema:
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysBannerSchema, entity)
+        _resolve_image_urls([schema])
         await _resolve_nicknames(self.db, [schema])
         return schema
 
     async def page_admin(self, query: BannerAdminPageQuery) -> PageData[SysBannerSchema]:
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysBannerSchema, entities)
+        _resolve_image_urls(schemas)
         await _resolve_nicknames(self.db, schemas)
         return build_page(query, total, schemas)
 
     async def list_public(self, query: BannerPublicListQuery) -> list[SysBannerSchema]:
         items = await self.repo.list_public(now=datetime.now(UTC), query=query)
-        return to_schema_list(SysBannerSchema, items)
+        schemas = to_schema_list(SysBannerSchema, items)
+        _resolve_image_urls(schemas)
+        return schemas
 
     async def record_interaction(self, payload: IdQuery) -> None:
         if not await self.repo.is_public_visible(payload.id, datetime.now(UTC)):
@@ -63,6 +68,12 @@ class BannerService:
         if redis is None:
             return
         await redis.hincrby(banner_interaction_delta_key(), payload.id, 1)
+
+
+def _resolve_image_urls(items: list[SysBannerSchema]) -> None:
+    """image 保持 object_name；image_url 给前端展示。"""
+    for item in items:
+        item.image_url = resolve_file_url(item.image) or item.image
 
 
 async def _resolve_nicknames(db, items: list) -> list:

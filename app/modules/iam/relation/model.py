@@ -7,7 +7,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.enums import DataScope, StatusEnum
 from app.modules.iam.enums import (
-    GrantEffect,
     GrantMode,
     IamRelationSubjectType,
     IamRelationTargetType,
@@ -60,12 +59,6 @@ class SysIamRelation(Base, TimestampMixin):
         nullable=False,
         default=GrantMode.CASCADE.value,
         comment="授权模式",
-    )
-    effect: Mapped[str] = mapped_column(
-        String(32),
-        nullable=False,
-        default=GrantEffect.ALLOW.value,
-        comment="授权效果",
     )
     data_scope: Mapped[str] = mapped_column(
         String(32),

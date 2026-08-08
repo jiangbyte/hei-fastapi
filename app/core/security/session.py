@@ -21,7 +21,6 @@ class PermissionGrantPayload(TypedDict):
     permission_key: str
     data_scope: DataScope | str
     custom_scope_dept_ids: list[str]
-    effect: str
     source_type: str
     source_id: str
 
@@ -37,9 +36,10 @@ class SessionPayload:
     dept_ids: list[str] = field(default_factory=list)
     group_ids: list[str] = field(default_factory=list)
     resource_ids: list[str] = field(default_factory=list)
-    button_codes: list[str] = field(default_factory=list)
     permission_keys: list[str] = field(default_factory=list)
     permission_grants: list[PermissionGrantPayload] = field(default_factory=list)
+    client_resource_ids: list[str] = field(default_factory=list)
+    client_permission_keys: list[str] = field(default_factory=list)
     client_ip: str | None = None
     user_agent: str | None = None
     remember_me: bool = True
@@ -67,12 +67,9 @@ class SessionStore:
     async def get(self, token: str) -> SessionPayload | None:
         """按 token 从 Redis 读取会话。"""
         redis = self._get_required_redis()
-        raw = await redis.get(login_token_key(token))
-        if not raw:
+        session = await self._load_raw(redis, token)
+        if session is None:
             return None
-        raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
-        data = json.loads(raw_text)
-        session = SessionPayload(**data)
         return await self._check_idle_timeout(redis, session)
 
     async def touch(self, token: str) -> None:
@@ -234,13 +231,25 @@ class SessionStore:
     async def delete(self, token: str) -> None:
         """删除会话，并在 Redis 模式下同步清理用户维度的 token 索引。"""
         redis = self._get_required_redis()
-        payload = await self.get(token)
+        # 必须用 _load_raw：经 get() 会再走空闲超时 → delete，造成无限递归。
+        payload = await self._load_raw(redis, token)
         await self._delete_keys(redis, [login_token_key(token)])
         await redis.srem(login_tokens_key(), token)
         if payload:
             await redis.srem(
                 login_account_tokens_key(str(payload.account_type), payload.account_id), token
             )
+
+    async def _load_raw(self, redis, token: str) -> SessionPayload | None:
+        """读取会话载荷，不做空闲超时校验。"""
+        raw = await redis.get(login_token_key(token))
+        if not raw:
+            return None
+        raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        data = json.loads(raw_text)
+        data.setdefault("client_resource_ids", [])
+        data.setdefault("client_permission_keys", [])
+        return SessionPayload(**data)
 
     async def delete_account_sessions(self, account_type: str, account_id: str) -> None:
         """删除指定账户的所有在线会话和账户维度 token 索引。"""

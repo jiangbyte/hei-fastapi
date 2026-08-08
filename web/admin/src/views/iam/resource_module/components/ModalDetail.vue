@@ -2,6 +2,7 @@
 
 <script setup lang="ts">
 import { resourceModuleApi } from '@/api'
+import { accountTypeLabel } from '@/constants/account'
 import { createTagColor, displayValue, formatDateTime } from '@/utils'
 import { reactive } from 'vue'
 import { dictTypeColor, dictTypeData } from '@/utils/dict'
@@ -44,7 +45,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'资源模块 ID'">
             {{ displayValue(state.module.id) }}
           </NDescriptionsItem>
@@ -55,16 +60,22 @@ defineExpose({
             {{ displayValue(state.module.code) }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'客户端'">
-            {{
-              dictTypeData('RESOURCE_MODULE_CLIENT', state.module.client) ||
-              displayValue(state.module.client)
-            }}
+            {{ accountTypeLabel(state.module.client) || displayValue(state.module.client) }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'图标'">
-            <span v-if="state.module.icon" class="icon-detail-preview" :title="state.module.icon">
-              <NovaIcon :icon="state.module.icon" :size="22" />
+            <span
+              v-if="state.module.icon"
+              class="icon-detail-preview"
+              :title="state.module.icon"
+            >
+              <NovaIcon
+                :icon="state.module.icon"
+                :size="22"
+              />
             </span>
-            <template v-else> - </template>
+            <template v-else>
+              -
+            </template>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'颜色'">
             <NTag
@@ -74,7 +85,9 @@ defineExpose({
             >
               {{ state.module.color }}
             </NTag>
-            <template v-else> - </template>
+            <template v-else>
+              -
+            </template>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'排序'">
             {{ displayValue(state.module.sort) }}
@@ -86,7 +99,7 @@ defineExpose({
             >
               {{
                 dictTypeData('COMMON_STATUS', state.module.status) ||
-                displayValue(state.module.status)
+                  displayValue(state.module.status)
               }}
             </NTag>
           </NDescriptionsItem>

@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core.config.enums import AccountStatusEnum, AccountType, DataScope, StatusEnum
-from app.core.exceptions.business import ConflictError
+from app.core.exceptions.business import BusinessError, ConflictError
 from app.core.schema.base import IdsRequest
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.dept.model import SysDept
@@ -18,7 +18,9 @@ from app.modules.iam.position.service import PositionService
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.resource.schema import ResourceUpdateRequest
 from app.modules.iam.resource.service import ResourceService
+from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
+from app.modules.iam.role.schema import RoleUpdateRequest
 from app.modules.iam.role.service import RoleService
 from tests.iam_relation_helpers import (
     account_dept,
@@ -26,7 +28,6 @@ from tests.iam_relation_helpers import (
     account_role,
     group_role,
     resource_permission,
-    subject_permission_grant,
     subject_resource_grant,
 )
 
@@ -124,12 +125,6 @@ async def test_delete_role_rejects_grants(db_session):
     db_session.add_all(
         [
             subject_resource_grant(GrantSubjectType.ROLE, role.id, resource.id),
-            subject_permission_grant(
-                GrantSubjectType.ROLE,
-                role.id,
-                "iam:guard:delete",
-                data_scope=DataScope.SELF.value,
-            ),
         ]
     )
     await db_session.commit()
@@ -137,7 +132,6 @@ async def test_delete_role_rejects_grants(db_session):
     await _assert_conflict_message(
         RoleService(db_session).delete(IdsRequest(ids=[role.id])),
         "resource_grants=1",
-        "permission_grants=1",
     )
 
 
@@ -151,12 +145,6 @@ async def test_delete_group_rejects_account_role_and_grant_relations(db_session)
             account_group(account.id, group.id),
             group_role(group.id, role.id),
             subject_resource_grant(GrantSubjectType.GROUP, group.id, resource.id),
-            subject_permission_grant(
-                GrantSubjectType.GROUP,
-                group.id,
-                "iam:group:guard",
-                data_scope=DataScope.SELF.value,
-            ),
         ]
     )
     await db_session.commit()
@@ -166,7 +154,6 @@ async def test_delete_group_rejects_account_role_and_grant_relations(db_session)
         "account_groups=1",
         "group_roles=1",
         "resource_grants=1",
-        "permission_grants=1",
     )
 
 
@@ -187,13 +174,6 @@ async def test_delete_dept_rejects_child_account_owner_and_custom_scope_refs(db_
                 data_scope=DataScope.CUSTOM.value,
                 custom_scope_dept_ids=[dept.id],
             ),
-            subject_permission_grant(
-                GrantSubjectType.ACCOUNT,
-                account.id,
-                "iam:dept:custom-scope",
-                data_scope=DataScope.CUSTOM.value,
-                custom_scope_dept_ids=[dept.id],
-            ),
         ]
     )
     await db_session.commit()
@@ -203,7 +183,6 @@ async def test_delete_dept_rejects_child_account_owner_and_custom_scope_refs(db_
         "child_depts=1",
         "account_depts=1",
         "owner_roles=1",
-        "permission_grant_scopes=1",
         "resource_permission_scopes=1",
     )
     assert child_parent_id == dept_id
@@ -327,3 +306,66 @@ async def test_unreferenced_iam_entities_can_be_deleted(db_session):
     assert (
         await db_session.execute(select(SysPosition).where(SysPosition.id == position.id))
     ).scalar_one_or_none() is None
+
+
+async def test_delete_rejects_builtin_and_super_admin_roles(db_session):
+    builtin = SysRole(
+        code="builtin_role",
+        name="Builtin",
+        category="SYS",
+        scope_type=RoleScopeType.PLATFORM.value,
+        is_builtin=True,
+    )
+    super_admin = SysRole(
+        code=SUPER_ADMIN_ROLE_CODE,
+        name="Super Admin",
+        category="SYS",
+        scope_type=RoleScopeType.PLATFORM.value,
+        is_builtin=False,
+    )
+    db_session.add_all([builtin, super_admin])
+    await db_session.commit()
+
+    with pytest.raises(BusinessError, match="Cannot delete"):
+        await RoleService(db_session).delete(IdsRequest(ids=[builtin.id]))
+    with pytest.raises(BusinessError, match="Cannot delete"):
+        await RoleService(db_session).delete(IdsRequest(ids=[super_admin.id]))
+
+
+async def test_update_rejects_mutating_protected_role_identity(db_session):
+    role = SysRole(
+        code=SUPER_ADMIN_ROLE_CODE,
+        name="Super Admin",
+        category="SYS",
+        scope_type=RoleScopeType.PLATFORM.value,
+        is_builtin=True,
+        status=StatusEnum.ENABLED.value,
+        sort=1,
+        description=None,
+        extra={},
+    )
+    db_session.add(role)
+    await db_session.commit()
+
+    with pytest.raises(BusinessError, match="Cannot change code"):
+        await RoleService(db_session).update(
+            RoleUpdateRequest(
+                id=role.id,
+                code="NOT_SUPER",
+                name=role.name,
+                category=role.category,
+                scope_type=RoleScopeType.PLATFORM,
+                is_builtin=True,
+            )
+        )
+    with pytest.raises(BusinessError, match="Cannot change is_builtin"):
+        await RoleService(db_session).update(
+            RoleUpdateRequest(
+                id=role.id,
+                code=SUPER_ADMIN_ROLE_CODE,
+                name=role.name,
+                category=role.category,
+                scope_type=RoleScopeType.PLATFORM,
+                is_builtin=False,
+            )
+        )

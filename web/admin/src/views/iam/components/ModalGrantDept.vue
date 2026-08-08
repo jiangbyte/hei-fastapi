@@ -7,7 +7,7 @@ import { renderButtonIcon } from '@/utils'
 import { NButton, NTag } from 'naive-ui'
 import { computed, reactive } from 'vue'
 
-const emit = defineEmits<{ saved: [] }>()
+export type DeptPickItem = { id: string; name: string }
 
 interface FlatDept {
   id: string
@@ -15,8 +15,16 @@ interface FlatDept {
   depth: number
 }
 
+const emit = defineEmits<{
+  saved: []
+  confirm: [items: DeptPickItem[]]
+}>()
+
 const state = reactive({
   showModal: false,
+  mode: 'grant' as 'grant' | 'pick',
+  multiple: true,
+  titleOverride: '',
   loading: false,
   submitLoading: false,
   searchKey: '',
@@ -28,9 +36,13 @@ const state = reactive({
   pageSize: 20,
 })
 
-const modalTitle = computed(() =>
-  state.account?.name ? `分配部门 - ${state.account.name}` : '分配部门',
-)
+const isPick = computed(() => state.mode === 'pick')
+
+const modalTitle = computed(() => {
+  if (state.titleOverride) return state.titleOverride
+  if (isPick.value) return '选择部门'
+  return state.account?.name ? `分配部门 - ${state.account.name}` : '分配部门'
+})
 
 const filteredDepts = computed(() => {
   const k = state.searchKey.trim().toLowerCase()
@@ -70,37 +82,45 @@ const listColumns = computed<DataTableColumns<FlatDept>>(() => [
   },
 ])
 
-const selectedColumns = computed<DataTableColumns<FlatDept>>(() => [
-  {
-    title: '操作',
-    key: 'action',
-    align: 'center',
-    width: 70,
-    render: (row) => (
-      <NButton text type="error" size="small" onClick={() => delRecord(row)}>
-        {renderButtonIcon('icon-park-outline:delete')}
-      </NButton>
-    ),
-  },
-  { title: '部门名称', key: 'name', minWidth: 120 },
-  {
-    title: '主部门',
-    key: 'primary',
-    width: 90,
-    render: (row) =>
-      state.primaryId === row.id ? (
-        <NTag type="success" size="small" bordered={false}>
-          主部门
-        </NTag>
-      ) : (
-        <NButton text size="small" type="primary" onClick={() => (state.primaryId = row.id)}>
-          设为主部门
+const selectedColumns = computed<DataTableColumns<FlatDept>>(() => {
+  const cols: DataTableColumns<FlatDept> = [
+    {
+      title: '操作',
+      key: 'action',
+      align: 'center',
+      width: 70,
+      render: (row) => (
+        <NButton text type="error" size="small" onClick={() => delRecord(row)}>
+          {renderButtonIcon('icon-park-outline:delete')}
         </NButton>
       ),
-  },
-])
+    },
+    { title: '部门名称', key: 'name', minWidth: 120 },
+  ]
+  if (!isPick.value) {
+    cols.push({
+      title: '主部门',
+      key: 'primary',
+      width: 90,
+      render: (row) =>
+        state.primaryId === row.id ? (
+          <NTag type="success" size="small" bordered={false}>
+            主部门
+          </NTag>
+        ) : (
+          <NButton text size="small" type="primary" onClick={() => (state.primaryId = row.id)}>
+            设为主部门
+          </NButton>
+        ),
+    })
+  }
+  return cols
+})
 
 async function openModal(account: any) {
+  state.mode = 'grant'
+  state.multiple = true
+  state.titleOverride = ''
   state.account = account ?? {}
   state.searchKey = ''
   state.flatDepts = []
@@ -108,10 +128,28 @@ async function openModal(account: any) {
   state.primaryId = null
   state.page = 1
   state.showModal = true
-  await fetchData()
+  await fetchGrantData()
 }
 
-async function fetchData() {
+async function openPicker(options?: {
+  selectedIds?: string[]
+  multiple?: boolean
+  title?: string
+}) {
+  state.mode = 'pick'
+  state.multiple = options?.multiple ?? false
+  state.titleOverride = options?.title || ''
+  state.account = {}
+  state.searchKey = ''
+  state.flatDepts = []
+  state.selectedData = []
+  state.primaryId = null
+  state.page = 1
+  state.showModal = true
+  await fetchPickData(options?.selectedIds ?? [])
+}
+
+async function fetchGrantData() {
   if (!state.account?.id) return
   state.loading = true
   try {
@@ -130,7 +168,28 @@ async function fetchData() {
   }
 }
 
-async function submitGrant() {
+async function fetchPickData(selectedIds: string[]) {
+  state.loading = true
+  try {
+    const deptRes = await deptApi.tree().catch(() => ({ data: [] }))
+    state.flatDepts = flattenTree(deptRes.data ?? [])
+    const sel = new Set(selectedIds.map(String))
+    state.selectedData = state.flatDepts.filter((d) => sel.has(d.id))
+  } finally {
+    state.loading = false
+  }
+}
+
+async function submit() {
+  if (isPick.value) {
+    emit(
+      'confirm',
+      state.selectedData.map((d) => ({ id: d.id, name: d.name })),
+    )
+    closeModal()
+    return
+  }
+
   state.submitLoading = true
   try {
     const ids = state.selectedData.map((d) => d.id)
@@ -163,25 +222,36 @@ function closeModal() {
   state.showModal = false
   state.submitLoading = false
 }
+
 function addRecord(r: FlatDept) {
+  if (isPick.value && !state.multiple) {
+    state.selectedData = [r]
+    return
+  }
   if (!selectedIds.value.has(r.id)) state.selectedData.push(r)
 }
+
 function addAllPageRecord() {
+  if (isPick.value && !state.multiple) return
   tableDepts.value.forEach(addRecord)
 }
+
 function delRecord(r: FlatDept) {
   state.selectedData = state.selectedData.filter((d) => d.id !== r.id)
   if (state.primaryId === r.id) state.primaryId = state.selectedData[0]?.id ?? null
 }
+
 function delAllRecord() {
   state.selectedData = []
   state.primaryId = null
 }
+
 function resetSearch() {
   state.searchKey = ''
   state.page = 1
 }
-defineExpose({ openModal })
+
+defineExpose({ openModal, openPicker })
 </script>
 
 <template>
@@ -192,8 +262,15 @@ defineExpose({ openModal })
     resizable
     :mask-closable="false"
   >
-    <NDrawerContent :title="modalTitle" closable :native-scrollbar="false">
-      <NGrid :cols="24" :x-gap="10">
+    <NDrawerContent
+      :title="modalTitle"
+      closable
+      :native-scrollbar="false"
+    >
+      <NGrid
+        :cols="24"
+        :x-gap="10"
+      >
         <NGi :span="15">
           <NSpace vertical>
             <NInputGroup>
@@ -204,12 +281,29 @@ defineExpose({ openModal })
                 @keyup.enter="state.page = 1"
                 @clear="resetSearch"
               />
-              <NButton type="primary" @click="state.page = 1"> 搜索 </NButton>
-              <NButton @click="resetSearch"> 重置 </NButton>
+              <NButton
+                type="primary"
+                @click="state.page = 1"
+              >
+                搜索
+              </NButton>
+              <NButton @click="resetSearch">
+                重置
+              </NButton>
             </NInputGroup>
-            <NFlex justify="space-between" align="center">
+            <NFlex
+              justify="space-between"
+              align="center"
+            >
               <NText>{{ `待处理: ${filteredDepts.length}` }}</NText>
-              <NButton dashed size="small" @click="addAllPageRecord"> 新增当前页 </NButton>
+              <NButton
+                v-if="!(isPick && !state.multiple)"
+                dashed
+                size="small"
+                @click="addAllPageRecord"
+              >
+                新增当前页
+              </NButton>
             </NFlex>
             <NDataTable
               size="small"
@@ -233,9 +327,19 @@ defineExpose({ openModal })
         </NGi>
         <NGi :span="9">
           <NSpace vertical>
-            <NFlex justify="space-between" align="center">
+            <NFlex
+              justify="space-between"
+              align="center"
+            >
               <NText>{{ `已选择: ${state.selectedData.length}` }}</NText>
-              <NButton dashed type="error" size="small" @click="delAllRecord"> 全部移除 </NButton>
+              <NButton
+                dashed
+                type="error"
+                size="small"
+                @click="delAllRecord"
+              >
+                全部移除
+              </NButton>
             </NFlex>
             <NDataTable
               size="small"
@@ -250,10 +354,19 @@ defineExpose({ openModal })
         </NGi>
       </NGrid>
       <template #footer>
-        <NSpace justify="end" align="center">
-          <NButton @click="closeModal"> 关闭 </NButton>
-          <NButton type="primary" :loading="state.submitLoading" @click="submitGrant">
-            保存
+        <NSpace
+          justify="end"
+          align="center"
+        >
+          <NButton @click="closeModal">
+            关闭
+          </NButton>
+          <NButton
+            type="primary"
+            :loading="state.submitLoading"
+            @click="submit"
+          >
+            {{ isPick ? '确认' : '保存' }}
           </NButton>
         </NSpace>
       </template>

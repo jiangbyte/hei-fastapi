@@ -21,7 +21,6 @@ async def test_admin_file_list_uses_current_size_total_pages_records(client):
         file = SysFile(
             object_name="uploads/20260617/demo.txt",
             original_name="demo.txt",
-            storage_config_id="__settings__",
             storage_provider="local",
             bucket=None,
             content_type="text/plain",

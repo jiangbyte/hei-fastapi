@@ -1,48 +1,185 @@
 """ Author: Charlie """
 
+from __future__ import annotations
+
 import asyncio
+import logging
 import smtplib
 import ssl
 from email.message import EmailMessage
+from typing import Any
 
 from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
+from app.platform.cloud.aliyun_rpc import aliyun_rpc_get
+from app.platform.cloud.tencent_api import tencent_api_post
+from app.platform.config.reader import config_reader
+
+logger = logging.getLogger(__name__)
 
 
 async def send_mail(to_email: str, subject: str, body: str) -> None:
-    """通过已配置的 SMTP 发送纯文本邮件。"""
-    mail = settings.mail
-    if not mail.host or not mail.from_email:
+    """按 DEFAULT_EMAIL_ENGINE 发送纯文本邮件。"""
+    engine = (config_reader.get("DEFAULT_EMAIL_ENGINE") or "LOCAL").strip().upper()
+    if engine == "LOCAL":
+        await _send_local_smtp(to_email, subject, body)
+        return
+    if engine == "ALIYUN":
+        await _send_aliyun_mail(to_email, subject, body)
+        return
+    if engine == "TENCENT":
+        await _send_tencent_mail(to_email, subject, body)
+        return
+    raise BusinessError(f"Unsupported email engine: {engine}")
+
+
+async def send_templated_mail(scene: str, to_email: str, variables: dict[str, Any]) -> None:
+    """按 MAIL_TEMPLATE_{SCENE} 渲染并发送。"""
+    tmpl = config_reader.get_mail_template(scene)
+    subject = tmpl["subject"] or f"{settings.app.name}"
+    body = tmpl["body"] or ""
+    subject = _render(subject, variables)
+    body = _render(body, variables)
+    if not subject.strip() and not body.strip():
+        raise BusinessError(f"Mail template missing: MAIL_TEMPLATE_{scene}")
+    await send_mail(to_email, subject, body)
+
+
+def _render(text: str, variables: dict[str, Any]) -> str:
+    out = text
+    for key, value in variables.items():
+        out = out.replace("{{" + key + "}}", str(value))
+    return out
+
+
+async def _send_local_smtp(to_email: str, subject: str, body: str) -> None:
+    host = (config_reader.get("MAIL_LOCAL_HOST") or settings.mail.host or "").strip()
+    port = config_reader.get_int("MAIL_LOCAL_PORT", settings.mail.port)
+    from_email = (config_reader.get("MAIL_LOCAL_FROM_EMAIL") or settings.mail.from_email or "").strip()
+    from_name = (config_reader.get("MAIL_LOCAL_FROM_NAME") or settings.mail.from_name or "").strip()
+    if not host or not from_email:
         raise BusinessError("Mail service is not configured")
 
     message = EmailMessage()
-    message["From"] = f"{mail.from_name} <{mail.from_email}>"
+    message["From"] = f"{from_name} <{from_email}>" if from_name else from_email
     message["To"] = to_email
     message["Subject"] = subject
     message.set_content(body)
 
-    await asyncio.to_thread(_send_sync, message)
+    use_ssl = config_reader.get_bool("MAIL_LOCAL_USE_SSL", False)
+    use_starttls = config_reader.get_bool(
+        "MAIL_LOCAL_USE_STARTTLS",
+        settings.mail.use_tls,
+    )
+    auth_required = config_reader.get_bool(
+        "MAIL_LOCAL_AUTH_REQUIRED",
+        bool((config_reader.get("MAIL_LOCAL_USERNAME") or settings.mail.username or "").strip()),
+    )
+    username = (config_reader.get("MAIL_LOCAL_USERNAME") or settings.mail.username or "").strip()
+    password = config_reader.get("MAIL_LOCAL_PASSWORD") or settings.mail.password or ""
+    timeout = settings.mail.timeout_seconds
+
+    await asyncio.to_thread(
+        _send_sync,
+        message,
+        host=host,
+        port=port,
+        use_ssl=use_ssl,
+        use_starttls=use_starttls,
+        auth_required=auth_required,
+        username=username,
+        password=password,
+        timeout=timeout,
+    )
 
 
-def _send_sync(message: EmailMessage) -> None:
-    mail = settings.mail
+def _send_sync(
+    message: EmailMessage,
+    *,
+    host: str,
+    port: int,
+    use_ssl: bool,
+    use_starttls: bool,
+    auth_required: bool,
+    username: str,
+    password: str,
+    timeout: float,
+) -> None:
     try:
-        if mail.use_tls:
-            with smtplib.SMTP(mail.host, mail.port, timeout=mail.timeout_seconds) as smtp:
-                smtp.starttls(context=ssl.create_default_context())
-                _login(smtp)
+        context = ssl.create_default_context()
+        if use_ssl:
+            with smtplib.SMTP_SSL(host, port, timeout=timeout, context=context) as smtp:
+                if auth_required and username:
+                    smtp.login(username, password)
                 smtp.send_message(message)
-        else:
-            with smtplib.SMTP(mail.host, mail.port, timeout=mail.timeout_seconds) as smtp:
-                _login(smtp)
-                smtp.send_message(message)
+            return
+        with smtplib.SMTP(host, port, timeout=timeout) as smtp:
+            if use_starttls:
+                smtp.starttls(context=context)
+            if auth_required and username:
+                smtp.login(username, password)
+            smtp.send_message(message)
     except OSError as exc:
         raise BusinessError("Failed to send email") from exc
     except smtplib.SMTPException as exc:
         raise BusinessError("Failed to send email") from exc
 
 
-def _login(smtp: smtplib.SMTP) -> None:
-    mail = settings.mail
-    if mail.username:
-        smtp.login(mail.username, mail.password)
+async def _send_aliyun_mail(to_email: str, subject: str, body: str) -> None:
+    access_key_id = _require("MAIL_ALIYUN_ACCESS_KEY_ID")
+    access_key_secret = _require("MAIL_ALIYUN_ACCESS_KEY_SECRET")
+    account_name = _require("MAIL_ALIYUN_ACCOUNT_NAME")
+    from_alias = (config_reader.get("MAIL_LOCAL_FROM_NAME") or settings.mail.from_name or "").strip()
+    try:
+        await aliyun_rpc_get(
+            endpoint="dm.aliyuncs.com",
+            access_key_id=access_key_id,
+            access_key_secret=access_key_secret,
+            action="SingleSendMail",
+            version="2015-11-23",
+            business_params={
+                "AccountName": account_name,
+                "AddressType": "1",
+                "ReplyToAddress": "false",
+                "ToAddress": to_email,
+                "Subject": subject,
+                "TextBody": body,
+                **({"FromAlias": from_alias} if from_alias else {}),
+            },
+        )
+    except Exception as exc:
+        logger.exception("Aliyun mail failed")
+        raise BusinessError("Failed to send email via Aliyun") from exc
+
+
+async def _send_tencent_mail(to_email: str, subject: str, body: str) -> None:
+    secret_id = _require("MAIL_TENCENT_SECRET_ID")
+    secret_key = _require("MAIL_TENCENT_SECRET_KEY")
+    from_email = _require("MAIL_TENCENT_FROM_EMAIL")
+    region = (config_reader.get("MAIL_TENCENT_REGION") or "ap-guangzhou").strip()
+    try:
+        await tencent_api_post(
+            service="ses",
+            host="ses.tencentcloudapi.com",
+            action="SendEmail",
+            version="2020-10-02",
+            region=region,
+            secret_id=secret_id,
+            secret_key=secret_key,
+            payload={
+                "FromEmailAddress": from_email,
+                "Destination": [to_email],
+                "Subject": subject,
+                "Simple": {"Text": body},
+            },
+        )
+    except Exception as exc:
+        logger.exception("Tencent mail failed")
+        raise BusinessError("Failed to send email via Tencent") from exc
+
+
+def _require(key: str) -> str:
+    value = (config_reader.get(key) or "").strip()
+    if not value:
+        raise BusinessError(f"邮件引擎未配置: {key}")
+    return value

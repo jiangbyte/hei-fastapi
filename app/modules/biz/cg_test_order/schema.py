@@ -1,7 +1,7 @@
 """
 由 HEI 代码生成器生成。
 Author: Charlie
-生成时间：2026-08-07 07:26:16
+生成时间：2026-08-08 21:09:54
 """
 
 from datetime import datetime
@@ -11,8 +11,7 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
-from app.core.schema.wire import WireBool, WireFloat, WireInt
-
+from app.core.schema.wire import WireBool, WireInt, WireFloat
 
 class CgTestOrderCreateRequest(ApiSchema):
     order_no: str

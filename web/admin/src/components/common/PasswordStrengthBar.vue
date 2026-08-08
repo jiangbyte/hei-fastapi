@@ -41,18 +41,29 @@ const passwordPolicy = computed(() => [
 </script>
 
 <template>
-  <div v-if="password" class="password-strength-bar">
+  <div
+    v-if="password"
+    class="password-strength-bar"
+  >
     <div class="bar-track">
       <div
         class="bar-fill"
         :style="{ width: strength.percent + '%', backgroundColor: strength.color }"
       />
     </div>
-    <span v-if="strength.label" class="strength-label" :style="{ color: strength.color }">
+    <span
+      v-if="strength.label"
+      class="strength-label"
+      :style="{ color: strength.color }"
+    >
       {{ strength.label }}
     </span>
     <div class="policy-list">
-      <div v-for="item in passwordPolicy" :key="item.label" class="policy-item">
+      <div
+        v-for="item in passwordPolicy"
+        :key="item.label"
+        class="policy-item"
+      >
         <span :class="['policy-icon', item.met ? 'met' : '']">
           {{ item.met ? '✓' : '○' }}
         </span>

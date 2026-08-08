@@ -18,6 +18,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { dictList, dictTypeData, dictTypeColor } from '@/utils/dict'
 import ModalDetail from './components/ModalDetail.vue'
 import ModalForm from './components/ModalForm.vue'
+import ModalGrantClientResource from './components/ModalGrantClientResource.vue'
 import ModalGrantResource from './components/ModalGrantResource.vue'
 import ModalGrantUser from '../components/ModalGrantUser.vue'
 import { readPageMeta } from '@/utils/wire'
@@ -25,6 +26,7 @@ import { readPageMeta } from '@/utils/wire'
 const formModalRef = ref<any>(null)
 const detailModalRef = ref<any>(null)
 const grantResourceModalRef = ref<any>(null)
+const grantClientResourceModalRef = ref<any>(null)
 const grantUserModalRef = ref<any>(null)
 const state = reactive({
   roles: [] as any[],
@@ -165,7 +167,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -228,6 +234,11 @@ const grantOptions = computed(() =>
       permission: 'iam:role:grantresource',
     },
     {
+      label: '分配客户端资源',
+      key: 'client-resource',
+      permission: 'iam:role:grantclientresource',
+    },
+    {
       label: '分配用户',
       key: 'user',
       permission: 'iam:role:grantuser',
@@ -282,6 +293,8 @@ function openGrantModal(type: string, row: any) {
   }
   if (type === 'resource') {
     grantResourceModalRef.value?.openModal(role)
+  } else if (type === 'client-resource') {
+    grantClientResourceModalRef.value?.openModal(role, roleApi, '分配客户端资源')
   } else if (type === 'user') {
     grantUserModalRef.value?.openModal(role)
   }
@@ -323,7 +336,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -397,10 +413,23 @@ async function deleteData(ids: string[]) {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
     <ModalDetail ref="detailModalRef" />
-    <ModalGrantResource ref="grantResourceModalRef" @saved="fetchPage" />
-    <ModalGrantUser ref="grantUserModalRef" @saved="fetchPage" />
+    <ModalGrantResource
+      ref="grantResourceModalRef"
+      @saved="fetchPage"
+    />
+    <ModalGrantClientResource
+      ref="grantClientResourceModalRef"
+      @saved="fetchPage"
+    />
+    <ModalGrantUser
+      ref="grantUserModalRef"
+      @saved="fetchPage"
+    />
   </NFlex>
 </template>
 

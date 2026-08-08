@@ -44,7 +44,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(640px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'资源ID'">
             {{ displayValue(state.resource.id) }}
           </NDescriptionsItem>
@@ -57,7 +61,7 @@ defineExpose({
           <NDescriptionsItem :label="'资源类型'">
             {{
               dictTypeData('RESOURCE_TYPE', state.resource.resource_type) ||
-              displayValue(state.resource.resource_type)
+                displayValue(state.resource.resource_type)
             }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'父级资源ID'">
@@ -81,9 +85,14 @@ defineExpose({
               class="icon-detail-preview"
               :title="state.resource.icon"
             >
-              <NovaIcon :icon="state.resource.icon" :size="22" />
+              <NovaIcon
+                :icon="state.resource.icon"
+                :size="22"
+              />
             </span>
-            <template v-else> - </template>
+            <template v-else>
+              -
+            </template>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'颜色'">
             <NTag
@@ -117,7 +126,7 @@ defineExpose({
             >
               {{
                 dictTypeData('COMMON_STATUS', state.resource.status) ||
-                displayValue(state.resource.status)
+                  displayValue(state.resource.status)
               }}
             </NTag>
           </NDescriptionsItem>

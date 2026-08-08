@@ -1,8 +1,7 @@
 """ Author: Charlie """
 
-from app.core.config.enums import AccountType, DataScope, StatusEnum
+from app.core.config.enums import AccountType, DataScope
 from app.modules.iam.enums import (
-    GrantEffect,
     GrantMode,
     GrantSubjectType,
     IamRelationSubjectType,
@@ -113,7 +112,6 @@ def subject_resource_grant(
     *,
     account_type: str = AccountType.ADMIN.value,
     grant_mode: GrantMode | str = GrantMode.CASCADE,
-    effect: GrantEffect | str = GrantEffect.ALLOW,
     **kwargs,
 ) -> SysIamRelation:
     return SysIamRelation(
@@ -124,32 +122,5 @@ def subject_resource_grant(
         target_type=IamRelationTargetType.RESOURCE.value,
         target_id=resource_id,
         grant_mode=grant_mode.value if isinstance(grant_mode, GrantMode) else grant_mode,
-        effect=effect.value if isinstance(effect, GrantEffect) else effect,
-        **kwargs,
-    )
-
-
-def subject_permission_grant(
-    subject_type: GrantSubjectType,
-    subject_id: str,
-    permission_key: str,
-    *,
-    account_type: str = AccountType.ADMIN.value,
-    data_scope: DataScope | str = DataScope.SELF,
-    custom_scope_dept_ids: list[str] | None = None,
-    effect: GrantEffect | str = GrantEffect.ALLOW,
-    **kwargs,
-) -> SysIamRelation:
-    return SysIamRelation(
-        subject_type=subject_type.value,
-        subject_id=subject_id,
-        account_type=account_type,
-        relation_type=IamRelationType.SUBJECT_PERMISSION_GRANT.value,
-        target_type=IamRelationTargetType.PERMISSION.value,
-        target_key=permission_key,
-        data_scope=data_scope.value if isinstance(data_scope, DataScope) else data_scope,
-        custom_scope_dept_ids=list(custom_scope_dept_ids or []),
-        effect=effect.value if isinstance(effect, GrantEffect) else effect,
-        status=kwargs.pop("status", StatusEnum.ENABLED.value),
         **kwargs,
     )

@@ -51,16 +51,6 @@ async def count_role_references(db: AsyncSession, role_ids: list[str]) -> dict[s
                 SysIamRelation.relation_type == IamRelationType.SUBJECT_RESOURCE_GRANT.value,
             ),
         ),
-        "permission_grants": await _count(
-            db,
-            select(func.count())
-            .select_from(SysIamRelation)
-            .where(
-                SysIamRelation.subject_type == GrantSubjectType.ROLE.value,
-                SysIamRelation.subject_id.in_(ids),
-                SysIamRelation.relation_type == IamRelationType.SUBJECT_PERMISSION_GRANT.value,
-            ),
-        ),
     }
 
 
@@ -92,16 +82,6 @@ async def count_group_references(db: AsyncSession, group_ids: list[str]) -> dict
                 SysIamRelation.relation_type == IamRelationType.SUBJECT_RESOURCE_GRANT.value,
             ),
         ),
-        "permission_grants": await _count(
-            db,
-            select(func.count())
-            .select_from(SysIamRelation)
-            .where(
-                SysIamRelation.subject_type == GrantSubjectType.GROUP.value,
-                SysIamRelation.subject_id.in_(ids),
-                SysIamRelation.relation_type == IamRelationType.SUBJECT_PERMISSION_GRANT.value,
-            ),
-        ),
     }
 
 
@@ -120,7 +100,6 @@ async def count_dept_references(db: AsyncSession, dept_ids: list[str]) -> dict[s
             db, select(func.count()).select_from(SysRole).where(SysRole.owner_dept_id.in_(ids))
         ),
         "resource_permission_scopes": await _count_resource_permission_scope_refs(db, ids),
-        "permission_grant_scopes": await _count_permission_grant_scope_refs(db, ids),
     }
 
 
@@ -219,22 +198,6 @@ async def _count_resource_permission_scope_refs(db: AsyncSession, dept_ids: list
             await db.execute(
                 select(SysIamRelation.custom_scope_dept_ids).where(
                     SysIamRelation.relation_type == IamRelationType.RESOURCE_PERMISSION.value,
-                    SysIamRelation.custom_scope_dept_ids.is_not(None),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    return _count_scope_refs(rows, dept_ids)
-
-
-async def _count_permission_grant_scope_refs(db: AsyncSession, dept_ids: list[str]) -> int:
-    rows = (
-        (
-            await db.execute(
-                select(SysIamRelation.custom_scope_dept_ids).where(
-                    SysIamRelation.relation_type == IamRelationType.SUBJECT_PERMISSION_GRANT.value,
                     SysIamRelation.custom_scope_dept_ids.is_not(None),
                 )
             )

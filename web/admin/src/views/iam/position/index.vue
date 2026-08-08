@@ -125,7 +125,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -242,7 +246,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -316,7 +323,10 @@ async function deleteData(ids: string[]) {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
     <ModalDetail ref="detailModalRef" />
   </NFlex>
 </template>

@@ -6,11 +6,16 @@ from dataclasses import asdict
 from sqlalchemy import select
 
 from app.core.config.enums import StorageProvider
-from app.platform.config.crypto import decrypt_config_value, decrypt_storage_value
+from app.platform.config.crypto import decrypt_config_value
 from app.platform.db.models.sys_config import SysConfig
-from app.platform.db.models.sys_storage_config import SysStorageConfig
 from app.platform.db.session import get_session_factory
+from app.platform.module.paths import DEFAULT_FILES_PUBLIC_PATH
 from app.platform.storage.config import DEFAULT_LOCAL_STORAGE_ROOT, StorageConfig
+from app.platform.storage.engines import (
+    PROVIDER_DISPLAY_NAMES,
+    config_key,
+    engine_to_provider,
+)
 
 
 class ConfigReader:
@@ -25,8 +30,6 @@ class ConfigReader:
     async def load_all(self) -> None:
         """从 DB 全量加载配置到内存缓存，成功后原子替换当前快照。"""
         cache: dict[str, str] = {}
-        storage_configs: dict[str, StorageConfig] = {}
-        default_storage_id: str | None = None
         factory = get_session_factory()
         async with factory() as db:
             async with db as session:
@@ -34,21 +37,7 @@ class ConfigReader:
                 rows = (await session.execute(stmt)).scalars().all()
                 for row in rows:
                     cache[row.config_key] = decrypt_config_value(row.config_key, row.config_value)
-                storage_stmt = select(SysStorageConfig).order_by(
-                    SysStorageConfig.is_default.desc(),
-                    SysStorageConfig.sort_code.asc(),
-                    SysStorageConfig.name.asc(),
-                )
-                storage_rows = (await session.execute(storage_stmt)).scalars().all()
-                presign_expire_seconds = _coerce_int(
-                    cache.get("storage.presign_expire_seconds"),
-                    3600,
-                )
-                for row in storage_rows:
-                    config = _storage_config_from_row(row, presign_expire_seconds)
-                    storage_configs[config.id] = config
-                    if config.is_default and default_storage_id is None:
-                        default_storage_id = config.id
+        storage_configs, default_storage_id = _build_storage_snapshot(cache)
         self._cache = cache
         self._storage_configs = storage_configs
         self._default_storage_id = default_storage_id
@@ -58,10 +47,24 @@ class ConfigReader:
         """重新加载（管理后台修改配置后调用）。"""
         await self.load_all()
         from app.platform.config.apply import apply_sys_config
+        from app.platform.module import load_module_specs
+        from app.platform.module.config_loader import load_module_configs
         from app.platform.storage.manager import clear_storage_cache
 
         apply_sys_config()
         clear_storage_cache()
+        try:
+            load_module_configs(load_module_specs())
+        except Exception:
+            # 模块配置热加载失败不阻断系统配置生效
+            pass
+        try:
+            from app.platform.tasks.celery_app import celery_app
+            from app.platform.tasks.redbeat_scheduler import sync_audit_interval_to_redbeat
+
+            sync_audit_interval_to_redbeat(celery_app)
+        except Exception:
+            pass
 
     @property
     def version(self) -> int:
@@ -82,10 +85,17 @@ class ConfigReader:
         provider: str | StorageProvider,
     ) -> StorageConfig | None:
         provider_value = StorageProvider(provider)
-        for config in self._storage_configs.values():
-            if config.provider == provider_value:
+        by_id = self._storage_configs.get(provider_value.value)
+        if by_id is not None:
+            return by_id
+        # 兼容测试/过渡期：id 尚未等于 provider 时按 provider 字段匹配
+        matches = [c for c in self._storage_configs.values() if c.provider == provider_value]
+        if not matches:
+            return None
+        for config in matches:
+            if config.is_default:
                 return config
-        return None
+        return matches[0]
 
     def list_storage_configs(self) -> list[StorageConfig]:
         return list(self._storage_configs.values())
@@ -124,25 +134,78 @@ class ConfigReader:
         except (json.JSONDecodeError, TypeError):
             return default or []
 
+    def get_json(self, key: str, default: dict | None = None) -> dict:
+        val = self._cache.get(key)
+        if val is None:
+            return default or {}
+        try:
+            parsed = json.loads(val)
+            return parsed if isinstance(parsed, dict) else (default or {})
+        except (json.JSONDecodeError, TypeError):
+            return default or {}
+
+    def get_mail_template(self, scene: str) -> dict[str, str]:
+        data = self.get_json(f"MAIL_TEMPLATE_{scene}")
+        return {
+            "subject": str(data.get("subject") or ""),
+            "body": str(data.get("body") or ""),
+        }
+
+    def get_sms_template(self, scene: str) -> dict[str, str]:
+        data = self.get_json(f"SMS_TEMPLATE_{scene}")
+        return {
+            "code": str(data.get("code") or ""),
+            "content": str(data.get("content") or ""),
+        }
+
     def raw_items(self) -> dict[str, str]:
         return dict(self._cache)
 
 
-def _storage_config_from_row(row: SysStorageConfig, presign_expire_seconds: int) -> StorageConfig:
+def _build_storage_snapshot(
+    cache: dict[str, str],
+) -> tuple[dict[str, StorageConfig], str | None]:
+    presign_expire_seconds = _coerce_int(cache.get("STORAGE_PRESIGN_EXPIRE_SECONDS"), 3600)
+    default_provider = engine_to_provider(cache.get("DEFAULT_FILE_ENGINE"))
+    default_id = default_provider.value if default_provider else None
+    configs: dict[str, StorageConfig] = {}
+    for provider in StorageProvider:
+        configs[provider.value] = _storage_config_from_cache(
+            cache,
+            provider,
+            is_default=(default_id == provider.value),
+            presign_expire_seconds=presign_expire_seconds,
+        )
+    return configs, default_id
+
+
+def _storage_config_from_cache(
+    cache: dict[str, str],
+    provider: StorageProvider,
+    *,
+    is_default: bool,
+    presign_expire_seconds: int,
+) -> StorageConfig:
+    def g(suffix: str, default: str = "") -> str:
+        return cache.get(config_key(provider, suffix)) or default
+
+    use_ssl_raw = g("USE_SSL", "FALSE")
+    use_ssl = use_ssl_raw.lower() in ("true", "1", "yes")
     return StorageConfig(
-        id=row.id,
-        name=row.name,
-        provider=StorageProvider(row.provider),
-        bucket=decrypt_storage_value("bucket", row.bucket) or "",
-        endpoint=decrypt_storage_value("endpoint", row.endpoint) or "",
-        access_key=decrypt_storage_value("access_key", row.access_key) or "",
-        secret_key=decrypt_storage_value("secret_key", row.secret_key) or "",
-        region=decrypt_storage_value("region", row.region) or "",
-        use_ssl=bool(row.use_ssl),
-        base_url=decrypt_storage_value("base_url", row.base_url) or "",
-        public_path=row.public_path or "/api/v1/files",
-        local_root=row.local_root or DEFAULT_LOCAL_STORAGE_ROOT,
-        is_default=bool(row.is_default),
+        id=provider.value,
+        name=PROVIDER_DISPLAY_NAMES.get(provider, provider.value),
+        provider=provider,
+        bucket=g("BUCKET"),
+        endpoint=g("ENDPOINT"),
+        access_key=g("ACCESS_KEY"),
+        secret_key=g("SECRET_KEY"),
+        region=g("REGION"),
+        use_ssl=use_ssl,
+        base_url=g("BASE_URL"),
+        public_path=g("PUBLIC_PATH", DEFAULT_FILES_PUBLIC_PATH),
+        local_root=g("LOCAL_ROOT", DEFAULT_LOCAL_STORAGE_ROOT),
+        windows_root=g("WINDOWS_ROOT"),
+        is_default=is_default,
         presign_expire_seconds=presign_expire_seconds,
     )
 

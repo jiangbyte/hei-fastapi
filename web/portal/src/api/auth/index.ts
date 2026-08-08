@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const prefix = '/api/v1/portal'
+const prefix = `${API_PREFIX}`
 
 export function captcha(format: 'svg' | 'png' = 'svg') {
   return http.get<any>(`${prefix}/captcha`, { params: { format }, public: true })
@@ -14,6 +15,18 @@ export function passwordKey() {
 
 export function login(data: any) {
   return http.post<any>(`${prefix}/login`, data, { public: true })
+}
+
+export function authOptions() {
+  return http.get<any>(`${prefix}/public/auth-options`, { public: true })
+}
+
+export function sendLoginCode(data: any) {
+  return http.post<any>(`${prefix}/send-login-code`, data, { public: true })
+}
+
+export function sendPasswordChangeCode() {
+  return http.post<any>(`${prefix}/user-center/password/send-code`)
 }
 
 export function register(data: any) {
@@ -28,12 +41,20 @@ export function resetPassword(data: any) {
   return http.post<any>(`${prefix}/reset-password`, data, { public: true })
 }
 
-export function me() {
-  return http.get<any>(`${prefix}/me`)
+/** probe：首访/会话探测用，401 不弹窗、不跳登录。 */
+export function me(options?: { probe?: boolean }) {
+  return http.get<any>(
+    `${prefix}/me`,
+    options?.probe ? { public: true, skipErrorMessage: true } : undefined,
+  )
 }
 
 export function logout() {
-  return http.post<any>(`${prefix}/logout`)
+  // 登出本身失败（含已无 cookie）不应再走全局 401 提示
+  return http.post<any>(`${prefix}/logout`, undefined, {
+    public: true,
+    skipErrorMessage: true,
+  })
 }
 
 export function updateUserCenterProfile(data: any) {

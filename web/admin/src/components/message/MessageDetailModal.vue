@@ -2,13 +2,18 @@
 
 <script setup lang="ts">
 import { messageApi } from '@/api'
-import { createTagColor, displayValue, formatDateTime } from '@/utils'
-import { dictTypeColor, dictTypeData } from '@/utils/dict'
-import { reactive } from 'vue'
+import { useMessageUnreadStore } from '@/stores'
+import { displayValue, formatDateTime, wireBool } from '@/utils'
+import { dictTypeData } from '@/utils/dict'
+import { computed, reactive } from 'vue'
+
+type MessageKind = 'NOTIFICATION' | 'ANNOUNCEMENT'
 
 const emit = defineEmits<{
   changed: [payload: { type: string; id: string }]
 }>()
+
+const unreadStore = useMessageUnreadStore()
 
 const state = reactive({
   show: false,
@@ -16,38 +21,86 @@ const state = reactive({
   actionLoading: false,
   source: {} as any,
   detail: {} as any,
+  readLocally: false,
 })
 
+function resolveKind(raw: unknown): MessageKind {
+  return String(raw || 'NOTIFICATION').toUpperCase() === 'ANNOUNCEMENT'
+    ? 'ANNOUNCEMENT'
+    : 'NOTIFICATION'
+}
+
+function asReadFlag(value: unknown): boolean {
+  if (typeof value === 'boolean' || typeof value === 'string') {
+    return wireBool(value)
+  }
+  return false
+}
+
+const messageKind = computed<MessageKind>(() =>
+  resolveKind(state.detail.kind || state.source.sourceType || state.source.type),
+)
+
+const kindLabel = computed(() => (messageKind.value === 'ANNOUNCEMENT' ? '公告' : '通知'))
+
+const titleText = computed(() => displayValue(state.detail.title || state.source.title))
+
+const contentText = computed(() => displayValue(state.detail.content || state.source.content))
+
+const publishText = computed(() =>
+  formatDateTime(state.detail.publish_at || state.source.publish_at || state.detail.created_at),
+)
+
+const severityLabel = computed(() => {
+  const severity = state.detail.severity || state.source.severity
+  if (!severity) return ''
+  return dictTypeData('NOTIFICATION_SEVERITY', severity) || severity
+})
+
+const isRead = computed(
+  () => state.readLocally || asReadFlag(state.detail.is_read) || asReadFlag(state.source.is_read),
+)
+
 async function open(source: any) {
+  const wasUnread = !asReadFlag(source?.is_read)
   state.source = source ?? {}
   state.detail = {}
+  state.readLocally = false
   state.show = true
   state.loading = true
   try {
-    const response = await messageApi.notificationMyDetail(state.source.id)
+    // myDetail 后端会顺带标记已读
+    const response = await messageApi.myDetail(state.source.id)
     state.detail = response.data ?? {}
   } finally {
     state.loading = false
   }
 
   const id = state.detail.id || state.source.id
-  if (id && !(state.detail.is_read || state.source.is_read)) {
-    await messageApi.readNotification({ ids: [id] })
+  const kind = resolveKind(state.detail.kind || messageKind.value)
+  if (id && wasUnread) {
     state.detail.is_read = true
     state.source.is_read = true
-    emit('changed', { type: 'notification', id })
+    state.readLocally = true
+    unreadStore.notifyRead()
+    emit('changed', { type: kind, id })
+    void unreadStore.refresh()
   }
 }
 
-async function markNotificationRead() {
+async function markRead() {
   const id = state.detail.id || state.source.id
-  if (!id) return
+  if (!id || isRead.value) return
+  const kind = resolveKind(state.detail.kind || messageKind.value)
   state.actionLoading = true
   try {
-    await messageApi.readNotification({ ids: [id] })
+    await messageApi.read({ ids: [id] })
     state.detail.is_read = true
     state.source.is_read = true
-    emit('changed', { type: 'notification', id })
+    state.readLocally = true
+    unreadStore.notifyRead()
+    emit('changed', { type: kind, id })
+    void unreadStore.refresh()
   } finally {
     state.actionLoading = false
   }
@@ -60,60 +113,94 @@ defineExpose({ open })
   <NModal
     v-model:show="state.show"
     preset="card"
-    draggable
-    :mask-closable="false"
-    title="通知 详情"
-    style="width: 720px"
+    :mask-closable="true"
+    :bordered="false"
+    size="medium"
+    style="width: 560px; max-width: calc(100vw - 32px)"
   >
-    <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-      <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
-          <NDescriptionsItem :label="'标题'">
-            {{ displayValue(state.detail.title || state.source.title) }}
-          </NDescriptionsItem>
-          <NDescriptionsItem :label="'严重级别'">
-            <NTag
-              :color="createTagColor(dictTypeColor('NOTIFICATION_SEVERITY', state.detail.severity))"
-              :bordered="false"
+    <template #header>
+      <NSpace
+        align="center"
+        :size="8"
+      >
+        <NTag
+          size="small"
+          :bordered="false"
+          :type="messageKind === 'ANNOUNCEMENT' ? 'warning' : 'info'"
+        >
+          {{ kindLabel }}
+        </NTag>
+        <NTag
+          size="small"
+          :bordered="false"
+          :type="isRead ? 'success' : 'warning'"
+        >
+          {{ isRead ? '已读' : '未读' }}
+        </NTag>
+      </NSpace>
+    </template>
+
+    <NSpin :show="state.loading">
+      <NSpace
+        vertical
+        :size="16"
+      >
+        <NThing>
+          <template #header>
+            <NText
+              strong
+              style="font-size: 18px; line-height: 1.4"
             >
-              {{
-                dictTypeData('NOTIFICATION_SEVERITY', state.detail.severity) ||
-                displayValue(state.detail.severity)
-              }}
-            </NTag>
-          </NDescriptionsItem>
-          <NDescriptionsItem :label="'状态'">
-            <NTag
-              :type="state.detail.is_read || state.source.is_read ? 'success' : 'warning'"
-              :bordered="false"
+              {{ titleText }}
+            </NText>
+          </template>
+          <template #description>
+            <NSpace
+              :size="8"
+              align="center"
             >
-              {{ state.detail.is_read || state.source.is_read ? '已读' : '未读' }}
-            </NTag>
-          </NDescriptionsItem>
-          <NDescriptionsItem :label="'发布时间'">
-            {{ formatDateTime(state.detail.publish_at || state.source.publish_at) }}
-          </NDescriptionsItem>
-          <NDescriptionsItem :label="'内容'">
-            {{ displayValue(state.detail.content || state.source.content) }}
-          </NDescriptionsItem>
-          <NDescriptionsItem :label="'创建时间'">
-            {{ formatDateTime(state.detail.created_at) }}
-          </NDescriptionsItem>
-          <NDescriptionsItem :label="'更新时间'">
-            {{ formatDateTime(state.detail.updated_at) }}
-          </NDescriptionsItem>
-        </NDescriptions>
-        <NSpace class="mt-4" justify="end">
+              <NTag
+                v-if="severityLabel"
+                size="small"
+                :bordered="false"
+              >
+                {{ severityLabel }}
+              </NTag>
+              <NText
+                depth="3"
+                style="font-size: 12px"
+              >
+                {{ publishText }}
+              </NText>
+            </NSpace>
+          </template>
+        </NThing>
+
+        <NDivider style="margin: 0" />
+
+        <NScrollbar style="max-height: min(420px, calc(100vh - 280px))">
+          <NText
+            depth="2"
+            style="font-size: 14px; line-height: 1.75; white-space: pre-wrap"
+          >
+            {{ contentText }}
+          </NText>
+        </NScrollbar>
+
+        <NSpace
+          v-if="!isRead"
+          justify="end"
+        >
           <NButton
-            v-if="!(state.detail.is_read || state.source.is_read)"
+            text
             type="primary"
             :loading="state.actionLoading"
-            @click="markNotificationRead"
+            @click="markRead"
           >
             标记已读
           </NButton>
         </NSpace>
-      </NSpin>
-    </NScrollbar>
+      </NSpace>
+    </NSpin>
   </NModal>
 </template>

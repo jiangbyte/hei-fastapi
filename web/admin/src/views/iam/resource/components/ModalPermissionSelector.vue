@@ -210,7 +210,10 @@ defineExpose({
         :scroll-x="900"
         max-height="calc(100vh - 340px)"
       />
-      <NFlex justify="end" class="mt-10px">
+      <NFlex
+        justify="end"
+        class="mt-10px"
+      >
         <NPagination
           v-model:page="state.page"
           v-model:page-size="state.pageSize"
@@ -223,8 +226,13 @@ defineExpose({
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 关闭 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          关闭
+        </NButton>
       </NSpace>
     </template>
   </NModal>

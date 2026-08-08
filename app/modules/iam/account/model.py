@@ -45,17 +45,6 @@ class SysAccount(Base, TimestampMixin):
         DateTime(timezone=True), comment="最新登录时间"
     )
     latest_login_device: Mapped[str | None] = mapped_column(Text, comment="最新登录设备")
-    mfa_enabled: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, comment="是否启用 MFA"
-    )
-    mfa_secret_encrypted: Mapped[str | None] = mapped_column(Text, comment="MFA TOTP 密钥（加密）")
-    mfa_enabled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), comment="MFA 启用时间"
-    )
-    mfa_backup_codes_hash: Mapped[str | None] = mapped_column(Text, comment="MFA 备份码哈希 JSON")
-    webauthn_credentials_json: Mapped[str | None] = mapped_column(
-        Text, comment="WebAuthn 凭证 JSON 列表"
-    )
 
 
 class SysAccountIdentity(Base, TimestampMixin):

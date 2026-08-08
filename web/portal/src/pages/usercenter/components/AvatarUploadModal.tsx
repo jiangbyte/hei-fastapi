@@ -1,6 +1,6 @@
 /** Author: Charlie */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Avatar, Button, Modal, Slider, Space, Upload, message } from 'antd'
 import { UploadOutlined, UserOutlined } from '@ant-design/icons'
 import Cropper, { type Area } from 'react-easy-crop'
@@ -26,12 +26,6 @@ export function AvatarUploadModal({ open, avatar, onClose, onUploaded }: Props) 
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [previewUrl, setPreviewUrl] = useState('')
   const [uploading, setUploading] = useState(false)
-
-  useEffect(() => {
-    if (!open) {
-      resetSource()
-    }
-  }, [open])
 
   function resetSource() {
     if (source) {
@@ -126,6 +120,10 @@ export function AvatarUploadModal({ open, avatar, onClose, onUploaded }: Props) 
         </Space>
       }
       onCancel={onClose}
+      afterOpenChange={(next) => {
+        if (!next) resetSource()
+      }}
+      destroyOnHidden
     >
       <div className="avatar-upload-modal">
         {hasSource ? (
@@ -147,7 +145,9 @@ export function AvatarUploadModal({ open, avatar, onClose, onUploaded }: Props) 
               <div className="avatar-upload-modal__preview">
                 {previewUrl ? <img src={previewUrl} alt="裁剪预览" /> : null}
               </div>
-              <div className="mt-3 text-center text-sm text-[var(--ant-color-text-secondary)]">实时预览</div>
+              <div className="mt-3 text-center text-sm text-[var(--ant-color-text-secondary)]">
+                实时预览
+              </div>
             </div>
             <div className="avatar-upload-modal__zoom">
               <Slider min={1} max={4} step={0.01} value={zoom} onChange={setZoom} />
@@ -199,17 +199,7 @@ async function cropToBlob(imageSrc: string, area: Area) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return null
 
-    ctx.drawImage(
-      image,
-      area.x,
-      area.y,
-      area.width,
-      area.height,
-      0,
-      0,
-      CROP_SIZE,
-      CROP_SIZE,
-    )
+    ctx.drawImage(image, area.x, area.y, area.width, area.height, 0, 0, CROP_SIZE, CROP_SIZE)
 
     return new Promise<Blob | null>((resolve) => {
       canvas.toBlob((blob) => resolve(blob), 'image/png', 0.92)

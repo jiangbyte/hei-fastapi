@@ -42,14 +42,12 @@ def _encrypt_password(public_key_b64: str, password: str) -> str:
 async def test_admin_login_full_crypto_cookie(fake_redis, db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
     monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
-    monkeypatch.setattr(settings.auth, "mfa_required", False)
     monkeypatch.setattr(settings.swagger, "enabled", False)
 
     account = SysAccount(
         password_hash=hash_password("Admin@123456"),
         account_type=AccountType.ADMIN.value,
         account_status=AccountStatusEnum.ENABLED.value,
-        mfa_enabled=False,
     )
     db_session.add(account)
     await db_session.flush()
@@ -100,6 +98,5 @@ async def test_admin_login_full_crypto_cookie(fake_redis, db_session: AsyncSessi
     assert response.status_code == 200, response.text
     data = response.json()["data"]
     assert data["account_id"] == account.id
-    assert data.get("mfa_required") == "false"
     assert response.cookies.get("hei_session")
     assert data["token"]

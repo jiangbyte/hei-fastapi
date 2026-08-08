@@ -5,7 +5,6 @@ import type { DropdownOption } from 'naive-ui'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { renderIcon } from '@/utils/icon'
-import { resolveFileUrl } from '@/utils'
 import { useAuthStore } from '@/stores'
 
 const router = useRouter()
@@ -14,7 +13,7 @@ const homePath = import.meta.env.VITE_HOME_PATH
 
 const displayName = computed(() => authStore.userInfo?.nickname || '-')
 
-const avatar = computed(() => resolveFileUrl(authStore.userInfo?.avatar))
+const avatar = computed(() => authStore.userInfo?.avatar || undefined)
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 
 // 桌面端用户菜单项。项目首页使用环境配置路径。
@@ -23,6 +22,11 @@ const options = computed<DropdownOption[]>(() => [
     label: '个人中心',
     key: 'userCenter',
     icon: renderIcon('icon-park-outline:user'),
+  },
+  {
+    label: '我的反馈',
+    key: 'feedback',
+    icon: renderIcon('icon-park-outline:message'),
   },
   {
     type: 'divider',
@@ -45,6 +49,9 @@ function handleSelect(key: string | number) {
   if (key === 'userCenter') {
     router.push('/usercenter')
   }
+  if (key === 'feedback') {
+    router.push('/feedback')
+  }
   if (key === 'home') {
     router.push(homePath)
   }
@@ -64,7 +71,11 @@ function handleSelect(key: string | number) {
 </script>
 
 <template>
-  <n-dropdown trigger="click" :options="options" @select="handleSelect">
+  <n-dropdown
+    trigger="click"
+    :options="options"
+    @select="handleSelect"
+  >
     <div class="flex items-center gap-2">
       <n-avatar
         v-if="avatar"
@@ -73,7 +84,11 @@ function handleSelect(key: string | number) {
         :src="avatar"
         :img-props="avatarImgProps"
       />
-      <n-avatar v-else round class="cursor-pointer">
+      <n-avatar
+        v-else
+        round
+        class="cursor-pointer"
+      >
         <NovaIcon icon="icon-park-outline:user" />
       </n-avatar>
       <span class="hidden md:inline">{{ displayName }}</span>

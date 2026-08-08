@@ -2,12 +2,16 @@
 
 <script setup lang="ts">
 import type { FormInst, FormItemRule, FormRules } from 'naive-ui'
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import CaptchaInput from '@/components/common/CaptchaInput.vue'
+import { authApi } from '@/api'
 import { useAuthStore } from '@/stores'
 import { isValidEmail } from '@/utils'
 import { encryptPasswords } from '@/utils/security'
+import { wireBool } from '@/utils/wire'
 import AuthLayout from './AuthLayout.vue'
+
+const OTP_COOLDOWN_SECONDS = 60
 
 type LoginType = 'ACCOUNT' | 'EMAIL' | 'PHONE'
 
@@ -16,35 +20,100 @@ const authStore = useAuthStore()
 const formRef = ref<FormInst | null>(null)
 const captchaRef = ref<InstanceType<typeof CaptchaInput> | null>(null)
 const loading = ref(false)
+const sendingCode = ref(false)
+const otpCooldown = ref(0)
+let otpCooldownTimer: ReturnType<typeof setInterval> | null = null
 const activeType = ref<LoginType>('ACCOUNT')
-const mfaChallengeId = ref('')
-const mfaCode = ref('')
-const webauthnOptions = ref<Record<string, unknown> | null>(null)
+const loginMode = ref<'PASSWORD' | 'OTP'>('PASSWORD')
+const copyright = ref(import.meta.env.VITE_COPYRIGHT_INFO || '')
+const copyrightUrl = ref('')
 
-const loginTypes: Array<{ key: LoginType; label: string; placeholder: string }> = [
+const options = reactive({
+  allow_account: true,
+  allow_email: true,
+  allow_phone: true,
+  allow_otp: true,
+})
+
+const sendCodeLabel = computed(() =>
+  otpCooldown.value > 0 ? `${otpCooldown.value}s 后重发` : '发送验证码',
+)
+
+function startOtpCooldown() {
+  otpCooldown.value = OTP_COOLDOWN_SECONDS
+  if (otpCooldownTimer) clearInterval(otpCooldownTimer)
+  otpCooldownTimer = setInterval(() => {
+    otpCooldown.value -= 1
+    if (otpCooldown.value <= 0 && otpCooldownTimer) {
+      clearInterval(otpCooldownTimer)
+      otpCooldownTimer = null
+    }
+  }, 1000)
+}
+
+const allLoginTypes: Array<{ key: LoginType; label: string; placeholder: string }> = [
   { key: 'ACCOUNT', label: '账号', placeholder: '请输入管理员账号' },
   { key: 'EMAIL', label: '邮箱', placeholder: '请输入登录邮箱' },
   { key: 'PHONE', label: '手机号', placeholder: '请输入登录手机号' },
 ]
+
+const loginTypes = computed(() =>
+  allLoginTypes.filter((item) => {
+    if (item.key === 'ACCOUNT') return options.allow_account
+    if (item.key === 'EMAIL') return options.allow_email
+    return options.allow_phone
+  }),
+)
 
 const form = reactive({
   account: '',
   email: '',
   phone: '',
   password: '',
+  otp_code: '',
   captcha_id: '',
   captcha_value: '',
   remember: true,
 })
 
-const currentLogin = computed(() => loginTypes.find(item => item.key === activeType.value)!)
+const currentLogin = computed(
+  () => loginTypes.value.find((item) => item.key === activeType.value) || loginTypes.value[0],
+)
 const activeField = computed(() => activeType.value.toLowerCase() as 'account' | 'email' | 'phone')
-const mfaStep = computed(() => Boolean(mfaChallengeId.value))
+const otpAvailable = computed(
+  () => options.allow_otp && (activeType.value === 'EMAIL' || activeType.value === 'PHONE'),
+)
+
+onMounted(async () => {
+  try {
+    const res = await authApi.authOptions()
+    const data = res?.data || {}
+    options.allow_account = wireBool(data.allow_account ?? true)
+    options.allow_email = wireBool(data.allow_email ?? true)
+    options.allow_phone = wireBool(data.allow_phone ?? true)
+    options.allow_otp = wireBool(data.allow_otp ?? true)
+    if (data.copyright_text) copyright.value = data.copyright_text
+    copyrightUrl.value = data.copyright_url || ''
+    if (!loginTypes.value.some((item) => item.key === activeType.value)) {
+      activeType.value = loginTypes.value[0]?.key || 'ACCOUNT'
+    }
+  } catch {
+    // 使用默认全开
+  }
+})
+
+onUnmounted(() => {
+  if (otpCooldownTimer) clearInterval(otpCooldownTimer)
+})
+
+watch(activeType, () => {
+  if (!otpAvailable.value) loginMode.value = 'PASSWORD'
+})
 
 function validateLoginIdentity(_rule: FormItemRule, value: string) {
   const text = String(value ?? '').trim()
   if (!text) {
-    return new Error(`请输入${currentLogin.value.label}`)
+    return new Error(`请输入${currentLogin.value?.label || '账号'}`)
   }
   if (activeType.value === 'EMAIL' && !isValidEmail(text)) {
     return new Error('请输入有效邮箱')
@@ -52,197 +121,207 @@ function validateLoginIdentity(_rule: FormItemRule, value: string) {
   return true
 }
 
-const rules = computed<FormRules>(() => ({
-  [activeField.value]: [
-    {
-      validator: validateLoginIdentity,
-      trigger: ['input', 'blur'],
-    },
-  ],
-  password: [
-    {
-      required: true,
-      message: '请输入密码',
-      trigger: ['input', 'blur'],
-    },
-  ],
-  captcha_value: [
-    {
-      required: true,
-      message: '请输入验证码',
-      trigger: ['input', 'blur'],
-    },
-  ],
-}))
+const rules = computed<FormRules>(() => {
+  const next: FormRules = {
+    [activeField.value]: [
+      {
+        validator: validateLoginIdentity,
+        trigger: ['input', 'blur'],
+      },
+    ],
+    captcha_value: [
+      {
+        required: true,
+        message: '请输入验证码',
+        trigger: ['input', 'blur'],
+      },
+    ],
+  }
+  if (loginMode.value === 'OTP') {
+    next.otp_code = [{ required: true, message: '请输入登录验证码', trigger: ['input', 'blur'] }]
+  } else {
+    next.password = [{ required: true, message: '请输入密码', trigger: ['input', 'blur'] }]
+  }
+  return next
+})
+
+async function handleSendCode() {
+  if (otpCooldown.value > 0 || sendingCode.value) return
+  const target = form[activeField.value].trim()
+  if (!target) {
+    window.$message.warning(`请输入${currentLogin.value?.label}`)
+    return
+  }
+  if (activeType.value === 'EMAIL' && !isValidEmail(target)) {
+    window.$message.warning('请输入有效邮箱')
+    return
+  }
+  if (!form.captcha_value.trim()) {
+    window.$message.warning('请输入图形验证码')
+    return
+  }
+  sendingCode.value = true
+  try {
+    await authApi.sendLoginCode({
+      target,
+      channel: activeType.value === 'EMAIL' ? 'EMAIL' : 'PHONE',
+      captcha_id: form.captcha_id,
+      captcha_value: form.captcha_value,
+    })
+    window.$message.success('验证码已发送，请查收后填写')
+    startOtpCooldown()
+    // 发送成功会消耗图形验证码，需刷新供登录提交使用
+    await captchaRef.value?.refresh()
+  } catch {
+    await captchaRef.value?.refresh()
+  } finally {
+    sendingCode.value = false
+  }
+}
 
 async function handleSubmit() {
   try {
     await formRef.value?.validate()
-  }
-  catch {
+  } catch {
     return
   }
 
   loading.value = true
   try {
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
-    const encrypted = await encryptPasswords({ password: form.password })
-    const result = await authStore.login(
+    const security: Record<string, string> = {
+      captcha_id: form.captcha_id,
+      captcha_value: form.captcha_value,
+    }
+    let password = ''
+    if (loginMode.value === 'PASSWORD') {
+      const encrypted = await encryptPasswords({ password: form.password })
+      password = encrypted.values.password || ''
+      security.password_key_id = encrypted.password_key_id
+    }
+    await authStore.login(
       form[activeField.value].trim(),
-      encrypted.values.password || '',
+      password,
       redirect,
       form.remember,
       activeType.value,
       {
-        password_key_id: encrypted.password_key_id,
-        captcha_id: form.captcha_id,
-        captcha_value: form.captcha_value,
-      },
+        ...security,
+        login_mode: loginMode.value,
+        ...(loginMode.value === 'OTP' && form.otp_code.trim()
+          ? { otp_code: form.otp_code.trim() }
+          : {}),
+      } as any,
     )
-    if (result.mfaRequired) {
-      mfaChallengeId.value = result.challengeId
-      webauthnOptions.value = result.webauthnOptions ?? null
-      window.$message.info('请输入动态验证码、备份码，或使用安全密钥')
-      return
-    }
     window.$message.success('登录成功')
-  }
-  catch {
+  } catch {
     await captchaRef.value?.refresh()
-  }
-  finally {
+  } finally {
     loading.value = false
   }
-}
-
-async function handleMfaSubmit() {
-  if (!mfaCode.value.trim()) {
-    window.$message.warning('请输入验证码')
-    return
-  }
-  loading.value = true
-  try {
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
-    await authStore.completeMfaLogin(mfaChallengeId.value, mfaCode.value.trim(), redirect)
-    window.$message.success('登录成功')
-  }
-  catch {
-    // 保留 MFA 步骤
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-function bufferToBase64Url(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer)
-  let binary = ''
-  for (let i = 0; i < bytes.length; i += 1) {
-    binary += String.fromCharCode(bytes[i])
-  }
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-}
-
-function base64UrlToBuffer(value: string) {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/')
-  const pad = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
-  const binary = atob(padded + pad)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i)
-  }
-  return bytes.buffer
-}
-
-async function handleWebAuthnLogin() {
-  if (!webauthnOptions.value || !window.PublicKeyCredential) {
-    window.$message.warning('当前环境不支持安全密钥')
-    return
-  }
-  loading.value = true
-  try {
-    const options = webauthnOptions.value as any
-    const publicKey = {
-      ...options,
-      challenge: base64UrlToBuffer(options.challenge),
-      allowCredentials: (options.allowCredentials || []).map((item: any) => ({
-        ...item,
-        id: base64UrlToBuffer(item.id),
-      })),
-    }
-    const cred = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential | null
-    if (!cred) {
-      throw new Error('cancelled')
-    }
-    const response = cred.response as AuthenticatorAssertionResponse
-    const payload = {
-      id: cred.id,
-      rawId: bufferToBase64Url(cred.rawId),
-      type: cred.type,
-      response: {
-        clientDataJSON: bufferToBase64Url(response.clientDataJSON),
-        authenticatorData: bufferToBase64Url(response.authenticatorData),
-        signature: bufferToBase64Url(response.signature),
-        userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : null,
-      },
-    }
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
-    await authStore.completeMfaLogin(mfaChallengeId.value, '', redirect, payload)
-    window.$message.success('登录成功')
-  }
-  catch {
-    window.$message.error('安全密钥验证失败')
-  }
-  finally {
-    loading.value = false
-  }
-}
-
-function backToPassword() {
-  mfaChallengeId.value = ''
-  mfaCode.value = ''
-  webauthnOptions.value = null
 }
 </script>
 
 <template>
-  <AuthLayout title="管理端登录" subtitle="欢迎回来">
+  <AuthLayout
+    title="管理端登录"
+    :copyright="copyright"
+    :copyright-url="copyrightUrl"
+  >
     <n-form
-      v-if="!mfaStep"
       ref="formRef"
       :model="form"
       :rules="rules"
       size="large"
       @submit.prevent="handleSubmit"
     >
-      <n-tabs v-model:value="activeType" type="segment" class="auth-login-tabs">
-        <n-tab-pane v-for="item in loginTypes" :key="item.key" :name="item.key" :tab="item.label" />
+      <n-tabs
+        v-model:value="activeType"
+        type="segment"
+        size="large"
+        class="auth-login-tabs"
+      >
+        <n-tab-pane
+          v-for="item in loginTypes"
+          :key="item.key"
+          :name="item.key"
+          :tab="item.label"
+        />
       </n-tabs>
 
       <n-form-item :path="activeField">
         <n-input
           v-model:value="form[activeField]"
-          :placeholder="currentLogin.placeholder"
+          size="large"
+          :placeholder="currentLogin?.placeholder"
           clearable
         />
       </n-form-item>
-      <n-form-item path="password">
+
+      <div
+        v-if="otpAvailable"
+        class="auth-mode-row"
+      >
+        <n-radio-group
+          v-model:value="loginMode"
+          size="large"
+        >
+          <n-radio-button
+            value="PASSWORD"
+            label="密码登录"
+          />
+          <n-radio-button
+            value="OTP"
+            label="验证码登录"
+          />
+        </n-radio-group>
+      </div>
+
+      <n-form-item
+        v-if="loginMode === 'PASSWORD'"
+        path="password"
+      >
         <n-input
           v-model:value="form.password"
+          size="large"
           type="password"
           show-password-on="click"
           placeholder="请输入密码"
         />
+      </n-form-item>
+      <n-form-item
+        v-else
+        path="otp_code"
+      >
+        <div class="auth-otp-row">
+          <n-input
+            v-model:value="form.otp_code"
+            size="large"
+            placeholder="请输入登录验证码"
+          />
+          <n-button
+            size="large"
+            :loading="sendingCode"
+            :disabled="otpCooldown > 0"
+            @click="handleSendCode"
+          >
+            {{ sendCodeLabel }}
+          </n-button>
+        </div>
       </n-form-item>
       <n-form-item path="captcha_value">
         <CaptchaInput
           ref="captchaRef"
           v-model:captcha-id="form.captcha_id"
           v-model:captcha-value="form.captcha_value"
+          size="large"
         />
       </n-form-item>
       <div class="auth-form-row">
-        <n-checkbox v-model:checked="form.remember">
+        <n-checkbox
+          v-model:checked="form.remember"
+          size="large"
+        >
           记住我
         </n-checkbox>
         <RouterLink to="/auth/forgot-password">
@@ -252,6 +331,7 @@ function backToPassword() {
       <n-button
         class="auth-submit"
         type="primary"
+        size="large"
         block
         attr-type="submit"
         :loading="loading"
@@ -259,52 +339,22 @@ function backToPassword() {
         登录
       </n-button>
     </n-form>
-
-    <div v-else class="mfa-step">
-      <p class="mfa-hint">
-        已启用双因素认证，请输入应用中的 6 位动态码或备份码。
-      </p>
-      <n-input
-        v-model:value="mfaCode"
-        size="large"
-        placeholder="动态验证码 / 备份码"
-        @keyup.enter="handleMfaSubmit"
-      />
-      <n-button
-        class="auth-submit"
-        type="primary"
-        block
-        :loading="loading"
-        @click="handleMfaSubmit"
-      >
-        验证并登录
-      </n-button>
-      <n-button
-        v-if="webauthnOptions"
-        block
-        :loading="loading"
-        @click="handleWebAuthnLogin"
-      >
-        使用安全密钥 / Passkey
-      </n-button>
-      <n-button quaternary block class="mfa-back" @click="backToPassword">
-        返回账号密码
-      </n-button>
-    </div>
   </AuthLayout>
 </template>
 
 <style scoped>
-.auth-login-tabs {
-  margin-bottom: 4px;
-}
-
 .auth-login-tabs :deep(.n-tabs-pane-wrapper) {
   overflow: visible;
 }
 
-.auth-login-tabs :deep(.n-tabs-nav) {
-  margin-bottom: 16px;
+.auth-mode-row {
+  margin: 0 0 12px;
+}
+
+.auth-otp-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
 }
 
 .auth-form-row {
@@ -312,34 +362,13 @@ function backToPassword() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: -2px 0 22px;
+  margin: 0 0 16px;
   font-size: 14px;
 }
 
 .auth-form-row a {
-  color: var(--n-primary-color, #18a058);
+  color: var(--n-primary-color, #1677ff);
   text-decoration: none;
-}
-
-.auth-submit {
-  margin-top: 2px;
-}
-
-.mfa-step {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.mfa-hint {
-  margin: 0;
-  color: var(--n-text-color-3, #666);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.mfa-back {
-  margin-top: 4px;
 }
 
 @media (max-width: 420px) {

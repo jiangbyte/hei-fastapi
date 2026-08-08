@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const accountPrefix = '/api/v1/admin/sys/accounts'
+const accountPrefix = `${API_PREFIX}/sys/accounts`
 
 export function page(params: any) {
   return http.get<any>(`${accountPrefix}/page`, {
@@ -58,4 +59,12 @@ export function ownResources(accountId: string) {
 
 export function grantResources(data: any) {
   return http.post<any>(`${accountPrefix}/grant-resource`, data)
+}
+
+export function ownClientResources(accountId: string) {
+  return http.get<any>(`${accountPrefix}/own-client-resource`, { params: { id: accountId } })
+}
+
+export function grantClientResources(data: any) {
+  return http.post<any>(`${accountPrefix}/grant-client-resource`, data)
 }

@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const resourceModulePrefix = '/api/v1/admin/sys/resource-modules'
+const resourceModulePrefix = `${API_PREFIX}/sys/resource-modules`
 
 export function page(params: any) {
   return http.get<any>(`${resourceModulePrefix}/page`, { params })

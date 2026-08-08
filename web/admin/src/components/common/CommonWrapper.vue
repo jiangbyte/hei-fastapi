@@ -1,8 +1,15 @@
 <!-- Author: Charlie -->
 
 <template>
-  <n-el tag="div" class="common-wrapper">
-    <n-flex align="center" :wrap="false" class="h-full">
+  <n-el
+    tag="div"
+    class="common-wrapper"
+  >
+    <n-flex
+      align="center"
+      :wrap="false"
+      class="h-full"
+    >
       <slot />
     </n-flex>
   </n-el>

@@ -120,26 +120,52 @@ defineExpose({
           label-width="110"
           :disabled="state.loading || state.submitLoading"
         >
-          <NFormItem :label="'岗位名称'" path="name">
+          <NFormItem
+            :label="'岗位名称'"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem :label="'岗位分类'" path="category">
+          <NFormItem
+            :label="'岗位分类'"
+            path="category"
+          >
             <DictSelect
               v-model="state.formModel.category"
               dict-code="POSITION_CATEGORY"
               :placeholder="'请选择岗位分类'"
             />
           </NFormItem>
-          <NFormItem :label="'排序'" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" :min="0" />
+          <NFormItem
+            :label="'排序'"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+              :min="0"
+            />
           </NFormItem>
-          <NFormItem :label="'虚拟岗位'" path="is_virtual">
+          <NFormItem
+            :label="'虚拟岗位'"
+            path="is_virtual"
+          >
             <NSwitch v-model:value="state.formModel.is_virtual" />
           </NFormItem>
-          <NFormItem :label="'状态'" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" type="radio" />
+          <NFormItem
+            :label="'状态'"
+            path="status"
+          >
+            <DictSelect
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
+              type="radio"
+            />
           </NFormItem>
-          <NFormItem :label="'描述'" path="description">
+          <NFormItem
+            :label="'描述'"
+            path="description"
+          >
             <NInput
               v-model:value="state.formModel.description"
               type="textarea"
@@ -151,9 +177,20 @@ defineExpose({
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

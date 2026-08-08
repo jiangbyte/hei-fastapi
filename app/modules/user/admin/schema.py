@@ -8,6 +8,7 @@ from app.core.schema.base import ApiSchema
 from app.core.schema.common_schema import IdNameResponse
 from app.core.schema.wire import WireBool
 from app.core.security.transport import PasswordKeyMixin
+from app.modules.auth.schema import OptionalStr
 
 
 class AdminProfileResponse(ApiSchema):
@@ -53,8 +54,9 @@ class AdminUserCenterProfileUpdateRequest(ApiSchema):
 class AdminUserCenterPasswordUpdateRequest(PasswordKeyMixin):
     """当前管理员修改密码请求。"""
 
-    old_password: str = Field(min_length=1, max_length=512)
+    old_password: OptionalStr = Field(default=None, min_length=1, max_length=512)
     new_password: str = Field(min_length=1, max_length=512)
+    otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
 
 
 class AdminUserCenterPhoneUpdateRequest(PasswordKeyMixin):

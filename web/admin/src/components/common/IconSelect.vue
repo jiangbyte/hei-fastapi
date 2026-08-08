@@ -147,7 +147,11 @@ onBeforeUnmount(() => {
 <template>
   <div class="icon-select">
     <span class="icon-select__preview">
-      <NovaIcon v-if="currentIcon" :icon="currentIcon" :size="18" />
+      <NovaIcon
+        v-if="currentIcon"
+        :icon="currentIcon"
+        :size="18"
+      />
     </span>
     <NInput
       class="icon-select__input"
@@ -184,7 +188,12 @@ onBeforeUnmount(() => {
   >
     <div class="icon-select-panel">
       <div class="icon-select-panel__header">
-        <NInput v-model:value="searchKey" size="small" placeholder="搜索图标名称" clearable />
+        <NInput
+          v-model:value="searchKey"
+          size="small"
+          placeholder="搜索图标名称"
+          clearable
+        />
         <div class="icon-select-panel__meta">
           <NText depth="3">
             {{ resultText }}
@@ -210,11 +219,18 @@ onBeforeUnmount(() => {
             :title="toFullIconName(name)"
             @click="selectIcon(name)"
           >
-            <NovaIcon :icon="toFullIconName(name)" :size="20" />
+            <NovaIcon
+              :icon="toFullIconName(name)"
+              :size="20"
+            />
             <span>{{ name }}</span>
           </button>
         </div>
-        <NEmpty v-if="!filteredIcons.length" size="small" description="未找到图标" />
+        <NEmpty
+          v-if="!filteredIcons.length"
+          size="small"
+          description="未找到图标"
+        />
       </div>
     </div>
   </NModal>

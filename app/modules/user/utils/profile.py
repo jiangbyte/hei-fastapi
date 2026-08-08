@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import AccountType
+from app.core.config.enums import AccountType, account_types_with_profile
 from app.core.exceptions.business import BusinessError
 from app.modules.user.admin.model import AdminUserProfile
 from app.modules.user.admin.repository import AdminUserProfileRepository
@@ -27,20 +27,24 @@ def as_account_type(account_type: AccountType | str) -> AccountType:
 
 def pick_profile_repo(db: AsyncSession, account_type: AccountType | str):
     account_type = as_account_type(account_type)
-    if account_type == AccountType.ADMIN:
-        return AdminUserProfileRepository(db)
-    if account_type == AccountType.PORTAL:
-        return PortalUserProfileRepository(db)
-    raise BusinessError(f"Unsupported account type: {account_type}")
+    match account_type:
+        case AccountType.ADMIN:
+            return AdminUserProfileRepository(db)
+        case AccountType.PORTAL:
+            return PortalUserProfileRepository(db)
+        case _:
+            raise BusinessError(f"Unsupported account type for profile: {account_type}")
 
 
 def pick_profile_model(account_type: AccountType | str):
     account_type = as_account_type(account_type)
-    if account_type == AccountType.ADMIN:
-        return AdminUserProfile
-    if account_type == AccountType.PORTAL:
-        return PortalUserProfile
-    raise BusinessError(f"Unsupported account type: {account_type}")
+    match account_type:
+        case AccountType.ADMIN:
+            return AdminUserProfile
+        case AccountType.PORTAL:
+            return PortalUserProfile
+        case _:
+            raise BusinessError(f"Unsupported account type for profile: {account_type}")
 
 
 async def get_profile(
@@ -71,13 +75,16 @@ async def enrich_audit_names(
     db: AsyncSession,
     schemas: list[Any],
     *,
-    account_type: AccountType | str = AccountType.ADMIN,
+    account_type: AccountType | str | None = None,
     created_by_attr: str = "created_by",
     updated_by_attr: str = "updated_by",
     created_name_attr: str = "created_name",
     updated_name_attr: str = "updated_name",
 ) -> list[Any]:
-    """从 admin/portal profile 填充 schema 对象的 created_name / updated_name。"""
+    """从各端 profile 填充 schema 的 created_name / updated_name。
+
+    若未指定 account_type，则在具备资料表的端上合并查找（ADMIN + PORTAL）。
+    """
     if not schemas:
         return schemas
     all_ids: set[str] = set()
@@ -90,7 +97,14 @@ async def enrich_audit_names(
             all_ids.add(str(updated_by))
     if not all_ids:
         return schemas
-    profiles = await get_profiles_batch(db, account_type, list(all_ids))
+
+    profiles: dict[str, object] = {}
+    if account_type is None:
+        for client in account_types_with_profile():
+            profiles.update(await get_profiles_batch(db, client, list(all_ids)))
+    else:
+        profiles = await get_profiles_batch(db, account_type, list(all_ids))
+
     for schema in schemas:
         created_by = getattr(schema, created_by_attr, None)
         updated_by = getattr(schema, updated_by_attr, None)
@@ -105,7 +119,7 @@ async def enrich_audit_name(
     db: AsyncSession,
     schema: Any,
     *,
-    account_type: AccountType | str = AccountType.ADMIN,
+    account_type: AccountType | str | None = None,
 ) -> Any:
     await enrich_audit_names(db, [schema], account_type=account_type)
     return schema

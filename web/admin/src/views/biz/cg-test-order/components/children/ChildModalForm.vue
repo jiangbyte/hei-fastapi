@@ -1,13 +1,13 @@
 <!--
   由 HEI 代码生成器生成。
   Author: Charlie
-  生成时间：2026-08-07 07:26:16
+  生成时间：2026-08-08 21:09:54
 -->
 
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
 import { cgTestOrderApi } from '@/api'
-import { wireBool, wireFloat, wireInt } from '@/utils/wire'
+import { wireBool, wireInt, wireFloat } from '@/utils/wire'
 import { createRequiredRule, toApiDateTime, toFormDateTime } from '@/utils'
 import { computed, reactive, ref } from 'vue'
 
@@ -38,30 +38,25 @@ const state = reactive({
   formModel: normalizeFormData(),
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑CgTestOrderItem' : '新增CgTestOrderItem')
+const modalTitle = computed(() => (state.dataId ? '编辑CgTestOrderItem' : '新增CgTestOrderItem'))
 const rules = computed<FormRules>(() => ({
-  order_id: [
-    createRequiredRule('订单ID', 'input'),
-  ],
-  sku_code: [
-    createRequiredRule('SKU编码', 'input'),
-  ],
-  name: [
-    createRequiredRule('商品名称', 'input'),
-  ],
-  status: [
-    createRequiredRule('状态', 'input'),
-  ],
+  order_id: [createRequiredRule('订单ID', 'input')],
+  sku_code: [createRequiredRule('SKU编码', 'input')],
+  name: [createRequiredRule('商品名称', 'input')],
+  status: [createRequiredRule('状态', 'input')],
   quantity: [
     {
-      validator: () => typeof state.formModel.quantity === 'number' && Number.isFinite(state.formModel.quantity),
+      validator: () =>
+        typeof state.formModel.quantity === 'number' && Number.isFinite(state.formModel.quantity),
       message: '请输入数量',
       trigger: ['input', 'blur'],
     },
   ],
   unit_price: [
     {
-      validator: () => typeof state.formModel.unit_price === 'number' && Number.isFinite(state.formModel.unit_price),
+      validator: () =>
+        typeof state.formModel.unit_price === 'number' &&
+        Number.isFinite(state.formModel.unit_price),
       message: '请输入单价',
       trigger: ['input', 'blur'],
     },
@@ -113,9 +108,18 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-    is_gift: data.is_gift == null || data.is_gift === '' ? defaultFormData.is_gift : wireBool(String(data.is_gift)),
-    quantity: data.quantity == null || data.quantity === '' ? defaultFormData.quantity : wireInt(String(data.quantity)),
-    unit_price: data.unit_price == null || data.unit_price === '' ? defaultFormData.unit_price : wireFloat(String(data.unit_price)),
+    is_gift:
+      data.is_gift == null || data.is_gift === ''
+        ? defaultFormData.is_gift
+        : wireBool(String(data.is_gift)),
+    quantity:
+      data.quantity == null || data.quantity === ''
+        ? defaultFormData.quantity
+        : wireInt(String(data.quantity)),
+    unit_price:
+      data.unit_price == null || data.unit_price === ''
+        ? defaultFormData.unit_price
+        : wireFloat(String(data.unit_price)),
     shipped_at: toFormDateTime(data.shipped_at),
     item_config: stringifyJsonValue(data.item_config),
     extra: stringifyJsonValue(data.extra),
@@ -207,42 +211,109 @@ defineExpose({
   >
     <NSpin :show="state.loading">
       <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-        <NForm ref="formRef" :model="state.formModel" :rules="rules" label-placement="left" label-width="110" :disabled="state.loading || state.submitLoading">
-          <NFormItem label="订单ID" path="order_id">
+        <NForm
+          ref="formRef"
+          :model="state.formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="110"
+          :disabled="state.loading || state.submitLoading"
+        >
+          <NFormItem
+            label="订单ID"
+            path="order_id"
+          >
             <NInput v-model:value="state.formModel.order_id" />
           </NFormItem>
-          <NFormItem label="SKU编码" path="sku_code">
+          <NFormItem
+            label="SKU编码"
+            path="sku_code"
+          >
             <NInput v-model:value="state.formModel.sku_code" />
           </NFormItem>
-          <NFormItem label="商品名称" path="name">
+          <NFormItem
+            label="商品名称"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem label="商品分类" path="category">
+          <NFormItem
+            label="商品分类"
+            path="category"
+          >
             <NInput v-model:value="state.formModel.category" />
           </NFormItem>
-          <NFormItem label="状态" path="status">
+          <NFormItem
+            label="状态"
+            path="status"
+          >
             <NInput v-model:value="state.formModel.status" />
           </NFormItem>
-          <NFormItem label="数量" path="quantity">
-            <NInputNumber v-model:value="state.formModel.quantity" class="w-full" />
+          <NFormItem
+            label="数量"
+            path="quantity"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.quantity"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="单价" path="unit_price">
-            <NInputNumber v-model:value="state.formModel.unit_price" class="w-full" />
+          <NFormItem
+            label="单价"
+            path="unit_price"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.unit_price"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="发货时间" path="shipped_at">
-            <NDatePicker v-model:formatted-value="state.formModel.shipped_at" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="w-full" clearable />
+          <NFormItem
+            label="发货时间"
+            path="shipped_at"
+          >
+            <NDatePicker
+              v-model:formatted-value="state.formModel.shipped_at"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="w-full"
+              clearable
+            />
           </NFormItem>
-          <NFormItem label="是否赠品" path="is_gift">
+          <NFormItem
+            label="是否赠品"
+            path="is_gift"
+          >
             <NSwitch v-model:value="state.formModel.is_gift" />
           </NFormItem>
-          <NFormItem label="明细配置" path="item_config">
-            <NInput v-model:value="state.formModel.item_config" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="明细配置"
+            path="item_config"
+          >
+            <NInput
+              v-model:value="state.formModel.item_config"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="备注" path="remark">
-            <NInput v-model:value="state.formModel.remark" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="备注"
+            path="remark"
+          >
+            <NInput
+              v-model:value="state.formModel.remark"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="扩展信息" path="extra">
-            <NInput v-model:value="state.formModel.extra" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="扩展信息"
+            path="extra"
+          >
+            <NInput
+              v-model:value="state.formModel.extra"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
@@ -250,8 +321,16 @@ defineExpose({
 
     <template #action>
       <NSpace justify="end">
-        <NButton @click="closeModal">取消</NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm">确认</NButton>
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

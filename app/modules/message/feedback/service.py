@@ -8,31 +8,40 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
 from app.modules.message.feedback.repository import MsgFeedbackRepository
 from app.modules.message.feedback.schema import (
     MsgFeedbackAdminPageQuery,
+    MsgFeedbackAttachmentSchema,
     MsgFeedbackCreateRequest,
     MsgFeedbackSchema,
     MsgFeedbackUpdateRequest,
     MyFeedbackPageQuery,
 )
+from app.modules.sys.file.repository import FileRepository
 from app.modules.user.utils.profile import enrich_audit_names, get_profile, get_profiles_batch
 from app.platform.db.transaction import transactional
+from app.platform.storage.url import normalize_object_name, resolve_file_url
 
 
 class MsgFeedbackService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = MsgFeedbackRepository(db)
+        self.file_repo = FileRepository(db)
 
     async def submit(self, payload: MsgFeedbackCreateRequest, session: SessionPayload) -> None:
+        attach_object_names = await self._normalize_attach_object_names(payload.attach_object_names)
         async with transactional(self.db):
-            entity = await self.repo.create(payload)
-            entity.submitter_account_type = str(session.account_type)
-            entity.submitter_account_id = session.account_id
+            await self.repo.create(
+                payload,
+                submitter_account_type=str(session.account_type),
+                submitter_account_id=session.account_id,
+                attach_object_names=attach_object_names,
+            )
 
     async def update(self, payload: MsgFeedbackUpdateRequest, session: SessionPayload) -> None:
         async with transactional(self.db):
@@ -53,6 +62,16 @@ class MsgFeedbackService:
         schema = to_schema(MsgFeedbackSchema, entity)
         return await self._enrich_profiles(schema)
 
+    async def detail_my(self, query: IdQuery, session: SessionPayload) -> MsgFeedbackSchema:
+        entity = await self.repo.get_required(query.id)
+        if (
+            str(entity.submitter_account_type) != str(session.account_type)
+            or str(entity.submitter_account_id) != str(session.account_id)
+        ):
+            raise NotFoundError("MsgFeedback not found")
+        schema = to_schema(MsgFeedbackSchema, entity)
+        return await self._enrich_attachments(schema)
+
     async def page_admin(self, query: MsgFeedbackAdminPageQuery) -> PageData[MsgFeedbackSchema]:
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(MsgFeedbackSchema, items)
@@ -69,16 +88,80 @@ class MsgFeedbackService:
             session.account_id,
         )
         schemas = to_schema_list(MsgFeedbackSchema, items)
-        return build_page(query, total, schemas)
+        return build_page(query, total, await self._enrich_attachments_many(schemas))
+
+    async def _normalize_attach_object_names(self, values: list[str]) -> list[str]:
+        normalized: list[str] = []
+        for value in values:
+            object_name = normalize_object_name(value)
+            if not object_name:
+                continue
+            normalized.append(object_name)
+        unique = list(dict.fromkeys(normalized))
+        if not unique:
+            return []
+        entities = await self.file_repo.list_by_object_names(unique)
+        found = {entity.object_name for entity in entities}
+        missing = [name for name in unique if name not in found]
+        if missing:
+            raise BusinessError("附件文件不存在")
+        return unique
+
+    async def _enrich_attachments(self, schema: MsgFeedbackSchema) -> MsgFeedbackSchema:
+        schemas = await self._enrich_attachments_many([schema])
+        return schemas[0]
+
+    async def _enrich_attachments_many(
+        self, schemas: list[MsgFeedbackSchema]
+    ) -> list[MsgFeedbackSchema]:
+        all_names: list[str] = []
+        for schema in schemas:
+            names = [
+                name
+                for raw in (schema.attach_object_names or [])
+                if (name := normalize_object_name(raw))
+            ]
+            schema.attach_object_names = list(dict.fromkeys(names))
+            all_names.extend(schema.attach_object_names)
+
+        entity_map = {
+            entity.object_name: entity
+            for entity in await self.file_repo.list_by_object_names(all_names)
+        }
+        for schema in schemas:
+            attachments: list[MsgFeedbackAttachmentSchema] = []
+            for object_name in schema.attach_object_names:
+                entity = entity_map.get(object_name)
+                if entity is None:
+                    attachments.append(
+                        MsgFeedbackAttachmentSchema(
+                            object_name=object_name,
+                            url=resolve_file_url(object_name),
+                        )
+                    )
+                    continue
+                attachments.append(
+                    MsgFeedbackAttachmentSchema(
+                        object_name=entity.object_name,
+                        id=entity.id,
+                        original_name=entity.original_name,
+                        content_type=entity.content_type,
+                        size=entity.size,
+                        url=resolve_file_url(entity.object_name) or entity.url,
+                    )
+                )
+            schema.attachments = attachments
+        return schemas
 
     async def _enrich_profiles(self, schema: MsgFeedbackSchema) -> MsgFeedbackSchema:
+        await self._enrich_attachments(schema)
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         if schema.submitter_account_id:
             try:
                 at = AccountType(schema.submitter_account_type)
                 profile = await get_profile(self.db, at, schema.submitter_account_id)
                 if profile:
-                    schema.submitter_avatar = profile.avatar
+                    schema.submitter_avatar = resolve_file_url(profile.avatar)
                     schema.submitter_nickname = profile.nickname or profile.name
             except ValueError:
                 pass
@@ -87,6 +170,7 @@ class MsgFeedbackService:
     async def _batch_enrich_profiles(
         self, schemas: list[MsgFeedbackSchema]
     ) -> list[MsgFeedbackSchema]:
+        await self._enrich_attachments_many(schemas)
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
 
         groups: dict[str, list[str]] = {}
@@ -107,7 +191,7 @@ class MsgFeedbackService:
                         and schema.submitter_account_id in batch
                     ):
                         p = batch[schema.submitter_account_id]
-                        schema.submitter_avatar = p.avatar
+                        schema.submitter_avatar = resolve_file_url(p.avatar)
                         schema.submitter_nickname = p.nickname or p.name
             except ValueError:
                 pass

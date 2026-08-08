@@ -119,7 +119,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -240,7 +244,10 @@ function filterDeptTree(items: any[], searchValues: any): any[] {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -314,7 +321,10 @@ function filterDeptTree(items: any[], searchValues: any): any[] {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchTree" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchTree"
+    />
     <ModalDetail ref="detailModalRef" />
   </NFlex>
 </template>

@@ -44,7 +44,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(640px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'用户组ID'">
             {{ displayValue(state.group.id) }}
           </NDescriptionsItem>
@@ -58,7 +62,7 @@ defineExpose({
             >
               {{
                 dictTypeData('COMMON_STATUS', state.group.status) ||
-                displayValue(state.group.status)
+                  displayValue(state.group.status)
               }}
             </NTag>
           </NDescriptionsItem>

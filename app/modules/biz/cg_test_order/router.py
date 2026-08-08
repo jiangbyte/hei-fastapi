@@ -1,7 +1,7 @@
 """
 由 HEI 代码生成器生成。
 Author: Charlie
-生成时间：2026-08-07 07:26:16
+生成时间：2026-08-08 21:09:54
 """
 
 from typing import Annotated
@@ -22,16 +22,16 @@ from app.deps.db import get_db_session
 from app.modules.biz.cg_test_order.schema import (
     CgTestOrderAdminPageQuery,
     CgTestOrderCreateRequest,
+    CgTestOrderSchema,
+    CgTestOrderUpdateRequest,
     CgTestOrderItemAdminPageQuery,
     CgTestOrderItemCreateRequest,
     CgTestOrderItemSchema,
     CgTestOrderItemUpdateRequest,
-    CgTestOrderSchema,
-    CgTestOrderUpdateRequest,
 )
 from app.modules.biz.cg_test_order.service import (
-    CgTestOrderItemService,
     CgTestOrderService,
+    CgTestOrderItemService,
 )
 
 router = APIRouter()

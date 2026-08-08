@@ -4,12 +4,11 @@ import { create } from 'zustand'
 import { message } from 'antd'
 import { authApi } from '@/api'
 import { clearDict, refreshDict, syncDictTree } from '@/utils/dict'
-import {
-  clearAuthStorage,
-  getStoredUserInfo,
-  setStoredUserInfo,
-} from '@/utils/storage'
+import { clearAuthStorage, getStoredUserInfo, setStoredUserInfo } from '@/utils/storage'
 import { getSafeRedirect } from '@/utils/validate'
+import { wireBool } from '@/utils/wire'
+
+const userCenterPasswordPath = '/usercenter?tab=password'
 
 export interface AuthUserInfo {
   accountId: string
@@ -31,6 +30,8 @@ export interface AuthUserInfo {
 interface AuthState {
   userInfo: AuthUserInfo | null
   sessionChecked: boolean
+  /** 主动退出中：屏蔽并发请求的 401 提示 */
+  loggingOut: boolean
   isLogin: () => boolean
   ensureSession: () => Promise<boolean>
   login: (
@@ -39,7 +40,13 @@ interface AuthState {
     redirect?: string,
     rememberMe?: boolean,
     identityType?: string,
-    security?: { password_key_id: string; captcha_id: string; captcha_value: string },
+    security?: {
+      password_key_id?: string
+      captcha_id: string
+      captcha_value: string
+      login_mode?: 'PASSWORD' | 'OTP'
+      otp_code?: string
+    },
   ) => Promise<string>
   refreshUserInfo: () => Promise<any>
   logout: (redirect?: string) => Promise<void>
@@ -68,6 +75,7 @@ function mapMe(data: any, loginAt = Date.now()): AuthUserInfo {
 export const useAuthStore = create<AuthState>((set, get) => ({
   userInfo: getStoredUserInfo<AuthUserInfo>(),
   sessionChecked: false,
+  loggingOut: false,
 
   isLogin: () => Boolean(get().userInfo?.accountId),
 
@@ -77,7 +85,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     set({ sessionChecked: true })
     try {
-      await get().refreshUserInfo()
+      // 静默探测 cookie 会话；未登录时的 401 属预期，不弹错、不弹登录框
+      const meResponse = await authApi.me({ probe: true })
+      const userInfo = mapMe(meResponse.data, get().userInfo?.loginAt ?? Date.now())
+      setStoredUserInfo(userInfo)
+      set({ userInfo })
       return true
     } catch {
       clearAuthStorage()
@@ -96,20 +108,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   ) => {
     const response = await authApi.login({
       account,
-      password,
+      password: password || undefined,
       identity_type: identityType,
       remember_me: rememberMe,
-      password_key_id: security?.password_key_id || '',
+      password_key_id: security?.password_key_id,
       captcha_id: security?.captcha_id || '',
       captcha_value: security?.captcha_value || '',
+      login_mode: security?.login_mode || 'PASSWORD',
+      ...(security?.otp_code ? { otp_code: security.otp_code } : {}),
     })
 
     // 服务端设置 HttpOnly cookie；不在浏览器持久化 session token。
     clearAuthStorage()
     set({ sessionChecked: true })
 
-    if (response.data.password_expired) {
-      message.warning('密码已过期，请登录后尽快修改密码')
+    // WireBool 序列化为 "true"/"false" 字符串，不能直接当 JS 真值用
+    const passwordExpired = wireBool(response.data.password_expired ?? false)
+    const warningDays = response.data.password_expiry_warning_days
+    if (passwordExpired) {
+      message.warning('密码已过期，请先修改密码')
+    } else if (typeof warningDays === 'number' && warningDays > 0) {
+      message.warning(`密码将在 ${warningDays} 天后过期，请及时修改`)
     }
 
     await get().refreshUserInfo()
@@ -117,7 +136,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     syncDictTree()
     await refreshDict()
 
-    return getSafeRedirect(redirect)
+    return getSafeRedirect(passwordExpired ? userCenterPasswordPath : redirect)
   },
 
   refreshUserInfo: async () => {
@@ -135,16 +154,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async (redirect) => {
+    set({ loggingOut: true })
     try {
       await authApi.logout()
     } catch {
       // 忽略
     } finally {
       get().resetSession()
+      set({ loggingOut: false })
     }
 
-    const query =
-      redirect && !redirect.startsWith('/auth') ? `?redirect=${encodeURIComponent(redirect)}` : ''
-    window.location.assign(`/auth/login${query}`)
+    const { useAuthModalStore } = await import('@/stores/authModal')
+    useAuthModalStore
+      .getState()
+      .open('login', redirect && !redirect.startsWith('/auth') ? redirect : undefined)
   },
 }))

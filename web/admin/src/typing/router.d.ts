@@ -132,7 +132,7 @@ declare global {
       id: string
       name: string
       code: string
-      client: 'ADMIN' | 'PORTAL'
+      client: string
       icon?: string | null
       color?: string | null
       sort: number

@@ -5,6 +5,7 @@ import { RouterLink } from 'vue-router'
 import { h } from 'vue'
 import Layout from '@/layouts/index.vue'
 import { renderIcon } from '@/utils/icon'
+import { wireBool, wireInt } from '@/utils/wire'
 
 // 能参与前端路由体系的资源类型。按钮、动作、接口分组只用于权限控制，不生成页面路由。
 const routeResourceTypes: AppRoute.ResourceType[] = ['CATALOG', 'MENU', 'PAGE']
@@ -20,6 +21,48 @@ const innerAppRoutes: RouteRecordRaw[] = [
     meta: {
       code: 'usercenter',
       name: '个人中心',
+      resource_type: 'PAGE',
+      is_visible: false,
+      is_cache: false,
+      is_affix: false,
+      status: 'ENABLED',
+    },
+  },
+  {
+    path: '/feedback',
+    name: 'my-feedback',
+    component: () => import('@/views/feedback/index.vue'),
+    meta: {
+      code: 'my-feedback',
+      name: '意见反馈',
+      resource_type: 'PAGE',
+      is_visible: false,
+      is_cache: false,
+      is_affix: false,
+      status: 'ENABLED',
+    },
+  },
+  {
+    path: '/feedback/new',
+    name: 'my-feedback-new',
+    component: () => import('@/views/feedback/new.vue'),
+    meta: {
+      code: 'my-feedback-new',
+      name: '提交反馈',
+      resource_type: 'PAGE',
+      is_visible: false,
+      is_cache: false,
+      is_affix: false,
+      status: 'ENABLED',
+    },
+  },
+  {
+    path: '/feedback/:id',
+    name: 'my-feedback-detail',
+    component: () => import('@/views/feedback/detail.vue'),
+    meta: {
+      code: 'my-feedback-detail',
+      name: '反馈详情',
       resource_type: 'PAGE',
       is_visible: false,
       is_cache: false,
@@ -68,6 +111,21 @@ export function createFullscreenRoutes(resources: AppRoute.RowRoute[]): RouteRec
       meta: item.meta,
     }),
   ) as RouteRecordRaw[]
+}
+
+/**
+ * 将动态接口返回的 wire 标量（"true"/"false"、数字字符串）归一为前端内部类型。
+ *
+ * 未归一时 `"false"` 在 JS 中为真值，隐藏 PAGE 会误进侧边菜单。
+ */
+export function normalizeRowRoutes(resources: AppRoute.RowRoute[]): AppRoute.RowRoute[] {
+  return resources.map((resource) => ({
+    ...resource,
+    sort: typeof resource.sort === 'string' ? wireInt(resource.sort) : resource.sort,
+    is_visible: wireBool(resource.is_visible as string | boolean),
+    is_cache: wireBool(resource.is_cache as string | boolean),
+    is_affix: wireBool(resource.is_affix as string | boolean),
+  }))
 }
 
 /**
@@ -138,7 +196,9 @@ function matchResourcePath(pattern: string | null | undefined, path: string) {
   }
   const escaped = pattern
     .split('/')
-    .map((segment) => (segment.startsWith(':') ? '[^/]+' : segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+    .map((segment) =>
+      segment.startsWith(':') ? '[^/]+' : segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+    )
     .join('/')
   return new RegExp(`^${escaped}$`).test(path)
 }
@@ -228,7 +288,8 @@ function hoistLeafPageChildren(routes: AppRoute.Route[]): AppRoute.Route[] {
     if (route.children?.length) {
       route.children = hoistLeafPageChildren(route.children)
     }
-    const hasLeafComponent = Boolean(route.component) && isClickableResource(route.meta.resource_type)
+    const hasLeafComponent =
+      Boolean(route.component) && isClickableResource(route.meta.resource_type)
     if (hasLeafComponent && route.children?.length) {
       const nested = route.children
       route.children = undefined
@@ -359,7 +420,7 @@ export function groupResourcesByModule(resources: AppRoute.RowRoute[]): AppRoute
       id: string
       name: string
       code: string
-      client: 'ADMIN' | 'PORTAL'
+      client: string
       icon: string | null
       color: string | null
       sort: number

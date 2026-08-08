@@ -7,9 +7,10 @@ import { Link, useParams } from 'react-router-dom'
 import DOMPurify from 'dompurify'
 import { Markdown } from '@/components/common/Markdown'
 import { useAuthStore } from '@/stores/auth'
+import { useMessageUnreadStore } from '@/stores/messageUnread'
 import { formatDateTime } from '@/utils/time'
-import { readPageMeta } from '@/utils/wire'
-import { announcementApi } from '@/api'
+import { readPageMeta, wireBool } from '@/utils/wire'
+import { messageApi, noticeApi } from '@/api'
 
 async function findAnnouncementById(id: string) {
   const pageSize = 50
@@ -17,7 +18,7 @@ async function findAnnouncementById(id: string) {
   let total = Infinity
 
   while ((current - 1) * pageSize < total) {
-    const res = await announcementApi.list({ current, size: pageSize })
+    const res = await noticeApi.list({ current, size: pageSize })
     const records = res.data.records ?? []
     total = readPageMeta(res.data).total
     const found = records.find((row: any) => String(row.id) === String(id))
@@ -30,38 +31,45 @@ async function findAnnouncementById(id: string) {
 
 export function AnnouncementDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const isLogin = useAuthStore((s) => s.isLogin)
-  const loggedIn = isLogin()
+  const loggedIn = useAuthStore((s) => s.isLogin())
+  const refreshUnread = useMessageUnreadStore((s) => s.refresh)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(Boolean(id))
   const [detail, setDetail] = useState<any>(null)
-  const [notFound, setNotFound] = useState(false)
+  const [notFound, setNotFound] = useState(!id)
+  const [activeId, setActiveId] = useState(id)
+  const [activeLogin, setActiveLogin] = useState(loggedIn)
+
+  if (id !== activeId || loggedIn !== activeLogin) {
+    setActiveId(id)
+    setActiveLogin(loggedIn)
+    setLoading(Boolean(id))
+    setNotFound(!id)
+    setDetail(null)
+  }
 
   useEffect(() => {
-    if (!id) {
-      setNotFound(true)
-      setLoading(false)
-      return
-    }
+    if (!id) return
 
     let mounted = true
 
-    async function load() {
-      setLoading(true)
-      setNotFound(false)
+    void (async () => {
       try {
         let item: any = null
-        if (isLogin()) {
+        let loadedByMyDetail = false
+        if (loggedIn) {
           try {
-            const res = await announcementApi.myDetail(id!)
+            // myDetail 后端会顺带标记已读
+            const res = await messageApi.myDetail(id)
             item = res.data
+            loadedByMyDetail = true
           } catch {
             // 回退到公开列表查找
           }
         }
 
         if (!item) {
-          item = await findAnnouncementById(id!)
+          item = await findAnnouncementById(id)
         }
 
         if (!mounted) return
@@ -71,12 +79,20 @@ export function AnnouncementDetailPage() {
           return
         }
 
-        setDetail(item)
+        setDetail({
+          ...item,
+          is_read: loadedByMyDetail ? true : wireBool(item.is_read ?? false),
+        })
 
-        if (isLogin() && !item.is_read) {
+        if (loggedIn && loadedByMyDetail) {
+          void refreshUnread()
+        } else if (loggedIn && item.id && !wireBool(item.is_read ?? false)) {
           try {
-            await announcementApi.read([item.id])
-            if (mounted) setDetail((curr: any) => (curr ? { ...curr, is_read: true } : curr))
+            await messageApi.read({ ids: [item.id] })
+            if (mounted) {
+              setDetail((curr: any) => (curr ? { ...curr, is_read: true } : curr))
+              void refreshUnread()
+            }
           } catch {
             // 标已读失败不影响阅读
           }
@@ -88,13 +104,12 @@ export function AnnouncementDetailPage() {
       } finally {
         if (mounted) setLoading(false)
       }
-    }
+    })()
 
-    void load()
     return () => {
       mounted = false
     }
-  }, [id, loggedIn])
+  }, [id, loggedIn, refreshUnread])
 
   return (
     <div className="page-shell">

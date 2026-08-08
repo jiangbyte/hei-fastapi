@@ -12,7 +12,7 @@ from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
-from app.modules.iam.enums import ResourceModuleClient
+from app.core.config.enums import AccountType
 from app.modules.iam.resource.schema import (
     ResourceAdminPageQuery,
     ResourceButtonCreateRequest,
@@ -131,7 +131,7 @@ async def current_resources(
     return success(
         await ResourceService(db).list_current_resources(
             session,
-            module_client=ResourceModuleClient.ADMIN,
+            module_client=AccountType.ADMIN,
         )
     )
 

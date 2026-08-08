@@ -6,14 +6,13 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { sessionApi } from '@/api'
 import {
-  createTagColor,
-  formatDateTime,
-  hasPermission,
-  normalizeSearchValues,
-  renderButtonIcon,
-} from '@/utils'
-import { dictList, dictTypeColor, dictTypeData } from '@/utils/dict'
-import { NButton, NDataTable, NFlex, NIcon, NTag } from 'naive-ui'
+  ACCOUNT_TYPE_TABS,
+  DEFAULT_ACCOUNT_TYPE,
+  accountTypeLabel,
+  type AccountType,
+} from '@/constants/account'
+import { formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
+import { NButton, NDataTable, NFlex, NIcon } from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive } from 'vue'
 import { readPageMeta } from '@/utils/wire'
@@ -26,6 +25,7 @@ const state = reactive({
   loading: false,
   tokenModalShow: false,
   searchValues: {} as any,
+  accountType: DEFAULT_ACCOUNT_TYPE as AccountType,
   page: 1,
   pageSize: 20,
 })
@@ -65,12 +65,6 @@ const analysisTitleMap: Record<string, string> = {
 }
 
 const searchColumns = computed<ProSearchFormColumns<any>>(() => [
-  {
-    title: '账号类型',
-    path: 'account_type',
-    field: 'select',
-    fieldProps: { options: dictList('ACCOUNT_TYPE') },
-  },
   { title: '账号', path: 'account', field: 'input' },
   { title: '客户端 IP', path: 'ip', field: 'input' },
 ])
@@ -95,19 +89,6 @@ const pagination = computed<PaginationProps>(() => ({
 
 const tableColumns = computed<ProDataTableColumns<any>>(() => [
   { title: '账号 ID', path: 'account_id', width: 170, ellipsis: { tooltip: true } },
-  {
-    title: '账号类型',
-    path: 'account_type',
-    width: 130,
-    render: (row) => (
-      <NTag
-        color={createTagColor(dictTypeColor('ACCOUNT_TYPE', row.account_type))}
-        bordered={false}
-      >
-        {dictTypeData('ACCOUNT_TYPE', row.account_type) || row.account_type}
-      </NTag>
-    ),
-  },
   { title: '账号', path: 'account', width: 160, ellipsis: { tooltip: true } },
   { title: '名称', path: 'name', width: 160, ellipsis: { tooltip: true } },
   { title: '设备数', path: 'token_count', width: 110 },
@@ -191,7 +172,20 @@ const tokenColumns = computed<DataTableColumns<any>>(() => [
   },
 ])
 
-onMounted(fetchAll)
+const tableTitle = computed(() => {
+  const label = accountTypeLabel(state.accountType) || state.accountType
+  return label ? `${label}会话` : '在线会话'
+})
+
+onMounted(() => {
+  void fetchAll()
+})
+
+function handleAccountTypeChange(value: string | number) {
+  state.accountType = String(value) as AccountType
+  state.page = 1
+  void fetchPage()
+}
 
 async function fetchAll() {
   await Promise.all([fetchAnalysis(), fetchPage()])
@@ -203,11 +197,13 @@ async function fetchAnalysis() {
 }
 
 async function fetchPage() {
+  if (!state.accountType) return
   state.loading = true
   try {
     const response = await sessionApi.page({
       current: state.page,
       size: state.pageSize,
+      account_type: state.accountType,
       ...state.searchValues,
     })
     const data = response.data ?? {}
@@ -263,25 +259,51 @@ function confirmExitToken(token: string) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
-    <NGrid cols="2 s:3 xl:6" responsive="screen" :x-gap="10" :y-gap="10">
-      <NGridItem v-for="item in analysisCards" :key="item.key">
-        <NCard class="session-stat" :bordered="false">
-          <div
-            class="session-stat__icon"
-            :style="{ color: item.color, backgroundColor: `${item.color}14` }"
-          >
-            <NovaIcon :icon="item.icon" :size="22" />
-          </div>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+    :size="12"
+  >
+    <div class="session-stats">
+      <div
+        v-for="item in analysisCards"
+        :key="item.key"
+        class="session-stat"
+      >
+        <div
+          class="session-stat__icon"
+          :style="{ color: item.color, backgroundColor: `${item.color}14` }"
+        >
+          <NovaIcon
+            :icon="item.icon"
+            :size="16"
+          />
+        </div>
+        <div class="session-stat__meta">
           <div class="session-stat__title">
             {{ analysisTitleMap[item.key] ?? item.key }}
           </div>
           <div class="session-stat__value">
             {{ state.analysis[item.key] ?? 0 }}
           </div>
-        </NCard>
-      </NGridItem>
-    </NGrid>
+        </div>
+      </div>
+    </div>
+
+    <NTabs
+      class="session-account-tabs"
+      :value="state.accountType"
+      type="line"
+      animated
+      @update:value="handleAccountTypeChange"
+    >
+      <NTabPane
+        v-for="item in ACCOUNT_TYPE_TABS"
+        :key="item.key"
+        :name="item.key"
+        :tab="item.label"
+      />
+    </NTabs>
 
     <ProCard content-class="pb-0!">
       <ProSearchForm
@@ -298,9 +320,9 @@ function confirmExitToken(token: string) {
     <ProDataTable
       class="min-h-0 flex-1"
       remote
-      :title="'在线会话'"
+      :title="tableTitle"
       row-key="account_id"
-      :scroll-x="1340"
+      :scroll-x="1210"
       :columns="tableColumns"
       :data="state.rows"
       :loading="state.loading"
@@ -344,30 +366,65 @@ function confirmExitToken(token: string) {
 </template>
 
 <style scoped>
-.session-stat :deep(.n-card__content) {
+.session-stats {
   display: grid;
-  gap: 8px;
-  min-height: 118px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.session-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--n-color, #fff);
+  border-radius: 8px;
 }
 
 .session-stat__icon {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+
+.session-stat__meta {
+  min-width: 0;
 }
 
 .session-stat__title {
   color: var(--text-color-3);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .session-stat__value {
   color: var(--text-color-base);
-  font-size: 26px;
+  font-size: 18px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.2;
+}
+
+@media (max-width: 1280px) {
+  .session-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .session-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.session-account-tabs :deep(.n-tabs-pane-wrapper) {
+  display: none;
 }
 </style>

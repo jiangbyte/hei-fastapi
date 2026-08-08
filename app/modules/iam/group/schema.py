@@ -109,3 +109,19 @@ class GroupGrantResourceRequest(ApiSchema):
     id: str = Field(min_length=1, max_length=64)
     account_type: AccountType
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)
+
+
+class GroupOwnClientResourceQuery(IdQuery):
+    account_type: AccountType
+
+
+class GroupOwnClientResourceResponse(ApiSchema):
+    id: str
+    modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
+    grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)
+
+
+class GroupGrantClientResourceRequest(ApiSchema):
+    id: str = Field(min_length=1, max_length=64)
+    account_type: AccountType
+    grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)

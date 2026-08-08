@@ -1,13 +1,13 @@
 """
 由 HEI 代码生成器生成。
 Author: Charlie
-生成时间：2026-08-07 07:26:16
+生成时间：2026-08-08 21:09:55
 """
 
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db.base import Base

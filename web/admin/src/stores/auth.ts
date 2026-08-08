@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { router } from '@/router'
 import { authApi } from '@/api'
 import { clearDict, refreshDict, syncDictTree } from '@/utils/dict'
+import { wireBool } from '@/utils/wire'
 import { useRouteStore } from './route'
 import { useTabStore } from './tab'
 
@@ -21,7 +22,6 @@ interface AuthUserInfo {
   deptIdNames?: { id: string; name: string }[]
   groupIdNames?: { id: string; name: string }[]
   permissionKeys: string[]
-  buttonCodes: string[]
   profile?: Record<string, unknown> | null
   loginAt: number
 }
@@ -85,56 +85,40 @@ export const useAuthStore = defineStore('auth-store', {
       redirect?: string,
       rememberMe?: boolean,
       identityType = 'ACCOUNT',
-      security?: { password_key_id: string; captcha_id: string; captcha_value: string },
-    ): Promise<
-      | { mfaRequired: true; challengeId: string; webauthnOptions?: Record<string, unknown> | null }
-      | { mfaRequired: false }
-    > {
+      security?: {
+        password_key_id?: string
+        captcha_id: string
+        captcha_value: string
+        login_mode?: 'PASSWORD' | 'OTP'
+        otp_code?: string
+      },
+    ) {
       const response = await authApi.login({
         account,
-        password,
+        password: password || undefined,
         identity_type: identityType,
         remember_me: rememberMe ?? true,
         password_key_id: security?.password_key_id,
         captcha_id: security?.captcha_id,
         captcha_value: security?.captcha_value,
+        login_mode: security?.login_mode || 'PASSWORD',
+        ...(security?.otp_code ? { otp_code: security.otp_code } : {}),
       })
-      if (response.data?.mfa_required && response.data?.challenge_id) {
-        return {
-          mfaRequired: true,
-          challengeId: String(response.data.challenge_id),
-          webauthnOptions: response.data.webauthn_options ?? null,
-        }
-      }
 
       this.sessionChecked = true
 
-      const passwordExpired = response.data.password_expired ?? false
+      // WireBool 序列化为 "true"/"false" 字符串，不能直接当 JS 真值用
+      const passwordExpired = wireBool(response.data.password_expired ?? false)
+      const warningDays = response.data.password_expiry_warning_days
+      if (typeof warningDays === 'number' && warningDays > 0 && !passwordExpired) {
+        window.$message?.warning?.(`密码将在 ${warningDays} 天后过期，请及时修改`)
+      }
       if (passwordExpired) {
-        await this.finishLogin(userCenterPasswordPath)
-        return { mfaRequired: false }
-      }
-
-      await this.finishLogin(redirect)
-      return { mfaRequired: false }
-    },
-
-    async completeMfaLogin(
-      challengeId: string,
-      code: string,
-      redirect?: string,
-      webauthnCredential?: Record<string, unknown>,
-    ) {
-      const response = await authApi.loginMfa({
-        challenge_id: challengeId,
-        code: code || undefined,
-        webauthn_credential: webauthnCredential,
-      })
-      this.sessionChecked = true
-      if (response.data.password_expired) {
+        window.$message?.warning?.('密码已过期，请先修改密码')
         await this.finishLogin(userCenterPasswordPath)
         return
       }
+
       await this.finishLogin(redirect)
     },
 
@@ -165,7 +149,6 @@ export const useAuthStore = defineStore('auth-store', {
         deptIdNames: meResponse.data.dept_id_names ?? [],
         groupIdNames: meResponse.data.group_id_names ?? [],
         permissionKeys: meResponse.data.permission_keys ?? [],
-        buttonCodes: meResponse.data.button_codes ?? [],
         profile: meResponse.data.profile ?? null,
         loginAt: this.userInfo?.loginAt ?? Date.now(),
       }
@@ -177,12 +160,7 @@ export const useAuthStore = defineStore('auth-store', {
 
     hasPermission(permissionKey: string) {
       const keys = this.userInfo?.permissionKeys ?? []
-      const buttonCodes = this.userInfo?.buttonCodes ?? []
-      return (
-        keys.includes('*:*:*') ||
-        keys.includes(permissionKey) ||
-        buttonCodes.includes(permissionKey)
-      )
+      return keys.includes('*:*:*') || keys.includes(permissionKey)
     },
 
     clearAuthStorage() {

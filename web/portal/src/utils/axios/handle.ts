@@ -4,7 +4,6 @@ import type { AxiosError, AxiosResponse } from 'axios'
 import { message } from 'antd'
 import type { ApiResponse } from '@/typing/api'
 
-const loginPath = '/auth/login'
 let isHandlingUnauthorized = false
 
 const httpStatusMessageMap: Record<number, string> = {
@@ -90,33 +89,39 @@ function handleUnauthorizedError(error: AxiosError) {
   }
 
   isHandlingUnauthorized = true
-  const msg = getErrorMessage(error)
-  if (msg) {
-    message.error(msg)
-  }
 
-  void redirectToLogin().finally(() => {
+  void redirectToLogin(error).finally(() => {
     window.setTimeout(() => {
       isHandlingUnauthorized = false
     }, 1000)
   })
 }
 
-async function redirectToLogin() {
+async function redirectToLogin(error: AxiosError) {
   const { useAuthStore } = await import('@/stores/auth')
-  useAuthStore.getState().resetSession()
+  const auth = useAuthStore.getState()
+  const loggingOut = auth.loggingOut
+  const hadSession = auth.isLogin()
+  auth.resetSession()
 
-  const { pathname, search } = window.location
-  if (pathname.startsWith('/auth')) {
-    if (pathname !== loginPath) {
-      window.location.replace(loginPath)
-    }
+  // 主动退出 / 本来就没登录：静默清理，不弹错（退出流程自己会开登录框）
+  if (loggingOut || !hadSession) {
     return
   }
 
-  const redirect = `${pathname}${search}`
-  const query = redirect && redirect !== '/' ? `?redirect=${encodeURIComponent(redirect)}` : ''
-  window.location.replace(`${loginPath}${query}`)
+  const msg = getErrorMessage(error)
+  if (msg) {
+    message.error(msg)
+  }
+
+  const { pathname, search } = window.location
+  const { useAuthModalStore } = await import('@/stores/authModal')
+  if (pathname.startsWith('/auth/forgot-password')) {
+    return
+  }
+  const redirect =
+    pathname.startsWith('/auth') || pathname === '/' ? undefined : `${pathname}${search}`
+  useAuthModalStore.getState().open('login', redirect)
 }
 
 function showErrorMessage(error: AxiosError) {

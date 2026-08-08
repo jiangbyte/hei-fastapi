@@ -1,12 +1,7 @@
 """ Author: Charlie """
 
+from app.platform.config.keys import SENSITIVE_CONFIG_KEYS
 from app.platform.secrets.backend import decrypt_plaintext, encrypt_plaintext
-
-_sensitive_keys = {
-    "auth.default_password",
-    "audit_alert.webhook_secret",
-    "mail.password",
-}
 
 _storage_sensitive_columns = {
     "access_key",
@@ -15,7 +10,7 @@ _storage_sensitive_columns = {
 
 
 def is_sensitive(config_key: str) -> bool:
-    return config_key in _sensitive_keys
+    return config_key in SENSITIVE_CONFIG_KEYS
 
 
 def encrypt_config_value(config_key: str, value: str | None) -> str | None:
@@ -52,11 +47,3 @@ def decrypt_storage_value(column_name: str, value: str | None) -> str | None:
     # 轮换前仍为明文行：原样返回。
     return decrypted if decrypted is not None else value
 
-
-def encrypt_secret(value: str) -> str:
-    """加密任意密钥（如 MFA TOTP 种子）。"""
-    return encrypt_plaintext(value)
-
-
-def decrypt_secret(value: str) -> str | None:
-    return decrypt_plaintext(value)

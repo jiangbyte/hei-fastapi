@@ -9,7 +9,8 @@ from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import resolve_data_scope_dept_ids
 from app.core.security.permission_registry import list_permission_resources
 from app.core.security.session import SessionPayload
-from app.modules.iam.enums import ResourceModuleClient, ResourceType
+from app.core.config.enums import AccountType
+from app.modules.iam.enums import ResourceType
 from app.modules.iam.permission.service import ensure_registered_permission
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.model import SysResource
@@ -163,7 +164,7 @@ class ResourceService:
     async def list_current_resources(
         self,
         session: SessionPayload,
-        module_client: ResourceModuleClient | None = None,
+        module_client: AccountType | None = None,
     ) -> list[SysResourceSchema]:
         resources = await self._list_visible_resources(
             session,
@@ -172,14 +173,14 @@ class ResourceService:
         return await self._build_resource_schemas(resources)
 
     async def list_public_portal_resources(self) -> list[SysResourceSchema]:
-        resources = await self.repo.list_resources(module_client=ResourceModuleClient.PORTAL)
+        resources = await self.repo.list_resources(module_client=AccountType.PORTAL)
         return await self._build_resource_schemas(resources)
 
     async def _list_visible_resources(
         self,
         session: SessionPayload,
         module_id: str | None = None,
-        module_client: ResourceModuleClient | None = None,
+        module_client: AccountType | None = None,
     ) -> list[SysResource]:
         if "*:*:*" in session.permission_keys:
             return await self.repo.list_resources(
@@ -199,8 +200,11 @@ class ResourceService:
             resources = [resource for resource in resources if resource.module_id == module_id]
         return resources
 
-    async def list_grant_modules(self) -> list[ResourceGrantModuleOption]:
-        return await self.repo.list_all_resource_grant_modules()
+    async def list_grant_modules(
+        self,
+        module_client: AccountType | None = None,
+    ) -> list[ResourceGrantModuleOption]:
+        return await self.repo.list_all_resource_grant_modules(module_client=module_client)
 
     async def _build_resource_schemas(
         self,

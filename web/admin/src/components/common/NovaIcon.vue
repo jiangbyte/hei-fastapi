@@ -20,7 +20,12 @@ withDefaults(
 </script>
 
 <template>
-  <n-icon v-if="icon" :size="size" :depth="depth" :color="color">
+  <n-icon
+    v-if="icon"
+    :size="size"
+    :depth="depth"
+    :color="color"
+  >
     <Icon :icon="icon" />
   </n-icon>
 </template>

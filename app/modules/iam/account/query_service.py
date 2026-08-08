@@ -54,11 +54,13 @@ class AccountQueryService:
                 (item for item in account_identities if item.identity_type == "PHONE"),
                 None,
             )
-            profile = (
-                admin_profile_map.get(account.id)
-                if account.account_type == AccountType.ADMIN.value
-                else portal_profile_map.get(account.id)
-            )
+            match account.account_type:
+                case AccountType.ADMIN.value:
+                    profile = admin_profile_map.get(account.id)
+                case AccountType.PORTAL.value:
+                    profile = portal_profile_map.get(account.id)
+                case _:
+                    profile = None
             normalize_orm_datetimes(account)
             if profile is not None:
                 normalize_orm_datetimes(profile)

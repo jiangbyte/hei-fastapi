@@ -11,6 +11,6 @@ def test_fernet_env_roundtrip():
     clear_secrets_backend_cache()
     key = Fernet.generate_key().decode()
     backend = FernetEnvBackend(key)
-    token = backend.encrypt("hello-mfa")
-    assert backend.decrypt(token) == "hello-mfa"
+    token = backend.encrypt("hello-secret")
+    assert backend.decrypt(token) == "hello-secret"
     assert backend.decrypt("not-valid") is None

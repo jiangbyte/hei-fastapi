@@ -132,7 +132,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     width: 120,
     render: (row) =>
       row.color ? (
-        <NTag color={createTagColor(row.color)} bordered={false}>
+        <NTag size="small" color={createTagColor(row.color)} bordered={false}>
           {row.color}
         </NTag>
       ) : (
@@ -163,7 +163,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status)}
       </NTag>
     ),
@@ -410,9 +414,20 @@ function flattenDictTree(items: any[]) {
 
 <template>
   <div class="dict-page">
-    <ProCard class="dict-tree-card" content-class="h-full min-h-0 overflow-hidden">
-      <NFlex class="dict-tree-layout" vertical :size="12">
-        <NInput v-model:value="state.treeSearchKey" clearable :placeholder="'搜索 dict'">
+    <ProCard
+      class="dict-tree-card"
+      content-class="h-full min-h-0 overflow-hidden"
+    >
+      <NFlex
+        class="dict-tree-layout"
+        vertical
+        :size="12"
+      >
+        <NInput
+          v-model:value="state.treeSearchKey"
+          clearable
+          :placeholder="'搜索 dict'"
+        >
           <template #prefix>
             <NIcon>
               <Icon icon="icon-park-outline:search" />
@@ -426,8 +441,14 @@ function flattenDictTree(items: any[]) {
           justify-content="space-evenly"
           @update:value="handleCategoryUpdate"
         >
-          <NTabPane name="SYS" :tab="'系统'" />
-          <NTabPane name="BIZ" :tab="'业务'" />
+          <NTabPane
+            name="SYS"
+            :tab="'系统'"
+          />
+          <NTabPane
+            name="BIZ"
+            :tab="'业务'"
+          />
         </NTabs>
         <div class="dict-tree-body">
           <NSpin
@@ -435,7 +456,10 @@ function flattenDictTree(items: any[]) {
             class="dict-tree-spin"
             content-class="dict-tree-spin-content"
           >
-            <NScrollbar class="dict-tree-scroll" content-class="dict-tree-scroll-content">
+            <NScrollbar
+              class="dict-tree-scroll"
+              content-class="dict-tree-scroll-content"
+            >
               <NTree
                 block-line
                 block-node
@@ -453,7 +477,10 @@ function flattenDictTree(items: any[]) {
       </NFlex>
     </ProCard>
 
-    <NFlex class="min-w-0 min-h-0 h-full" vertical>
+    <NFlex
+      class="min-w-0 min-h-0 h-full"
+      vertical
+    >
       <ProCard content-class="pb-0!">
         <ProSearchForm
           :form="searchForm"
@@ -528,7 +555,11 @@ function flattenDictTree(items: any[]) {
       </ProDataTable>
     </NFlex>
 
-    <ModalForm ref="formModalRef" :dicts="flatTreeDicts" @saved="handleSaved" />
+    <ModalForm
+      ref="formModalRef"
+      :dicts="flatTreeDicts"
+      @saved="handleSaved"
+    />
     <ModalDetail ref="detailModalRef" />
   </div>
 </template>

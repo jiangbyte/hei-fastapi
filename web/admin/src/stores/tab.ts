@@ -28,10 +28,10 @@ export interface AppTab {
   // Vue Router 的路由名称；当前资源路由使用 module_id + code 作为 route.name。
   name: RouteLocationNormalizedLoaded['name']
 
-  // 不含查询参数的路由路径。
+  // 不含查询参数的路由路径；全局标签去重键。
   path: string
 
-  // 含 query/hash 的完整路径，作为标签唯一标识和跳转目标。
+  // 含 query/hash 的完整路径，作为跳转目标；query 变化时原地更新，不新建标签。
   fullPath: string
 
   // 路由元信息快照，标题、图标、资源类型、固定标签等都从这里读取。
@@ -65,8 +65,8 @@ interface TabAction {
   // 清空全部标签页，通常用于退出登录或重置会话。
   clearAllTabs: () => void
 
-  // 判断指定 fullPath 是否已经存在于固定标签或普通标签中。
-  hasExistTab: (fullPath: string) => boolean
+  // 判断指定 path 是否已经存在于固定标签或普通标签中。
+  hasExistTab: (path: string) => boolean
 
   // 设置当前激活标签页。
   setCurrentTab: (fullPath: string) => void
@@ -96,13 +96,19 @@ export const useTabStore = defineStore('tab-store', {
      *
      * 只有 MENU/PAGE 资源会进入标签栏；CATALOG、BUTTON、ACTION、API_GROUP
      * 以及 404 等内部路由都不会生成标签页。
+     *
+     * 全局按 path 去重：同一页面仅一个标签；query/hash 变化只更新该标签的 fullPath。
      */
     addTab(route: RouteLocationNormalizedLoaded) {
-      if (
-        route.meta.layout === 'fullscreen' ||
-        !isTabResource(route.meta.resource_type) ||
-        this.hasExistTab(route.fullPath)
-      ) {
+      if (route.meta.layout === 'fullscreen' || !isTabResource(route.meta.resource_type)) {
+        return
+      }
+
+      const existing = this.allTabs.find((item) => item.path === route.path)
+      if (existing) {
+        existing.name = route.name
+        existing.fullPath = route.fullPath
+        existing.meta = { ...route.meta }
         return
       }
 
@@ -189,12 +195,10 @@ export const useTabStore = defineStore('tab-store', {
     },
 
     /**
-     * 检查标签是否已存在。
-     *
-     * 使用 fullPath 而不是 path，可以让同一路由携带不同 query 时形成不同标签。
+     * 检查标签是否已存在（按 path）。
      */
-    hasExistTab(fullPath: string) {
-      return this.allTabs.some((item) => item.fullPath === fullPath)
+    hasExistTab(path: string) {
+      return this.allTabs.some((item) => item.path === path)
     },
 
     /**

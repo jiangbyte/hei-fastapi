@@ -1,6 +1,6 @@
 /** Author: Charlie */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button, Grid } from 'antd'
 import { MenuOutlined } from '@ant-design/icons'
 import { useLocation } from 'react-router-dom'
@@ -8,7 +8,9 @@ import { MobileDrawer } from '../common/MobileDrawer'
 import { Logo } from './Logo'
 import { NavMenu } from './NavMenu'
 import { ThemeSwitch } from './ThemeSwitch'
+import { Notices } from './Notices'
 import { UserCenter } from './UserCenter'
+import { useAuthStore } from '@/stores/auth'
 import './header.css'
 
 const { useBreakpoint } = Grid
@@ -20,10 +22,14 @@ export function AppHeader() {
   const location = useLocation()
   const isMobile = !screens.md
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [pathname, setPathname] = useState(location.pathname)
+  const isLogin = useAuthStore((s) => s.isLogin)
+  const loggedIn = isLogin()
 
-  useEffect(() => {
-    setDrawerOpen(false)
-  }, [location.pathname])
+  if (location.pathname !== pathname) {
+    setPathname(location.pathname)
+    if (drawerOpen) setDrawerOpen(false)
+  }
 
   return (
     <>
@@ -47,6 +53,7 @@ export function AppHeader() {
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <ThemeSwitch />
+            {loggedIn ? <Notices /> : null}
             <UserCenter />
           </div>
         </div>

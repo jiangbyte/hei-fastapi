@@ -59,7 +59,11 @@ function handleUpdateValue(value: any) {
     :size="size"
     @update:value="handleUpdateValue"
   >
-    <NRadio v-for="option in options" :key="option.value" :value="option.value">
+    <NRadio
+      v-for="option in options"
+      :key="option.value"
+      :value="option.value"
+    >
       {{ option.label }}
     </NRadio>
   </NRadioGroup>
@@ -71,7 +75,11 @@ function handleUpdateValue(value: any) {
     :disabled="disabled"
     @update:value="handleUpdateValue"
   >
-    <NCheckbox v-for="option in options" :key="option.value" :value="option.value">
+    <NCheckbox
+      v-for="option in options"
+      :key="option.value"
+      :value="option.value"
+    >
       {{ option.label }}
     </NCheckbox>
   </NCheckboxGroup>

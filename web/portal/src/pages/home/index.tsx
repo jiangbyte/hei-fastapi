@@ -4,15 +4,19 @@ import { useEffect, useState } from 'react'
 import { Empty, Skeleton, Tag } from 'antd'
 import { NotificationOutlined, RightOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
+import { useAuthModalStore } from '@/stores/authModal'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/time'
-import { announcementApi } from '@/api'
+import { noticeApi } from '@/api'
 
 function announcementSummary(content: string, contentType: string) {
   const raw = content || ''
   const text =
     contentType === 'html' || contentType === 'markdown'
-      ? raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      ? raw
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
       : raw.replace(/\s+/g, ' ').trim()
   if (text.length <= 80) return text
   return `${text.slice(0, 80)}…`
@@ -22,6 +26,7 @@ export function HomePage() {
   const userInfo = useAuthStore((s) => s.userInfo)
   const isLogin = useAuthStore((s) => s.isLogin)
   const ensureSession = useAuthStore((s) => s.ensureSession)
+  const openAuthModal = useAuthModalStore((s) => s.open)
   const loggedIn = isLogin()
 
   const [announcements, setAnnouncements] = useState<any[]>([])
@@ -37,7 +42,7 @@ export function HomePage() {
     async function loadAnnouncements() {
       setAnnounceLoading(true)
       try {
-        const res = await announcementApi.list({ current: 1, size: 5 })
+        const res = await noticeApi.list({ current: 1, size: 5 })
         if (!mounted) return
         setAnnouncements(res.data.records ?? [])
       } catch {
@@ -82,12 +87,13 @@ export function HomePage() {
               账号设置
             </Link>
           ) : (
-            <Link
-              to="/auth/login"
+            <button
+              type="button"
+              onClick={() => openAuthModal('login')}
               className="inline-flex items-center rounded-lg bg-[var(--ant-color-fill-quaternary)] px-4 py-2 text-sm font-medium hover:bg-[var(--ant-color-fill-secondary)]"
             >
               登录
-            </Link>
+            </button>
           )}
         </div>
       </section>
@@ -115,7 +121,9 @@ export function HomePage() {
                   className="flex w-full flex-col border-b border-[var(--ant-color-border)] px-4 py-3.5 text-left last:border-b-0 transition-colors hover:bg-[var(--ant-color-fill-quaternary)]"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="min-w-0 flex-1 truncate text-[15px] font-medium">{item.title}</div>
+                    <div className="min-w-0 flex-1 truncate text-[15px] font-medium">
+                      {item.title}
+                    </div>
                     {item.is_pinned ? (
                       <Tag color="warning" className="m-0 shrink-0">
                         置顶

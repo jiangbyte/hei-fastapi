@@ -6,14 +6,28 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.enums import AccountStatusEnum, StatusEnum
 from app.core.security.session import session_store
 from app.modules.dashboard.schema import (
-    DashboardMetric,
+    DashboardAccounts,
+    DashboardFiles,
+    DashboardIam,
+    DashboardOpsToday,
     DashboardOverviewResponse,
     DashboardStatusItem,
+    DashboardSummary,
     DashboardTrendPoint,
+    DashboardTrends,
 )
 from app.modules.iam.account.model import SysAccount
+from app.modules.iam.dept.model import SysDept
+from app.modules.iam.enums import ResourceType
+from app.modules.iam.group.model import SysGroup
+from app.modules.iam.resource.model import SysResource
+from app.modules.iam.role.model import SysRole
+from app.modules.message.enums import FeedbackStatus
+from app.modules.message.feedback.model import MsgFeedback
+from app.modules.sys.audit.model import SysOperationAuditLog
 from app.modules.sys.file.model import SysFile
 
 
@@ -23,23 +37,72 @@ class DashboardService:
 
     async def overview(self) -> DashboardOverviewResponse:
         since = datetime.now(UTC) - timedelta(days=6)
+        day_start = _day_start()
+
         account_total = await self._count(SysAccount.id)
-        account_new = await self._count(SysAccount.id, SysAccount.created_at >= _day_start())
+        enabled = await self._count(
+            SysAccount.id, SysAccount.account_status == AccountStatusEnum.ENABLED.value
+        )
+        disabled = await self._count(
+            SysAccount.id, SysAccount.account_status == AccountStatusEnum.DISABLED.value
+        )
+        today_new = await self._count(SysAccount.id, SysAccount.created_at >= day_start)
+
         online_sessions = len(
             await session_store.list_sessions_by_tokens(await session_store.list_tokens())
         )
         file_total = await self._count(SysFile.id)
-        file_size = int(
+        storage_bytes = int(
             (await self.db.execute(select(func.coalesce(func.sum(SysFile.size), 0)))).scalar_one()
         )
+
+        audit_total = await self._count(
+            SysOperationAuditLog.id, SysOperationAuditLog.created_at >= day_start
+        )
+        audit_failed = await self._count(
+            SysOperationAuditLog.id,
+            SysOperationAuditLog.created_at >= day_start,
+            SysOperationAuditLog.success.is_(False),
+        )
+        feedback_pending = await self._count(
+            MsgFeedback.id, MsgFeedback.status == FeedbackStatus.PENDING.value
+        )
+
         return DashboardOverviewResponse(
-            metrics=[
-                DashboardMetric(key="accounts", value=account_total, trend_value=account_new),
-                DashboardMetric(key="online_sessions", value=online_sessions),
-                DashboardMetric(key="files", value=file_total, trend_value=file_size),
-            ],
-            account_trend=await self._daily_trend(SysAccount.created_at, since, "accounts"),
-            file_type_share=await self._file_type_share(),
+            summary=DashboardSummary(
+                account_total=account_total,
+                online_sessions=online_sessions,
+                file_total=file_total,
+                storage_bytes=storage_bytes,
+            ),
+            accounts=DashboardAccounts(
+                enabled=enabled,
+                disabled=disabled,
+                today_new=today_new,
+                by_type=await self._account_by_type(),
+            ),
+            iam=DashboardIam(
+                role_count=await self._count(SysRole.id),
+                dept_count=await self._count(SysDept.id),
+                group_count=await self._count(SysGroup.id),
+                menu_count=await self._count(
+                    SysResource.id,
+                    SysResource.resource_type == ResourceType.MENU.value,
+                    SysResource.status == StatusEnum.ENABLED.value,
+                ),
+            ),
+            ops_today=DashboardOpsToday(
+                audit_total=audit_total,
+                audit_failed=audit_failed,
+                feedback_pending=feedback_pending,
+            ),
+            trends=DashboardTrends(
+                account_trend=await self._daily_trend(SysAccount.created_at, since, "accounts"),
+                audit_trend=await self._daily_trend(
+                    SysOperationAuditLog.created_at, since, "audits"
+                ),
+            ),
+            files=DashboardFiles(by_content_type=await self._file_type_share()),
         )
 
     async def _count(self, column, *filters) -> int:
@@ -47,6 +110,19 @@ class DashboardService:
         if filters:
             stmt = stmt.where(*filters)
         return int((await self.db.execute(stmt)).scalar_one())
+
+    async def _account_by_type(self) -> list[DashboardStatusItem]:
+        rows = (
+            await self.db.execute(
+                select(SysAccount.account_type, func.count(SysAccount.id))
+                .group_by(SysAccount.account_type)
+                .order_by(func.count(SysAccount.id).desc())
+            )
+        ).all()
+        return [
+            DashboardStatusItem(name=str(account_type or "unknown"), value=int(count))
+            for account_type, count in rows
+        ]
 
     async def _daily_trend(self, column, since: datetime, label: str) -> list[DashboardTrendPoint]:
         rows = (await self.db.execute(select(column).where(column >= since))).scalars().all()

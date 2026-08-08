@@ -7,8 +7,7 @@ export const navItems = [
 
 export function getSelectedNavKey(pathname: string) {
   return (
-    navItems.find((item) =>
-      item.key === '/' ? pathname === '/' : pathname.startsWith(item.key),
-    )?.key || '/'
+    navItems.find((item) => (item.key === '/' ? pathname === '/' : pathname.startsWith(item.key)))
+      ?.key || '/'
   )
 }

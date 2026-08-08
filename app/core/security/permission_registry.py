@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
+from app.core.config.enums import AccountType, account_type_url_segment
 from app.platform.cache.keys import (
     permission_resource_cache_key,
     permission_resource_method_cache_key,
@@ -17,15 +18,16 @@ from app.platform.cache.redis import get_redis
 
 logger = logging.getLogger(__name__)
 
+_ACCOUNT_TYPE_PATH_ALTS = "|".join(account_type_url_segment(item) for item in AccountType)
+_CLIENT_PATH_ALTS = f"{_ACCOUNT_TYPE_PATH_ALTS}|internal|public"
+
 PERMISSION_KEY_PATTERN = re.compile(r"^[a-z0-9*]+(?::[a-z0-9*]+)+$")
 # 绝对 OpenAPI 路径 → 业务路径，如 /api/v1/admin/sys/file/page → /sys/file/page
 PERMISSION_ROUTE_PREFIX_PATTERN = re.compile(
-    r"^/api(?:/v[0-9]+)?(?:/(?:admin|portal|internal|public))?(?=/|$)"
+    rf"^/api(?:/v[0-9]+)?(?:/(?:{_CLIENT_PATH_ALTS}))?(?=/|$)"
 )
 # 装饰器路径（未挂载全局 /api）
-DECORATOR_CLIENT_PREFIX_PATTERN = re.compile(
-    r"^/v[0-9]+/(?:admin|portal|internal|public)(?=/|$)"
-)
+DECORATOR_CLIENT_PREFIX_PATTERN = re.compile(rf"^/v[0-9]+/(?:{_CLIENT_PATH_ALTS})(?=/|$)")
 PERMISSION_META_ATTR = "__permission_meta__"
 ACCOUNT_TYPE_META_ATTR = "__account_type_meta__"
 

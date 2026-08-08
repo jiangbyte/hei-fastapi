@@ -36,17 +36,36 @@ async def test_dashboard_overview_returns_real_shape(client):
 
     assert response.status_code == 200
     data = response.json()["data"]
-    metric_keys = {item["key"] for item in data["metrics"]}
-    assert metric_keys >= {"accounts", "online_sessions", "files"}
-    assert all("title" not in item for item in data["metrics"])
-    assert all("unit" not in item for item in data["metrics"])
-    assert "audits" not in metric_keys
-    assert "todos" not in metric_keys
-    assert "messages" not in metric_keys
-    assert "banners" not in metric_keys
-    assert "notifications" not in metric_keys
-    assert len(data["account_trend"]) == 7
-    assert "audit_trend" not in data
-    assert "todo_status" not in data
-    assert "banner_status" not in data
-    assert "recent_activities" not in data
+    assert set(data.keys()) == {
+        "summary",
+        "accounts",
+        "iam",
+        "ops_today",
+        "trends",
+        "files",
+    }
+    assert set(data["summary"].keys()) == {
+        "account_total",
+        "online_sessions",
+        "file_total",
+        "storage_bytes",
+    }
+    assert set(data["accounts"].keys()) == {"enabled", "disabled", "today_new", "by_type"}
+    assert set(data["iam"].keys()) == {
+        "role_count",
+        "dept_count",
+        "group_count",
+        "menu_count",
+    }
+    assert set(data["ops_today"].keys()) == {
+        "audit_total",
+        "audit_failed",
+        "feedback_pending",
+    }
+    assert set(data["trends"].keys()) == {"account_trend", "audit_trend"}
+    assert len(data["trends"]["account_trend"]) == 7
+    assert len(data["trends"]["audit_trend"]) == 7
+    assert "by_content_type" in data["files"]
+    assert "metrics" not in data
+    assert "account_trend" not in data
+    assert "file_type_share" not in data

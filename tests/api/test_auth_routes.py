@@ -14,7 +14,11 @@ from app.modules.iam.account.model import SysAccount, SysAccountIdentity
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType, RoleScopeType
 from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
+from app.platform.config.reader import config_reader
 from tests.iam_relation_helpers import account_role
+
+_ADMIN_RESET_BASE = "http://admin.test/auth/forgot-password"
+_PORTAL_RESET_BASE = "http://portal.test/auth/forgot-password"
 
 
 @pytest.fixture(autouse=True)
@@ -27,6 +31,8 @@ def auth_security_bypass(monkeypatch):
 
     monkeypatch.setattr("app.modules.auth.router.verify_captcha", fake_verify_captcha)
     monkeypatch.setattr("app.modules.auth.router.decrypt_password", fake_decrypt_password)
+    config_reader._cache["AUTH_PASSWORD_RESET_URL_ADMIN"] = _ADMIN_RESET_BASE
+    config_reader._cache["AUTH_PASSWORD_RESET_URL_PORTAL"] = _PORTAL_RESET_BASE
 
 
 def _secured(payload: dict) -> dict:
@@ -204,7 +210,7 @@ async def test_portal_register_requires_email_and_does_not_require_name_or_phone
         ),
     )
 
-    assert missing_email.status_code == 422
+    assert missing_email.status_code == 400
     assert created.status_code == 200
     assert created.json()["data"]["account_type"] == AccountType.PORTAL.value
 
@@ -212,10 +218,14 @@ async def test_portal_register_requires_email_and_does_not_require_name_or_phone
 async def test_admin_forgot_and_reset_password_use_email_link(client, monkeypatch):
     sent_messages: list[tuple[str, str, str]] = []
 
-    async def fake_send_mail(to_email: str, subject: str, body: str) -> None:
-        sent_messages.append((to_email, subject, body))
+    async def fake_send_templated_mail(scene: str, to_email: str, variables: dict) -> None:
+        body = str(variables.get("reset_link") or "")
+        sent_messages.append((to_email, scene, body))
 
-    monkeypatch.setattr("app.modules.auth.service.send_mail", fake_send_mail)
+    monkeypatch.setattr(
+        "app.modules.auth.service.send_templated_mail",
+        fake_send_templated_mail,
+    )
 
     override = client._transport.app.dependency_overrides[get_db_session]
     async for session in override():
@@ -242,14 +252,16 @@ async def test_admin_forgot_and_reset_password_use_email_link(client, monkeypatc
     assert forgot.status_code == 200
     assert sent_messages and sent_messages[0][0] == "admin-reset@example.com"
     link = re.search(r"https?://\S+", sent_messages[0][2]).group(0)
-    query = parse_qs(urlparse(link).query)
+    parsed = urlparse(link)
+    query = parse_qs(parsed.query)
     token = query["token"][0]
+    assert "email" not in query
+    assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == _ADMIN_RESET_BASE
 
     reset = await client.post(
         "/api/v1/admin/reset-password",
         json=_secured(
             {
-                "email": "admin-reset@example.com",
                 "token": token,
                 "password": "Admin@654321",
             }
@@ -269,7 +281,6 @@ async def test_admin_forgot_and_reset_password_use_email_link(client, monkeypatc
         "/api/v1/admin/reset-password",
         json=_secured(
             {
-                "email": "admin-reset@example.com",
                 "token": token,
                 "password": "Admin@111111",
             }
@@ -279,6 +290,50 @@ async def test_admin_forgot_and_reset_password_use_email_link(client, monkeypatc
     assert reset.status_code == 200
     assert login.status_code == 200
     assert reused.status_code == 401
+
+
+async def test_portal_forgot_password_uses_portal_reset_url(client, monkeypatch):
+    sent_messages: list[str] = []
+
+    async def fake_send_templated_mail(scene: str, to_email: str, variables: dict) -> None:
+        sent_messages.append(str(variables.get("reset_link") or ""))
+
+    monkeypatch.setattr(
+        "app.modules.auth.service.send_templated_mail",
+        fake_send_templated_mail,
+    )
+
+    override = client._transport.app.dependency_overrides[get_db_session]
+    async for session in override():
+        db_session: AsyncSession = session
+        account = await _seed_account(
+            db_session,
+            identifier="portal_reset_user",
+            password="Portal@123456",
+            account_type=AccountType.PORTAL,
+        )
+        await _add_identity(
+            db_session,
+            account,
+            AccountIdentityType.EMAIL,
+            "portal-reset@example.com",
+        )
+        await db_session.commit()
+        break
+
+    forgot = await client.post(
+        "/api/v1/portal/forgot-password",
+        json=_secured({"email": "portal-reset@example.com"}),
+    )
+    assert forgot.status_code == 200
+    assert sent_messages
+    link = re.search(r"https?://\S+", sent_messages[0]).group(0)
+    parsed = urlparse(link)
+    query = parse_qs(parsed.query)
+    assert "email" not in query
+    assert "token" in query
+    assert f"{parsed.scheme}://{parsed.netloc}{parsed.path}" == _PORTAL_RESET_BASE
+    assert _ADMIN_RESET_BASE not in sent_messages[0]
 
 
 async def test_logout_rejects_bearer_prefixed_token(client):

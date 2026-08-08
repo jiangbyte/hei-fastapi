@@ -44,7 +44,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(640px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'角色ID'">
             {{ displayValue(state.role.id) }}
           </NDescriptionsItem>
@@ -57,13 +61,13 @@ defineExpose({
           <NDescriptionsItem :label="'角色分类'">
             {{
               dictTypeData('SYS_BIZ_CATEGORY', state.role.category) ||
-              displayValue(state.role.category)
+                displayValue(state.role.category)
             }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'范围类型'">
             {{
               dictTypeData('ROLE_SCOPE_TYPE', state.role.scope_type) ||
-              displayValue(state.role.scope_type)
+                displayValue(state.role.scope_type)
             }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'所属部门'">

@@ -10,6 +10,14 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const port = Number(env.VITE_PORT || 5174)
+  // Cookie 会话需同源；开发时由 Vite 反代到后端，避免跨域丢 hei_session。
+  const proxyTarget = env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+  const apiProxy = {
+    '/api': {
+      target: proxyTarget,
+      changeOrigin: true,
+    },
+  }
 
   return {
     plugins: [
@@ -41,11 +49,13 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       port,
       strictPort: false,
+      proxy: apiProxy,
     },
     preview: {
       host: '0.0.0.0',
       port,
       strictPort: false,
+      proxy: apiProxy,
     },
   }
 })

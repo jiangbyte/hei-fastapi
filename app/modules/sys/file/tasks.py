@@ -16,6 +16,7 @@ from app.modules.sys.file.model import SysFile
 from app.platform.db.session import get_session_factory
 from app.platform.storage.local import LocalStorage
 from app.platform.storage.manager import get_storage
+from app.platform.tasks.async_runner import worker_async_runner
 from app.platform.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,10 @@ logger = logging.getLogger(__name__)
 def cleanup_local_orphans(self, *, min_age_seconds: int = 3600, limit: int = 200):
     """删除早于 min_age 且无对应 sys_file 行的本地文件。"""
     try:
-        return asyncio.run(_cleanup(min_age_seconds=min_age_seconds, limit=limit))
+        # 必须走 worker 持久 loop；asyncio.run() 会与已绑定的 DB 连接冲突
+        return worker_async_runner.run(
+            _cleanup(min_age_seconds=min_age_seconds, limit=limit)
+        )
     except Exception:
         logger.exception("Local orphan cleanup failed")
         raise self.retry() from None

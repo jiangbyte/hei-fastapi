@@ -1,6 +1,6 @@
 """ Author: Charlie """
 
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import unquote, urlparse
 
 from sqlalchemy import select
 
@@ -15,17 +15,16 @@ from app.modules.user.admin.model import AdminUserProfile
 from app.modules.user.admin.service import AdminUserProfileService
 from app.modules.user.portal.model import PortalUserProfile
 from app.modules.user.portal.service import PortalUserProfileService
-from app.platform.storage.signed_url import verify_object_access
+from app.platform.storage.url import quote_object_name
 
 
-def _assert_signed_file_url(
+def _assert_path_file_url(
     url: str, object_name: str, *, public_path: str = "/api/v1/files"
 ) -> None:
     parsed = urlparse(url)
-    assert parsed.path == public_path
-    qs = parse_qs(parsed.query)
-    assert qs["object_name"][0] == object_name
-    assert verify_object_access(object_name, int(qs["expires"][0]), qs["sig"][0])
+    assert not parsed.query
+    assert parsed.path == f"{public_path.rstrip('/')}/{quote_object_name(object_name)}"
+    assert unquote(parsed.path.removeprefix(public_path.rstrip("/") + "/")) == object_name
 
 
 async def test_file_service_upload_and_url(tmp_path, db_session):
@@ -45,7 +44,7 @@ async def test_file_service_upload_and_url(tmp_path, db_session):
         await db_session.commit()
         assert entity.object_name.startswith("uploads/")
         assert entity.object_name.endswith(".png")
-        _assert_signed_file_url(entity.url, entity.object_name)
+        _assert_path_file_url(entity.url, entity.object_name)
         assert str(tmp_path) not in entity.url
         assert format_utc_iso8601(entity.created_at).endswith("Z")
         assert await service.get_url(ObjectNameQuery(object_name=entity.object_name)) == entity.url

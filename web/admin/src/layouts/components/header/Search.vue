@@ -179,9 +179,17 @@ function handleMouseEnter(index: number) {
 </script>
 
 <template>
-  <CommonWrapper class="px-2" @click="openModal">
+  <CommonWrapper
+    class="px-2"
+    @click="openModal"
+  >
     <NovaIcon icon="icon-park-outline:search" />
-    <n-tag v-if="!appStore.isMobile" round size="small" class="font-mono cursor-pointer">
+    <n-tag
+      v-if="!appStore.isMobile"
+      round
+      size="small"
+      class="font-mono cursor-pointer"
+    >
       CtrlK
     </n-tag>
   </CommonWrapper>
@@ -209,8 +217,14 @@ function handleMouseEnter(index: number) {
       </n-input>
     </template>
 
-    <n-scrollbar ref="scrollbarRef" class="h-450px">
-      <ul v-if="options.length" class="flex flex-col gap-8px p-8px p-r-3">
+    <n-scrollbar
+      ref="scrollbarRef"
+      class="h-450px"
+    >
+      <ul
+        v-if="options.length"
+        class="flex flex-col gap-8px p-8px p-r-3"
+      >
         <n-el
           v-for="(option, index) in options"
           :key="option.value"
@@ -229,28 +243,48 @@ function handleMouseEnter(index: number) {
               <NovaIcon :icon="option.icon" />
             </div>
             <span>{{ option.label }}</span>
-            <NovaIcon icon="icon-park-outline:right" class="row-span-2 place-self-center" />
+            <NovaIcon
+              icon="icon-park-outline:right"
+              class="row-span-2 place-self-center"
+            />
             <span class="op-70">{{ option.value }} / {{ option.code }}</span>
           </div>
         </n-el>
       </ul>
 
-      <n-empty v-else size="large" class="h-450px flex-center" :description="'暂无结果'" />
+      <n-empty
+        v-else
+        size="large"
+        class="h-450px flex-center"
+        :description="'暂无结果'"
+      />
     </n-scrollbar>
 
     <template #footer>
       <n-flex class="items-center">
         <span class="flex-y-center gap-1">
-          <n-tag size="small" round>Enter</n-tag>
+          <n-tag
+            size="small"
+            round
+          >Enter</n-tag>
           <span>选择</span>
         </span>
         <span class="flex-y-center gap-1">
-          <n-tag size="small" round>↑</n-tag>
-          <n-tag size="small" round>↓</n-tag>
+          <n-tag
+            size="small"
+            round
+          >↑</n-tag>
+          <n-tag
+            size="small"
+            round
+          >↓</n-tag>
           <span>导航</span>
         </span>
         <span class="flex-y-center gap-1">
-          <n-tag size="small" round>Esc</n-tag>
+          <n-tag
+            size="small"
+            round
+          >Esc</n-tag>
           <span>关闭</span>
         </span>
       </n-flex>

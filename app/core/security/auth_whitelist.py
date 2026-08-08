@@ -8,9 +8,53 @@ import fnmatch
 import logging
 from functools import lru_cache
 
+from app.core.config.enums import (
+    AccountType,
+    account_type_url_segment,
+    account_types_with_auth_routes,
+)
 from app.core.config.settings import settings
+from app.platform.module.paths import api_version_glob_prefix
 
 logger = logging.getLogger(__name__)
+
+
+def _builtin_client_auth_paths() -> tuple[str, ...]:
+    """按 AccountType 推导各端公开认证相关路径（版本用 v* 通配）。"""
+    version_glob = api_version_glob_prefix()
+    paths: list[str] = []
+    for account_type in account_types_with_auth_routes():
+        segment = account_type_url_segment(account_type)
+        base = f"{version_glob}/{segment}"
+        paths.extend(
+            (
+                f"{base}/captcha",
+                f"{base}/password-key",
+                f"{base}/login",
+                f"{base}/send-login-code",
+                f"{base}/forgot-password",
+                f"{base}/reset-password",
+                f"{base}/public/auth-options",
+            )
+        )
+        if account_type == AccountType.PORTAL:
+            paths.append(f"{base}/register")
+    return tuple(paths)
+
+
+def _builtin_portal_public_paths() -> tuple[str, ...]:
+    """门户侧匿名可读业务路径（版本通配 + 账户段来自枚举）。"""
+    version_glob = api_version_glob_prefix()
+    portal = account_type_url_segment(AccountType.PORTAL)
+    base = f"{version_glob}/{portal}"
+    return (
+        f"{base}/sys/banners/list",
+        f"{base}/sys/banners/interaction",
+        f"{base}/sys/dicts/tree",
+        f"{base}/sys/resources/current",
+        f"{base}/message/notices/list",
+    )
+
 
 # 完整请求路径（含 /api）。支持 fnmatch 通配符 (* ? [])。
 BUILTIN_AUTH_WHITELIST: tuple[str, ...] = (
@@ -20,27 +64,12 @@ BUILTIN_AUTH_WHITELIST: tuple[str, ...] = (
     "/redoc",
     "/openapi.json",
     "/metrics",
-    "/api/v1/admin/captcha",
-    "/api/v1/admin/password-key",
-    "/api/v1/admin/login",
-    "/api/v1/admin/login/mfa",
-    "/api/v1/admin/forgot-password",
-    "/api/v1/admin/reset-password",
-    "/api/v1/portal/captcha",
-    "/api/v1/portal/password-key",
-    "/api/v1/portal/login",
-    "/api/v1/portal/register",
-    "/api/v1/portal/forgot-password",
-    "/api/v1/portal/reset-password",
-    "/api/v1/internal/health",
-    "/api/v1/internal/health/*",
-    "/api/v1/files",
-    "/api/v1/files/*",
-    "/api/v1/portal/sys/banners/list",
-    "/api/v1/portal/sys/banners/interaction",
-    "/api/v1/portal/sys/dicts/tree",
-    "/api/v1/portal/sys/resources/current",
-    "/api/v1/portal/message/announcements/list",
+    *_builtin_client_auth_paths(),
+    f"{api_version_glob_prefix()}/internal/health",
+    f"{api_version_glob_prefix()}/internal/health/*",
+    f"{api_version_glob_prefix()}/files",
+    f"{api_version_glob_prefix()}/files/*",
+    *_builtin_portal_public_paths(),
 )
 
 

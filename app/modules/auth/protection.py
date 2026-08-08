@@ -3,6 +3,7 @@
 from app.core.config.enums import AccountType
 from app.core.config.settings import settings
 from app.core.exceptions.business import AuthenticationError
+from app.modules.auth.policy import get_login_policy
 from app.platform.cache.keys import (
     login_failure_account_key,
     login_failure_ip_key,
@@ -42,12 +43,15 @@ class LoginProtectionService:
         redis = get_redis()
         if redis is None:
             return
+        policy = get_login_policy(account_type)
         normalized_account = self._normalize_account(account)
         await self._increase_failure(
             redis,
             key=login_failure_account_key(account_type.value, normalized_account),
             lock_key=login_lock_account_key(account_type.value, normalized_account),
-            max_failures=settings.auth.login_account_max_failures,
+            max_failures=policy.max_failures,
+            window_seconds=policy.failure_window_seconds,
+            lock_seconds=policy.lock_seconds,
             account_type=account_type.value,
             scope="account",
         )
@@ -57,6 +61,8 @@ class LoginProtectionService:
                 key=login_failure_ip_key(account_type.value, client_ip),
                 lock_key=login_lock_ip_key(account_type.value, client_ip),
                 max_failures=settings.auth.login_ip_max_failures,
+                window_seconds=settings.auth.login_failure_window_seconds,
+                lock_seconds=settings.auth.login_lock_seconds,
                 account_type=account_type.value,
                 scope="ip",
             )
@@ -88,24 +94,26 @@ class LoginProtectionService:
         key: str,
         lock_key: str,
         max_failures: int,
+        window_seconds: int,
+        lock_seconds: int,
         account_type: str,
         scope: str,
     ) -> None:
-        count = await self._increment_failure_counter(redis, key)
+        count = await self._increment_failure_counter(redis, key, window_seconds)
         if count >= max_failures:
-            await redis.setex(lock_key, settings.auth.login_lock_seconds, "1")
+            await redis.setex(lock_key, lock_seconds, "1")
             await redis.delete(key)
             record_login_lock(account_type, scope)
 
-    async def _increment_failure_counter(self, redis, key: str) -> int:
+    async def _increment_failure_counter(self, redis, key: str, window_seconds: int) -> int:
         if hasattr(redis, "incr"):
             count = await redis.incr(key)
             if count == 1:
-                await redis.expire(key, settings.auth.login_failure_window_seconds)
+                await redis.expire(key, window_seconds)
             return int(count)
         raw = await redis.get(key)
         count = int(raw or 0) + 1
-        await redis.setex(key, settings.auth.login_failure_window_seconds, str(count))
+        await redis.setex(key, window_seconds, str(count))
         return count
 
     def _normalize_account(self, account: str) -> str:

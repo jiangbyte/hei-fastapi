@@ -1,42 +1,69 @@
 """ Author: Charlie
 
-从 DB 配置表回写运行期 settings 的自动映射函数。
+从 DB 配置表回写运行期 settings 的显式映射。
 """
+from app.core.config.enums import StorageProvider
 from app.core.config.settings import settings
 from app.platform.config.coerce import coerce_config_value
+from app.platform.config.keys import SETTINGS_KEY_MAP
 from app.platform.config.reader import config_reader
-
-
-def _apply_from_config(settings_obj: object, prefix: str) -> None:
-    for field_name in vars(settings_obj.__class__).get("model_fields", {}):
-        config_key = f"{prefix}.{field_name}"
-        raw = config_reader.get(config_key)
-        if raw is None:
-            continue
-
-        field_info = settings_obj.model_fields[field_name]
-        annotation = field_info.annotation
-
-        value = coerce_config_value(raw, annotation)
-        if value is not None:
-            setattr(settings_obj, field_name, value)
 
 
 def apply_sys_config() -> None:
     """从 sys_config 表覆盖运行期 settings（仅映射已声明字段）。"""
-    _apply_from_config(settings.storage, "storage")
-    _apply_from_config(settings.mail, "mail")
-    _apply_from_config(settings.auth, "auth")
-    _apply_from_config(settings.audit_alert, "audit_alert")
-    _apply_from_config(settings.password_policy, "password_policy")
+    groups = {
+        "storage": settings.storage,
+        "mail": settings.mail,
+        "auth": settings.auth,
+        "audit_alert": settings.audit_alert,
+        "password_policy": settings.password_policy,
+    }
+    for config_key, group_name, field_name in SETTINGS_KEY_MAP:
+        settings_obj = groups.get(group_name)
+        if settings_obj is None:
+            continue
+        raw = config_reader.get(config_key)
+        if raw is None:
+            continue
+        field_info = settings_obj.model_fields.get(field_name)
+        if field_info is None:
+            continue
+        value = coerce_config_value(raw, field_info.annotation)
+        if value is not None:
+            setattr(settings_obj, field_name, value)
 
 
 def apply_storage_config() -> None:
-    """校验 DB 中是否存在可用的默认存储配置。"""
-    if not config_reader.get_default_storage():
+    """校验 DEFAULT_FILE_ENGINE 与默认引擎必要字段。"""
+    engine = config_reader.get("DEFAULT_FILE_ENGINE")
+    if not engine:
         raise RuntimeError(
-            "No active storage configuration found in sys_storage_config table. "
-            "Set a default storage config via admin panel before starting the application."
+            "DEFAULT_FILE_ENGINE is missing in sys_config. "
+            "Set a default file engine via admin panel before starting the application."
+        )
+    default = config_reader.get_default_storage()
+    if default is None:
+        raise RuntimeError(
+            f"DEFAULT_FILE_ENGINE={engine!r} does not map to a known storage provider."
+        )
+    if default.provider == StorageProvider.LOCAL:
+        if not (default.local_root or default.windows_root):
+            raise RuntimeError(
+                "Default LOCAL storage requires STORAGE_LOCAL_LOCAL_ROOT "
+                "or STORAGE_LOCAL_WINDOWS_ROOT."
+            )
+        return
+    missing: list[str] = []
+    if not default.bucket:
+        missing.append("bucket")
+    if default.provider != StorageProvider.S3 and not default.endpoint:
+        missing.append("endpoint")
+    if default.provider == StorageProvider.S3 and not (default.region or default.endpoint):
+        missing.append("region/endpoint")
+    if missing:
+        raise RuntimeError(
+            f"Default {default.provider.value} storage is missing required fields: "
+            + ", ".join(missing)
         )
 
 

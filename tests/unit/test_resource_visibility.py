@@ -564,3 +564,70 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
 
     assert [item.id for item in selector] == ["module_portal"]
     assert [item.id for item in page.records] == ["module_portal"]
+
+
+async def test_grant_modules_group_by_real_parent_without_root(db_session):
+    db_session.add_all(
+        [
+            SysResourceModule(
+                id="module_admin",
+                code="admin",
+                name="Admin",
+                client=AccountType.ADMIN.value,
+                sort=1,
+            ),
+            SysResource(
+                id="catalog_sys",
+                code="sys",
+                name="系统",
+                resource_type=ResourceType.CATALOG.value,
+                module_id="module_admin",
+                sort=1,
+            ),
+            SysResource(
+                id="menu_banner",
+                parent_id="catalog_sys",
+                code="sys-banner",
+                name="展示图管理",
+                resource_type=ResourceType.MENU.value,
+                module_id="module_admin",
+                sort=2,
+            ),
+            SysResource(
+                id="page_banner_create",
+                parent_id="menu_banner",
+                code="sys-banner-create-page",
+                name="新增展示图页",
+                resource_type=ResourceType.PAGE.value,
+                module_id="module_admin",
+                sort=3,
+            ),
+            SysResource(
+                id="menu_dashboard",
+                code="dashboard",
+                name="运营工作台",
+                resource_type=ResourceType.MENU.value,
+                module_id="module_admin",
+                sort=4,
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    modules = await ResourceService(db_session).list_grant_modules(
+        module_client=AccountType.ADMIN,
+    )
+    assert len(modules) == 1
+    menu_by_id = {item.id: item for item in modules[0].menu}
+
+    assert set(menu_by_id) == {"menu_banner", "page_banner_create", "menu_dashboard"}
+    assert "catalog_sys" not in menu_by_id
+    assert menu_by_id["menu_banner"].parent_id_name == "系统"
+    assert menu_by_id["page_banner_create"].parent_id_name == "展示图管理"
+    assert menu_by_id["menu_dashboard"].parent_id_name == "运营工作台"
+    assert all(item.parent_id_name != "ROOT" for item in modules[0].menu)
+
+    portal_modules = await ResourceService(db_session).list_grant_modules(
+        module_client=AccountType.PORTAL,
+    )
+    assert portal_modules == []

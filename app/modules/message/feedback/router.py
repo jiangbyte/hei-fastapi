@@ -94,7 +94,47 @@ async def delete(
     return success()
 
 
-# ==================== Portal 路由 ====================
+# ==================== 当前用户「我的反馈」（admin / portal） ====================
+
+
+@admin_router.post(
+    "/v1/admin/message/feedbacks/submit",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[None],
+)
+async def admin_submit(
+    payload: MsgFeedbackCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[None]:
+    await MsgFeedbackService(db).submit(payload, session)
+    return success()
+
+
+@admin_router.get(
+    "/v1/admin/message/feedbacks/my-page",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[PageData[MsgFeedbackSchema]],
+)
+async def admin_my_page(
+    query: Annotated[MyFeedbackPageQuery, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[PageData[MsgFeedbackSchema]]:
+    return success(await MsgFeedbackService(db).page_my(query, session))
+
+
+@admin_router.get(
+    "/v1/admin/message/feedbacks/my-detail",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[MsgFeedbackSchema],
+)
+async def admin_my_detail(
+    query: Annotated[IdQuery, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[MsgFeedbackSchema]:
+    return success(await MsgFeedbackService(db).detail_my(query, session))
 
 
 @portal_router.post(
@@ -134,4 +174,4 @@ async def my_detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[MsgFeedbackSchema]:
-    return success(await MsgFeedbackService(db).detail(query))
+    return success(await MsgFeedbackService(db).detail_my(query, session))

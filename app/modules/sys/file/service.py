@@ -76,7 +76,6 @@ class FileService:
                     FileRecordCreate(
                         object_name=object_name,
                         original_name=PurePosixPath(payload.filename).name,
-                        storage_config_id=storage_config.id,
                         storage_provider=storage_config.provider,
                         bucket=(
                             storage_config.bucket
@@ -175,18 +174,16 @@ class FileService:
         return str(storage.get_presigned_url(normalized))
 
     async def response(self, query: ObjectNameQuery) -> Response:
-        from app.core.exceptions.business import AuthenticationError
-        from app.platform.storage.signed_url import verify_object_access
-
         normalized = normalize_object_name(query.object_name)
-        if not normalized:
+        if not normalized or is_external_url(normalized):
             raise NotFoundError("File not found")
-        if not verify_object_access(normalized, query.expires, query.sig):
-            raise AuthenticationError("Invalid or expired file signature")
         entity = await self.repo.get_by_object_name(normalized)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         if isinstance(storage, LocalStorage):
-            path = storage.get_path(normalized)
+            try:
+                path = storage.get_path(normalized)
+            except ValueError as exc:
+                raise NotFoundError("File not found") from exc
             if not path.exists() or not path.is_file():
                 raise NotFoundError("File not found")
             return FileResponse(
@@ -230,10 +227,7 @@ class FileService:
         return build_page(page_query, total, schemas)
 
     def _with_resolved_url(self, schema: SysFileSchema) -> SysFileSchema:
-        storage_config = resolve_storage_config(
-            schema.storage_config_id,
-            provider=schema.storage_provider,
-        )
+        storage_config = resolve_storage_config(provider=schema.storage_provider)
         resolved_url = self._get_storage(storage_config).get_object_url(schema.object_name)
         schema.url = str(resolved_url) or schema.url
         return schema
@@ -256,18 +250,12 @@ class FileService:
                 item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
 
     def _resolve_upload_storage_config(self, payload: FileUploadRequest) -> StorageConfig:
-        return resolve_storage_config(
-            payload.storage_config_id,
-            provider=payload.storage_provider,
-        )
+        return resolve_storage_config(provider=payload.storage_provider)
 
     def _resolve_entity_storage_config(self, entity: SysFile | None) -> StorageConfig:
         if entity is None:
             return resolve_storage_config()
-        return resolve_storage_config(
-            entity.storage_config_id,
-            provider=entity.storage_provider,
-        )
+        return resolve_storage_config(provider=entity.storage_provider)
 
     def _get_storage(self, config: StorageConfig):
         return get_storage(config.id)

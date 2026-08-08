@@ -1,7 +1,7 @@
 <!--
   由 HEI 代码生成器生成。
   Author: Charlie
-  生成时间：2026-08-07 07:26:16
+  生成时间：2026-08-08 21:09:54
 -->
 
 <script setup lang="tsx">
@@ -132,14 +132,24 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
   { title: '客户手机号', path: 'customer_phone', width: 150, ellipsis: { tooltip: true } },
   { title: '状态', path: 'status', width: 150, ellipsis: { tooltip: true } },
   { title: '订单类型', path: 'type', width: 150, ellipsis: { tooltip: true } },
-  { title: '下单时间', path: 'ordered_at', width: 190, render: row => formatDateTime(row.ordered_at) },
-  { title: '更新时间', path: 'updated_at', width: 190, render: row => formatDateTime(row.updated_at) },
+  {
+    title: '下单时间',
+    path: 'ordered_at',
+    width: 190,
+    render: (row) => formatDateTime(row.ordered_at),
+  },
+  {
+    title: '更新时间',
+    path: 'updated_at',
+    width: 190,
+    render: (row) => formatDateTime(row.updated_at),
+  },
   {
     title: '操作',
     key: 'actions',
     width: 170,
     fixed: 'right',
-    render: row => (
+    render: (row) => (
       <NFlex size={12}>
         {hasPermission('biz:cgtestorder:detail') ? (
           <NButton type="info" size="small" text={true} onClick={() => openDetailModal(row.id)}>
@@ -174,21 +184,36 @@ const childColumns = computed<ProDataTableColumns<any>>(() => [
   { title: '状态', path: 'status', width: 150, ellipsis: { tooltip: true } },
   { title: '数量', path: 'quantity', width: 150, ellipsis: { tooltip: true } },
   { title: '单价', path: 'unit_price', width: 150, ellipsis: { tooltip: true } },
-  { title: '更新时间', path: 'updated_at', width: 190, render: row => formatDateTime(row.updated_at) },
+  {
+    title: '更新时间',
+    path: 'updated_at',
+    width: 190,
+    render: (row) => formatDateTime(row.updated_at),
+  },
   {
     title: '操作',
     key: 'actions',
     width: 130,
     fixed: 'right',
-    render: row => (
+    render: (row) => (
       <NFlex size={12}>
         {hasPermission('biz:cgtestorder:detail') ? (
-          <NButton type="info" size="small" text={true} onClick={() => openChildDetailModal(row.id)}>
+          <NButton
+            type="info"
+            size="small"
+            text={true}
+            onClick={() => openChildDetailModal(row.id)}
+          >
             {renderButtonIcon('icon-park-outline:preview-open')}
           </NButton>
         ) : null}
         {hasPermission('biz:cgtestorder:update') ? (
-          <NButton type="primary" size="small" text={true} onClick={() => openChildEditModal(row.id)}>
+          <NButton
+            type="primary"
+            size="small"
+            text={true}
+            onClick={() => openChildEditModal(row.id)}
+          >
             {renderButtonIcon('icon-park-outline:edit')}
           </NButton>
         ) : null}
@@ -209,14 +234,20 @@ onMounted(() => {
 async function fetchPage() {
   state.loading = true
   try {
-    const response = await cgTestOrderApi.page({ current: state.page, size: state.pageSize, ...state.searchValues })
+    const response = await cgTestOrderApi.page({
+      current: state.page,
+      size: state.pageSize,
+      ...state.searchValues,
+    })
     const data = response.data ?? {}
     state.rows = data.records ?? []
     const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
     state.total = pageMeta.total
     state.page = pageMeta.current
     state.pageSize = pageMeta.size
-    state.checkedRowKeys = state.checkedRowKeys.filter(key => state.rows.some(item => item.id === key))
+    state.checkedRowKeys = state.checkedRowKeys.filter((key) =>
+      state.rows.some((item) => item.id === key),
+    )
   } finally {
     state.loading = false
   }
@@ -241,11 +272,16 @@ async function fetchChildPage() {
     })
     const data = response.data ?? {}
     state.childRows = data.records ?? []
-    const childPageMeta = readPageMeta(data, { current: state.childPage, size: state.childPageSize })
+    const childPageMeta = readPageMeta(data, {
+      current: state.childPage,
+      size: state.childPageSize,
+    })
     state.childTotal = childPageMeta.total
     state.childPage = childPageMeta.current
     state.childPageSize = childPageMeta.size
-    state.childCheckedRowKeys = state.childCheckedRowKeys.filter(key => state.childRows.some(item => item.id === key))
+    state.childCheckedRowKeys = state.childCheckedRowKeys.filter((key) =>
+      state.childRows.some((item) => item.id === key),
+    )
   } finally {
     state.childLoading = false
   }
@@ -299,7 +335,7 @@ function confirmDelete(value: string | string[]) {
 
 async function deleteRows(ids: string[]) {
   await cgTestOrderApi.remove({ ids })
-  state.checkedRowKeys = state.checkedRowKeys.filter(key => !ids.includes(key))
+  state.checkedRowKeys = state.checkedRowKeys.filter((key) => !ids.includes(key))
   if (state.selectedMasterId && ids.includes(state.selectedMasterId)) {
     state.selectedMasterId = null
     state.childDrawerVisible = false
@@ -327,14 +363,17 @@ function confirmChildDelete(value: string | string[]) {
 
 async function deleteChildRows(ids: string[]) {
   await cgTestOrderApi.childRemove({ ids })
-  state.childCheckedRowKeys = state.childCheckedRowKeys.filter(key => !ids.includes(key))
+  state.childCheckedRowKeys = state.childCheckedRowKeys.filter((key) => !ids.includes(key))
   window.$message.success('删除成功')
   await fetchChildPage()
 }
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -359,22 +398,53 @@ async function deleteChildRows(ids: string[]) {
     >
       <template #toolbar>
         <NFlex>
-          <NButton v-if="hasPermission('biz:cgtestorder:create')" type="primary" text @click="openCreateModal">
-            <template #icon><NIcon><Icon icon="icon-park-outline:plus" /></NIcon></template>
+          <NButton
+            v-if="hasPermission('biz:cgtestorder:create')"
+            type="primary"
+            text
+            @click="openCreateModal"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
+            </template>
           </NButton>
-          <NButton text :loading="state.loading" @click="fetchPage">
-            <template #icon><NIcon><Icon icon="icon-park-outline:refresh" /></NIcon></template>
+          <NButton
+            text
+            :loading="state.loading"
+            @click="fetchPage"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
+            </template>
           </NButton>
-          <NButton v-if="hasPermission('biz:cgtestorder:delete')" type="error" text :disabled="!hasCheckedRows" @click="confirmDelete(state.checkedRowKeys)">
-            <template #icon><NIcon><Icon icon="icon-park-outline:delete" /></NIcon></template>
+          <NButton
+            v-if="hasPermission('biz:cgtestorder:delete')"
+            type="error"
+            text
+            :disabled="!hasCheckedRows"
+            @click="confirmDelete(state.checkedRowKeys)"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:delete" /></NIcon>
+            </template>
           </NButton>
         </NFlex>
       </template>
     </ProDataTable>
 
-    <NDrawer v-model:show="state.childDrawerVisible" :width="960" placement="right">
-      <NDrawerContent title="CgTestOrderItem管理" closable>
-        <NFlex style="height: calc(100vh - 110px)" vertical>
+    <NDrawer
+      v-model:show="state.childDrawerVisible"
+      :width="960"
+      placement="right"
+    >
+      <NDrawerContent
+        title="CgTestOrderItem管理"
+        closable
+      >
+        <NFlex
+          style="height: calc(100vh - 110px)"
+          vertical
+        >
           <ProCard content-class="pb-0!">
             <ProSearchForm
               :form="childSearchForm"
@@ -398,14 +468,36 @@ async function deleteChildRows(ids: string[]) {
           >
             <template #toolbar>
               <NFlex>
-                <NButton v-if="hasPermission('biz:cgtestorder:create')" type="primary" text :disabled="!canCreateChild" @click="openChildCreateModal">
-                  <template #icon><NIcon><Icon icon="icon-park-outline:plus" /></NIcon></template>
+                <NButton
+                  v-if="hasPermission('biz:cgtestorder:create')"
+                  type="primary"
+                  text
+                  :disabled="!canCreateChild"
+                  @click="openChildCreateModal"
+                >
+                  <template #icon>
+                    <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
+                  </template>
                 </NButton>
-                <NButton text :loading="state.childLoading" @click="fetchChildPage">
-                  <template #icon><NIcon><Icon icon="icon-park-outline:refresh" /></NIcon></template>
+                <NButton
+                  text
+                  :loading="state.childLoading"
+                  @click="fetchChildPage"
+                >
+                  <template #icon>
+                    <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
+                  </template>
                 </NButton>
-                <NButton v-if="hasPermission('biz:cgtestorder:delete')" type="error" text :disabled="!hasChildCheckedRows" @click="confirmChildDelete(state.childCheckedRowKeys)">
-                  <template #icon><NIcon><Icon icon="icon-park-outline:delete" /></NIcon></template>
+                <NButton
+                  v-if="hasPermission('biz:cgtestorder:delete')"
+                  type="error"
+                  text
+                  :disabled="!hasChildCheckedRows"
+                  @click="confirmChildDelete(state.childCheckedRowKeys)"
+                >
+                  <template #icon>
+                    <NIcon><Icon icon="icon-park-outline:delete" /></NIcon>
+                  </template>
                 </NButton>
               </NFlex>
             </template>
@@ -415,8 +507,14 @@ async function deleteChildRows(ids: string[]) {
     </NDrawer>
 
     <ModalDetail ref="detailModalRef" />
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
     <ChildModalDetail ref="childDetailModalRef" />
-    <ChildModalForm ref="childFormModalRef" @saved="fetchChildPage" />
+    <ChildModalForm
+      ref="childFormModalRef"
+      @saved="fetchChildPage"
+    />
   </NFlex>
 </template>

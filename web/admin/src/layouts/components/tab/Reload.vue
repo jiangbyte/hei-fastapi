@@ -18,10 +18,16 @@ function handleReload() {
 </script>
 
 <template>
-  <n-tooltip placement="bottom" trigger="hover">
+  <n-tooltip
+    placement="bottom"
+    trigger="hover"
+  >
     <template #trigger>
       <CommonWrapper @click="handleReload">
-        <NovaIcon icon="icon-park-outline:refresh" :class="{ 'animate-spin': loading }" />
+        <NovaIcon
+          icon="icon-park-outline:refresh"
+          :class="{ 'animate-spin': loading }"
+        />
       </CommonWrapper>
     </template>
     刷新

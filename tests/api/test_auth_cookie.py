@@ -10,7 +10,6 @@ from httpx import ASGITransport, AsyncClient
 from app.core.config.settings import settings
 from app.core.security.session import SessionPayload
 from app.factory import create_app
-from app.modules.auth.service import LoginOutcome
 
 
 @pytest.mark.asyncio
@@ -28,11 +27,18 @@ async def test_admin_login_sets_session_cookie(monkeypatch):
     )
 
     async def _fake_login(self, payload):
-        return LoginOutcome(session=session)
+        return session
+
+    async def _fake_warning(self, account_id: str):
+        return None
 
     monkeypatch.setattr(
         "app.modules.auth.service.AuthService.login",
         _fake_login,
+    )
+    monkeypatch.setattr(
+        "app.modules.auth.service.AuthService.password_expiry_warning_days",
+        _fake_warning,
     )
     monkeypatch.setattr(
         "app.modules.auth.router.verify_captcha",
@@ -65,3 +71,5 @@ async def test_admin_login_sets_session_cookie(monkeypatch):
     assert response.json()["data"]["token"] == "tok-cookie-1"
     cookie = response.cookies.get("hei_session")
     assert cookie == "tok-cookie-1"
+    set_cookie = ";".join(response.headers.get_list("set-cookie"))
+    assert "Path=/api/v1/admin" in set_cookie

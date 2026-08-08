@@ -21,6 +21,7 @@ module = ModuleSpec(
         BeatScheduleSpec(
             name="audit-analysis-cycle",
             task="audit.analysis_cycle",
+            # 启动时读 settings；配置热更新由 sync_audit_interval_to_redbeat 覆盖
             schedule=float(settings.audit_alert.analysis_interval_seconds),
         ),
     ),

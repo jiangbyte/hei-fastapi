@@ -35,12 +35,7 @@ const DEFAULT_TONES = [
   'from-[var(--ant-color-warning)] to-[var(--ant-color-error)]',
 ]
 
-export function PromoCarousel({
-  slides,
-  height = 240,
-  className,
-  autoplay = true,
-}: Props) {
+export function PromoCarousel({ slides, height = 240, className, autoplay = true }: Props) {
   if (!slides.length) return null
 
   return (
@@ -117,7 +112,11 @@ export function PromoCarousel({
           }
 
           return (
-            <div key={slide.key} onClick={slide.onClick} role={slide.onClick ? 'button' : undefined}>
+            <div
+              key={slide.key}
+              onClick={slide.onClick}
+              role={slide.onClick ? 'button' : undefined}
+            >
               {body}
             </div>
           )

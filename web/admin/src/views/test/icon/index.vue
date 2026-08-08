@@ -32,15 +32,35 @@ function clearIcon() {
       </div>
     </div>
 
-    <NGrid cols="1 l:24" responsive="screen" :x-gap="16" :y-gap="16">
+    <NGrid
+      cols="1 l:24"
+      responsive="screen"
+      :x-gap="16"
+      :y-gap="16"
+    >
       <NGridItem span="1 l:14">
-        <NCard title="选择器" :bordered="false" class="icon-test-card">
-          <NForm label-placement="left" label-width="100">
+        <NCard
+          title="选择器"
+          :bordered="false"
+          class="icon-test-card"
+        >
+          <NForm
+            label-placement="left"
+            label-width="100"
+          >
             <NFormItem label="图标">
-              <IconSelect v-model:value="icon" :columns="columns" />
+              <IconSelect
+                v-model:value="icon"
+                :columns="columns"
+              />
             </NFormItem>
             <NFormItem label="每行数量">
-              <NInputNumber v-model:value="columns" class="w-full" :min="4" :max="12" />
+              <NInputNumber
+                v-model:value="columns"
+                class="w-full"
+                :min="4"
+                :max="12"
+              />
             </NFormItem>
             <NFormItem label="示例">
               <NSpace>
@@ -55,7 +75,13 @@ function clearIcon() {
                   </template>
                   {{ item.split(':')[1] }}
                 </NButton>
-                <NButton size="small" tertiary @click="clearIcon"> 清空 </NButton>
+                <NButton
+                  size="small"
+                  tertiary
+                  @click="clearIcon"
+                >
+                  清空
+                </NButton>
               </NSpace>
             </NFormItem>
           </NForm>
@@ -63,15 +89,27 @@ function clearIcon() {
       </NGridItem>
 
       <NGridItem span="1 l:10">
-        <NCard title="当前值" :bordered="false" class="icon-test-card">
+        <NCard
+          title="当前值"
+          :bordered="false"
+          class="icon-test-card"
+        >
           <div class="icon-preview">
             <div class="icon-preview__box">
-              <NovaIcon v-if="icon" :icon="icon" :size="40" />
+              <NovaIcon
+                v-if="icon"
+                :icon="icon"
+                :size="40"
+              />
             </div>
             <div class="icon-preview__meta">
-              <NText depth="3"> 完整值 </NText>
+              <NText depth="3">
+                完整值
+              </NText>
               <NCode :code="icon || '-'" />
-              <NText depth="3"> 图标名 </NText>
+              <NText depth="3">
+                图标名
+              </NText>
               <NCode :code="currentName || '-'" />
             </div>
           </div>

@@ -1,6 +1,7 @@
 /** Author: Charlie */
 
 import { useEffect } from 'react'
+import { AuthModal } from '@/components/auth/AuthModal'
 import { refreshDict, syncDictTree } from '@/utils/dict'
 import { AppFooter, AppHeader, HEADER_HEIGHT } from './components'
 import { Content } from './Content'
@@ -18,6 +19,7 @@ export function MainLayout() {
         <Content />
         <AppFooter />
       </div>
+      <AuthModal />
     </div>
   )
 }

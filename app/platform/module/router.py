@@ -8,11 +8,12 @@ from functools import cache
 from fastapi import APIRouter
 
 from app.platform.module.discovery import load_module_specs
+from app.platform.module.paths import API_ROOT_PREFIX
 from app.platform.module.spec import ModuleSpec, RouteSpec, import_string
 
 logger = logging.getLogger(__name__)
 
-API_ROOT_PREFIX = "/api"
+__all__ = ["API_ROOT_PREFIX", "build_api_router", "get_api_router"]
 
 
 @cache

@@ -1,15 +1,14 @@
 """ Author: Charlie """
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
 from app.core.network.client_ip import get_client_ip
-from app.core.response.schema import ApiResponse, success
+from app.core.response.schema import success
 from app.core.security.session import SessionPayload
 from app.core.security.session_token import (
     clear_session_cookie,
@@ -26,7 +25,10 @@ from app.core.security.transport import (
 )
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
+from app.modules.auth.policy import get_auth_options, get_register_policy
 from app.modules.auth.schema import (
+    AuthOptionsApiResponse,
+    AuthOptionsResponse,
     CancelAccountApiResponse,
     CancelAccountRequest,
     CancelAccountResponse,
@@ -38,21 +40,42 @@ from app.modules.auth.schema import (
     LoginResponse,
     LogoutApiResponse,
     LogoutResponse,
-    MfaConfirmApiResponse,
-    MfaConfirmRequest,
-    MfaDisableRequest,
-    MfaLoginRequest,
-    MfaSetupApiResponse,
-    MfaStatusApiResponse,
     RegisterApiResponse,
     RegisterRequest,
     ResetPasswordRequest,
-    WebAuthnRegisterVerifyRequest,
+    SendLoginCodeRequest,
 )
 from app.modules.auth.service import AuthService
 
 admin_router = APIRouter()
 portal_router = APIRouter()
+
+
+@admin_router.get("/v1/admin/public/auth-options", response_model=AuthOptionsApiResponse)
+async def admin_auth_options() -> AuthOptionsApiResponse:
+    return success(_auth_options_response(AccountType.ADMIN))
+
+
+@portal_router.get("/v1/portal/public/auth-options", response_model=AuthOptionsApiResponse)
+async def portal_auth_options() -> AuthOptionsApiResponse:
+    return success(_auth_options_response(AccountType.PORTAL))
+
+
+def _auth_options_response(account_type: AccountType) -> AuthOptionsResponse:
+    opts = get_auth_options(account_type)
+    return AuthOptionsResponse(
+        account_type=opts.account_type,
+        allow_account=opts.allow_account,
+        allow_email=opts.allow_email,
+        allow_phone=opts.allow_phone,
+        allow_otp=opts.allow_otp,
+        register_enabled=opts.register_enabled,
+        register_require_phone=opts.register_require_phone,
+        register_require_email=opts.register_require_email,
+        password_change_verify_method=opts.password_change_verify_method,
+        copyright_text=opts.copyright_text,
+        copyright_url=opts.copyright_url,
+    )
 
 
 @admin_router.get("/v1/admin/captcha", response_model=CaptchaApiResponse)
@@ -69,6 +92,54 @@ async def password_key() -> PasswordKeyApiResponse:
     return success(await create_password_key())
 
 
+async def _login(
+    *,
+    payload: LoginRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession,
+    account_type: AccountType,
+) -> LoginApiResponse:
+    await verify_captcha(payload.captcha_id, payload.captcha_value)
+    login_mode = (payload.login_mode or "PASSWORD").strip().upper()
+    password: str | None = None
+    if login_mode != "OTP":
+        if not payload.password or not payload.password_key_id:
+            raise BusinessError("Password is required")
+        password = await decrypt_password(payload.password_key_id, payload.password)
+    service = AuthService(db)
+    session = await service.login(
+        LoginPayload(
+            account=payload.account,
+            password=password or "",
+            account_type=account_type,
+            identity_type=payload.identity_type,
+            login_mode=login_mode,
+            otp_code=payload.otp_code,
+            remember_me=payload.remember_me,
+            client_ip=get_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+            device_label=_device_label(request.headers.get("user-agent")),
+        )
+    )
+    set_session_cookie(
+        response,
+        session.token,
+        request=request,
+        remember_me=payload.remember_me,
+    )
+    warning = await service.password_expiry_warning_days(session.account_id)
+    return success(
+        LoginResponse(
+            token=session.token,
+            account_id=session.account_id,
+            account_type=AccountType(str(session.account_type)),
+            password_expired=session.password_expired,
+            password_expiry_warning_days=warning,
+        )
+    )
+
+
 @admin_router.post("/v1/admin/login", response_model=LoginApiResponse)
 async def admin_login(
     payload: LoginRequest,
@@ -76,143 +147,13 @@ async def admin_login(
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> LoginApiResponse:
-    """管理端登录入口，仅允许管理端用户体系访问。"""
-    await verify_captcha(payload.captcha_id, payload.captcha_value)
-    password = await decrypt_password(payload.password_key_id, payload.password)
-    outcome = await AuthService(db).login(
-        LoginPayload(
-            account=payload.account,
-            password=password or "",
-            account_type=AccountType.ADMIN,
-            identity_type=payload.identity_type,
-            remember_me=payload.remember_me,
-            client_ip=get_client_ip(request),
-            user_agent=request.headers.get("user-agent"),
-            device_label=_device_label(request.headers.get("user-agent")),
-        )
+    return await _login(
+        payload=payload,
+        request=request,
+        response=response,
+        db=db,
+        account_type=AccountType.ADMIN,
     )
-    if outcome.mfa_required:
-        return success(
-            LoginResponse(
-                mfa_required=True,
-                challenge_id=outcome.challenge_id,
-                webauthn_options=outcome.webauthn_options,
-            )
-        )
-    assert outcome.session is not None
-    session = outcome.session
-    set_session_cookie(response, session.token, remember_me=payload.remember_me)
-    return success(
-        LoginResponse(
-            token=session.token,
-            account_id=session.account_id,
-            account_type=AccountType(str(session.account_type)),
-            password_expired=session.password_expired,
-        )
-    )
-
-
-@admin_router.post("/v1/admin/login/mfa", response_model=LoginApiResponse)
-async def admin_login_mfa(
-    payload: MfaLoginRequest,
-    request: Request,
-    response: Response,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> LoginApiResponse:
-    session = await AuthService(db).complete_mfa_login(
-        payload,
-        client_ip=get_client_ip(request),
-    )
-    set_session_cookie(response, session.token, remember_me=session.remember_me)
-    return success(
-        LoginResponse(
-            token=session.token,
-            account_id=session.account_id,
-            account_type=AccountType(str(session.account_type)),
-            password_expired=session.password_expired,
-        )
-    )
-
-
-@admin_router.get(
-    "/v1/admin/auth/mfa/status",
-    response_model=MfaStatusApiResponse,
-    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
-)
-async def admin_mfa_status(
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> MfaStatusApiResponse:
-    return success(await AuthService(db).mfa_status(session))
-
-
-@admin_router.post(
-    "/v1/admin/auth/mfa/setup",
-    response_model=MfaSetupApiResponse,
-    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
-)
-async def admin_mfa_setup(
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> MfaSetupApiResponse:
-    return success(await AuthService(db).mfa_setup(session))
-
-
-@admin_router.post(
-    "/v1/admin/auth/mfa/confirm",
-    response_model=MfaConfirmApiResponse,
-    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
-)
-async def admin_mfa_confirm(
-    payload: MfaConfirmRequest,
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> MfaConfirmApiResponse:
-    return success(await AuthService(db).mfa_confirm(session, payload))
-
-
-@admin_router.post(
-    "/v1/admin/auth/mfa/disable",
-    response_model=ApiResponse[None],
-    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
-)
-async def admin_mfa_disable(
-    payload: MfaDisableRequest,
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    password = await decrypt_password(payload.password_key_id, payload.password)
-    await AuthService(db).mfa_disable(
-        session,
-        payload.model_copy(update={"password": password or ""}),
-    )
-    return success()
-
-
-@admin_router.post(
-    "/v1/admin/auth/mfa/webauthn/register/options",
-    response_model=ApiResponse[dict[str, Any]],
-    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
-)
-async def admin_webauthn_register_options(
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[dict[str, Any]]:
-    return success(await AuthService(db).webauthn_register_options(session))
-
-
-@admin_router.post(
-    "/v1/admin/auth/mfa/webauthn/register/verify",
-    response_model=ApiResponse[None],
-    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
-)
-async def admin_webauthn_register_verify(
-    payload: WebAuthnRegisterVerifyRequest,
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[None]:
-    await AuthService(db).webauthn_register_verify(session, payload.credential)
-    return success()
 
 
 @portal_router.post("/v1/portal/login", response_model=LoginApiResponse)
@@ -222,32 +163,32 @@ async def portal_login(
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> LoginApiResponse:
-    """门户端登录入口，仅允许门户用户体系访问。"""
+    return await _login(
+        payload=payload,
+        request=request,
+        response=response,
+        db=db,
+        account_type=AccountType.PORTAL,
+    )
+
+
+@admin_router.post("/v1/admin/send-login-code")
+@portal_router.post("/v1/portal/send-login-code")
+async def send_login_code(
+    payload: SendLoginCodeRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
     await verify_captcha(payload.captcha_id, payload.captcha_value)
-    password = await decrypt_password(payload.password_key_id, payload.password)
-    outcome = await AuthService(db).login(
-        LoginPayload(
-            account=payload.account,
-            password=password or "",
-            account_type=AccountType.PORTAL,
-            identity_type=payload.identity_type,
-            remember_me=payload.remember_me,
-            client_ip=get_client_ip(request),
-            user_agent=request.headers.get("user-agent"),
-            device_label=_device_label(request.headers.get("user-agent")),
-        )
+    path = request.url.path
+    account_type = AccountType.ADMIN if "/admin/" in path else AccountType.PORTAL
+    await AuthService(db).send_login_code(
+        account_type=account_type,
+        channel=payload.channel,
+        target=payload.target,
+        client_ip=get_client_ip(request),
     )
-    assert outcome.session is not None
-    session = outcome.session
-    set_session_cookie(response, session.token, remember_me=payload.remember_me)
-    return success(
-        LoginResponse(
-            token=session.token,
-            account_id=session.account_id,
-            account_type=AccountType(str(session.account_type)),
-            password_expired=session.password_expired,
-        )
-    )
+    return success()
 
 
 @portal_router.post("/v1/portal/register", response_model=RegisterApiResponse)
@@ -256,7 +197,7 @@ async def portal_register(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> RegisterApiResponse:
     """门户端注册入口，创建门户账户主体和门户资料。"""
-    if not settings.auth.portal_register_enabled:
+    if not get_register_policy(AccountType.PORTAL).enabled:
         raise BusinessError("Portal registration is disabled")
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     password = await decrypt_password(payload.password_key_id, payload.password)
@@ -353,7 +294,7 @@ async def logout(
     """统一退出登录接口，优先读取 cookie / 请求头中的原始 token。"""
     token = extract_session_token(request, authorization) or session.token
     await AuthService(db).logout(token)
-    clear_session_cookie(response)
+    clear_session_cookie(response, request=request)
     return success(LogoutResponse(success=True))
 
 

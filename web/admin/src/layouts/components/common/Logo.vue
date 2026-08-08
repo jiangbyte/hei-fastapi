@@ -29,9 +29,15 @@ const hiddenLogoText = computed(() => sidebar && !appStore.isMobile && appStore.
     <span
       class="h-38px w-38px shrink-0 inline-flex items-center justify-center rounded-2 bg-[var(--primary-color)] text-white"
     >
-      <NovaIcon icon="icon-park-outline:code-computer" :size="24" />
+      <NovaIcon
+        icon="icon-park-outline:code-computer"
+        :size="24"
+      />
     </span>
-    <span v-if="!hiddenLogoText" class="min-w-0 flex flex-col">
+    <span
+      v-if="!hiddenLogoText"
+      class="min-w-0 flex flex-col"
+    >
       <span class="truncate text-base font-700 leading-5">{{ name }}</span>
     </span>
   </n-el>

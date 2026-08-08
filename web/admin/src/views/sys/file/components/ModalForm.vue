@@ -93,16 +93,30 @@ defineExpose({
         label-width="110"
         :disabled="state.loading || state.submitLoading"
       >
-        <NFormItem :label="'文件名'" path="original_name">
+        <NFormItem
+          :label="'文件名'"
+          path="original_name"
+        >
           <NInput v-model:value="state.formModel.original_name" />
         </NFormItem>
       </NForm>
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

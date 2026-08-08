@@ -149,19 +149,40 @@ defineExpose({
           label-width="110"
           :disabled="state.loading || state.submitLoading"
         >
-          <NFormItem :label="'角色名称'" path="name">
+          <NFormItem
+            :label="'角色名称'"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem :label="'角色编码'" path="code">
+          <NFormItem
+            :label="'角色编码'"
+            path="code"
+          >
             <NInput v-model:value="state.formModel.code" />
           </NFormItem>
-          <NFormItem :label="'角色分类'" path="category">
-            <DictSelect v-model="state.formModel.category" dict-code="SYS_BIZ_CATEGORY" />
+          <NFormItem
+            :label="'角色分类'"
+            path="category"
+          >
+            <DictSelect
+              v-model="state.formModel.category"
+              dict-code="SYS_BIZ_CATEGORY"
+            />
           </NFormItem>
-          <NFormItem :label="'范围类型'" path="scope_type">
-            <DictSelect v-model="state.formModel.scope_type" dict-code="ROLE_SCOPE_TYPE" />
+          <NFormItem
+            :label="'范围类型'"
+            path="scope_type"
+          >
+            <DictSelect
+              v-model="state.formModel.scope_type"
+              dict-code="ROLE_SCOPE_TYPE"
+            />
           </NFormItem>
-          <NFormItem :label="'所属部门'" path="owner_dept_id">
+          <NFormItem
+            :label="'所属部门'"
+            path="owner_dept_id"
+          >
             <NTreeSelect
               v-model:value="state.formModel.owner_dept_id"
               clearable
@@ -173,16 +194,36 @@ defineExpose({
               children-field="children"
             />
           </NFormItem>
-          <NFormItem :label="'排序'" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" :min="0" />
+          <NFormItem
+            :label="'排序'"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+              :min="0"
+            />
           </NFormItem>
-          <NFormItem :label="'内置角色'" path="is_builtin">
+          <NFormItem
+            :label="'内置角色'"
+            path="is_builtin"
+          >
             <NSwitch v-model:value="state.formModel.is_builtin" />
           </NFormItem>
-          <NFormItem :label="'状态'" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" type="radio" />
+          <NFormItem
+            :label="'状态'"
+            path="status"
+          >
+            <DictSelect
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
+              type="radio"
+            />
           </NFormItem>
-          <NFormItem :label="'描述'" path="description">
+          <NFormItem
+            :label="'描述'"
+            path="description"
+          >
             <NInput
               v-model:value="state.formModel.description"
               type="textarea"
@@ -194,9 +235,20 @@ defineExpose({
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

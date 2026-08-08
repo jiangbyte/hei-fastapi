@@ -3,11 +3,7 @@
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { roleApi } from '@/api'
-import {
-  ACCOUNT_TYPE_TABS,
-  DEFAULT_ACCOUNT_TYPE,
-  type AccountType,
-} from '@/constants/account'
+import { ACCOUNT_TYPE_OPTIONS, DEFAULT_ACCOUNT_TYPE, type AccountType } from '@/constants/account'
 import { NCheckbox } from 'naive-ui'
 import { computed, reactive } from 'vue'
 
@@ -15,16 +11,12 @@ const emit = defineEmits<{
   saved: []
 }>()
 
-const accountTypeOptions = ACCOUNT_TYPE_TABS.map((item) => ({
-  label: item.label,
-  value: item.key,
-}))
-
 const state = reactive({
   showModal: false,
   loading: false,
   submitLoading: false,
   accountType: DEFAULT_ACCOUNT_TYPE as AccountType,
+  lockAccountType: false,
   subject: {} as any,
   grantApi: roleApi as any,
   title: '',
@@ -113,12 +105,13 @@ async function openModal(
   subject: any,
   grantApi: any = roleApi,
   title = '',
-  options?: { accountType?: AccountType },
+  options?: { accountType?: AccountType; lockAccountType?: boolean },
 ) {
   state.subject = subject ?? {}
   state.grantApi = grantApi
   state.title = title
   state.accountType = options?.accountType || DEFAULT_ACCOUNT_TYPE
+  state.lockAccountType = Boolean(options?.lockAccountType)
   state.modules = []
   state.activeModuleId = null
   state.showModal = true
@@ -167,6 +160,7 @@ async function onAccountTypeChange(value: AccountType) {
 function closeModal() {
   state.modules = []
   state.activeModuleId = null
+  state.lockAccountType = false
   state.showModal = false
   state.submitLoading = false
 }
@@ -252,16 +246,27 @@ defineExpose({
     placement="right"
     :mask-closable="false"
   >
-    <NDrawerContent :title="modalTitle" closable :native-scrollbar="false">
+    <NDrawerContent
+      :title="modalTitle"
+      closable
+      :native-scrollbar="false"
+    >
       <NSpin :show="state.loading">
-        <NSpace class="mb-10px" align="center">
+        <NSpace
+          class="mb-10px"
+          align="center"
+        >
           <NSelect
             :value="state.accountType"
-            :options="accountTypeOptions"
+            :options="ACCOUNT_TYPE_OPTIONS"
+            :disabled="state.lockAccountType"
             style="width: 180px"
             @update:value="onAccountTypeChange"
           />
-          <NRadioGroup v-model:value="state.activeModuleId" size="small">
+          <NRadioGroup
+            v-model:value="state.activeModuleId"
+            size="small"
+          >
             <NRadioButton
               v-for="module in state.modules"
               :key="module.id"
@@ -284,9 +289,18 @@ defineExpose({
       </NSpin>
 
       <template #footer>
-        <NSpace justify="end" align="center">
-          <NButton @click="closeModal"> 关闭 </NButton>
-          <NButton type="primary" :loading="state.submitLoading" @click="submitGrant">
+        <NSpace
+          justify="end"
+          align="center"
+        >
+          <NButton @click="closeModal">
+            关闭
+          </NButton>
+          <NButton
+            type="primary"
+            :loading="state.submitLoading"
+            @click="submitGrant"
+          >
             保存
           </NButton>
         </NSpace>

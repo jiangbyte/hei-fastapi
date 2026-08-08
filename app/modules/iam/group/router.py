@@ -15,9 +15,12 @@ from app.deps.db import get_db_session
 from app.modules.iam.group.schema import (
     GroupAdminPageQuery,
     GroupCreateRequest,
+    GroupGrantClientResourceRequest,
     GroupGrantResourceRequest,
     GroupGrantRoleRequest,
     GroupGrantUserRequest,
+    GroupOwnClientResourceQuery,
+    GroupOwnClientResourceResponse,
     GroupOwnResourceQuery,
     GroupOwnResourceResponse,
     GroupOwnRoleQuery,
@@ -234,4 +237,39 @@ async def grant_resource(
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
     await GroupService(db).grant_resource(payload, session)
+    return success()
+
+
+@router.get(
+    "/v1/admin/sys/groups/own-client-resource",
+    dependencies=[
+        Depends(require_account_type(AccountType.ADMIN)),
+        Depends(require_permission("iam:group:ownclientresource")),
+    ],
+    response_model=ApiResponse[GroupOwnClientResourceResponse],
+    summary="获取用户组客户端资源授权",
+)
+async def own_client_resource(
+    query: Annotated[GroupOwnClientResourceQuery, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[GroupOwnClientResourceResponse]:
+    return success(await GroupService(db).own_client_resource(query, session))
+
+
+@router.post(
+    "/v1/admin/sys/groups/grant-client-resource",
+    dependencies=[
+        Depends(require_account_type(AccountType.ADMIN)),
+        Depends(require_permission("iam:group:grantclientresource")),
+    ],
+    response_model=ApiResponse[None],
+    summary="给用户组授权客户端资源",
+)
+async def grant_client_resource(
+    payload: GroupGrantClientResourceRequest,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[None]:
+    await GroupService(db).grant_client_resource(payload, session)
     return success()

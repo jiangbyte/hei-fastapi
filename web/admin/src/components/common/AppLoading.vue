@@ -5,7 +5,9 @@
 <template>
   <naive-provider>
     <div id="loading">
-      <n-spin size="large"> 加载中... </n-spin>
+      <n-spin size="large">
+        加载中...
+      </n-spin>
     </div>
   </naive-provider>
 </template>

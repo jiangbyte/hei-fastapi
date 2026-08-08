@@ -34,7 +34,12 @@ function handleSelect(key: string | number) {
 </script>
 
 <template>
-  <n-dropdown v-if="options.length" trigger="click" :options="options" @select="handleSelect">
+  <n-dropdown
+    v-if="options.length"
+    trigger="click"
+    :options="options"
+    @select="handleSelect"
+  >
     <button
       class="module-switch"
       :class="{ 'module-switch--block': block }"
@@ -42,10 +47,17 @@ function handleSelect(key: string | number) {
       :title="currentModule?.name || 'Switch module'"
     >
       <NovaIcon :icon="currentModule?.icon || 'icon-park-outline:blocks-and-arrows'" />
-      <span v-if="showLabel" class="module-switch__label">
+      <span
+        v-if="showLabel"
+        class="module-switch__label"
+      >
         {{ currentModule?.name || 'Modules' }}
       </span>
-      <NovaIcon v-if="showLabel" icon="icon-park-outline:down" class="module-switch__arrow" />
+      <NovaIcon
+        v-if="showLabel"
+        icon="icon-park-outline:down"
+        class="module-switch__arrow"
+      />
     </button>
   </n-dropdown>
 </template>

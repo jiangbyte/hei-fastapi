@@ -113,20 +113,43 @@ function resetDiff() {
       </NButton>
     </div>
 
-    <NGrid cols="1 xl:24" responsive="screen" :x-gap="16" :y-gap="16">
+    <NGrid
+      cols="1 xl:24"
+      responsive="screen"
+      :x-gap="16"
+      :y-gap="16"
+    >
       <NGridItem span="1 xl:18">
-        <NCard :bordered="false" class="editor-test-card">
-          <NTabs v-model:value="state.activeTab" type="segment" animated>
-            <NTabPane name="markdown" tab="Markdown">
+        <NCard
+          :bordered="false"
+          class="editor-test-card"
+        >
+          <NTabs
+            v-model:value="state.activeTab"
+            type="segment"
+            animated
+          >
+            <NTabPane
+              name="markdown"
+              tab="Markdown"
+            >
               <div class="pane-toolbar">
-                <NButton size="small" @click="resetMarkdown">
+                <NButton
+                  size="small"
+                  @click="resetMarkdown"
+                >
                   <template #icon>
                     <NovaIcon icon="icon-park-outline:refresh" />
                   </template>
                   重置
                 </NButton>
               </div>
-              <NGrid cols="1 l:2" responsive="screen" :x-gap="16" :y-gap="16">
+              <NGrid
+                cols="1 l:2"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
                 <NGridItem>
                   <MdEditor
                     v-model:value="state.markdown"
@@ -142,16 +165,27 @@ function resetDiff() {
               </NGrid>
             </NTabPane>
 
-            <NTabPane name="richText" tab="富文本">
+            <NTabPane
+              name="richText"
+              tab="富文本"
+            >
               <div class="pane-toolbar">
-                <NButton size="small" @click="resetRichText">
+                <NButton
+                  size="small"
+                  @click="resetRichText"
+                >
                   <template #icon>
                     <NovaIcon icon="icon-park-outline:refresh" />
                   </template>
                   重置
                 </NButton>
               </div>
-              <NGrid cols="1 l:2" responsive="screen" :x-gap="16" :y-gap="16">
+              <NGrid
+                cols="1 l:2"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
                 <NGridItem>
                   <RichTextEditor
                     v-model:value="state.richText"
@@ -167,35 +201,66 @@ function resetDiff() {
               </NGrid>
             </NTabPane>
 
-            <NTabPane name="monaco" tab="Monaco">
+            <NTabPane
+              name="monaco"
+              tab="Monaco"
+            >
               <div class="pane-toolbar">
-                <NButton size="small" @click="resetCode">
+                <NButton
+                  size="small"
+                  @click="resetCode"
+                >
                   <template #icon>
                     <NovaIcon icon="icon-park-outline:refresh" />
                   </template>
                   重置
                 </NButton>
               </div>
-              <NGrid cols="1 l:2" responsive="screen" :x-gap="16" :y-gap="16">
+              <NGrid
+                cols="1 l:2"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
                 <NGridItem>
-                  <MonacoEditor v-model:value="state.code" language="typescript" height="520px" />
+                  <MonacoEditor
+                    v-model:value="state.code"
+                    language="typescript"
+                    height="520px"
+                  />
                 </NGridItem>
                 <NGridItem>
-                  <MonacoPreview :value="state.code" language="typescript" height="520px" />
+                  <MonacoPreview
+                    :value="state.code"
+                    language="typescript"
+                    height="520px"
+                  />
                 </NGridItem>
               </NGrid>
             </NTabPane>
 
-            <NTabPane name="diff" tab="Diff">
+            <NTabPane
+              name="diff"
+              tab="Diff"
+            >
               <div class="pane-toolbar">
-                <NButton size="small" @click="resetDiff">
+                <NButton
+                  size="small"
+                  @click="resetDiff"
+                >
                   <template #icon>
                     <NovaIcon icon="icon-park-outline:refresh" />
                   </template>
                   重置
                 </NButton>
               </div>
-              <NGrid class="mb-16px" cols="1 l:2" responsive="screen" :x-gap="16" :y-gap="16">
+              <NGrid
+                class="mb-16px"
+                cols="1 l:2"
+                responsive="screen"
+                :x-gap="16"
+                :y-gap="16"
+              >
                 <NGridItem>
                   <NInput
                     v-model:value="state.diffOriginal"
@@ -223,10 +288,20 @@ function resetDiff() {
       </NGridItem>
 
       <NGridItem span="1 xl:6">
-        <NCard title="上传记录" :bordered="false" class="editor-test-card upload-card">
-          <NEmpty v-if="!uploadLogItems.length" description="暂无上传记录" />
+        <NCard
+          title="上传记录"
+          :bordered="false"
+          class="editor-test-card upload-card"
+        >
+          <NEmpty
+            v-if="!uploadLogItems.length"
+            description="暂无上传记录"
+          />
           <NList v-else>
-            <NListItem v-for="(item, index) in uploadLogItems" :key="`${item.value}-${index}`">
+            <NListItem
+              v-for="(item, index) in uploadLogItems"
+              :key="`${item.value}-${index}`"
+            >
               <NThing :title="item.name">
                 <template #description>
                   <div class="upload-detail">

@@ -11,6 +11,7 @@ import {
   generateCacheRoutes,
   getActiveMenuPath,
   groupResourcesByModule,
+  normalizeRowRoutes,
 } from './route/helper'
 
 /**
@@ -158,5 +159,5 @@ export function getRouteTitle(route: {
 
 async function fetchUserRoutes(): Promise<AppRoute.RowRoute[]> {
   const response = await resourceApi.current()
-  return response.data ?? []
+  return normalizeRowRoutes(response.data ?? [])
 }

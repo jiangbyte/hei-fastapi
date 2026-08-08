@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const dictPrefix = '/api/v1/admin/sys/dicts'
+const dictPrefix = `${API_PREFIX}/sys/dicts`
 
 export function page(params: any) {
   return http.get<any>(`${dictPrefix}/page`, {

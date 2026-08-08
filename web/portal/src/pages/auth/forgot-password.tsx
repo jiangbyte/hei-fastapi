@@ -6,6 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { authApi } from '@/api'
 import { CaptchaInput, type CaptchaInputHandle } from '@/components/common/CaptchaInput'
 import { PasswordStrength } from '@/components/common/PasswordStrength'
+import { useAuthModalStore } from '@/stores/authModal'
 import { encryptPasswords } from '@/utils/security'
 import { isValidEmail } from '@/utils/validate'
 import { AuthCenter } from './AuthSplit'
@@ -24,6 +25,7 @@ export function ForgotPasswordPage() {
   const captchaRef = useRef<CaptchaInputHandle>(null)
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const openAuthModal = useAuthModalStore((s) => s.open)
   const token = params.get('token') || ''
   const isResetMode = Boolean(token)
   const captchaId = Form.useWatch('captcha_id', form) || ''
@@ -59,21 +61,16 @@ export function ForgotPasswordPage() {
 
   async function resetPassword() {
     try {
-      await form.validateFields()
+      await form.validateFields(['password', 'confirmPassword', 'captcha_value'])
     } catch {
       return
     }
     const values = form.getFieldsValue()
-    if (!isValidEmail(values.email || '')) {
-      message.warning('请输入有效邮箱')
-      return
-    }
 
     setLoading(true)
     try {
       const encrypted = await encryptPasswords({ password: values.password || '' })
       await authApi.resetPassword({
-        email: values.email.trim(),
         token,
         password: encrypted.values.password || '',
         password_key_id: encrypted.password_key_id,
@@ -81,7 +78,8 @@ export function ForgotPasswordPage() {
         captcha_value: values.captcha_value,
       })
       message.success('密码已重置，请重新登录')
-      navigate('/auth/login')
+      navigate('/')
+      openAuthModal('login')
     } catch {
       await captchaRef.current?.refresh()
     } finally {
@@ -108,11 +106,11 @@ export function ForgotPasswordPage() {
             void (isResetMode ? resetPassword() : sendLink())
           }}
         >
-          <Form.Item name="email" rules={[{ required: true, message: '请输入登录邮箱' }]}>
-            <Input placeholder="登录邮箱" allowClear />
-          </Form.Item>
-
-          {isResetMode ? (
+          {!isResetMode ? (
+            <Form.Item name="email" rules={[{ required: true, message: '请输入登录邮箱' }]}>
+              <Input placeholder="登录邮箱" allowClear />
+            </Form.Item>
+          ) : (
             <>
               <Form.Item name="password" rules={[{ required: true, message: '请输入新密码' }]}>
                 <Input.Password placeholder="新密码（至少 8 位，含大小写、数字与特殊字符）" />
@@ -136,7 +134,7 @@ export function ForgotPasswordPage() {
                 <Input.Password placeholder="确认新密码" />
               </Form.Item>
             </>
-          ) : null}
+          )}
 
           <Form.Item name="captcha_id" hidden>
             <Input />
@@ -160,13 +158,29 @@ export function ForgotPasswordPage() {
           </Form.Item>
 
           <div className="auth-center__links">
-            <Link to="/auth/login">返回登录</Link>
+            <Button
+              type="link"
+              className="!px-0"
+              onClick={() => {
+                navigate('/')
+                openAuthModal('login')
+              }}
+            >
+              返回登录
+            </Button>
             {isResetMode ? (
-              <Button type="link" className="!px-0" onClick={() => void sendLink()}>
-                发送新链接
-              </Button>
+              <Link to="/auth/forgot-password">重新申请链接</Link>
             ) : (
-              <Link to="/auth/register">去注册</Link>
+              <Button
+                type="link"
+                className="!px-0"
+                onClick={() => {
+                  navigate('/')
+                  openAuthModal('register')
+                }}
+              >
+                去注册
+              </Button>
             )}
           </div>
         </Form>

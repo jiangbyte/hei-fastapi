@@ -131,7 +131,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="monaco-editor" :style="containerStyle" />
+  <div
+    ref="containerRef"
+    class="monaco-editor"
+    :style="containerStyle"
+  />
 </template>
 
 <style scoped>

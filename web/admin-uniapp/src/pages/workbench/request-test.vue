@@ -11,7 +11,7 @@
       <view class="bg-white rounded p-3 mb-3">
         <view class="flex items-center justify-between mb-2">
           <text class="text-sm font-semibold text-gray-700"
-            >GET /api/v1/admin/me</text
+            >GET {{ API_PREFIX }}/me</text
           >
           <u-button
             text="发送"
@@ -36,7 +36,7 @@
       <view class="bg-white rounded p-3 mb-3">
         <view class="flex items-center justify-between mb-2">
           <text class="text-sm font-semibold text-gray-700"
-            >GET /api/v1/admin/sys/dicts/tree</text
+            >GET {{ API_PREFIX }}/sys/dicts/tree</text
           >
           <u-button
             text="发送"
@@ -83,7 +83,7 @@
       <!-- 文件上传测试 -->
       <view class="bg-white rounded p-3 mb-3">
         <text class="text-sm font-semibold text-gray-700 mb-2 block"
-          >文件上传测试 — POST /api/v1/admin/sys/file/upload</text
+          >文件上传测试 — POST {{ API_PREFIX }}/sys/file/upload</text
         >
         <view class="flex flex-col items-center gap-3 mb-3">
           <view
@@ -140,6 +140,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { API_PREFIX } from '@/constants/api'
 import Layout from '@/layouts/index.vue'
 
 const loadingMe = ref(false)
@@ -155,7 +156,7 @@ async function fetchMe() {
   meResult.value = ''
   try {
     const { http } = await import('@/utils/request')
-    const data = await http.get('/api/v1/admin/me')
+    const data = await http.get(`${API_PREFIX}/me`)
     meResult.value = JSON.stringify(data, null, 2)
   } catch (e: any) {
     meResult.value = `错误：${e.message || e}`
@@ -169,7 +170,7 @@ async function fetchDictTree() {
   dictTreeResult.value = ''
   try {
     const { http } = await import('@/utils/request')
-    const data = await http.get('/api/v1/admin/sys/dicts/tree')
+    const data = await http.get(`${API_PREFIX}/sys/dicts/tree`)
     const preview = (Array.isArray(data) ? data : [])
       .slice(0, 3)
       .map((n: any) => ({
@@ -194,7 +195,7 @@ async function fetchError() {
   errorResult.value = ''
   try {
     const { http } = await import('@/utils/request')
-    const data = await http.get('/api/v1/admin/non-existent-path')
+    const data = await http.get(`${API_PREFIX}/non-existent-path`)
     errorResult.value = JSON.stringify(data, null, 2)
   } catch (e: any) {
     errorResult.value = `错误：${e.message || e}\ncode: ${e.code}\nstatusCode: ${e.statusCode}`
@@ -246,7 +247,7 @@ async function doUploadFile() {
     const { http } = await import('@/utils/request')
     uni.showLoading({ title: '上传中...' })
     const result = await http.upload(
-      '/api/v1/admin/sys/file/upload',
+      `${API_PREFIX}/sys/file/upload`,
       uploadFilePath.value
     )
     uni.hideLoading()

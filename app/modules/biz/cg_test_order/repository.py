@@ -1,7 +1,7 @@
 """
 由 HEI 代码生成器生成。
 Author: Charlie
-生成时间：2026-08-07 07:26:16
+生成时间：2026-08-08 21:09:54
 """
 
 from sqlalchemy import Select, delete, func, select
@@ -16,10 +16,10 @@ from app.modules.biz.cg_test_order.model import (
 from app.modules.biz.cg_test_order.schema import (
     CgTestOrderAdminPageQuery,
     CgTestOrderCreateRequest,
+    CgTestOrderUpdateRequest,
     CgTestOrderItemAdminPageQuery,
     CgTestOrderItemCreateRequest,
     CgTestOrderItemUpdateRequest,
-    CgTestOrderUpdateRequest,
 )
 
 

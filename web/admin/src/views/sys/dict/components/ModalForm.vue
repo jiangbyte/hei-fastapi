@@ -227,14 +227,20 @@ defineExpose({
         label-width="100"
         :disabled="state.loading || state.submitLoading"
       >
-        <NFormItem :label="'分类'" path="category">
+        <NFormItem
+          :label="'分类'"
+          path="category"
+        >
           <DictSelect
             v-model="state.formModel.category"
             dict-code="SYS_BIZ_CATEGORY"
             type="radio"
           />
         </NFormItem>
-        <NFormItem :label="'父级字典'" path="parent_id">
+        <NFormItem
+          :label="'父级字典'"
+          path="parent_id"
+        >
           <NTreeSelect
             v-model:value="state.formModel.parent_id"
             clearable
@@ -245,34 +251,74 @@ defineExpose({
             label-field="label"
           />
         </NFormItem>
-        <NFormItem :label="'编码'" path="code">
-          <NInput :value="state.formModel.code" @update:value="updateCode" />
+        <NFormItem
+          :label="'编码'"
+          path="code"
+        >
+          <NInput
+            :value="state.formModel.code"
+            @update:value="updateCode"
+          />
         </NFormItem>
-        <NFormItem :label="'标签'" path="label">
+        <NFormItem
+          :label="'标签'"
+          path="label"
+        >
           <NInput v-model:value="state.formModel.label" />
         </NFormItem>
-        <NFormItem :label="'值'" path="value">
+        <NFormItem
+          :label="'值'"
+          path="value"
+        >
           <NInput v-model:value="state.formModel.value" />
         </NFormItem>
-        <NFormItem :label="'颜色'" path="color">
+        <NFormItem
+          :label="'颜色'"
+          path="color"
+        >
           <CommonColorPicker
             v-model="state.formModel.color"
             :disabled="state.loading || state.submitLoading"
           />
         </NFormItem>
-        <NFormItem :label="'排序'" path="sort">
-          <NInputNumber v-model:value="state.formModel.sort" class="w-full" :min="0" />
+        <NFormItem
+          :label="'排序'"
+          path="sort"
+        >
+          <NInputNumber
+            v-model:value="state.formModel.sort"
+            class="w-full"
+            :min="0"
+          />
         </NFormItem>
-        <NFormItem :label="'状态'" path="status">
-          <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" type="radio" />
+        <NFormItem
+          :label="'状态'"
+          path="status"
+        >
+          <DictSelect
+            v-model="state.formModel.status"
+            dict-code="COMMON_STATUS"
+            type="radio"
+          />
         </NFormItem>
       </NForm>
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-告警分发器 — 通过邮件和/或 webhook 发送告警，含冷却。
+告警分发器 — 通过邮件 / 消息推送 / 自定义 Webhook 发送告警，含冷却。
 """
 import base64
 import hashlib
@@ -65,20 +65,26 @@ class AlertDispatcher:
             )
 
     def _notify_method(self) -> str:
+        cfg = settings.audit_alert
         parts = []
-        if settings.mail.host and settings.mail.from_email:
+        if cfg.notify_email and settings.mail.host and settings.mail.from_email:
             parts.append("email")
-        if settings.audit_alert.webhook_url:
+        if cfg.notify_push:
+            parts.append("push")
+        if cfg.notify_custom_webhook and cfg.webhook_url:
             parts.append("webhook")
         return ",".join(parts) if parts else "none"
 
     async def _send_alert(self, event: AlertEvent) -> None:
-        """发送单条告警（邮件 + Webhook 并行）。"""
+        """发送单条告警（邮件 / 推送 / 自定义 Webhook）。"""
         await self._send_email(event)
+        await self._send_push(event)
         await self._send_webhook(event)
 
     async def _send_email(self, event: AlertEvent) -> None:
         """邮件发送（静默失败不阻塞流程）。"""
+        if not settings.audit_alert.notify_email:
+            return
         if not settings.mail.host or not settings.mail.from_email:
             return
         try:
@@ -95,8 +101,23 @@ class AlertDispatcher:
         except Exception:
             logger.exception("Failed to send alert email for %s", event.rule_name)
 
+    async def _send_push(self, event: AlertEvent) -> None:
+        """复用消息推送配置（钉钉 / 飞书 / 企微）。"""
+        if not settings.audit_alert.notify_push:
+            return
+        try:
+            from app.platform.push.sender import send_push
+
+            title = f"[{event.severity}] 审计告警"
+            content = f"{event.summary}\n规则: {event.rule_name}"
+            await send_push(title, content)
+        except Exception:
+            logger.exception("Failed to send alert push for %s", event.rule_name)
+
     async def _send_webhook(self, event: AlertEvent) -> None:
-        """Webhook 发送（静默失败不阻塞流程）。"""
+        """自定义 Webhook 发送（静默失败不阻塞流程）。"""
+        if not settings.audit_alert.notify_custom_webhook:
+            return
         url = settings.audit_alert.webhook_url
         secret = settings.audit_alert.webhook_secret
         if not url:
@@ -161,6 +182,20 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
         return ""
     except Exception as exc:
         return f"发送失败: {exc}"
+
+
+async def send_test_push() -> str:
+    """通过默认消息推送引擎发送测试消息。成功返回空串。"""
+    try:
+        from app.platform.push.sender import send_push
+
+        await send_push(
+            "审计告警测试",
+            "HEI-FastAPI 审计告警系统测试消息\n\n如果收到此消息，说明消息推送配置可复用于审计告警。",
+        )
+        return ""
+    except Exception as exc:
+        return f"推送失败: {exc}"
 
 
 alert_dispatcher = AlertDispatcher()

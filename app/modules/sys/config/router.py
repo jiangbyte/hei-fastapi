@@ -155,3 +155,18 @@ async def test_audit_alert_webhook(
 
         raise BusinessError(err)
     return success({"message": "测试消息已发送"})
+
+
+@router.post(
+    "/v1/admin/sys/config/audit-alert/test-push",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+)
+async def test_audit_alert_push() -> ApiResponse[dict]:
+    from app.modules.sys.audit.alert import send_test_push
+
+    err = await send_test_push()
+    if err:
+        from app.core.exceptions.business import BusinessError
+
+        raise BusinessError(err)
+    return success({"message": "测试消息已发送"})

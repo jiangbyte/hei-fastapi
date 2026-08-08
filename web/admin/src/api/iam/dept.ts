@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const deptPrefix = '/api/v1/admin/sys/depts'
+const deptPrefix = `${API_PREFIX}/sys/depts`
 
 export function page(params: any) {
   return http.get<any>(`${deptPrefix}/page`, { params })

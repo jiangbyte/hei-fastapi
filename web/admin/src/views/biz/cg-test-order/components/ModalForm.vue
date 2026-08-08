@@ -1,13 +1,13 @@
 <!--
   由 HEI 代码生成器生成。
   Author: Charlie
-  生成时间：2026-08-07 07:26:16
+  生成时间：2026-08-08 21:09:54
 -->
 
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
 import { cgTestOrderApi } from '@/api'
-import { wireBool, wireFloat, wireInt } from '@/utils/wire'
+import { wireBool, wireInt, wireFloat } from '@/utils/wire'
 import { createRequiredRule, toApiDateTime, toFormDateTime } from '@/utils'
 import { computed, reactive, ref } from 'vue'
 
@@ -40,36 +40,28 @@ const state = reactive({
   formModel: normalizeFormData(),
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑CgTestOrder' : '新增CgTestOrder')
+const modalTitle = computed(() => (state.dataId ? '编辑CgTestOrder' : '新增CgTestOrder'))
 const rules = computed<FormRules>(() => ({
-  order_no: [
-    createRequiredRule('订单号', 'input'),
-  ],
-  name: [
-    createRequiredRule('订单名称', 'input'),
-  ],
-  customer_name: [
-    createRequiredRule('客户名称', 'input'),
-  ],
-  status: [
-    createRequiredRule('状态', 'input'),
-  ],
-  type: [
-    createRequiredRule('订单类型', 'input'),
-  ],
-  ordered_at: [
-    createRequiredRule('下单时间', 'change'),
-  ],
+  order_no: [createRequiredRule('订单号', 'input')],
+  name: [createRequiredRule('订单名称', 'input')],
+  customer_name: [createRequiredRule('客户名称', 'input')],
+  status: [createRequiredRule('状态', 'input')],
+  type: [createRequiredRule('订单类型', 'input')],
+  ordered_at: [createRequiredRule('下单时间', 'change')],
   total_amount: [
     {
-      validator: () => typeof state.formModel.total_amount === 'number' && Number.isFinite(state.formModel.total_amount),
+      validator: () =>
+        typeof state.formModel.total_amount === 'number' &&
+        Number.isFinite(state.formModel.total_amount),
       message: '请输入订单金额',
       trigger: ['input', 'blur'],
     },
   ],
   item_count: [
     {
-      validator: () => typeof state.formModel.item_count === 'number' && Number.isFinite(state.formModel.item_count),
+      validator: () =>
+        typeof state.formModel.item_count === 'number' &&
+        Number.isFinite(state.formModel.item_count),
       message: '请输入商品数量',
       trigger: ['input', 'blur'],
     },
@@ -121,9 +113,18 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-    need_invoice: data.need_invoice == null || data.need_invoice === '' ? defaultFormData.need_invoice : wireBool(String(data.need_invoice)),
-    item_count: data.item_count == null || data.item_count === '' ? defaultFormData.item_count : wireInt(String(data.item_count)),
-    total_amount: data.total_amount == null || data.total_amount === '' ? defaultFormData.total_amount : wireFloat(String(data.total_amount)),
+    need_invoice:
+      data.need_invoice == null || data.need_invoice === ''
+        ? defaultFormData.need_invoice
+        : wireBool(String(data.need_invoice)),
+    item_count:
+      data.item_count == null || data.item_count === ''
+        ? defaultFormData.item_count
+        : wireInt(String(data.item_count)),
+    total_amount:
+      data.total_amount == null || data.total_amount === ''
+        ? defaultFormData.total_amount
+        : wireFloat(String(data.total_amount)),
     ordered_at: toFormDateTime(data.ordered_at),
     paid_at: toFormDateTime(data.paid_at),
     invoice_config: stringifyJsonValue(data.invoice_config),
@@ -217,48 +218,127 @@ defineExpose({
   >
     <NSpin :show="state.loading">
       <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-        <NForm ref="formRef" :model="state.formModel" :rules="rules" label-placement="left" label-width="110" :disabled="state.loading || state.submitLoading">
-          <NFormItem label="订单号" path="order_no">
+        <NForm
+          ref="formRef"
+          :model="state.formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="110"
+          :disabled="state.loading || state.submitLoading"
+        >
+          <NFormItem
+            label="订单号"
+            path="order_no"
+          >
             <NInput v-model:value="state.formModel.order_no" />
           </NFormItem>
-          <NFormItem label="订单名称" path="name">
+          <NFormItem
+            label="订单名称"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem label="客户名称" path="customer_name">
+          <NFormItem
+            label="客户名称"
+            path="customer_name"
+          >
             <NInput v-model:value="state.formModel.customer_name" />
           </NFormItem>
-          <NFormItem label="客户手机号" path="customer_phone">
+          <NFormItem
+            label="客户手机号"
+            path="customer_phone"
+          >
             <NInput v-model:value="state.formModel.customer_phone" />
           </NFormItem>
-          <NFormItem label="状态" path="status">
+          <NFormItem
+            label="状态"
+            path="status"
+          >
             <NInput v-model:value="state.formModel.status" />
           </NFormItem>
-          <NFormItem label="订单类型" path="type">
+          <NFormItem
+            label="订单类型"
+            path="type"
+          >
             <NInput v-model:value="state.formModel.type" />
           </NFormItem>
-          <NFormItem label="下单时间" path="ordered_at">
-            <NDatePicker v-model:formatted-value="state.formModel.ordered_at" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="w-full" clearable />
+          <NFormItem
+            label="下单时间"
+            path="ordered_at"
+          >
+            <NDatePicker
+              v-model:formatted-value="state.formModel.ordered_at"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="w-full"
+              clearable
+            />
           </NFormItem>
-          <NFormItem label="支付时间" path="paid_at">
-            <NDatePicker v-model:formatted-value="state.formModel.paid_at" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="w-full" clearable />
+          <NFormItem
+            label="支付时间"
+            path="paid_at"
+          >
+            <NDatePicker
+              v-model:formatted-value="state.formModel.paid_at"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="w-full"
+              clearable
+            />
           </NFormItem>
-          <NFormItem label="订单金额" path="total_amount">
-            <NInputNumber v-model:value="state.formModel.total_amount" class="w-full" />
+          <NFormItem
+            label="订单金额"
+            path="total_amount"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.total_amount"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="商品数量" path="item_count">
-            <NInputNumber v-model:value="state.formModel.item_count" class="w-full" />
+          <NFormItem
+            label="商品数量"
+            path="item_count"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.item_count"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="是否开票" path="need_invoice">
+          <NFormItem
+            label="是否开票"
+            path="need_invoice"
+          >
             <NSwitch v-model:value="state.formModel.need_invoice" />
           </NFormItem>
-          <NFormItem label="发票配置" path="invoice_config">
-            <NInput v-model:value="state.formModel.invoice_config" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="发票配置"
+            path="invoice_config"
+          >
+            <NInput
+              v-model:value="state.formModel.invoice_config"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="备注" path="remark">
-            <NInput v-model:value="state.formModel.remark" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="备注"
+            path="remark"
+          >
+            <NInput
+              v-model:value="state.formModel.remark"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="扩展信息" path="extra">
-            <NInput v-model:value="state.formModel.extra" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="扩展信息"
+            path="extra"
+          >
+            <NInput
+              v-model:value="state.formModel.extra"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
@@ -266,8 +346,16 @@ defineExpose({
 
     <template #action>
       <NSpace justify="end">
-        <NButton @click="closeModal">取消</NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm">确认</NButton>
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-message 模块仅保留公告 / 通知 / 反馈；IM 相关包不得再被发现。
+message 模块仅保留 notice / feedback；IM 与旧 notification/announcement 包不得再被发现。
 """
 from __future__ import annotations
 
@@ -10,13 +10,14 @@ from pathlib import Path
 from app.platform.module.discovery import clear_module_specs_cache, load_module_specs
 
 
-def test_message_module_specs_exclude_im():
+def test_message_module_specs_exclude_im_and_legacy():
     clear_module_specs_cache()
     names = {spec.name for spec in load_module_specs(include_disabled=True)}
-    assert "message.announcement" in names
-    assert "message.notification" in names
+    assert "message.notice" in names
     assert "message.feedback" in names
     for forbidden in (
+        "message.announcement",
+        "message.notification",
         "message.im",
         "message.friend",
         "message.group",
@@ -28,13 +29,13 @@ def test_message_module_specs_exclude_im():
         assert forbidden not in names
 
 
-def test_notification_service_has_no_im_import():
+def test_notice_service_has_no_im_import():
     path = (
         Path(__file__).resolve().parents[2]
         / "app"
         / "modules"
         / "message"
-        / "notification"
+        / "notice"
         / "service.py"
     )
     tree = ast.parse(path.read_text(encoding="utf-8"))

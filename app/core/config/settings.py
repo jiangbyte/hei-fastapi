@@ -8,6 +8,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.enums import StorageProvider
+from app.platform.module.paths import DEFAULT_FILES_PUBLIC_PATH
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -66,7 +67,8 @@ class AuthSettings(BaseSettings):
     session_bind_user_agent: bool = False
     max_concurrent_sessions: int = 5
     # Cookie 优先的 Web 会话；原生客户端可在 token_name 头发送不透明 token
-    # （非 HTTP Bearer）。
+    # （非 HTTP Bearer）。各端共用 cookie 名，登录/登出时 Path 取自请求路径父级；
+    # session_cookie_path 仅用于清理旧版 Path=/ 共享 Cookie。
     session_cookie_enabled: bool = True
     session_cookie_name: str = "hei_session"
     session_cookie_secure: bool = False
@@ -74,14 +76,6 @@ class AuthSettings(BaseSettings):
     session_cookie_path: str = "/"
     # 额外鉴权豁免路径（精确或 fnmatch），与内置白名单合并。
     auth_whitelist: list[str] = []
-    # 管理端 TOTP MFA（portal 登录不走 MFA）。
-    mfa_required: bool = False
-    mfa_challenge_ttl_seconds: int = 300
-    mfa_issuer: str = "HEI Admin"
-    # WebAuthn 依赖方（管理端 MFA）。
-    webauthn_rp_id: str = "localhost"
-    webauthn_rp_name: str = "HEI Admin"
-    webauthn_origin: str = "http://localhost:5173"
 
 
 class SecretsSettings(BaseSettings):
@@ -109,7 +103,6 @@ class MailSettings(BaseSettings):
     from_name: str = "hei-fastapi"
     use_tls: bool = True
     timeout_seconds: float = 10.0
-    password_reset_url: str = "http://localhost:5173/auth/forgot-password"
 
 
 class CorsSettings(BaseSettings):
@@ -168,7 +161,7 @@ class StorageSettings(BaseSettings):
     use_ssl: bool = False
     presign_expire_seconds: int = 3600
     base_url: str = ""
-    public_path: str = "/api/v1/files"
+    public_path: str = DEFAULT_FILES_PUBLIC_PATH
     local_root: str = ".runtime/storage"
     upload_max_bytes: int = 10 * 1024 * 1024
     upload_allowed_content_types: list[str] = [
@@ -239,6 +232,9 @@ class ObservabilitySettings(BaseSettings):
 
 class AuditAlertSettings(BaseSettings):
     enabled: bool = False
+    notify_email: bool = True
+    notify_push: bool = True
+    notify_custom_webhook: bool = False
     webhook_url: str = ""
     webhook_secret: str = ""
     analysis_interval_seconds: int = 300
@@ -263,6 +259,12 @@ class PasswordPolicySettings(BaseSettings):
     expire_days: int = 90
     history_check_count: int = 5
     common_password_check: bool = True
+    # UPPER_SNAKE complexity: NO_LIMIT | DIGITS_AND_LETTERS | ...
+    complexity: str = "DIGITS_UPPER_LOWER_SPECIAL"
+    max_consecutive_chars: int = 3
+    forbid_user_info: bool = True
+    forbid_historical: bool = True
+    expiry_warning_days: int = 3
 
 
 class Settings(BaseSettings):

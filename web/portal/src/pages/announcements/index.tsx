@@ -6,13 +6,16 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/time'
 import { readPageMeta } from '@/utils/wire'
-import { announcementApi } from '@/api'
+import { noticeApi } from '@/api'
 
 function announcementSummary(content: string, contentType: string) {
   const raw = content || ''
   const text =
     contentType === 'html' || contentType === 'markdown'
-      ? raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      ? raw
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
       : raw.replace(/\s+/g, ' ').trim()
   if (text.length <= 120) return text
   return `${text.slice(0, 120)}…`
@@ -34,7 +37,7 @@ export function AnnouncementListPage() {
     async function load() {
       setLoading(true)
       try {
-        const res = await announcementApi.list({ current, size })
+        const res = await noticeApi.list({ current, size })
         if (!mounted) return
         setRecords(res.data.records ?? [])
         setTotal(readPageMeta(res.data).total)
@@ -71,7 +74,9 @@ export function AnnouncementListPage() {
                   className="flex flex-col border-b border-[var(--ant-color-border)] px-4 py-4 last:border-b-0 transition-colors hover:bg-[var(--ant-color-fill-quaternary)]"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="min-w-0 flex-1 truncate text-[15px] font-medium">{item.title}</div>
+                    <div className="min-w-0 flex-1 truncate text-[15px] font-medium">
+                      {item.title}
+                    </div>
                     {item.is_pinned ? (
                       <Tag color="warning" className="m-0 shrink-0">
                         置顶

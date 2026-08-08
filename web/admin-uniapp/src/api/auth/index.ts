@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils/request'
 
-const prefix = '/api/v1/admin'
+const prefix = API_PREFIX
 
 export function captcha(params?: any) {
   return http.get<any>(`${prefix}/captcha`, params, { attachSession: false })
@@ -53,5 +54,5 @@ export function orgInfo() {
 }
 
 export function uploadAvatar(filePath: string) {
-  return http.upload<any>('/api/v1/admin/user-center/avatar/upload', filePath)
+  return http.upload<any>(`${prefix}/user-center/avatar/upload`, filePath)
 }

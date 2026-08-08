@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const prefix = '/api/v1/admin/auth/sessions'
+const prefix = `${API_PREFIX}/auth/sessions`
 
 export function analysis() {
   return http.get<any>(`${prefix}/analysis`)

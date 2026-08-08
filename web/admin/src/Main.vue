@@ -55,7 +55,10 @@ const proConfigProviderProps = computed<ProConfigProviderProps>(() => ({
     <naive-provider>
       <ProConfigProvider v-bind="proConfigProviderProps">
         <router-view />
-        <watermark show text="HEI" />
+        <watermark
+          show
+          text="HEI"
+        />
       </ProConfigProvider>
     </naive-provider>
   </n-config-provider>

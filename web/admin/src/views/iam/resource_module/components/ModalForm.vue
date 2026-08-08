@@ -5,6 +5,7 @@ import type { FormInst, FormRules } from 'naive-ui'
 import { resourceModuleApi } from '@/api'
 import CommonColorPicker from '@/components/common/CommonColorPicker.vue'
 import IconSelect from '@/components/common/IconSelect.vue'
+import { ACCOUNT_TYPE_OPTIONS } from '@/constants/account'
 import { createRequiredRule, isHexColor, toNullableString } from '@/utils'
 import { computed, reactive, ref } from 'vue'
 
@@ -138,32 +139,69 @@ defineExpose({
           label-width="100"
           :disabled="state.loading || state.submitLoading"
         >
-          <NFormItem :label="'模块名称'" path="name">
+          <NFormItem
+            :label="'模块名称'"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem :label="'模块编码'" path="code">
+          <NFormItem
+            :label="'模块编码'"
+            path="code"
+          >
             <NInput v-model:value="state.formModel.code" />
           </NFormItem>
-          <NFormItem :label="'客户端'" path="client">
+          <NFormItem
+            :label="'客户端'"
+            path="client"
+          >
+            <NRadioGroup v-model:value="state.formModel.client">
+              <NSpace>
+                <NRadio
+                  v-for="item in ACCOUNT_TYPE_OPTIONS"
+                  :key="item.value"
+                  :value="item.value"
+                  :label="item.label"
+                />
+              </NSpace>
+            </NRadioGroup>
+          </NFormItem>
+          <NFormItem
+            :label="'图标'"
+            path="icon"
+          >
+            <IconSelect v-model:value="state.formModel.icon" />
+          </NFormItem>
+          <NFormItem
+            :label="'颜色'"
+            path="color"
+          >
+            <CommonColorPicker v-model="state.formModel.color" />
+          </NFormItem>
+          <NFormItem
+            :label="'排序'"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+              :min="0"
+            />
+          </NFormItem>
+          <NFormItem
+            :label="'状态'"
+            path="status"
+          >
             <DictSelect
-              v-model="state.formModel.client"
-              dict-code="RESOURCE_MODULE_CLIENT"
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
               type="radio"
             />
           </NFormItem>
-          <NFormItem :label="'图标'" path="icon">
-            <IconSelect v-model:value="state.formModel.icon" />
-          </NFormItem>
-          <NFormItem :label="'颜色'" path="color">
-            <CommonColorPicker v-model="state.formModel.color" />
-          </NFormItem>
-          <NFormItem :label="'排序'" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" :min="0" />
-          </NFormItem>
-          <NFormItem :label="'状态'" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" type="radio" />
-          </NFormItem>
-          <NFormItem :label="'描述'" path="description">
+          <NFormItem
+            :label="'描述'"
+            path="description"
+          >
             <NInput
               v-model:value="state.formModel.description"
               type="textarea"
@@ -175,9 +213,20 @@ defineExpose({
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

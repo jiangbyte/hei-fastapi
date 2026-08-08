@@ -97,10 +97,8 @@ class AccountSessionService:
         device_label: str | None = None,
     ) -> SessionPayload:
         permission_keys = set(authorization["permission_keys"])
-        button_codes = set(authorization["button_codes"])
         if SUPER_ADMIN_ROLE_CODE in authorization["role_codes"]:
             permission_keys.add("*:*:*")
-            button_codes.add("*:*:*")
         now = datetime.now(UTC)
         expires_at = now + timedelta(seconds=settings.auth.token_ttl_seconds)
         return SessionPayload(
@@ -113,9 +111,10 @@ class AccountSessionService:
             dept_ids=authorization["dept_ids"],
             group_ids=authorization["group_ids"],
             resource_ids=authorization["resource_ids"],
-            button_codes=sorted(button_codes),
             permission_keys=sorted(permission_keys),
             permission_grants=authorization["permission_grants"],
+            client_resource_ids=list(authorization.get("client_resource_ids") or []),
+            client_permission_keys=list(authorization.get("client_permission_keys") or []),
             client_ip=client_ip,
             user_agent=user_agent,
             device_label=device_label,

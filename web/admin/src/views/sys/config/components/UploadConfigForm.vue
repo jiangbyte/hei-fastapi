@@ -1,209 +1,187 @@
 <!-- Author: Charlie -->
 
 <script setup lang="ts">
-import { configApi } from '@/api'
 import { onMounted, reactive } from 'vue'
+import ConfigSectionLayout from './ConfigSectionLayout.vue'
+import {
+  loadByCategory,
+  parseNumber,
+  parseTags,
+  saveByKeys,
+  tagsToJson,
+} from '../composables/useConfigForm'
 
-const props = defineProps<{ category: string }>()
-const emit = defineEmits<{ saved: [] }>()
+const CATEGORY = 'UPLOAD'
 
-const fields = reactive({
-  maxBytes: { id: '', value: 0, remark: '' },
-  presignExpire: { id: '', value: 0, remark: '' },
-  categoryMaxLength: { id: '', value: 0, remark: '' },
-  allowedContentTypes: { id: '', tags: [] as string[], remark: '' },
-  allowedExtensions: { id: '', tags: [] as string[], remark: '' },
-  deniedExtensions: { id: '', tags: [] as string[], remark: '' },
+const state = reactive({
+  loading: false,
   saving: false,
+  maxBytes: 10485760,
+  presignExpire: 3600,
+  categoryMaxLength: 64,
+  allowedContentTypes: [] as string[],
+  allowedExtensions: [] as string[],
+  deniedExtensions: [] as string[],
+  snapshot: '',
 })
 
-function parseTags(raw: string | null | undefined): string[] {
-  if (!raw) return []
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : [raw]
-  } catch {
-    return []
-  }
-}
-
-function tagsToJson(tags: string[]): string {
-  return JSON.stringify(tags)
-}
-
-onMounted(async () => {
-  const res = await configApi.list({ category: props.category })
-  for (const row of res.data ?? []) {
-    switch (row.config_key) {
-      case 'storage.upload_max_bytes':
-        fields.maxBytes = {
-          id: row.id,
-          value: Number(row.config_value) || 0,
-          remark: row.remark ?? '',
-        }
-        break
-      case 'storage.presign_expire_seconds':
-        fields.presignExpire = {
-          id: row.id,
-          value: Number(row.config_value) || 0,
-          remark: row.remark ?? '',
-        }
-        break
-      case 'storage.upload_category_max_length':
-        fields.categoryMaxLength = {
-          id: row.id,
-          value: Number(row.config_value) || 0,
-          remark: row.remark ?? '',
-        }
-        break
-      case 'storage.upload_allowed_content_types':
-        fields.allowedContentTypes = {
-          id: row.id,
-          tags: parseTags(row.config_value),
-          remark: row.remark ?? '',
-        }
-        break
-      case 'storage.upload_allowed_extensions':
-        fields.allowedExtensions = {
-          id: row.id,
-          tags: parseTags(row.config_value),
-          remark: row.remark ?? '',
-        }
-        break
-      case 'storage.upload_denied_extensions':
-        fields.deniedExtensions = {
-          id: row.id,
-          tags: parseTags(row.config_value),
-          remark: row.remark ?? '',
-        }
-        break
-    }
-  }
+onMounted(() => {
+  void reload()
 })
 
-function buildPayload() {
-  return {
-    items: [
-      {
-        id: fields.maxBytes.id,
-        config_key: 'storage.upload_max_bytes',
-        config_value: String(fields.maxBytes.value),
-      },
-      {
-        id: fields.presignExpire.id,
-        config_key: 'storage.presign_expire_seconds',
-        config_value: String(fields.presignExpire.value),
-      },
-      {
-        id: fields.categoryMaxLength.id,
-        config_key: 'storage.upload_category_max_length',
-        config_value: String(fields.categoryMaxLength.value),
-      },
-      {
-        id: fields.allowedContentTypes.id,
-        config_key: 'storage.upload_allowed_content_types',
-        config_value: tagsToJson(fields.allowedContentTypes.tags),
-      },
-      {
-        id: fields.allowedExtensions.id,
-        config_key: 'storage.upload_allowed_extensions',
-        config_value: tagsToJson(fields.allowedExtensions.tags),
-      },
-      {
-        id: fields.deniedExtensions.id,
-        config_key: 'storage.upload_denied_extensions',
-        config_value: tagsToJson(fields.deniedExtensions.tags),
-      },
-    ],
-  }
-}
-
-async function saveAll() {
-  fields.saving = true
+async function reload() {
+  state.loading = true
   try {
-    await configApi.batchSave(buildPayload())
-    window.$message.success('保存成功')
-    emit('saved')
+    const map = await loadByCategory(CATEGORY)
+    state.maxBytes = parseNumber(map.STORAGE_UPLOAD_MAX_BYTES, 10485760)
+    state.presignExpire = parseNumber(map.STORAGE_PRESIGN_EXPIRE_SECONDS, 3600)
+    state.categoryMaxLength = parseNumber(map.STORAGE_UPLOAD_CATEGORY_MAX_LENGTH, 64)
+    state.allowedContentTypes = parseTags(map.STORAGE_UPLOAD_ALLOWED_CONTENT_TYPES)
+    state.allowedExtensions = parseTags(map.STORAGE_UPLOAD_ALLOWED_EXTENSIONS)
+    state.deniedExtensions = parseTags(map.STORAGE_UPLOAD_DENIED_EXTENSIONS)
+    state.snapshot = JSON.stringify({
+      maxBytes: state.maxBytes,
+      presignExpire: state.presignExpire,
+      categoryMaxLength: state.categoryMaxLength,
+      allowedContentTypes: state.allowedContentTypes,
+      allowedExtensions: state.allowedExtensions,
+      deniedExtensions: state.deniedExtensions,
+    })
   } finally {
-    fields.saving = false
+    state.loading = false
+  }
+}
+
+function reset() {
+  if (!state.snapshot) return
+  const data = JSON.parse(state.snapshot)
+  state.maxBytes = data.maxBytes
+  state.presignExpire = data.presignExpire
+  state.categoryMaxLength = data.categoryMaxLength
+  state.allowedContentTypes = data.allowedContentTypes
+  state.allowedExtensions = data.allowedExtensions
+  state.deniedExtensions = data.deniedExtensions
+}
+
+async function save() {
+  state.saving = true
+  try {
+    await saveByKeys([
+      {
+        config_key: 'STORAGE_UPLOAD_MAX_BYTES',
+        config_value: String(state.maxBytes),
+        category: CATEGORY,
+      },
+      {
+        config_key: 'STORAGE_PRESIGN_EXPIRE_SECONDS',
+        config_value: String(state.presignExpire),
+        category: CATEGORY,
+      },
+      {
+        config_key: 'STORAGE_UPLOAD_CATEGORY_MAX_LENGTH',
+        config_value: String(state.categoryMaxLength),
+        category: CATEGORY,
+      },
+      {
+        config_key: 'STORAGE_UPLOAD_ALLOWED_CONTENT_TYPES',
+        config_value: tagsToJson(state.allowedContentTypes),
+        category: CATEGORY,
+      },
+      {
+        config_key: 'STORAGE_UPLOAD_ALLOWED_EXTENSIONS',
+        config_value: tagsToJson(state.allowedExtensions),
+        category: CATEGORY,
+      },
+      {
+        config_key: 'STORAGE_UPLOAD_DENIED_EXTENSIONS',
+        config_value: tagsToJson(state.deniedExtensions),
+        category: CATEGORY,
+      },
+    ])
+    window.$message.success('保存成功')
+    state.snapshot = JSON.stringify({
+      maxBytes: state.maxBytes,
+      presignExpire: state.presignExpire,
+      categoryMaxLength: state.categoryMaxLength,
+      allowedContentTypes: state.allowedContentTypes,
+      allowedExtensions: state.allowedExtensions,
+      deniedExtensions: state.deniedExtensions,
+    })
+  } finally {
+    state.saving = false
   }
 }
 </script>
 
 <template>
-  <NForm label-placement="top" :label-width="140">
-    <NGrid :cols="24" :x-gap="24" :y-gap="12">
-      <NGi :span="12">
-        <NFormItem label="上传大小上限" :style="{ marginBottom: 0 }">
-          <div class="w-full">
-            <NInputNumber v-model:value="fields.maxBytes.value" class="w-full" :min="0" />
-            <div class="hint">
-              {{ fields.maxBytes.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-      <NGi :span="12">
-        <NFormItem label="预签名 URL 有效期" :style="{ marginBottom: 0 }">
-          <div class="w-full">
-            <NInputNumber v-model:value="fields.presignExpire.value" class="w-full" :min="0" />
-            <div class="hint">
-              {{ fields.presignExpire.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-      <NGi :span="12">
-        <NFormItem label="分类名最大长度" :style="{ marginBottom: 0 }">
-          <div class="w-full">
-            <NInputNumber v-model:value="fields.categoryMaxLength.value" class="w-full" :min="0" />
-            <div class="hint">
-              {{ fields.categoryMaxLength.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-      <NGi :span="24">
-        <NFormItem label="允许的 MIME 类型" :style="{ marginBottom: 0 }">
-          <div class="w-full">
-            <NDynamicTags v-model:value="fields.allowedContentTypes.tags" :max="100" />
-            <div class="hint">
-              {{ fields.allowedContentTypes.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-      <NGi :span="24">
-        <NFormItem label="允许的文件扩展名" :style="{ marginBottom: 0 }">
-          <div class="w-full">
-            <NDynamicTags v-model:value="fields.allowedExtensions.tags" :max="100" />
-            <div class="hint">
-              {{ fields.allowedExtensions.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-      <NGi :span="24">
-        <NFormItem label="禁止的扩展名" :style="{ marginBottom: 0 }">
-          <div class="w-full">
-            <NDynamicTags v-model:value="fields.deniedExtensions.tags" :max="100" />
-            <div class="hint">
-              {{ fields.deniedExtensions.remark }}
-            </div>
-          </div>
-        </NFormItem>
-      </NGi>
-    </NGrid>
-    <NButton type="primary" class="mt-16px" :loading="fields.saving" @click="saveAll">
-      保存配置
-    </NButton>
-  </NForm>
+  <NSpin :show="state.loading">
+    <ConfigSectionLayout
+      description="配置上传大小、预签名有效期与扩展名限制。"
+      :saving="state.saving"
+      @save="save"
+      @reset="reset"
+    >
+      <NForm
+        class="sys-config-form sys-config-form--wide"
+        label-placement="top"
+      >
+        <NGrid
+          :cols="24"
+          :x-gap="16"
+        >
+          <NGi :span="8">
+            <NFormItem label="上传大小上限（字节）">
+              <NInputNumber
+                v-model:value="state.maxBytes"
+                class="w-full"
+                :min="0"
+              />
+            </NFormItem>
+          </NGi>
+          <NGi :span="8">
+            <NFormItem label="预签名有效期（秒）">
+              <NInputNumber
+                v-model:value="state.presignExpire"
+                class="w-full"
+                :min="0"
+              />
+            </NFormItem>
+          </NGi>
+          <NGi :span="8">
+            <NFormItem label="分类名最大长度">
+              <NInputNumber
+                v-model:value="state.categoryMaxLength"
+                class="w-full"
+                :min="1"
+              />
+            </NFormItem>
+          </NGi>
+          <NGi :span="24">
+            <NFormItem label="允许的 MIME 类型">
+              <NDynamicTags
+                v-model:value="state.allowedContentTypes"
+                :max="100"
+              />
+            </NFormItem>
+          </NGi>
+          <NGi :span="24">
+            <NFormItem label="允许的扩展名">
+              <NDynamicTags
+                v-model:value="state.allowedExtensions"
+                :max="100"
+              />
+            </NFormItem>
+          </NGi>
+          <NGi :span="24">
+            <NFormItem label="禁止的扩展名">
+              <NDynamicTags
+                v-model:value="state.deniedExtensions"
+                :max="100"
+              />
+            </NFormItem>
+          </NGi>
+        </NGrid>
+      </NForm>
+    </ConfigSectionLayout>
+  </NSpin>
 </template>
-
-<style scoped>
-.hint {
-  font-size: 12px;
-  color: #aaa;
-  margin-top: 2px;
-}
-</style>

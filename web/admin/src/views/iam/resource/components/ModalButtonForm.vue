@@ -149,20 +149,44 @@ defineExpose({
         label-width="120"
         :disabled="state.submitLoading"
       >
-        <NFormItem :label="'资源名称'" path="name">
+        <NFormItem
+          :label="'资源名称'"
+          path="name"
+        >
           <NInput v-model:value="state.formModel.name" />
         </NFormItem>
-        <NFormItem :label="'资源编码'" path="code">
+        <NFormItem
+          :label="'资源编码'"
+          path="code"
+        >
           <NInput v-model:value="state.formModel.code" />
         </NFormItem>
-        <NFormItem :label="'权限标识'" path="permission_key">
+        <NFormItem
+          :label="'权限标识'"
+          path="permission_key"
+        >
           <NInputGroup>
-            <NInput v-model:value="state.formModel.permission_key" readonly />
-            <NButton type="primary" secondary @click="openPermissionSelector"> 选择权限 </NButton>
+            <NInput
+              v-model:value="state.formModel.permission_key"
+              readonly
+            />
+            <NButton
+              type="primary"
+              secondary
+              @click="openPermissionSelector"
+            >
+              选择权限
+            </NButton>
           </NInputGroup>
         </NFormItem>
-        <NFormItem :label="'数据范围'" path="data_scope">
-          <DictSelect v-model="state.formModel.data_scope" dict-code="DATA_SCOPE" />
+        <NFormItem
+          :label="'数据范围'"
+          path="data_scope"
+        >
+          <DictSelect
+            v-model="state.formModel.data_scope"
+            dict-code="DATA_SCOPE"
+          />
         </NFormItem>
         <NFormItem
           v-if="state.formModel.data_scope === 'CUSTOM'"
@@ -182,13 +206,30 @@ defineExpose({
             children-field="children"
           />
         </NFormItem>
-        <NFormItem :label="'排序'" path="sort">
-          <NInputNumber v-model:value="state.formModel.sort" class="w-full" :min="0" />
+        <NFormItem
+          :label="'排序'"
+          path="sort"
+        >
+          <NInputNumber
+            v-model:value="state.formModel.sort"
+            class="w-full"
+            :min="0"
+          />
         </NFormItem>
-        <NFormItem :label="'状态'" path="status">
-          <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" type="radio" />
+        <NFormItem
+          :label="'状态'"
+          path="status"
+        >
+          <DictSelect
+            v-model="state.formModel.status"
+            dict-code="COMMON_STATUS"
+            type="radio"
+          />
         </NFormItem>
-        <NFormItem :label="'描述'" path="description">
+        <NFormItem
+          :label="'描述'"
+          path="description"
+        >
           <NInput
             v-model:value="state.formModel.description"
             type="textarea"
@@ -199,12 +240,26 @@ defineExpose({
     </NSpin>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 取消 </NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm"> 确认 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>
 
-  <ModalPermissionSelector ref="permissionSelectorRef" @selected="handlePermissionSelected" />
+  <ModalPermissionSelector
+    ref="permissionSelectorRef"
+    @selected="handlePermissionSelected"
+  />
 </template>

@@ -2,6 +2,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.modules.sys.config.repository import ConfigRepository
@@ -32,6 +33,13 @@ class ConfigService:
         await reload_and_publish("sys_config.create")
 
     async def update(self, payload: ConfigUpdateRequest) -> None:
+        entity = await self.repo.get_required(payload.id)
+        if entity.is_builtin and payload.scene and payload.scene != entity.scene:
+            raise BusinessError("内置配置不可修改场景编码")
+        if entity.is_builtin:
+            payload.is_builtin = True
+            payload.scene = entity.scene
+            payload.scope = entity.scope or payload.scope
         payload.config_value = encrypt_config_value(payload.config_key, payload.config_value)
         async with transactional(self.db):
             await self.repo.update(payload)
@@ -39,7 +47,14 @@ class ConfigService:
 
     async def delete(self, payload: IdsRequest) -> None:
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            unique_ids = list(dict.fromkeys(payload.ids))
+            entities = []
+            for config_id in unique_ids:
+                entities.append(await self.repo.get_required(config_id))
+            builtin = [e.config_key for e in entities if e.is_builtin]
+            if builtin:
+                raise BusinessError(f"内置配置不可删除: {', '.join(builtin)}")
+            await self.repo.delete_many(unique_ids)
         await reload_and_publish("sys_config.delete")
 
     async def detail(self, query: IdQuery) -> SysConfigSchema:
@@ -48,10 +63,16 @@ class ConfigService:
         return schema
 
     async def list_by_category(self, query: CategoryQuery) -> list[SysConfigSchema]:
-        items = await self.repo.list_by_category(query.category)
+        items = await self.repo.list_by_category(query.category, query.scope)
         schemas = to_schema_list(SysConfigSchema, items)
         for s in schemas:
-            s.config_value = decrypt_config_value(s.config_key, s.config_value) or ""
+            if is_sensitive(s.config_key) and s.config_key.startswith("STORAGE_"):
+                # 不向浏览器回显存储密钥；is_set 供表单「已配置，留空不修改」
+                has_value = bool(s.config_value)
+                s.config_value = ""
+                s.ext_json = {**(s.ext_json or {}), "is_set": has_value}
+            else:
+                s.config_value = decrypt_config_value(s.config_key, s.config_value) or ""
         return schemas
 
     async def batch_save(self, payload: ConfigBatchSaveRequest) -> None:

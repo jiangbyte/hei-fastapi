@@ -1,14 +1,14 @@
 /** Author: Charlie */
 
-import { getFilenameFromContentDisposition, http, resolveFileUrl, saveBlob } from '@/utils'
+import { API_PREFIX } from '@/constants/api'
+import { getFilenameFromContentDisposition, http, saveBlob } from '@/utils'
 
-const filePrefix = '/api/v1/admin/sys/file'
+const filePrefix = `${API_PREFIX}/sys/file`
 
 export interface SysFileItem {
   id: string
   object_name: string
   original_name: string
-  storage_config_id: string
   storage_provider: string
   bucket?: string | null
   content_type: string
@@ -26,7 +26,6 @@ export interface FileUrlResponse {
 }
 
 export interface FileUploadOptions {
-  storage_config_id?: string | null
   storage_provider?: string | null
 }
 
@@ -69,9 +68,6 @@ export function remove(data: any) {
 export function upload(file: File, options: FileUploadOptions = {}) {
   const data = new FormData()
   data.append('file', file)
-  if (options.storage_config_id) {
-    data.append('storage_config_id', options.storage_config_id)
-  }
   if (options.storage_provider) {
     data.append('storage_provider', options.storage_provider)
   }
@@ -145,7 +141,7 @@ function isRemoteDownloadTarget(target: FileDownloadTarget) {
 }
 
 function openFileUrl(value?: string | null, filename = 'download') {
-  const url = resolveFileUrl(value)
+  const url = value || undefined
   if (!url) {
     return
   }

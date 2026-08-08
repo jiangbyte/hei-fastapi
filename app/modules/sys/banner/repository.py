@@ -57,13 +57,13 @@ class BannerRepository:
         count_stmt = select(func.count(SysBanner.id))
         filters = []
         if query.display_scope:
-            filters.append(SysBanner.display_scope == query.display_scope)
+            filters.append(SysBanner.display_scope == str(query.display_scope))
         if query.category:
-            filters.append(SysBanner.category == query.category)
+            filters.append(SysBanner.category == str(query.category))
         if query.type:
-            filters.append(SysBanner.type == query.type)
+            filters.append(SysBanner.type == str(query.type))
         if query.position:
-            filters.append(SysBanner.position == query.position)
+            filters.append(SysBanner.position == str(query.position))
         if query.status:
             filters.append(SysBanner.status == str(query.status))
         if filters:
@@ -87,14 +87,14 @@ class BannerRepository:
         stmt = select(SysBanner).where(
             SysBanner.display_scope == BannerDisplayScope.PORTAL.value,
             SysBanner.status == StatusEnum.ENABLED.value,
-            SysBanner.position == query.position,
+            SysBanner.position == str(query.position),
             or_(SysBanner.start_at.is_(None), SysBanner.start_at <= now),
             or_(SysBanner.end_at.is_(None), SysBanner.end_at >= now),
         )
         if query.category:
-            stmt = stmt.where(SysBanner.category == query.category)
+            stmt = stmt.where(SysBanner.category == str(query.category))
         if query.type:
-            stmt = stmt.where(SysBanner.type == query.type)
+            stmt = stmt.where(SysBanner.type == str(query.type))
         stmt = stmt.order_by(SysBanner.sort.asc(), SysBanner.id.desc())
         return list((await self.db.execute(stmt)).scalars().all())
 

@@ -65,7 +65,11 @@ const columns = computed<DataTableColumns<any>>(() => [
     key: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -158,8 +162,14 @@ defineExpose({
     style="width: min(980px, calc(100vw - 32px))"
     :segmented="{ content: true, action: true }"
   >
-    <NFlex vertical class="min-h-0">
-      <NFlex justify="space-between" align="center">
+    <NFlex
+      vertical
+      class="min-h-0"
+    >
+      <NFlex
+        justify="space-between"
+        align="center"
+      >
         <NFlex>
           <NButton
             v-if="hasPermission('iam:resource:create') && hasPermission('iam:resource:grant')"
@@ -205,11 +215,19 @@ defineExpose({
     </NFlex>
 
     <template #action>
-      <NSpace justify="end" align="center">
-        <NButton @click="closeModal"> 关闭 </NButton>
+      <NSpace
+        justify="end"
+        align="center"
+      >
+        <NButton @click="closeModal">
+          关闭
+        </NButton>
       </NSpace>
     </template>
   </NModal>
 
-  <ModalButtonForm ref="formModalRef" @saved="fetchButtons" />
+  <ModalButtonForm
+    ref="formModalRef"
+    @saved="fetchButtons"
+  />
 </template>

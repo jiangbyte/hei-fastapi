@@ -1,7 +1,7 @@
 """
 由 HEI 代码生成器生成。
 Author: Charlie
-生成时间：2026-08-07 07:26:16
+生成时间：2026-08-08 21:09:55
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,8 @@ from app.core.schema.base import (
 )
 from app.core.security.data_scope import build_data_scope_filter, default_owner_dept_id
 from app.core.security.session import SessionPayload
+from app.modules.user.utils.profile import enrich_audit_names
+from app.platform.db.transaction import transactional
 from app.modules.biz.cg_test_knowledge_category.model import CgTestKnowledgeCategory
 from app.modules.biz.cg_test_knowledge_category.repository import (
     CgTestKnowledgeCategoryRepository,
@@ -33,8 +35,6 @@ from app.modules.biz.cg_test_knowledge_category.schema import (
     CgTestKnowledgeDocSchema,
     CgTestKnowledgeDocUpdateRequest,
 )
-from app.modules.user.utils.profile import enrich_audit_names
-from app.platform.db.transaction import transactional
 
 
 class CgTestKnowledgeCategoryService:

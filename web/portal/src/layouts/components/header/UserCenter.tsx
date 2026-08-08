@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { Avatar, Button, Dropdown, Modal, Space, Tooltip, Typography, message } from 'antd'
 import {
+  FormOutlined,
   HomeOutlined,
   LogoutOutlined,
   SettingOutlined,
@@ -10,7 +11,7 @@ import {
 } from '@ant-design/icons'
 import type { DropdownProps, MenuProps } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { resolveFileUrl } from '@/utils/file'
+import { useAuthModalStore } from '@/stores/authModal'
 import { useAuthStore } from '@/stores/auth'
 
 type Props = {
@@ -24,6 +25,7 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
   const userInfo = useAuthStore((s) => s.userInfo)
   const ensureSession = useAuthStore((s) => s.ensureSession)
   const logout = useAuthStore((s) => s.logout)
+  const openAuthModal = useAuthModalStore((s) => s.open)
 
   const loggedIn = Boolean(userInfo?.accountId)
 
@@ -40,7 +42,7 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
             className="!h-10 !w-10 !px-0"
             icon={<UserOutlined />}
             aria-label="登录"
-            onClick={() => navigate('/auth/login')}
+            onClick={() => openAuthModal('login')}
           />
         </Tooltip>
       )
@@ -48,8 +50,8 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
 
     return (
       <Space size={8}>
-        <Button onClick={() => navigate('/auth/register')}>注册</Button>
-        <Button type="primary" onClick={() => navigate('/auth/login')}>
+        <Button onClick={() => openAuthModal('register')}>注册</Button>
+        <Button type="primary" onClick={() => openAuthModal('login')}>
           登录
         </Button>
       </Space>
@@ -57,7 +59,7 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
   }
 
   const displayName = userInfo?.nickname || userInfo?.account || '用户'
-  const avatarSrc = resolveFileUrl(userInfo?.avatar)
+  const avatarSrc = userInfo?.avatar || undefined
 
   const items: MenuProps['items'] = [
     {
@@ -69,6 +71,11 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
       key: 'userCenter',
       icon: <SettingOutlined />,
       label: '账号设置',
+    },
+    {
+      key: 'feedback',
+      icon: <FormOutlined />,
+      label: '我的反馈',
     },
     { type: 'divider' },
     {
@@ -90,6 +97,10 @@ export function UserCenter({ compact = false, placement = 'bottomRight' }: Props
     }
     if (key === 'userCenter') {
       navigate('/usercenter')
+      return
+    }
+    if (key === 'feedback') {
+      navigate('/feedback')
       return
     }
     if (key === 'home') {

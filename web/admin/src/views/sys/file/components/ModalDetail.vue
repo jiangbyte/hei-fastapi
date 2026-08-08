@@ -2,9 +2,9 @@
 
 <script setup lang="ts">
 import { fileApi } from '@/api'
-import { displayValue, formatDateTime, formatFileSize, isImageFile, resolveFileUrl } from '@/utils'
+import { displayValue, formatDateTime, formatFileSize, isImageFile } from '@/utils'
 import { computed, reactive } from 'vue'
-import { dictTypeData } from '@/utils/dict'
+import { storageProviderLabel } from '../constants'
 
 const state = reactive({
   showModal: false,
@@ -13,7 +13,7 @@ const state = reactive({
   file: {} as any,
 })
 
-const fileUrl = computed(() => resolveFileUrl(state.file?.url))
+const fileUrl = computed(() => state.file?.url || undefined)
 const imageAlt = computed(() => state.file?.original_name ?? '预览')
 const isImage = computed(() => isImageFile(state.file))
 
@@ -118,7 +118,9 @@ defineExpose({
             >
               下载
             </NButton>
-            <template v-else> - </template>
+            <template v-else>
+              -
+            </template>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'文件ID'">
             {{ displayValue(state.file.id) }}
@@ -127,17 +129,34 @@ defineExpose({
             {{ displayValue(state.file.original_name) }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'对象路径'">
-            <NFlex align="center" :size="8">
+            <NFlex
+              align="center"
+              :size="8"
+            >
               <span class="file-detail-text">{{ displayValue(state.file.object_name) }}</span>
-              <NButton size="small" text type="primary" @click="copyText(state.file.object_name)">
+              <NButton
+                size="small"
+                text
+                type="primary"
+                @click="copyText(state.file.object_name)"
+              >
                 复制
               </NButton>
             </NFlex>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'访问URL'">
-            <NFlex align="center" :size="8">
+            <NFlex
+              align="center"
+              :size="8"
+            >
               <span class="file-detail-text">{{ displayValue(fileUrl) }}</span>
-              <NButton v-if="fileUrl" size="small" text type="primary" @click="openFile">
+              <NButton
+                v-if="fileUrl"
+                size="small"
+                text
+                type="primary"
+                @click="openFile"
+              >
                 打开
               </NButton>
               <NButton
@@ -150,21 +169,27 @@ defineExpose({
               >
                 下载
               </NButton>
-              <NButton v-if="fileUrl" size="small" text type="primary" @click="copyText(fileUrl)">
+              <NButton
+                v-if="fileUrl"
+                size="small"
+                text
+                type="primary"
+                @click="copyText(fileUrl)"
+              >
                 复制
               </NButton>
             </NFlex>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'存储提供商'">
             {{
-              dictTypeData('STORAGE_PROVIDER', state.file.storage_provider) ||
-              displayValue(state.file.storage_provider)
+              storageProviderLabel(state.file.storage_provider) ||
+                displayValue(state.file.storage_provider)
             }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'存储桶'">
             {{ displayValue(state.file.bucket) }}
           </NDescriptionsItem>
-          <NDescriptionsItem :label="'内容 类型'">
+          <NDescriptionsItem :label="'内容类型'">
             {{ displayValue(state.file.content_type) }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'文件大小'">

@@ -32,6 +32,14 @@ def password_reset_token_key(token: str) -> str:
     return f"password:reset:{token}"
 
 
+def login_otp_key(account_type: str, channel: str, target: str) -> str:
+    return f"login:otp:{account_type}:{channel}:{target}"
+
+
+def change_password_otp_key(account_type: str, channel: str, account_id: str) -> str:
+    return f"password:change:otp:{account_type}:{channel}:{account_id}"
+
+
 def captcha_key(captcha_id: str) -> str:
     return f"captcha:{captcha_id}"
 

@@ -18,7 +18,10 @@ const html = computed(() => DOMPurify.sanitize(props.value ?? ''))
 
 <template>
   <!-- eslint-disable vue/no-v-html -->
-  <div class="rich-text-preview" v-html="html" />
+  <div
+    class="rich-text-preview"
+    v-html="html"
+  />
   <!-- eslint-enable vue/no-v-html -->
 </template>
 

@@ -144,9 +144,27 @@ class AdminUserProfileService:
         payload: AdminUserCenterPasswordUpdateRequest,
         session: SessionPayload,
     ) -> None:
+        from app.core.config.enums import AccountType
+        from app.modules.auth.password_change import verify_change_password
+        from app.modules.iam.account.password_helper import validate_and_record_password
+
         account = await self.account_repo.get_required(session.account_id)
-        self._ensure_password(account.password_hash, payload.old_password)
+        await verify_change_password(
+            self.db,
+            account=account,
+            account_type=AccountType.ADMIN,
+            old_password=payload.old_password,
+            otp_code=payload.otp_code,
+        )
         async with transactional(self.db):
+            await validate_and_record_password(
+                self.db,
+                session.account_id,
+                payload.new_password,
+                changed_by=session.account_id,
+                change_reason="self_change",
+                account=account,
+            )
             await self.account_repo.update_password_hash(
                 session.account_id,
                 hash_password(payload.new_password),

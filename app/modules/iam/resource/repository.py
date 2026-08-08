@@ -302,7 +302,10 @@ class ResourceRepository:
         )
         await self.delete_many([button_id])
 
-    async def list_resource_permissions(self) -> list[SysIamRelation]:
+    async def list_resource_permissions(
+        self,
+        account_type: AccountType | None = None,
+    ) -> list[SysIamRelation]:
         stmt = (
             select(SysIamRelation)
             .where(
@@ -313,6 +316,8 @@ class ResourceRepository:
             )
             .order_by(SysIamRelation.sort.asc(), SysIamRelation.id.asc())
         )
+        if account_type is not None:
+            stmt = stmt.where(SysIamRelation.account_type == account_type.value)
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_permissions_by_resource_ids(
@@ -355,10 +360,13 @@ class ResourceRepository:
                 current = resource_map.get(current.parent_id or "")
         return [resource for resource in all_resources if resource.id in result_ids]
 
-    async def list_all_resource_grant_modules(self) -> list[ResourceGrantModuleOption]:
-        resources = await self.list_resources()
-        permissions = await self.list_resource_permissions()
-        modules = await ResourceModuleRepository(self.db).list_enabled_modules()
+    async def list_all_resource_grant_modules(
+        self,
+        module_client: AccountType | None = None,
+    ) -> list[ResourceGrantModuleOption]:
+        resources = await self.list_resources(module_client=module_client)
+        permissions = await self.list_resource_permissions(account_type=module_client)
+        modules = await ResourceModuleRepository(self.db).list_enabled_modules(client=module_client)
         permission_map: dict[str, list[ResourcePermissionOption]] = {}
         for permission in permissions:
             permission_map.setdefault(permission.subject_id, []).append(
@@ -395,8 +403,15 @@ class ResourceRepository:
             for module in modules
         }
         module_sort_map = {module.id: module.sort for module in modules}
+        # CATALOG 只充当父级分组标签，不单独出现在「菜单」列；
+        # 无父级时用资源自身名称分组，避免伪造 ROOT 父级授权。
+        grant_menu_types = {
+            ResourceType.MENU.value,
+            ResourceType.PAGE.value,
+            ResourceType.API_GROUP.value,
+        }
         for resource in resources:
-            if resource.resource_type in {ResourceType.BUTTON.value, ResourceType.ACTION.value}:
+            if resource.resource_type not in grant_menu_types:
                 continue
             if not resource.module_id:
                 continue
@@ -411,7 +426,7 @@ class ResourceRepository:
                     id=resource.id,
                     module_id=module_id,
                     parent_id=resource.parent_id,
-                    parent_id_name=parent.name if parent else "ROOT",
+                    parent_id_name=parent.name if parent else resource.name,
                     title=resource.name,
                     button=(
                         permission_map.get(resource.id, [])

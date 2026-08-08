@@ -51,7 +51,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'配置ID'">
             {{ displayValue(state.config.id) }}
           </NDescriptionsItem>
@@ -59,7 +63,10 @@ defineExpose({
             {{ displayValue(state.config.config_key) }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'配置值'">
-            <NCode :code="displayValue(state.config.config_value)" word-wrap />
+            <NCode
+              :code="displayValue(state.config.config_value)"
+              word-wrap
+            />
           </NDescriptionsItem>
           <NDescriptionsItem :label="'分类'">
             {{ displayValue(state.config.category) }}
@@ -71,7 +78,11 @@ defineExpose({
             {{ displayValue(state.config.sort_code) }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'扩展信息'">
-            <NCode :code="extJsonText" language="json" word-wrap />
+            <NCode
+              :code="extJsonText"
+              language="json"
+              word-wrap
+            />
           </NDescriptionsItem>
           <NDescriptionsItem :label="'创建时间'">
             {{ formatDateTime(state.config.created_at) }}

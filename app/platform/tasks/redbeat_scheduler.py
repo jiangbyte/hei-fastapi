@@ -4,6 +4,7 @@ import logging
 
 from redbeat.schedulers import RedBeatSchedulerEntry
 
+from app.core.config.settings import settings
 from app.platform.module import collect_beat_schedule, load_module_specs
 
 logger = logging.getLogger(__name__)
@@ -30,3 +31,18 @@ def sync_to_redbeat(celery_app) -> None:
                 logger.exception("Failed to sync '%s' to redbeat", name)
     except Exception:
         logger.exception("Failed to sync static schedules to redbeat")
+
+
+def sync_audit_interval_to_redbeat(celery_app) -> None:
+    """按当前 settings 覆盖审计分析周期 RedBeat 条目。"""
+    try:
+        interval = float(settings.audit_alert.analysis_interval_seconds)
+        entry = RedBeatSchedulerEntry(
+            name="audit-analysis-cycle",
+            task="audit.analysis_cycle",
+            schedule=interval,
+            app=celery_app,
+        )
+        entry.save()
+    except Exception:
+        logger.exception("Failed to sync audit analysis interval to redbeat")

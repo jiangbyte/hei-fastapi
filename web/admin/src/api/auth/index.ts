@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const authPrefix = '/api/v1/admin'
+const authPrefix = `${API_PREFIX}`
 
 export function login(data: any) {
   return http.post<any>(`${authPrefix}/login`, data, {
@@ -10,38 +11,20 @@ export function login(data: any) {
   })
 }
 
-export function loginMfa(data: {
-  challenge_id: string
-  code?: string
-  webauthn_credential?: Record<string, unknown>
-}) {
-  return http.post<any>(`${authPrefix}/login/mfa`, data, {
+export function authOptions() {
+  return http.get<any>(`${authPrefix}/public/auth-options`, {
     public: true,
   })
 }
 
-export function mfaStatus() {
-  return http.get<any>(`${authPrefix}/auth/mfa/status`)
+export function sendLoginCode(data: any) {
+  return http.post<any>(`${authPrefix}/send-login-code`, data, {
+    public: true,
+  })
 }
 
-export function mfaSetup() {
-  return http.post<any>(`${authPrefix}/auth/mfa/setup`)
-}
-
-export function mfaConfirm(data: { code: string }) {
-  return http.post<any>(`${authPrefix}/auth/mfa/confirm`, data)
-}
-
-export function mfaDisable(data: any) {
-  return http.post<any>(`${authPrefix}/auth/mfa/disable`, data)
-}
-
-export function webauthnRegisterOptions() {
-  return http.post<any>(`${authPrefix}/auth/mfa/webauthn/register/options`)
-}
-
-export function webauthnRegisterVerify(credential: Record<string, unknown>) {
-  return http.post<any>(`${authPrefix}/auth/mfa/webauthn/register/verify`, { credential })
+export function sendPasswordChangeCode() {
+  return http.post<any>(`${authPrefix}/user-center/password/send-code`)
 }
 
 export function captcha() {

@@ -4,18 +4,18 @@
 export interface BannerItem {
   avatar?: string | null
   id: string
-  type: number
+  type?: number
   title: string
   icon: string
   tagTitle?: string
+  /** 字典色，优先于 tagType */
+  tagColor?: { color: string; textColor?: string }
   tagType?: 'default' | 'error' | 'primary' | 'info' | 'success' | 'warning'
   description?: string
   date: string
   isRead?: boolean
 }
 
-import { NAvatar } from 'naive-ui'
-import { resolveFileUrl } from '@/utils'
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 
 defineProps<{
@@ -31,60 +31,117 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <n-scrollbar style="height: 400px">
-    <n-empty v-if="!loading && !list?.length" class="h-full py-80px" :description="'暂无数据'" />
-    <div v-else-if="loading && !list?.length" class="h-full flex items-center justify-center">
-      <n-spin size="small" />
-    </div>
-    <div v-else class="divide-y divide-gray-100/60">
-      <div
+  <NScrollbar style="height: 360px">
+    <NEmpty
+      v-if="!loading && !list?.length"
+      description="暂无消息"
+      style="padding: 64px 0"
+    />
+    <NSpace
+      v-else-if="loading && !list?.length"
+      justify="center"
+      style="padding: 120px 0"
+    >
+      <NSpin size="small" />
+    </NSpace>
+    <NList
+      v-else
+      hoverable
+      clickable
+    >
+      <NListItem
         v-for="item in list"
         :key="item.id"
-        class="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-100/50 select-none"
-        :class="{ 'opacity-50': item.isRead }"
         @click="emit('open', item.id)"
       >
-        <NAvatar
-          v-if="item.avatar"
-          round
-          :size="32"
-          class="shrink-0"
-          :src="resolveFileUrl(item.avatar)"
-          :img-props="avatarImgProps"
-        />
-        <NovaIcon
-          v-else
-          :icon="item.icon"
-          :size="32"
-          class="shrink-0"
-          style="color: var(--text-color-2)"
-        />
-        <div class="min-w-0 flex-1">
-          <div class="flex items-start justify-between gap-2">
-            <span class="text-sm font-600 truncate">{{ item.title }}</span>
-            <span v-if="item.tagTitle" class="shrink-0">
-              <n-tag :bordered="false" :type="item.tagType || 'default'" size="tiny">{{
-                item.tagTitle
-              }}</n-tag>
-            </span>
-          </div>
-          <div
-            v-if="item.description"
-            class="truncate mt-0.5 text-xs"
-            style="color: var(--text-color-3)"
-          >
-            {{ item.description }}
-          </div>
-          <div class="mt-0.5 text-xs" style="color: var(--text-color-4)">
-            {{ item.date }}
-          </div>
-        </div>
-      </div>
-      <div v-if="hasMore" class="py-3 text-center">
-        <n-button text size="small" :loading="loading" @click.stop="emit('loadMore')">
+        <NThing>
+          <template #avatar>
+            <NBadge
+              :dot="!item.isRead"
+              :processing="!item.isRead"
+              type="info"
+            >
+              <NAvatar
+                v-if="item.avatar"
+                round
+                :size="32"
+                :src="item.avatar || undefined"
+                :img-props="avatarImgProps"
+              />
+              <NAvatar
+                v-else
+                round
+                :size="32"
+              >
+                <NovaIcon
+                  :icon="item.icon"
+                  :size="16"
+                  :style="{
+                    color: item.isRead ? 'var(--text-color-3)' : 'var(--primary-color)',
+                  }"
+                />
+              </NAvatar>
+            </NBadge>
+          </template>
+          <template #header>
+            <NEllipsis style="max-width: 220px">
+              <NText
+                :depth="item.isRead ? 3 : 1"
+                :strong="!item.isRead"
+              >
+                {{ item.title }}
+              </NText>
+            </NEllipsis>
+          </template>
+          <template #header-extra>
+            <NTag
+              v-if="item.tagTitle"
+              size="tiny"
+              :bordered="false"
+              :color="item.tagColor"
+              :type="item.tagColor ? undefined : item.tagType || 'default'"
+            >
+              {{ item.tagTitle }}
+            </NTag>
+          </template>
+          <template #description>
+            <div>
+              <NEllipsis
+                v-if="item.description"
+                :line-clamp="1"
+                :tooltip="false"
+              >
+                <NText
+                  depth="3"
+                  style="font-size: 12px"
+                >
+                  {{ item.description }}
+                </NText>
+              </NEllipsis>
+              <NText
+                depth="3"
+                style="font-size: 11px; display: block"
+              >
+                {{ item.date }}
+              </NText>
+            </div>
+          </template>
+        </NThing>
+      </NListItem>
+      <NSpace
+        v-if="hasMore"
+        justify="center"
+        style="padding: 8px 0 12px"
+      >
+        <NButton
+          text
+          size="small"
+          :loading="loading"
+          @click.stop="emit('loadMore')"
+        >
           加载更多
-        </n-button>
-      </div>
-    </div>
-  </n-scrollbar>
+        </NButton>
+      </NSpace>
+    </NList>
+  </NScrollbar>
 </template>

@@ -314,7 +314,6 @@ class AccountRepository:
                 IamRelationType.ACCOUNT_DEPT,
                 IamRelationType.ACCOUNT_GROUP,
                 IamRelationType.SUBJECT_RESOURCE_GRANT,
-                IamRelationType.SUBJECT_PERMISSION_GRANT,
             ],
         )
         await self.db.execute(

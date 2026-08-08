@@ -169,6 +169,17 @@ class AccountGrantResourceRequest(ApiSchema):
     grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
 
 
+class AccountOwnClientResourceResponse(ApiSchema):
+    id: str
+    modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
+    grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
+
+
+class AccountGrantClientResourceRequest(ApiSchema):
+    id: str = Field(min_length=1, max_length=64)
+    grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
+
+
 class AccountOwnRoleResponse(ApiSchema):
     id: str
     roles: list[RoleOption] = Field(default_factory=list)

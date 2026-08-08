@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const resourcePrefix = '/api/v1/admin/sys/resources'
+const resourcePrefix = `${API_PREFIX}/sys/resources`
 
 export function tree(params?: any) {
   return http.get<any>(`${resourcePrefix}/tree`, { params })
@@ -29,21 +30,21 @@ export function remove(data: any) {
 }
 
 export function permissionRegistry() {
-  return http.get<any>('/api/v1/admin/permission-registry')
+  return http.get<any>(`${API_PREFIX}/permission-registry`)
 }
 
 export function buttonPage(params?: any) {
-  return http.get<any>('/api/v1/admin/sys/resource-buttons/page', { params })
+  return http.get<any>(`${API_PREFIX}/sys/resource-buttons/page`, { params })
 }
 
 export function buttonCreate(data: any) {
-  return http.post<any>('/api/v1/admin/sys/resource-buttons/create', data)
+  return http.post<any>(`${API_PREFIX}/sys/resource-buttons/create`, data)
 }
 
 export function buttonUpdate(data: any) {
-  return http.post<any>('/api/v1/admin/sys/resource-buttons/update', data)
+  return http.post<any>(`${API_PREFIX}/sys/resource-buttons/update`, data)
 }
 
 export function buttonRemove(data: any) {
-  return http.post<any>('/api/v1/admin/sys/resource-buttons/delete', data)
+  return http.post<any>(`${API_PREFIX}/sys/resource-buttons/delete`, data)
 }

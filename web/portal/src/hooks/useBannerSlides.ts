@@ -14,7 +14,7 @@ function bannerToSlide(banner: any): PromoSlide {
     key: banner.id,
     title: banner.title,
     desc: banner.summary || banner.description || '',
-    imageUrl: banner.image,
+    imageUrl: banner.image_url || banner.image,
     cta: link ? '了解更多' : undefined,
     onClick: () => {
       void bannerApi.recordBannerInteraction(banner.id).catch(() => undefined)
@@ -35,13 +35,20 @@ function bannerToSlide(banner: any): PromoSlide {
 }
 
 export function useBannerSlides(query: any) {
+  const requestKey = `${query.position ?? ''}|${query.category ?? ''}|${query.type ?? ''}`
   const [slides, setSlides] = useState<PromoSlide[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeKey, setActiveKey] = useState(requestKey)
+
+  if (activeKey !== requestKey) {
+    setActiveKey(requestKey)
+    setLoading(true)
+  }
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    void bannerApi.listBanners(query)
+    void bannerApi
+      .listBanners(query)
       .then((res) => {
         if (cancelled) return
         setSlides(res.data.map(bannerToSlide))
@@ -57,7 +64,7 @@ export function useBannerSlides(query: any) {
     }
     // position/category/type 在调用处为稳定字符串字面量
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query.position, query.category, query.type])
+  }, [requestKey])
 
   return { slides, loading }
 }

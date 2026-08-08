@@ -45,7 +45,7 @@ VALUES (
 )
 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = now();
 
-INSERT INTO sys_iam_relation (id, subject_type, subject_id, relation_type, target_type, target_id, target_key, grant_mode, effect, data_scope, custom_scope_dept_ids, is_primary, sort, status, description, extra)
+INSERT INTO sys_iam_relation (id, subject_type, subject_id, relation_type, target_type, target_id, target_key, grant_mode, data_scope, custom_scope_dept_ids, is_primary, sort, status, description, extra)
 VALUES (
   '{{ action.relation_id }}',
   'RESOURCE',
@@ -55,7 +55,6 @@ VALUES (
   '',
   '{{ plan.permission_prefix }}:{{ action.key }}',
   'CASCADE',
-  'ALLOW',
   'ALL',
   '[]',
   false,

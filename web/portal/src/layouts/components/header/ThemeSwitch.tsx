@@ -42,7 +42,11 @@ export function ThemeSwitch({ placement = 'bottomRight' }: Props) {
   }
 
   return (
-    <Dropdown menu={{ items, onClick, selectedKeys: [colorMode] }} trigger={['click']} placement={placement}>
+    <Dropdown
+      menu={{ items, onClick, selectedKeys: [colorMode] }}
+      trigger={['click']}
+      placement={placement}
+    >
       <Button type="text" icon={icons[colorMode]} aria-label="切换主题" />
     </Dropdown>
   )

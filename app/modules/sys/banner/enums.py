@@ -6,7 +6,7 @@ from enum import StrEnum
 
 
 class BannerCategory(StrEnum):
-    """展示图分类，对应 BANNER_CATEGORY 字典组子项 value。"""
+    """展示图分类，对应 BANNER_CATEGORY 字典组子项 value（可扩展，接口以 str 为准）。"""
 
     HOME = "HOME"
     LOGIN = "LOGIN"
@@ -17,7 +17,7 @@ class BannerCategory(StrEnum):
 
 
 class BannerType(StrEnum):
-    """展示图类型，对应 BANNER_TYPE 字典组子项 value。"""
+    """展示图类型，对应 BANNER_TYPE 字典组子项 value（可扩展，接口以 str 为准）。"""
 
     CAROUSEL = "CAROUSEL"
     HERO = "HERO"
@@ -28,7 +28,7 @@ class BannerType(StrEnum):
 
 
 class BannerPosition(StrEnum):
-    """展示图显示位置，对应 BANNER_POSITION 字典组子项 value。"""
+    """展示图显示位置，对应 BANNER_POSITION 字典组子项 value（可扩展，接口以 str 为准）。"""
 
     HOME_TOP = "HOME_TOP"
     HOME_MIDDLE = "HOME_MIDDLE"
@@ -41,7 +41,7 @@ class BannerPosition(StrEnum):
 
 
 class BannerDisplayScope(StrEnum):
-    """展示图显示端，对应 BANNER_DISPLAY_SCOPE 字典组子项 value。"""
+    """展示图显示端/渠道，对应 BANNER_DISPLAY_SCOPE；与 AccountType（账户身份）无关。"""
 
     PORTAL = "PORTAL"
     ADMIN = "ADMIN"

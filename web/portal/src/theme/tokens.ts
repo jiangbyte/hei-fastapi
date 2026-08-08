@@ -7,7 +7,7 @@ import type { ThemeConfig } from 'antd'
  */
 export const portalSeedToken = {
   colorPrimary: '#1677FF',
-  borderRadius: 10,
+  borderRadius: 5,
   colorBgLayout: '#f5f7fb',
   colorBorder: '#e6ebf2',
   colorBorderSecondary: '#eef2f7',

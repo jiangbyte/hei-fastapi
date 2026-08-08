@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.exceptions.business import AuthorizationError
+from app.core.exceptions.business import AuthorizationError, BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
@@ -12,18 +12,26 @@ from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
+from app.modules.iam.client.service import ClientResourceService
+from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.relation.model import SysIamRelation
+from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
+from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
 from app.modules.iam.role.schema import (
     RoleAdminPageQuery,
     RoleCreateRequest,
+    RoleGrantClientResourceRequest,
     RoleGrantResourceRequest,
     RoleGrantUserRequest,
+    RoleOwnClientResourceQuery,
+    RoleOwnClientResourceResponse,
     RoleOwnResourceQuery,
     RoleOwnResourceResponse,
     RoleOwnUserResponse,
+    RoleResourceGrantInfo,
     RoleUpdateRequest,
     SysRoleSchema,
 )
@@ -59,12 +67,15 @@ class RoleService:
                     "iam:role:update",
                     [payload.owner_dept_id],
                 )
+        existing = await self.repo.get_required(payload.id)
+        self._ensure_protected_role_mutable(existing, payload)
         async with transactional(self.db):
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:delete", payload.ids)
+        await self._ensure_roles_deletable(payload.ids)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
@@ -97,7 +108,9 @@ class RoleService:
             await self._ensure_roles_visible(session, "iam:role:ownresource", [query.id])
         return RoleOwnResourceResponse(
             id=query.id,
-            modules=await ResourceService(self.db).list_grant_modules(),
+            modules=await ResourceService(self.db).list_grant_modules(
+                module_client=query.account_type,
+            ),
             grant_info_list=await self.repo.list_resource_grants(
                 query.id,
                 account_type=query.account_type.value,
@@ -114,6 +127,41 @@ class RoleService:
         async with transactional(self.db):
             old_account_ids = await self.repo.list_account_ids_by_role(payload.id)
             await self.repo.replace_resource_grants(payload)
+        await self._refresh_accounts(old_account_ids)
+
+    async def own_client_resource(
+        self,
+        query: RoleOwnClientResourceQuery,
+        session: SessionPayload | None = None,
+    ) -> RoleOwnClientResourceResponse:
+        if session is not None:
+            await self._ensure_roles_visible(session, "iam:role:ownclientresource", [query.id])
+        grants = await IamRelationRepository(self.db).list_subject_client_resource_grants(
+            GrantSubjectType.ROLE,
+            query.id,
+            account_type=query.account_type,
+        )
+        return RoleOwnClientResourceResponse(
+            id=query.id,
+            modules=await ClientResourceService(self.db).list_grant_modules(query.account_type),
+            grant_info_list=[RoleResourceGrantInfo.model_validate(grant) for grant in grants],
+        )
+
+    async def grant_client_resource(
+        self,
+        payload: RoleGrantClientResourceRequest,
+        session: SessionPayload | None = None,
+    ) -> None:
+        if session is not None:
+            await self._ensure_roles_visible(session, "iam:role:grantclientresource", [payload.id])
+        async with transactional(self.db):
+            old_account_ids = await self.repo.list_account_ids_by_role(payload.id)
+            await IamRelationRepository(self.db).replace_subject_client_resource_grant_infos(
+                GrantSubjectType.ROLE,
+                payload.id,
+                payload.grant_info_list,
+                account_type=payload.account_type,
+            )
         await self._refresh_accounts(old_account_ids)
 
     async def own_user(
@@ -173,6 +221,28 @@ class RoleService:
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:
         await AccountSessionService(self.db).refresh_accounts_sessions(sorted(set(account_ids)))
+
+    def _is_protected_role(self, role: SysRole) -> bool:
+        return bool(role.is_builtin) or role.code == SUPER_ADMIN_ROLE_CODE
+
+    def _ensure_protected_role_mutable(
+        self,
+        existing: SysRole,
+        payload: RoleUpdateRequest,
+    ) -> None:
+        if not self._is_protected_role(existing):
+            return
+        if payload.code != existing.code:
+            raise BusinessError("Cannot change code of builtin or SUPER_ADMIN role")
+        if bool(payload.is_builtin) != bool(existing.is_builtin):
+            raise BusinessError("Cannot change is_builtin of builtin or SUPER_ADMIN role")
+
+    async def _ensure_roles_deletable(self, role_ids: list[str]) -> None:
+        unique_ids = list(dict.fromkeys(role_ids))
+        for role_id in unique_ids:
+            role = await self.repo.get_required(role_id)
+            if self._is_protected_role(role):
+                raise BusinessError("Cannot delete builtin or SUPER_ADMIN role")
 
     async def _role_scope_filter(self, session: SessionPayload, permission_key: str):
         return await build_data_scope_filter(

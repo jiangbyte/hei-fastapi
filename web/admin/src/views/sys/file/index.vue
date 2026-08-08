@@ -14,14 +14,13 @@ import {
   isImageFile,
   normalizeSearchValues,
   renderButtonIcon,
-  resolveFileUrl,
 } from '@/utils'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { dictList, dictTypeColor, dictTypeData } from '@/utils/dict'
 import ModalDetail from './components/ModalDetail.vue'
 import ModalForm from './components/ModalForm.vue'
 import ModalUpload from './components/ModalUpload.vue'
+import { STORAGE_PROVIDER_OPTIONS, storageProviderColor, storageProviderLabel } from './constants'
 import { readPageMeta } from '@/utils/wire'
 
 const formModalRef = ref<any>(null)
@@ -68,11 +67,11 @@ const searchColumns = computed<ProSearchFormColumns<any>>(() => [
     path: 'storage_provider',
     field: 'select',
     fieldProps: {
-      options: dictList('STORAGE_PROVIDER'),
+      options: [...STORAGE_PROVIDER_OPTIONS],
     },
   },
   {
-    title: '内容 类型',
+    title: '内容类型',
     path: 'content_type',
     field: 'input',
   },
@@ -129,10 +128,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     width: 130,
     render: (row) => (
       <NTag
-        color={createTagColor(dictTypeColor('STORAGE_PROVIDER', row.storage_provider))}
+        size="small"
+        color={createTagColor(storageProviderColor(row.storage_provider))}
         bordered={false}
       >
-        {dictTypeData('STORAGE_PROVIDER', row.storage_provider) || row.storage_provider}
+        {storageProviderLabel(row.storage_provider)}
       </NTag>
     ),
   },
@@ -145,7 +145,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     },
   },
   {
-    title: '内容 类型',
+    title: '内容类型',
     path: 'content_type',
     width: 180,
     ellipsis: {
@@ -231,9 +231,13 @@ async function fetchPage() {
 }
 
 function renderPreview(row: any) {
-  const src = resolveFileUrl(row.url)
+  const src = row.url || undefined
   if (!src || !isImageFile(row)) {
-    return <NTag bordered={false}>{row.content_type || '-'}</NTag>
+    return (
+      <NTag size="small" bordered={false}>
+        {row.content_type || '-'}
+      </NTag>
+    )
   }
   return (
     <NImage src={src} alt={row.original_name || '预览'} width={72} height={48} objectFit="cover" />
@@ -305,7 +309,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -378,8 +385,14 @@ async function deleteData(ids: string[]) {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
     <ModalDetail ref="detailModalRef" />
-    <ModalUpload ref="uploadModalRef" @saved="fetchPage" />
+    <ModalUpload
+      ref="uploadModalRef"
+      @saved="fetchPage"
+    />
   </NFlex>
 </template>

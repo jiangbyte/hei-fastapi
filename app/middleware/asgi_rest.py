@@ -12,6 +12,7 @@ import uuid
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.config.enums import AccountType, account_type_url_segment
 from app.core.exceptions.business import AuthenticationError
 from app.core.network.client_ip import get_client_ip
 from app.core.response.errors import asgi_error_response
@@ -21,15 +22,25 @@ from app.core.security.session_token import extract_session_token
 from app.deps.context import account_id_ctx, account_type_ctx, client_ip_ctx
 from app.platform.audit.queue import OperationAuditEvent, operation_audit_queue
 from app.platform.cache.redis import get_redis
-from app.platform.module.router import API_ROOT_PREFIX
+from app.platform.module.paths import API_ROOT_PREFIX
 
 logger = logging.getLogger(__name__)
 
+# 与 permission_registry 一致：路径段随 AccountType 枚举自动扩展
+_ACCOUNT_TYPE_PATH_ALTS = "|".join(account_type_url_segment(item) for item in AccountType)
+
 RATE_LIMIT_RULES: list[tuple[re.Pattern[str], int, int, str]] = [
-    (re.compile(r"^/api/v\d+/(admin|portal)/login"), 10, 60, "ip"),
-    (re.compile(r"^/api/v\d+/portal/register"), 5, 60, "ip"),
-    (re.compile(r"^/api/v\d+/(admin|portal)/(forgot-password|reset-password)"), 5, 60, "ip"),
-    (re.compile(r"^/api/v\d+/(admin|portal)/captcha"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/login"), 10, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/register"), 5, 60, "ip"),
+    (
+        re.compile(
+            rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/(forgot-password|reset-password)"
+        ),
+        5,
+        60,
+        "ip",
+    ),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/captcha"), 30, 60, "ip"),
     (re.compile(r"^/api/v\d+/"), 120, 60, "mix"),
 ]
 
@@ -40,7 +51,7 @@ RATE_LIMIT_EXEMPT: list[re.Pattern[str]] = [
 
 AUDIT_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 AUDIT_PATH_RE = re.compile(
-    r"^/api/v\d+/(?P<account_type>admin|portal)/"
+    rf"^/api/v\d+/(?P<account_type>{_ACCOUNT_TYPE_PATH_ALTS})/"
     r"(?P<module_path>[a-z][a-z0-9/_-]*)"
     r"(?P<action>/[^?]*)?"
 )
@@ -48,7 +59,6 @@ SKIP_AUDIT_PATH_PATTERNS = (
     "/captcha",
     "/password-key",
     "/login",
-    "/login/mfa",
     "/register",
     "/forgot-password",
     "/reset-password",

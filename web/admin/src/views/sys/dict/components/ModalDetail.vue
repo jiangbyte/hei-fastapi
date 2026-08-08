@@ -44,7 +44,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'ID'">
             {{ displayValue(state.data.id) }}
           </NDescriptionsItem>
@@ -60,12 +64,15 @@ defineExpose({
           <NDescriptionsItem :label="'颜色'">
             <NTag
               v-if="state.data.color"
+              size="small"
               :color="createTagColor(state.data.color)"
               :bordered="false"
             >
               {{ state.data.color }}
             </NTag>
-            <template v-else> - </template>
+            <template v-else>
+              -
+            </template>
           </NDescriptionsItem>
           <NDescriptionsItem :label="'分类'">
             {{ dictTypeData('SYS_BIZ_CATEGORY', state.data.category) }}
@@ -78,6 +85,7 @@ defineExpose({
           </NDescriptionsItem>
           <NDescriptionsItem :label="'状态'">
             <NTag
+              size="small"
               :color="createTagColor(dictTypeColor('COMMON_STATUS', state.data.status))"
               :bordered="false"
             >

@@ -1,10 +1,15 @@
 # 数据库迁移
 
-本目录保存 Alembic 迁移文件。迁移只管理数据库结构，不写入业务种子数据。
+Alembic 版本目录，只管理表结构。
 
-详细说明请参见 [docs/migration.md](../docs/migration.md)，涵盖：
+```bash
+python scripts/db/makemigration.py "describe schema change"
+python scripts/db/migrate.py
+python scripts/db/check_migration.py
+```
 
-- 配置来源
-- 常用迁移、生成、检查、seed 命令
-- Docker / Compose 迁移方式
-- 迁移约束
+```bash
+docker compose run --rm hei migrate
+```
+
+连接串来自 `.env` 的 `DB__URL`。禁用模块的模型仍会进入 metadata，可正常生成与执行迁移。

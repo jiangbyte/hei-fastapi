@@ -44,7 +44,11 @@ defineExpose({
   >
     <NScrollbar class="max-h-[min(640px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem :label="'岗位 ID'">
             {{ displayValue(state.position.id) }}
           </NDescriptionsItem>
@@ -54,7 +58,7 @@ defineExpose({
           <NDescriptionsItem :label="'岗位分类'">
             {{
               dictTypeData('POSITION_CATEGORY', state.position.category) ||
-              displayValue(state.position.category)
+                displayValue(state.position.category)
             }}
           </NDescriptionsItem>
           <NDescriptionsItem :label="'排序'">
@@ -70,7 +74,7 @@ defineExpose({
             >
               {{
                 dictTypeData('COMMON_STATUS', state.position.status) ||
-                displayValue(state.position.status)
+                  displayValue(state.position.status)
               }}
             </NTag>
           </NDescriptionsItem>

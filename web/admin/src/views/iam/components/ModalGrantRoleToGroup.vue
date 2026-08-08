@@ -3,22 +3,13 @@
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { groupApi, roleApi } from '@/api'
-import {
-  ACCOUNT_TYPE_TABS,
-  DEFAULT_ACCOUNT_TYPE,
-  type AccountType,
-} from '@/constants/account'
+import { ACCOUNT_TYPE_OPTIONS, DEFAULT_ACCOUNT_TYPE, type AccountType } from '@/constants/account'
 import { createTagColor, renderButtonIcon } from '@/utils'
 import { dictTypeColor, dictTypeData } from '@/utils/dict'
 import { NButton, NTag } from 'naive-ui'
 import { computed, reactive } from 'vue'
 
 const emit = defineEmits<{ saved: [] }>()
-
-const accountTypeOptions = ACCOUNT_TYPE_TABS.map((item) => ({
-  label: item.label,
-  value: item.key,
-}))
 
 const state = reactive({
   showModal: false,
@@ -201,13 +192,20 @@ defineExpose({ openModal })
     resizable
     :mask-closable="false"
   >
-    <NDrawerContent :title="modalTitle" closable :native-scrollbar="false">
-      <NGrid :cols="24" :x-gap="10">
+    <NDrawerContent
+      :title="modalTitle"
+      closable
+      :native-scrollbar="false"
+    >
+      <NGrid
+        :cols="24"
+        :x-gap="10"
+      >
         <NGi :span="16">
           <NSpace vertical>
             <NSelect
               :value="state.accountType"
-              :options="accountTypeOptions"
+              :options="ACCOUNT_TYPE_OPTIONS"
               style="width: 180px"
               @update:value="onAccountTypeChange"
             />
@@ -219,12 +217,28 @@ defineExpose({ openModal })
                 @keyup.enter="doSearch"
                 @clear="resetSearch"
               />
-              <NButton type="primary" @click="doSearch"> 搜索 </NButton>
-              <NButton @click="resetSearch"> 重置 </NButton>
+              <NButton
+                type="primary"
+                @click="doSearch"
+              >
+                搜索
+              </NButton>
+              <NButton @click="resetSearch">
+                重置
+              </NButton>
             </NInputGroup>
-            <NFlex justify="space-between" align="center">
+            <NFlex
+              justify="space-between"
+              align="center"
+            >
               <NText>{{ `待处理: ${state.total}` }}</NText>
-              <NButton dashed size="small" @click="addAllPageRecord"> 新增当前页 </NButton>
+              <NButton
+                dashed
+                size="small"
+                @click="addAllPageRecord"
+              >
+                新增当前页
+              </NButton>
             </NFlex>
             <NDataTable
               size="small"
@@ -250,9 +264,19 @@ defineExpose({ openModal })
         </NGi>
         <NGi :span="8">
           <NSpace vertical>
-            <NFlex justify="space-between" align="center">
+            <NFlex
+              justify="space-between"
+              align="center"
+            >
               <NText>{{ `已选择: ${state.selectedData.length}` }}</NText>
-              <NButton dashed type="error" size="small" @click="delAllRecord"> 全部移除 </NButton>
+              <NButton
+                dashed
+                type="error"
+                size="small"
+                @click="delAllRecord"
+              >
+                全部移除
+              </NButton>
             </NFlex>
             <NDataTable
               size="small"
@@ -267,9 +291,18 @@ defineExpose({ openModal })
         </NGi>
       </NGrid>
       <template #footer>
-        <NSpace justify="end" align="center">
-          <NButton @click="closeModal"> 关闭 </NButton>
-          <NButton type="primary" :loading="state.submitLoading" @click="submitGrant">
+        <NSpace
+          justify="end"
+          align="center"
+        >
+          <NButton @click="closeModal">
+            关闭
+          </NButton>
+          <NButton
+            type="primary"
+            :loading="state.submitLoading"
+            @click="submitGrant"
+          >
             保存
           </NButton>
         </NSpace>

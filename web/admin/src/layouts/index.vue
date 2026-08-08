@@ -100,13 +100,19 @@ const showMobileDrawer = ref(false)
 
     <template #sidebar>
       <n-scrollbar class="sidebar-menu-scrollbar">
-        <n-menu v-bind="layout.verticalMenuProps" :collapsed-width="64" />
+        <n-menu
+          v-bind="layout.verticalMenuProps"
+          :collapsed-width="64"
+        />
       </n-scrollbar>
     </template>
 
     <template #sidebar-extra>
       <n-scrollbar class="flex-[1_0_0]">
-        <n-menu v-bind="layout.verticalExtraMenuProps" :collapsed-width="64" />
+        <n-menu
+          v-bind="layout.verticalExtraMenuProps"
+          :collapsed-width="64"
+        />
       </n-scrollbar>
     </template>
 
@@ -119,9 +125,15 @@ const showMobileDrawer = ref(false)
 
     <MobileDrawer v-model:show="showMobileDrawer">
       <div class="mt-3 mb-2 px-3">
-        <ModuleSwitch force-label block />
+        <ModuleSwitch
+          force-label
+          block
+        />
       </div>
-      <n-menu v-bind="layout.verticalMenuProps" :collapsed="false" />
+      <n-menu
+        v-bind="layout.verticalMenuProps"
+        :collapsed="false"
+      />
     </MobileDrawer>
   </ProLayout>
 </template>

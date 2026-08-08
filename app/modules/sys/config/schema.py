@@ -7,7 +7,7 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
-from app.core.schema.wire import WireInt
+from app.core.schema.wire import WireBool, WireInt
 
 
 class ConfigCreateRequest(ApiSchema):
@@ -16,6 +16,11 @@ class ConfigCreateRequest(ApiSchema):
     category: str | None = Field(default=None, max_length=255)
     remark: str | None = Field(default=None, max_length=255)
     sort_code: WireInt = 0
+    value_type: str = Field(default="STRING", max_length=32)
+    label: str | None = Field(default=None, max_length=128)
+    scope: str | None = Field(default=None, max_length=32)
+    scene: str | None = Field(default=None, max_length=64)
+    is_builtin: WireBool = False
     ext_json: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -35,6 +40,11 @@ class SysConfigSchema(ApiSchema):
     category: str | None = None
     remark: str | None = None
     sort_code: WireInt
+    value_type: str = "STRING"
+    label: str | None = None
+    scope: str | None = None
+    scene: str | None = None
+    is_builtin: WireBool = False
     ext_json: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     created_by: str | None = None
@@ -43,9 +53,15 @@ class SysConfigSchema(ApiSchema):
 
 
 class ConfigBatchItem(ApiSchema):
-    id: str = Field(min_length=1, max_length=64)
     config_key: str = Field(min_length=1, max_length=255)
     config_value: str | None = None
+    category: str | None = Field(default=None, max_length=255)
+    remark: str | None = Field(default=None, max_length=255)
+    value_type: str | None = Field(default=None, max_length=32)
+    label: str | None = Field(default=None, max_length=128)
+    scope: str | None = Field(default=None, max_length=32)
+    scene: str | None = Field(default=None, max_length=64)
+    is_builtin: WireBool | None = None
 
 
 class ConfigBatchSaveRequest(ApiSchema):
@@ -54,3 +70,4 @@ class ConfigBatchSaveRequest(ApiSchema):
 
 class CategoryQuery(ApiSchema):
     category: str | None = Field(default=None, max_length=255)
+    scope: str | None = Field(default=None, max_length=32)

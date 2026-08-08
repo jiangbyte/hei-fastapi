@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import StatusEnum
 from app.core.exceptions.business import ConflictError, NotFoundError
-from app.modules.iam.enums import ResourceModuleClient, ResourceType
+from app.core.config.enums import AccountType
+from app.modules.iam.enums import ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.sys.codegen.model import SysCodegenField, SysCodegenPlan
 from app.modules.sys.codegen.schema import (
@@ -140,7 +141,7 @@ class CodegenRepository:
             select(SysResource)
             .join(SysResourceModule, SysResource.module_id == SysResourceModule.id)
             .where(
-                SysResourceModule.client == ResourceModuleClient.ADMIN.value,
+                SysResourceModule.client == AccountType.ADMIN.value,
                 SysResource.status == StatusEnum.ENABLED.value,
                 SysResource.resource_type.in_(
                     [ResourceType.CATALOG.value, ResourceType.MENU.value, ResourceType.PAGE.value]

@@ -1,8 +1,9 @@
 """ Author: Charlie """
 
 from typing import Annotated
+from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Path
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,9 +14,11 @@ from app.modules.sys.file.service import FileService
 router = APIRouter()
 
 
-@router.get("/v1/files", response_class=Response)
+@router.get("/v1/files/{object_name:path}", response_class=Response)
 async def get_file(
-    query: Annotated[ObjectNameQuery, Depends()],
+    object_name: Annotated[str, Path(min_length=1, max_length=512)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> Response:
-    return await FileService(db).response(query)
+    # 路径段可能被浏览器编码；统一还原后再规范化。
+    normalized = unquote(object_name).replace("\\", "/").lstrip("/")
+    return await FileService(db).response(ObjectNameQuery(object_name=normalized))

@@ -7,6 +7,8 @@ export * as configApi from './sys/config.ts'
 export * as dictApi from './sys/dict.ts'
 export * as fileApi from './sys/file.ts'
 export * as accountApi from './iam/account'
+export * as clientModuleApi from './iam/client_module'
+export * as clientResourceApi from './iam/client_resource'
 export * as deptApi from './iam/dept'
 export * as groupApi from './iam/group'
 export * as positionApi from './iam/position'
@@ -23,11 +25,6 @@ export * as cgTestOrderApi from './biz/cg-test-order'
 // 由 HEI 代码生成器生成。 Author: Charlie. 生成时间：2026-07-19 09:49:09.
 export * as cgTestKnowledgeCategoryApi from './biz/cg-test-knowledge-category'
 
-// 由 HEI 代码生成器生成。 Author: codegen_script. 生成时间：2026-07-24 10:52:11.
-export * as msgNotificationApi from './message/notification'
-
-// 由 HEI 代码生成器生成。 Author: codegen_script. 生成时间：2026-07-24 10:52:11.
-export * as msgAnnouncementApi from './message/announcement'
-
+export * as msgNoticeApi from './message/notice'
 export * as msgFeedbackApi from './message/feedback'
-export * as storageConfigApi from './sys/storageConfig'
+export * as weakPasswordApi from './sys/weakPassword'

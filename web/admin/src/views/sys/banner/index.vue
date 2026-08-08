@@ -12,17 +12,14 @@ import {
   hasPermission,
   normalizeSearchValues,
   renderButtonIcon,
-  resolveFileUrl,
 } from '@/utils'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { dictList, dictTypeData, dictTypeColor } from '@/utils/dict'
-import ModalDetail from './components/ModalDetail.vue'
-import ModalForm from './components/ModalForm.vue'
 import { readPageMeta } from '@/utils/wire'
 
-const formModalRef = ref<any>(null)
-const detailModalRef = ref<any>(null)
+const router = useRouter()
 const state = reactive({
   banners: [] as any[],
   total: 0,
@@ -73,7 +70,7 @@ const searchColumns = computed<ProSearchFormColumns<any>>(() => [
     },
   },
   {
-    title: '岗位',
+    title: '位置',
     path: 'position',
     field: 'select',
     fieldProps: {
@@ -133,6 +130,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     width: 120,
     render: (row) => (
       <NTag
+        size="small"
         color={createTagColor(dictTypeColor('BANNER_DISPLAY_SCOPE', row.display_scope))}
         bordered={false}
       >
@@ -144,25 +142,57 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     title: '分类',
     path: 'category',
     width: 150,
-    render: (row) => dictTypeData('BANNER_CATEGORY', row.category),
+    render: (row) => (
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('BANNER_CATEGORY', row.category))}
+        bordered={false}
+      >
+        {dictTypeData('BANNER_CATEGORY', row.category) || row.category}
+      </NTag>
+    ),
   },
   {
     title: '类型',
     path: 'type',
     width: 120,
-    render: (row) => dictTypeData('BANNER_TYPE', row.type),
+    render: (row) => (
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('BANNER_TYPE', row.type))}
+        bordered={false}
+      >
+        {dictTypeData('BANNER_TYPE', row.type) || row.type}
+      </NTag>
+    ),
   },
   {
-    title: '岗位',
+    title: '位置',
     path: 'position',
     width: 160,
-    render: (row) => dictTypeData('BANNER_POSITION', row.position),
+    render: (row) => (
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('BANNER_POSITION', row.position))}
+        bordered={false}
+      >
+        {dictTypeData('BANNER_POSITION', row.position) || row.position}
+      </NTag>
+    ),
   },
   {
     title: '链接类型',
     path: 'link_type',
     width: 110,
-    render: (row) => dictTypeData('BANNER_LINK_TYPE', row.link_type),
+    render: (row) => (
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('BANNER_LINK_TYPE', row.link_type))}
+        bordered={false}
+      >
+        {dictTypeData('BANNER_LINK_TYPE', row.link_type) || row.link_type}
+      </NTag>
+    ),
   },
   {
     title: '排序',
@@ -179,7 +209,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status)}
       </NTag>
     ),
@@ -213,12 +247,12 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     render: (row) => (
       <NFlex size={12}>
         {hasPermission('sys:banner:detail') ? (
-          <NButton type="info" size="small" text={true} onClick={() => openDetailModal(row.id)}>
+          <NButton type="info" size="small" text={true} onClick={() => openDetail(row.id)}>
             {renderButtonIcon('icon-park-outline:preview-open')}
           </NButton>
         ) : null}
         {hasPermission('sys:banner:update') ? (
-          <NButton type="primary" size="small" text={true} onClick={() => openEditModal(row.id)}>
+          <NButton type="primary" size="small" text={true} onClick={() => openEdit(row.id)}>
             {renderButtonIcon('icon-park-outline:edit')}
           </NButton>
         ) : null}
@@ -258,23 +292,23 @@ async function fetchPage() {
 }
 
 function renderImage(row: any) {
-  const src = resolveFileUrl(row.image)
+  const src = row.image_url || row.image || undefined
   if (!src) {
     return <span>-</span>
   }
   return <NImage src={src} alt={row.title || '图片'} width={72} height={48} objectFit="cover" />
 }
 
-function openDetailModal(id: string) {
-  detailModalRef.value?.openModal(id)
+function openDetail(id: string) {
+  router.push({ path: '/sys/banner/detail', query: { id } })
 }
 
-function openCreateModal() {
-  formModalRef.value?.openModal()
+function openCreate() {
+  router.push('/sys/banner/create')
 }
 
-function openEditModal(id: string) {
-  formModalRef.value?.openModal(id)
+function openEdit(id: string) {
+  router.push({ path: '/sys/banner/edit', query: { id } })
 }
 
 function handleCheckedRowKeys(keys: Array<string | number>) {
@@ -313,7 +347,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -347,7 +384,7 @@ async function deleteData(ids: string[]) {
             text
             :title="'新增'"
             :aria-label="'新增'"
-            @click="openCreateModal"
+            @click="openCreate"
           >
             <template #icon>
               <NIcon>
@@ -386,10 +423,5 @@ async function deleteData(ids: string[]) {
         </NFlex>
       </template>
     </ProDataTable>
-
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
-    <ModalDetail ref="detailModalRef" />
   </NFlex>
 </template>
-
-<style scoped></style>

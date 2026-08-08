@@ -4,7 +4,7 @@
 import type { UploadFileInfo } from 'naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { fileApi } from '@/api'
-import { formatFileSize, normalizeUploadedFile, resolveFileUrl } from '@/utils'
+import { buildPublicFileUrl, formatFileSize, normalizeUploadedFile } from '@/utils'
 import type { UploadedFileValueType } from '@/utils'
 import { computed, reactive, ref, watch } from 'vue'
 
@@ -58,7 +58,21 @@ const state = reactive({
   uploadFileList: [] as UploadFileInfo[],
 })
 
-const currentUrl = computed(() => state.fileUrl || resolveFileUrl(props.value))
+const currentUrl = computed(() => {
+  if (state.fileUrl) {
+    return state.fileUrl
+  }
+  const value = String(props.value || '').trim()
+  if (!value) {
+    return undefined
+  }
+  // 已是可访问地址，或上传后暂存的 url
+  if (/^(https?:|data:|blob:)/i.test(value) || value.startsWith('/')) {
+    return value
+  }
+  // 业务字段存的是 object_name 时，走统一公开访问路径预览
+  return buildPublicFileUrl(value)
+})
 const currentName = computed(
   () => state.fileName || props.file?.name || props.value || '未选择文件',
 )
@@ -192,20 +206,29 @@ defineExpose({
 </script>
 
 <template>
-  <div class="file-upload" :class="{ 'file-upload--compact': compact && mode !== 'upload' }">
+  <div
+    class="file-upload"
+    :class="{ 'file-upload--compact': compact && mode !== 'upload' }"
+  >
     <input
       ref="inputRef"
       class="file-upload__input"
       type="file"
       :accept="accept"
       @change="handleFileChange"
-    />
+    >
 
     <div
       v-if="mode !== 'upload' && !compact && preview === 'image' && currentUrl"
       class="file-upload__image"
     >
-      <NImage :src="currentUrl" object-fit="cover" :alt="currentName" width="160" height="90" />
+      <NImage
+        :src="currentUrl"
+        object-fit="cover"
+        :alt="currentName"
+        width="160"
+        height="90"
+      />
     </div>
     <video
       v-else-if="mode !== 'upload' && !compact && preview === 'video' && currentUrl"
@@ -213,7 +236,10 @@ defineExpose({
       controls
       :src="currentUrl"
     />
-    <NEllipsis v-else-if="mode !== 'upload' && !compact" class="file-upload__name">
+    <NEllipsis
+      v-else-if="mode !== 'upload' && !compact"
+      class="file-upload__name"
+    >
       {{ currentName }}
     </NEllipsis>
     <div
@@ -244,7 +270,10 @@ defineExpose({
           <div>{{ uploadText || '选择文件' }}</div>
         </div>
       </NUploadDragger>
-      <NButton v-else :loading="state.loading">
+      <NButton
+        v-else
+        :loading="state.loading"
+      >
         <template #icon>
           <NIcon>
             <Icon :icon="actionIcon" />
@@ -254,7 +283,11 @@ defineExpose({
       </NButton>
     </NUpload>
 
-    <div v-else class="file-upload__actions" :class="{ 'file-upload__actions--compact': compact }">
+    <div
+      v-else
+      class="file-upload__actions"
+      :class="{ 'file-upload__actions--compact': compact }"
+    >
       <NButton
         v-if="mode === 'icon'"
         text
@@ -269,15 +302,31 @@ defineExpose({
           </NIcon>
         </template>
       </NButton>
-      <NButton v-else size="small" :loading="state.loading" @click="triggerUpload">
-        <template v-if="icon" #icon>
+      <NButton
+        v-else
+        size="small"
+        :loading="state.loading"
+        @click="triggerUpload"
+      >
+        <template
+          v-if="icon"
+          #icon
+        >
           <NIcon>
             <Icon :icon="icon" />
           </NIcon>
         </template>
         {{ uploadText }}
       </NButton>
-      <NButton v-if="value" size="small" text type="error" @click="clearValue"> 清除 </NButton>
+      <NButton
+        v-if="value"
+        size="small"
+        text
+        type="error"
+        @click="clearValue"
+      >
+        清除
+      </NButton>
     </div>
   </div>
 </template>

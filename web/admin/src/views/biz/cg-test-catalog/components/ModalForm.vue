@@ -1,7 +1,7 @@
 <!--
   由 HEI 代码生成器生成。
   Author: Charlie
-  生成时间：2026-08-07 07:26:16
+  生成时间：2026-08-08 21:09:53
 -->
 
 <script setup lang="ts">
@@ -38,23 +38,16 @@ const state = reactive({
   treeRows: [] as any[],
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑CgTestCatalog' : '新增CgTestCatalog')
-const parentTreeOptions = computed(() =>
-  buildParentTreeOptions(state.treeRows, state.dataId),
-)
+const modalTitle = computed(() => (state.dataId ? '编辑CgTestCatalog' : '新增CgTestCatalog'))
+const parentTreeOptions = computed(() => buildParentTreeOptions(state.treeRows, state.dataId))
 const rules = computed<FormRules>(() => ({
-  code: [
-    createRequiredRule('目录编码', 'input'),
-  ],
-  name: [
-    createRequiredRule('目录名称', 'input'),
-  ],
-  status: [
-    createRequiredRule('状态', 'input'),
-  ],
+  code: [createRequiredRule('目录编码', 'input')],
+  name: [createRequiredRule('目录名称', 'input')],
+  status: [createRequiredRule('状态', 'input')],
   sort: [
     {
-      validator: () => typeof state.formModel.sort === 'number' && Number.isFinite(state.formModel.sort),
+      validator: () =>
+        typeof state.formModel.sort === 'number' && Number.isFinite(state.formModel.sort),
       message: '请输入排序',
       trigger: ['input', 'blur'],
     },
@@ -110,7 +103,10 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-    is_visible: data.is_visible == null || data.is_visible === '' ? defaultFormData.is_visible : wireBool(String(data.is_visible)),
+    is_visible:
+      data.is_visible == null || data.is_visible === ''
+        ? defaultFormData.is_visible
+        : wireBool(String(data.is_visible)),
     sort: data.sort == null || data.sort === '' ? defaultFormData.sort : wireInt(String(data.sort)),
     extra: stringifyJsonValue(data.extra),
   }
@@ -164,7 +160,11 @@ function closeModal() {
   state.submitLoading = false
 }
 
-function buildParentTreeOptions(items: any[], editingId: string | null, disabledParent = false): any[] {
+function buildParentTreeOptions(
+  items: any[],
+  editingId: string | null,
+  disabledParent = false,
+): any[] {
   return items.map((item) => {
     const itemId = String(item.id ?? '')
     const disabled = disabledParent || (editingId !== null && itemId === editingId)
@@ -213,8 +213,18 @@ defineExpose({
   >
     <NSpin :show="state.loading || state.treeLoading">
       <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-        <NForm ref="formRef" :model="state.formModel" :rules="rules" label-placement="left" label-width="110" :disabled="state.loading || state.treeLoading || state.submitLoading">
-          <NFormItem label="父级" path="parent_id">
+        <NForm
+          ref="formRef"
+          :model="state.formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="110"
+          :disabled="state.loading || state.treeLoading || state.submitLoading"
+        >
+          <NFormItem
+            label="父级"
+            path="parent_id"
+          >
             <NTreeSelect
               v-model:value="state.formModel.parent_id"
               clearable
@@ -227,32 +237,70 @@ defineExpose({
               class="w-full"
             />
           </NFormItem>
-          <NFormItem label="目录编码" path="code">
+          <NFormItem
+            label="目录编码"
+            path="code"
+          >
             <NInput v-model:value="state.formModel.code" />
           </NFormItem>
-          <NFormItem label="目录名称" path="name">
+          <NFormItem
+            label="目录名称"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem label="目录分类" path="category">
+          <NFormItem
+            label="目录分类"
+            path="category"
+          >
             <NInput v-model:value="state.formModel.category" />
           </NFormItem>
-          <NFormItem label="状态" path="status">
+          <NFormItem
+            label="状态"
+            path="status"
+          >
             <NInput v-model:value="state.formModel.status" />
           </NFormItem>
-          <NFormItem label="排序" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" />
+          <NFormItem
+            label="排序"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="是否显示" path="is_visible">
+          <NFormItem
+            label="是否显示"
+            path="is_visible"
+          >
             <NSwitch v-model:value="state.formModel.is_visible" />
           </NFormItem>
-          <NFormItem label="图标" path="icon">
+          <NFormItem
+            label="图标"
+            path="icon"
+          >
             <NInput v-model:value="state.formModel.icon" />
           </NFormItem>
-          <NFormItem label="描述" path="description">
-            <NInput v-model:value="state.formModel.description" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="描述"
+            path="description"
+          >
+            <NInput
+              v-model:value="state.formModel.description"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="扩展信息" path="extra">
-            <NInput v-model:value="state.formModel.extra" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="扩展信息"
+            path="extra"
+          >
+            <NInput
+              v-model:value="state.formModel.extra"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
@@ -260,8 +308,16 @@ defineExpose({
 
     <template #action>
       <NSpace justify="end">
-        <NButton @click="closeModal">取消</NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm">确认</NButton>
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

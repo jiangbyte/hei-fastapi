@@ -21,11 +21,13 @@ from app.modules.iam.account.schema import (
     AccountAdminPageQuery,
     AccountCreateRequest,
     AccountDeptAssignRequest,
+    AccountGrantClientResourceRequest,
     AccountGrantDeptRequest,
     AccountGrantGroupRequest,
     AccountGrantResourceRequest,
     AccountGrantRoleRequest,
     AccountGroupAssignRequest,
+    AccountOwnClientResourceResponse,
     AccountOwnDeptResponse,
     AccountOwnGroupResponse,
     AccountOwnResourceResponse,
@@ -41,6 +43,7 @@ from app.modules.iam.account.schema import (
 from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.group.repository import GroupRepository
+from app.modules.iam.client.service import ClientResourceService
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
@@ -218,9 +221,12 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:ownresource", [query.id])
         account = await self.repo.get_required(query.id)
+        account_type = AccountType(account.account_type)
         return AccountOwnResourceResponse(
             id=query.id,
-            modules=await ResourceService(self.db).list_grant_modules(),
+            modules=await ResourceService(self.db).list_grant_modules(
+                module_client=account_type,
+            ),
             grant_info_list=[
                 AccountResourceGrantInfo.model_validate(grant)
                 for grant in await self.relation_repo.list_subject_resource_grants(
@@ -241,6 +247,49 @@ class AccountService:
         account = await self.repo.get_required(payload.id)
         async with transactional(self.db):
             await self.relation_repo.replace_subject_resource_grant_infos(
+                GrantSubjectType.ACCOUNT,
+                payload.id,
+                payload.grant_info_list,
+                account_type=account.account_type,
+            )
+        await self._refresh_accounts([payload.id])
+
+    async def own_client_resource(
+        self,
+        query: IdQuery,
+        session: SessionPayload | None = None,
+    ) -> AccountOwnClientResourceResponse:
+        if session is not None:
+            await self._ensure_accounts_visible(
+                session, "iam:account:ownclientresource", [query.id]
+            )
+        account = await self.repo.get_required(query.id)
+        account_type = AccountType(account.account_type)
+        return AccountOwnClientResourceResponse(
+            id=query.id,
+            modules=await ClientResourceService(self.db).list_grant_modules(account_type),
+            grant_info_list=[
+                AccountResourceGrantInfo.model_validate(grant)
+                for grant in await self.relation_repo.list_subject_client_resource_grants(
+                    GrantSubjectType.ACCOUNT,
+                    query.id,
+                    account_type=account.account_type,
+                )
+            ],
+        )
+
+    async def grant_client_resource(
+        self,
+        payload: AccountGrantClientResourceRequest,
+        session: SessionPayload | None = None,
+    ) -> None:
+        if session is not None:
+            await self._ensure_accounts_visible(
+                session, "iam:account:grantclientresource", [payload.id]
+            )
+        account = await self.repo.get_required(payload.id)
+        async with transactional(self.db):
+            await self.relation_repo.replace_subject_client_resource_grant_infos(
                 GrantSubjectType.ACCOUNT,
                 payload.id,
                 payload.grant_info_list,

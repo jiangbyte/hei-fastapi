@@ -47,60 +47,52 @@ function validateRequiredEmail(_rule: FormItemRule, value: string) {
   return true
 }
 
-const rules = computed<FormRules>(() => ({
-  email: [
-    {
-      validator: validateRequiredEmail,
-      trigger: ['input', 'blur'],
-    },
-  ],
-  password: [
-    {
-      required: isResetMode.value,
-      message: '请输入新密码',
-      trigger: ['input', 'blur'],
-    },
-    {
-      min: 8,
-      message: '密码至少 8 个字符',
-      trigger: ['input', 'blur'],
-    },
-  ],
-  confirmPassword: [
-    {
-      required: isResetMode.value,
-      validator: isResetMode.value ? validateConfirmPassword : undefined,
-      trigger: ['input', 'blur'],
-    },
-  ],
-  captcha_value: [
-    {
-      required: true,
-      message: '请输入验证码',
-      trigger: ['input', 'blur'],
-    },
-  ],
-}))
+const rules = computed<FormRules>(() => {
+  const next: FormRules = {
+    captcha_value: [
+      {
+        required: true,
+        message: '请输入验证码',
+        trigger: ['input', 'blur'],
+      },
+    ],
+  }
+  if (isResetMode.value) {
+    next.password = [
+      {
+        required: true,
+        message: '请输入新密码',
+        trigger: ['input', 'blur'],
+      },
+      {
+        min: 8,
+        message: '密码至少 8 个字符',
+        trigger: ['input', 'blur'],
+      },
+    ]
+    next.confirmPassword = [
+      {
+        required: true,
+        validator: validateConfirmPassword,
+        trigger: ['input', 'blur'],
+      },
+    ]
+  } else {
+    next.email = [
+      {
+        validator: validateRequiredEmail,
+        trigger: ['input', 'blur'],
+      },
+    ]
+  }
+  return next
+})
 
 async function sendLink() {
-  if (isResetMode.value) {
-    const emailValidation = validateRequiredEmail({} as FormItemRule, form.email)
-    if (emailValidation instanceof Error) {
-      window.$message.warning(emailValidation.message)
-      return
-    }
-    if (!form.captcha_value.trim()) {
-      window.$message.warning('请输入验证码')
-      return
-    }
-  }
-  else {
-    try {
-      await formRef.value?.validate()
-    }
-    catch {
-      return
-    }
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return
   }
   loading.value = true
   try {
@@ -111,11 +103,9 @@ async function sendLink() {
     })
     window.$message.success('密码重置链接已发送')
     await captchaRef.value?.refresh()
-  }
-  catch {
+  } catch {
     await captchaRef.value?.refresh()
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -123,15 +113,13 @@ async function sendLink() {
 async function resetPassword() {
   try {
     await formRef.value?.validate()
-  }
-  catch {
+  } catch {
     return
   }
   loading.value = true
   try {
     const encrypted = await encryptPasswords({ password: form.password })
     await authApi.resetPassword({
-      email: form.email.trim(),
       token: form.token,
       password: encrypted.values.password,
       password_key_id: encrypted.password_key_id,
@@ -140,11 +128,9 @@ async function resetPassword() {
     })
     window.$message.success('密码已重置，请重新登录')
     router.push('/auth/login')
-  }
-  catch {
+  } catch {
     await captchaRef.value?.refresh()
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -160,15 +146,30 @@ async function resetPassword() {
         : '请输入已启用管理端登录的邮箱，系统将发送密码重置链接。'
     "
   >
-    <n-form ref="formRef" :model="form" :rules="rules" size="large" :show-label="false">
-      <n-form-item path="email">
-        <n-input v-model:value="form.email" clearable placeholder="登录邮箱" />
+    <n-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      size="large"
+      :show-label="false"
+    >
+      <n-form-item
+        v-if="!isResetMode"
+        path="email"
+      >
+        <n-input
+          v-model:value="form.email"
+          size="large"
+          clearable
+          placeholder="登录邮箱"
+        />
       </n-form-item>
 
       <template v-if="isResetMode">
         <n-form-item path="password">
           <n-input
             v-model:value="form.password"
+            size="large"
             type="password"
             show-password-on="click"
             placeholder="新密码（至少 8 位）"
@@ -178,6 +179,7 @@ async function resetPassword() {
         <n-form-item path="confirmPassword">
           <n-input
             v-model:value="form.confirmPassword"
+            size="large"
             type="password"
             show-password-on="click"
             placeholder="确认新密码"
@@ -190,6 +192,7 @@ async function resetPassword() {
           ref="captchaRef"
           v-model:captcha-id="form.captcha_id"
           v-model:captcha-value="form.captcha_value"
+          size="large"
         />
       </n-form-item>
 
@@ -207,9 +210,12 @@ async function resetPassword() {
         <RouterLink to="/auth/login">
           返回登录
         </RouterLink>
-        <n-button v-if="isResetMode" text type="primary" @click="sendLink">
-          发送新链接
-        </n-button>
+        <RouterLink
+          v-if="isResetMode"
+          to="/auth/forgot-password"
+        >
+          重新申请链接
+        </RouterLink>
       </div>
     </n-form>
   </AuthLayout>

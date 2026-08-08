@@ -25,15 +25,6 @@ class ResourceType(StrEnum):
     API_GROUP = "API_GROUP"  # API组
 
 
-class ResourceModuleClient(StrEnum):
-    """
-    资源模块所属端
-    """
-
-    ADMIN = "ADMIN"  # 管理后台
-    PORTAL = "PORTAL"  # 门户端
-
-
 class GrantSubjectType(StrEnum):
     """
     授权对象类型
@@ -53,15 +44,6 @@ class GrantMode(StrEnum):
     CASCADE = "CASCADE"  # 级联授权
 
 
-class GrantEffect(StrEnum):
-    """
-    授权效果
-    """
-
-    ALLOW = "ALLOW"  # 允许
-    DENY = "DENY"  # 拒绝
-
-
 class IamRelationType(StrEnum):
     """
     IAM 通用关系类型
@@ -72,8 +54,9 @@ class IamRelationType(StrEnum):
     ACCOUNT_GROUP = "ACCOUNT_GROUP"
     GROUP_ROLE = "GROUP_ROLE"
     SUBJECT_RESOURCE_GRANT = "SUBJECT_RESOURCE_GRANT"
-    SUBJECT_PERMISSION_GRANT = "SUBJECT_PERMISSION_GRANT"
     RESOURCE_PERMISSION = "RESOURCE_PERMISSION"
+    SUBJECT_CLIENT_RESOURCE_GRANT = "SUBJECT_CLIENT_RESOURCE_GRANT"
+    CLIENT_RESOURCE_PERMISSION = "CLIENT_RESOURCE_PERMISSION"
 
 
 class IamRelationSubjectType(StrEnum):
@@ -85,6 +68,7 @@ class IamRelationSubjectType(StrEnum):
     GROUP = "GROUP"
     ROLE = "ROLE"
     RESOURCE = "RESOURCE"
+    CLIENT_RESOURCE = "CLIENT_RESOURCE"
 
 
 class IamRelationTargetType(StrEnum):
@@ -97,6 +81,7 @@ class IamRelationTargetType(StrEnum):
     ROLE = "ROLE"
     DEPT = "DEPT"
     RESOURCE = "RESOURCE"
+    CLIENT_RESOURCE = "CLIENT_RESOURCE"
     PERMISSION = "PERMISSION"
 
 

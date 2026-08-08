@@ -65,7 +65,6 @@ async def get_me(
             dept_id_names=dept_id_names,
             group_id_names=group_id_names,
             permission_keys=session.permission_keys,
-            button_codes=session.button_codes,
             profile=AdminProfileResponse(
                 account_id=session.account_id,
                 name=account.name,
@@ -119,6 +118,25 @@ async def upload_user_center_avatar(
 
 
 @router.post(
+    "/v1/admin/user-center/password/send-code",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[None],
+)
+async def send_user_center_password_code(
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    from app.modules.auth.password_change import send_change_password_code
+    from app.modules.iam.account.repository import AccountRepository
+
+    account = await AccountRepository(db).get_required(session.account_id)
+    await send_change_password_code(
+        db, account=account, account_type=AccountType.ADMIN
+    )
+    return success()
+
+
+@router.post(
     "/v1/admin/user-center/password/update",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[None],
@@ -136,7 +154,7 @@ async def update_user_center_password(
     await AdminUserProfileService(db).update_current_password(
         payload.model_copy(
             update={
-                "old_password": old_password or "",
+                "old_password": old_password,
                 "new_password": new_password or "",
             }
         ),

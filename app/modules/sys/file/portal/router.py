@@ -32,7 +32,6 @@ portal_dependencies = [Depends(require_account_type(AccountType.PORTAL))]
 async def upload(
     file: Annotated[UploadFile, File(...)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    storage_config_id: Annotated[str | None, Form()] = None,
     storage_provider: Annotated[StorageProvider | None, Form()] = None,
 ) -> ApiResponse[SysFileSchema]:
     content = await file.read(settings.storage.upload_max_bytes + 1)
@@ -42,7 +41,6 @@ async def upload(
                 filename=file.filename or "file.bin",
                 content=content,
                 content_type=file.content_type or "application/octet-stream",
-                storage_config_id=storage_config_id,
                 storage_provider=storage_provider,
             )
         )

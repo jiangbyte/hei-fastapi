@@ -9,6 +9,12 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { msgFeedbackApi } from '@/api'
 import {
+  ACCOUNT_TYPE_TABS,
+  DEFAULT_ACCOUNT_TYPE,
+  accountTypeLabel,
+  type AccountType,
+} from '@/constants/account'
+import {
   createTagColor,
   dictTypeColor,
   dictTypeData,
@@ -18,16 +24,15 @@ import {
   normalizeSearchValues,
   renderButtonIcon,
 } from '@/utils'
-import { NButton, NFlex, NIcon, NTag } from 'naive-ui'
+import { NAvatar, NButton, NFlex, NIcon, NTag } from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
-import { computed, onMounted, reactive, ref } from 'vue'
-import ModalDetail from './components/ModalDetail.vue'
-import ModalForm from './components/ModalForm.vue'
+import { computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { readPageMeta } from '@/utils/wire'
 
-const formModalRef = ref<any>(null)
-const detailModalRef = ref<any>(null)
+const router = useRouter()
 const state = reactive({
+  accountType: DEFAULT_ACCOUNT_TYPE as AccountType,
   rows: [] as any[],
   total: 0,
   loading: false,
@@ -54,7 +59,7 @@ const searchForm = createProSearchForm<any>({
 })
 
 const searchColumns = computed<ProSearchFormColumns<any>>(() => [
-  { title: '反馈内容', path: 'content', field: 'input' },
+  { title: '标题', path: 'title', field: 'input' },
   {
     title: '反馈分类',
     path: 'category',
@@ -89,7 +94,7 @@ const pagination = computed<PaginationProps>(() => ({
 
 const tableColumns = computed<ProDataTableColumns<any>>(() => [
   { type: 'selection', fixed: 'left' },
-  { title: '反馈内容', path: 'content', width: 300, ellipsis: { tooltip: true } },
+  { title: '标题', path: 'title', width: 220, ellipsis: { tooltip: true } },
   {
     title: '分类',
     path: 'category',
@@ -98,9 +103,30 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
       const color = createTagColor(dictTypeColor('FEEDBACK_CATEGORY', row.category))
       const label = dictTypeData('FEEDBACK_CATEGORY', row.category)
       return (
-        <NTag color={color} bordered={false}>
+        <NTag size="small" color={color} bordered={false}>
           {label || row.category}
         </NTag>
+      )
+    },
+  },
+  {
+    title: '提交人',
+    key: 'submitter',
+    width: 160,
+    render: (row) => {
+      const name = row.submitter_nickname || row.submitter_account_id || '-'
+      const initial = String(name)[0]?.toUpperCase() || '?'
+      return (
+        <NFlex align="center" size={8}>
+          {row.submitter_avatar ? (
+            <NAvatar src={row.submitter_avatar} size={24} round />
+          ) : (
+            <NAvatar size={24} round color="#d9d9d9">
+              {initial}
+            </NAvatar>
+          )}
+          <span>{name}</span>
+        </NFlex>
       )
     },
   },
@@ -113,7 +139,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
       const color = createTagColor(dictTypeColor('FEEDBACK_STATUS', row.status))
       const label = dictTypeData('FEEDBACK_STATUS', row.status)
       return (
-        <NTag color={color} bordered={false}>
+        <NTag size="small" color={color} bordered={false}>
           {label || row.status}
         </NTag>
       )
@@ -133,12 +159,12 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     render: (row) => (
       <NFlex size={12}>
         {hasPermission('message:feedback:detail') ? (
-          <NButton type="info" size="small" text={true} onClick={() => openDetailModal(row.id)}>
+          <NButton type="info" size="small" text={true} onClick={() => openDetail(row.id)}>
             {renderButtonIcon('icon-park-outline:preview-open')}
           </NButton>
         ) : null}
         {hasPermission('message:feedback:update') ? (
-          <NButton type="primary" size="small" text={true} onClick={() => openEditModal(row.id)}>
+          <NButton type="primary" size="small" text={true} onClick={() => openEdit(row.id)}>
             {renderButtonIcon('icon-park-outline:edit')}
           </NButton>
         ) : null}
@@ -156,12 +182,20 @@ onMounted(() => {
   fetchPage()
 })
 
+function handleAccountTypeChange(value: string | number) {
+  state.accountType = String(value) as AccountType
+  state.page = 1
+  state.checkedRowKeys = []
+  void fetchPage()
+}
+
 async function fetchPage() {
   state.loading = true
   try {
     const response = await msgFeedbackApi.page({
       current: state.page,
       size: state.pageSize,
+      submitter_account_type: state.accountType,
       ...state.searchValues,
     })
     const data = response.data ?? {}
@@ -178,12 +212,12 @@ async function fetchPage() {
   }
 }
 
-function openDetailModal(id: string) {
-  detailModalRef.value?.openModal(id)
+function openDetail(id: string) {
+  router.push({ path: '/message/feedback/detail', query: { id } })
 }
 
-function openEditModal(id: string) {
-  formModalRef.value?.openModal(id)
+function openEdit(id: string) {
+  router.push({ path: '/message/feedback/edit', query: { id } })
 }
 
 function handleCheckedRowKeys(keys: Array<string | number>) {
@@ -213,7 +247,25 @@ async function deleteRows(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
+    <NTabs
+      class="account-type-tabs"
+      :value="state.accountType"
+      type="line"
+      animated
+      @update:value="handleAccountTypeChange"
+    >
+      <NTabPane
+        v-for="item in ACCOUNT_TYPE_TABS"
+        :key="item.key"
+        :name="item.key"
+        :tab="item.label"
+      />
+    </NTabs>
+
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -226,9 +278,9 @@ async function deleteRows(ids: string[]) {
     <ProDataTable
       class="min-h-0 flex-1"
       remote
-      title="意见反馈"
+      :title="`意见反馈 · ${accountTypeLabel(state.accountType)}`"
       row-key="id"
-      :scroll-x="1000"
+      :scroll-x="1100"
       :columns="tableColumns"
       :data="state.rows"
       :loading="state.loading"
@@ -238,7 +290,11 @@ async function deleteRows(ids: string[]) {
     >
       <template #toolbar>
         <NFlex>
-          <NButton text :loading="state.loading" @click="fetchPage">
+          <NButton
+            text
+            :loading="state.loading"
+            @click="fetchPage"
+          >
             <template #icon>
               <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
             </template>
@@ -257,8 +313,11 @@ async function deleteRows(ids: string[]) {
         </NFlex>
       </template>
     </ProDataTable>
-
-    <ModalDetail ref="detailModalRef" />
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
   </NFlex>
 </template>
+
+<style scoped>
+.account-type-tabs :deep(.n-tabs-pane-wrapper) {
+  display: none;
+}
+</style>

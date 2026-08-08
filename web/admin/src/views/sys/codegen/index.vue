@@ -672,7 +672,10 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -709,7 +712,12 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
               <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
             </template>
           </NButton>
-          <NButton text title="刷新" :loading="state.loading" @click="fetchPage">
+          <NButton
+            text
+            title="刷新"
+            :loading="state.loading"
+            @click="fetchPage"
+          >
             <template #icon>
               <NIcon><Icon icon="icon-park-outline:reload" /></NIcon>
             </template>
@@ -748,24 +756,42 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
             label-placement="left"
             label-width="116"
           >
-            <NGrid :cols="2" :x-gap="16">
+            <NGrid
+              :cols="2"
+              :x-gap="16"
+            >
               <NGi>
-                <NFormItem label="方案名称" path="name">
+                <NFormItem
+                  label="方案名称"
+                  path="name"
+                >
                   <NInput v-model:value="state.form.name" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="作者" path="author">
+                <NFormItem
+                  label="作者"
+                  path="author"
+                >
                   <NInput v-model:value="state.form.author" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="生成类型" path="gen_type">
-                  <NSelect v-model:value="state.form.gen_type" :options="genTypeOptions" />
+                <NFormItem
+                  label="生成类型"
+                  path="gen_type"
+                >
+                  <NSelect
+                    v-model:value="state.form.gen_type"
+                    :options="genTypeOptions"
+                  />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="主表" path="main_table">
+                <NFormItem
+                  label="主表"
+                  path="main_table"
+                >
                   <NSelect
                     v-model:value="state.form.main_table"
                     filterable
@@ -775,7 +801,10 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="主键" path="main_pk">
+                <NFormItem
+                  label="主键"
+                  path="main_pk"
+                >
                   <NSelect
                     v-model:value="state.form.main_pk"
                     filterable
@@ -784,42 +813,66 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="主实体类" path="main_entity_name">
+                <NFormItem
+                  label="主实体类"
+                  path="main_entity_name"
+                >
                   <NInput v-model:value="state.form.main_entity_name" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="业务名称" path="main_business_name">
+                <NFormItem
+                  label="业务名称"
+                  path="main_business_name"
+                >
                   <NInput v-model:value="state.form.main_business_name" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="后端模块路径" path="main_module_path">
+                <NFormItem
+                  label="后端模块路径"
+                  path="main_module_path"
+                >
                   <NInput v-model:value="state.form.main_module_path" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="接口前缀" path="api_prefix">
+                <NFormItem
+                  label="接口前缀"
+                  path="api_prefix"
+                >
                   <NInput v-model:value="state.form.api_prefix" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="权限前缀" path="permission_prefix">
+                <NFormItem
+                  label="权限前缀"
+                  path="permission_prefix"
+                >
                   <NInput v-model:value="state.form.permission_prefix" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="菜单名称" path="menu_name">
+                <NFormItem
+                  label="菜单名称"
+                  path="menu_name"
+                >
                   <NInput v-model:value="state.form.menu_name" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="菜单路径" path="menu_path">
+                <NFormItem
+                  label="菜单路径"
+                  path="menu_path"
+                >
                   <NInput v-model:value="state.form.menu_path" />
                 </NFormItem>
               </NGi>
               <NGi>
-                <NFormItem label="组件路径" path="component_path">
+                <NFormItem
+                  label="组件路径"
+                  path="component_path"
+                >
                   <NInput v-model:value="state.form.component_path" />
                 </NFormItem>
               </NGi>
@@ -853,7 +906,11 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
               </NGi>
               <NGi>
                 <NFormItem label="排序">
-                  <NInputNumber v-model:value="state.form.sort" class="w-full" :min="0" />
+                  <NInputNumber
+                    v-model:value="state.form.sort"
+                    class="w-full"
+                    :min="0"
+                  />
                 </NFormItem>
               </NGi>
               <NGi v-if="needsTree">
@@ -914,22 +971,34 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
               </NGi>
             </NGrid>
             <NFormItem label="描述">
-              <NInput v-model:value="state.form.description" type="textarea" />
+              <NInput
+                v-model:value="state.form.description"
+                type="textarea"
+              />
             </NFormItem>
           </NForm>
         </NScrollbar>
       </NSpin>
       <template #action>
         <NSpace justify="end">
-          <NButton @click="state.showForm = false"> 取消 </NButton>
-          <NButton type="primary" :loading="state.submitLoading" @click="submitForm">
+          <NButton @click="state.showForm = false">
+            取消
+          </NButton>
+          <NButton
+            type="primary"
+            :loading="state.submitLoading"
+            @click="submitForm"
+          >
             确认
           </NButton>
         </NSpace>
       </template>
     </NModal>
 
-    <NDrawer v-model:show="state.showFields" width="min(1280px, 96vw)">
+    <NDrawer
+      v-model:show="state.showFields"
+      width="min(1280px, 96vw)"
+    >
       <NDrawerContent title="字段配置">
         <NDataTable
           :columns="fieldColumns"
@@ -940,8 +1009,14 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
         />
         <template #footer>
           <NSpace justify="end">
-            <NButton @click="state.showFields = false"> 取消 </NButton>
-            <NButton type="primary" :loading="state.fieldSaving" @click="saveFields">
+            <NButton @click="state.showFields = false">
+              取消
+            </NButton>
+            <NButton
+              type="primary"
+              :loading="state.fieldSaving"
+              @click="saveFields"
+            >
               保存
             </NButton>
           </NSpace>
@@ -949,8 +1024,15 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
       </NDrawerContent>
     </NDrawer>
 
-    <NDrawer v-model:show="state.showPreview" width="min(1320px, 96vw)">
-      <NDrawerContent title="代码预览" closable body-content-class="codegen-preview-drawer">
+    <NDrawer
+      v-model:show="state.showPreview"
+      width="min(1320px, 96vw)"
+    >
+      <NDrawerContent
+        title="代码预览"
+        closable
+        body-content-class="codegen-preview-drawer"
+      >
         <NSpin :show="state.previewLoading">
           <div class="codegen-preview">
             <NTabs
@@ -966,8 +1048,14 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
                 :name="file.path"
                 :tab="previewTabLabel(file.path)"
               >
-                <div v-if="state.previewPath === file.path" class="codegen-preview__file">
-                  <div class="codegen-preview__path" :title="file.path">
+                <div
+                  v-if="state.previewPath === file.path"
+                  class="codegen-preview__file"
+                >
+                  <div
+                    class="codegen-preview__path"
+                    :title="file.path"
+                  >
                     {{ file.path }}
                   </div>
                   <MonacoPreview
@@ -979,7 +1067,10 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
                 </div>
               </NTabPane>
             </NTabs>
-            <NEmpty v-else description="暂无预览文件" />
+            <NEmpty
+              v-else
+              description="暂无预览文件"
+            />
           </div>
         </NSpin>
       </NDrawerContent>

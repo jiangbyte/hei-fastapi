@@ -15,7 +15,12 @@ const homePath = import.meta.env.VITE_HOME_PATH
     class="flex h-full w-full items-center justify-center flex-col"
   >
     <template #footer>
-      <n-button type="primary" @click="router.push(homePath)"> 返回工作台 </n-button>
+      <n-button
+        type="primary"
+        @click="router.push(homePath)"
+      >
+        返回工作台
+      </n-button>
     </template>
   </n-result>
 </template>

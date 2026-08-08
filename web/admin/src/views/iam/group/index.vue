@@ -18,6 +18,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { dictList, dictTypeData, dictTypeColor } from '@/utils/dict'
 import ModalDetail from './components/ModalDetail.vue'
 import ModalForm from './components/ModalForm.vue'
+import ModalGrantClientResource from '../role/components/ModalGrantClientResource.vue'
 import ModalGrantResource from '../role/components/ModalGrantResource.vue'
 import ModalGrantUser from '../components/ModalGrantUser.vue'
 import ModalGrantRoleToGroup from '../components/ModalGrantRoleToGroup.vue'
@@ -28,6 +29,7 @@ const detailModalRef = ref<any>(null)
 const grantUserModalRef = ref<any>(null)
 const grantRoleModalRef = ref<any>(null)
 const grantResourceModalRef = ref<any>(null)
+const grantClientResourceModalRef = ref<any>(null)
 const state = reactive({
   groups: [] as any[],
   total: 0,
@@ -114,7 +116,11 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 110,
     render: (row) => (
-      <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
+      <NTag
+        size="small"
+        color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))}
+        bordered={false}
+      >
         {dictTypeData('COMMON_STATUS', row.status) || row.status}
       </NTag>
     ),
@@ -186,6 +192,11 @@ const grantOptions = computed(() =>
       key: 'resource',
       permission: 'iam:group:grantresource',
     },
+    {
+      label: '分配客户端资源',
+      key: 'client-resource',
+      permission: 'iam:group:grantclientresource',
+    },
   ].filter((item) => hasPermission(item.permission)),
 )
 const hasCheckedRows = computed(() => state.checkedRowKeys.length > 0)
@@ -240,6 +251,8 @@ function openGrantModal(type: string, row: any) {
     grantRoleModalRef.value?.openModal(group)
   } else if (type === 'resource') {
     grantResourceModalRef.value?.openModal(group, groupApi, '分配资源')
+  } else if (type === 'client-resource') {
+    grantClientResourceModalRef.value?.openModal(group, groupApi, '分配客户端资源')
   }
 }
 
@@ -279,7 +292,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -353,11 +369,27 @@ async function deleteData(ids: string[]) {
       </template>
     </ProDataTable>
 
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
     <ModalDetail ref="detailModalRef" />
-    <ModalGrantUser ref="grantUserModalRef" @saved="fetchPage" />
-    <ModalGrantRoleToGroup ref="grantRoleModalRef" @saved="fetchPage" />
-    <ModalGrantResource ref="grantResourceModalRef" @saved="fetchPage" />
+    <ModalGrantUser
+      ref="grantUserModalRef"
+      @saved="fetchPage"
+    />
+    <ModalGrantRoleToGroup
+      ref="grantRoleModalRef"
+      @saved="fetchPage"
+    />
+    <ModalGrantResource
+      ref="grantResourceModalRef"
+      @saved="fetchPage"
+    />
+    <ModalGrantClientResource
+      ref="grantClientResourceModalRef"
+      @saved="fetchPage"
+    />
   </NFlex>
 </template>
 

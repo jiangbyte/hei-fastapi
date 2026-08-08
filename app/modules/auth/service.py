@@ -1,8 +1,7 @@
 """ Author: Charlie """
 
 import json
-from dataclasses import dataclass
-from typing import Any
+import secrets
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -14,19 +13,16 @@ from app.core.exceptions.business import AuthenticationError, BusinessError
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload, session_store
 from app.core.security.token import generate_token
-from app.modules.auth import mfa as mfa_service
-from app.modules.auth import webauthn_service
+from app.modules.auth.policy import (
+    ensure_identity_allowed,
+    get_register_policy,
+    no_user_policy_for,
+)
 from app.modules.auth.protection import login_protection_service
 from app.modules.auth.schema import (
     CancelAccountRequest,
     ForgotPasswordRequest,
     LoginPayload,
-    MfaConfirmRequest,
-    MfaConfirmResponse,
-    MfaDisableRequest,
-    MfaLoginRequest,
-    MfaSetupResponse,
-    MfaStatusResponse,
     RegisterRequest,
     RegisterResponse,
     ResetPasswordRequest,
@@ -34,29 +30,32 @@ from app.modules.auth.schema import (
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.password_helper import (
+    get_password_age_days,
     is_password_expired,
     validate_and_record_password,
 )
 from app.modules.iam.account.repository import AccountRepository
-from app.modules.iam.account.schema import AccountCancelPayload, AccountCreateRequest
+from app.modules.iam.account.schema import (
+    AccountCreateRequest,
+    AccountDeptAssignRequest,
+    AccountRoleAssignRequest,
+)
 from app.modules.iam.enums import AccountIdentityType
 from app.modules.sys.audit.service import OperationAuditService
 from app.modules.user.portal.repository import PortalUserProfileRepository
 from app.modules.user.portal.schema import PortalProfileUpsertPayload
-from app.platform.cache.keys import password_reset_token_key
+from app.platform.cache.keys import login_otp_key, password_reset_token_key
 from app.platform.cache.redis import get_redis
 from app.platform.config.reader import config_reader
 from app.platform.db.transaction import transactional
-from app.platform.email.sender import send_mail
+from app.platform.email.sender import send_templated_mail
 from app.platform.observability.metrics import record_login_attempt
+from app.platform.sms.sender import send_templated_sms
 
-
-@dataclass(slots=True)
-class LoginOutcome:
-    session: SessionPayload | None = None
-    mfa_required: bool = False
-    challenge_id: str | None = None
-    webauthn_options: dict[str, Any] | None = None
+_PASSWORD_RESET_URL_KEYS = {
+    AccountType.ADMIN: "AUTH_PASSWORD_RESET_URL_ADMIN",
+    AccountType.PORTAL: "AUTH_PASSWORD_RESET_URL_PORTAL",
+}
 
 
 class AuthService:
@@ -67,9 +66,15 @@ class AuthService:
         self.account_repo = AccountRepository(db)
         self.session_service = AccountSessionService(db)
 
-    async def login(self, payload: LoginPayload) -> LoginOutcome:
-        """执行登录流程；Admin MFA 启用时返回 challenge 而非 session。"""
+    async def login(self, payload: LoginPayload) -> SessionPayload:
+        """执行登录流程并签发会话。"""
+        login_mode = (payload.login_mode or "PASSWORD").strip().upper()
         try:
+            ensure_identity_allowed(
+                payload.account_type,
+                payload.identity_type,
+                login_mode=login_mode,
+            )
             await login_protection_service.ensure_allowed(
                 account_type=payload.account_type,
                 account=payload.account,
@@ -79,8 +84,14 @@ class AuthService:
                 payload.account,
                 [payload.identity_type],
             )
-            self._validate_account(account, payload.password, payload.account_type)
-        except AuthenticationError:
+            if account is None:
+                account = await self._maybe_auto_create(payload)
+            if login_mode == "OTP":
+                await self._verify_login_otp(payload)
+                self._validate_account_status(account, payload.account_type)
+            else:
+                self._validate_account(account, payload.password or "", payload.account_type)
+        except (AuthenticationError, BusinessError):
             await login_protection_service.record_failure(
                 account_type=payload.account_type,
                 account=payload.account,
@@ -101,152 +112,129 @@ class AuthService:
             )
             raise
         assert account is not None
+        return await self._issue_session(account, payload)
 
-        if payload.account_type == AccountType.ADMIN:
-            if settings.auth.mfa_required and not account.mfa_enabled:
-                raise BusinessError("MFA enrollment required before login")
-            if account.mfa_enabled or webauthn_service.account_has_webauthn(account):
-                challenge_id = await mfa_service.create_mfa_challenge(
-                    account=account,
-                    login_account=payload.account,
-                    remember_me=payload.remember_me,
-                    client_ip=payload.client_ip,
-                    user_agent=payload.user_agent,
-                    device_label=payload.device_label,
-                )
-                webauthn_options = await webauthn_service.begin_authentication(account)
-                return LoginOutcome(
-                    mfa_required=True,
-                    challenge_id=challenge_id,
-                    webauthn_options=webauthn_options,
-                )
-
-        session_payload = await self._issue_session(account, payload)
-        return LoginOutcome(session=session_payload)
-
-    async def complete_mfa_login(
-        self, payload: MfaLoginRequest, *, client_ip: str | None
-    ) -> SessionPayload:
-        challenge = await mfa_service.consume_mfa_challenge(payload.challenge_id)
-        if challenge.client_ip and client_ip and challenge.client_ip != client_ip:
-            raise AuthenticationError("MFA challenge IP mismatch")
-        account = await self.account_repo.get_by_id(challenge.account_id)
-        if account is None:
-            raise AuthenticationError("MFA challenge invalid")
-        if not account.mfa_enabled and not webauthn_service.account_has_webauthn(account):
-            raise AuthenticationError("MFA challenge invalid")
-
-        if payload.webauthn_credential:
-            await webauthn_service.complete_authentication(account, payload.webauthn_credential)
-            await self.db.flush()
-        elif payload.code:
-            if account.mfa_secret_encrypted:
-                secret = mfa_service.decrypt_account_mfa_secret(account)
-                code_ok = mfa_service.verify_totp(secret, payload.code)
-                if not code_ok:
-                    updated = mfa_service.consume_backup_code(
-                        account.mfa_backup_codes_hash, payload.code
-                    )
-                    if updated is None:
-                        await login_protection_service.record_failure(
-                            account_type=AccountType(challenge.account_type),
-                            account=challenge.login_account or account.id,
-                            client_ip=client_ip,
-                        )
-                        raise AuthenticationError("Invalid MFA code")
-                    account.mfa_backup_codes_hash = updated
-                    await self.db.flush()
-            else:
-                raise AuthenticationError("Invalid MFA code")
-        else:
-            raise AuthenticationError("MFA code or WebAuthn credential required")
-
-        login_payload = LoginPayload(
-            account=challenge.login_account or account.id,
-            password="",
-            account_type=AccountType(challenge.account_type),
-            remember_me=challenge.remember_me,
-            client_ip=challenge.client_ip,
-            user_agent=challenge.user_agent,
-            device_label=challenge.device_label,
-        )
-        return await self._issue_session(account, login_payload)
-
-    async def webauthn_register_options(self, session: SessionPayload) -> dict[str, Any]:
-        if session.account_type != AccountType.ADMIN.value:
-            raise BusinessError("WebAuthn is only available for admin accounts")
-        account = await self.account_repo.get_required(session.account_id)
-        return await webauthn_service.begin_registration(account)
-
-    async def webauthn_register_verify(
-        self, session: SessionPayload, credential: dict[str, Any]
+    async def send_login_code(
+        self,
+        *,
+        account_type: AccountType,
+        channel: str,
+        target: str,
+        client_ip: str | None = None,
     ) -> None:
-        account = await self.account_repo.get_required(session.account_id)
-        async with transactional(self.db):
-            await webauthn_service.complete_registration(account, credential)
-            await self.db.flush()
-
-    async def mfa_status(self, session: SessionPayload) -> MfaStatusResponse:
-        account = await self.account_repo.get_required(session.account_id)
-        return MfaStatusResponse(
-            enabled=bool(account.mfa_enabled) or webauthn_service.account_has_webauthn(account),
-            totp_enabled=bool(account.mfa_enabled),
-            required=bool(settings.auth.mfa_required),
-            enabled_at=account.mfa_enabled_at.isoformat() if account.mfa_enabled_at else None,
-            webauthn_count=len(webauthn_service.load_credentials(account)),
+        channel_u = channel.strip().upper()
+        identity = (
+            AccountIdentityType.EMAIL if channel_u == "EMAIL" else AccountIdentityType.PHONE
         )
+        policy = ensure_identity_allowed(account_type, identity, login_mode="OTP")
+        normalized = target.strip().lower() if channel_u == "EMAIL" else target.strip()
+        account = await self.account_repo.get_account_by_identifier(normalized, [identity])
+        if account is None:
+            policy_name = no_user_policy_for(policy, identity)
+            if policy_name != "AUTO_CREATE":
+                # 不泄露用户是否存在
+                return
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        redis = self._required_redis("Redis is required for OTP login")
+        ttl = settings.auth.password_reset_token_ttl_seconds
+        await redis.setex(login_otp_key(account_type.value, channel_u, normalized), ttl, code)
+        variables = {
+            "app_name": settings.app.name,
+            "code": code,
+            "expire_minutes": max(1, ttl // 60),
+        }
+        if channel_u == "EMAIL":
+            await send_templated_mail("LOGIN_CODE", normalized, variables)
+        else:
+            await send_templated_sms("LOGIN_CODE", normalized, variables)
 
-    async def mfa_setup(self, session: SessionPayload) -> MfaSetupResponse:
-        if session.account_type != AccountType.ADMIN.value:
-            raise BusinessError("MFA is only available for admin accounts")
-        account = await self.account_repo.get_required(session.account_id)
-        if account.mfa_enabled:
-            raise BusinessError("MFA already enabled")
-        secret = mfa_service.generate_totp_secret()
-        await mfa_service.store_pending_setup(account.id, secret)
-        return MfaSetupResponse(
-            secret=secret,
-            otpauth_uri=mfa_service.build_otpauth_uri(secret=secret, account_label=account.id),
+    async def _verify_login_otp(self, payload: LoginPayload) -> None:
+        code = (payload.otp_code or "").strip()
+        if not code:
+            raise AuthenticationError("Invalid or expired OTP code")
+        channel = (
+            "EMAIL"
+            if payload.identity_type == AccountIdentityType.EMAIL
+            else "PHONE"
+            if payload.identity_type == AccountIdentityType.PHONE
+            else ""
         )
+        if not channel:
+            raise BusinessError("OTP login requires email or phone")
+        normalized = (
+            payload.account.strip().lower()
+            if channel == "EMAIL"
+            else payload.account.strip()
+        )
+        redis = self._required_redis("Redis is required for OTP login")
+        key = login_otp_key(payload.account_type.value, channel, normalized)
+        raw = await redis.get(key)
+        stored = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        if not stored or stored != code:
+            raise AuthenticationError("Invalid or expired OTP code")
+        await redis.delete(key)
 
-    async def mfa_confirm(
-        self, session: SessionPayload, payload: MfaConfirmRequest
-    ) -> MfaConfirmResponse:
-        account = await self.account_repo.get_required(session.account_id)
-        if account.mfa_enabled:
-            raise BusinessError("MFA already enabled")
-        secret = await mfa_service.load_pending_setup(account.id)
-        if not mfa_service.verify_totp(secret, payload.code):
-            raise BusinessError("Invalid MFA code")
-        backup_codes = mfa_service.generate_backup_codes()
+    async def _maybe_auto_create(self, payload: LoginPayload) -> SysAccount | None:
+        policy = ensure_identity_allowed(
+            payload.account_type,
+            payload.identity_type,
+            login_mode=payload.login_mode,
+        )
+        if no_user_policy_for(policy, payload.identity_type) != "AUTO_CREATE":
+            return None
+        if payload.account_type == AccountType.ADMIN:
+            # 管理端默认仍 DENY；仅显式 AUTO_CREATE 才会走到这里
+            pass
+        identity = payload.account.strip()
+        email = identity if payload.identity_type == AccountIdentityType.EMAIL else None
+        phone = identity if payload.identity_type == AccountIdentityType.PHONE else None
+        account_name = f"u_{uuid4().hex[:10]}"
+        default_password = (settings.auth.default_password or secrets.token_urlsafe(12)).strip()
         async with transactional(self.db):
-            await mfa_service.enable_mfa_on_account(
-                self.db, account, secret=secret, backup_codes=backup_codes
+            account = await self.account_repo.create(
+                AccountCreateRequest(
+                    account=account_name,
+                    password=default_password,
+                    account_type=payload.account_type,
+                    account_status=AccountStatusEnum.ENABLED,
+                    email=email,
+                    phone=phone,
+                    email_login_enabled=bool(email),
+                    phone_login_enabled=bool(phone),
+                    email_identity_verified=bool(email),
+                    phone_identity_verified=bool(phone),
+                ),
+                password_hash=hash_password(default_password),
             )
-        await mfa_service.clear_pending_setup(account.id)
-        return MfaConfirmResponse(backup_codes=backup_codes)
-
-    async def mfa_disable(self, session: SessionPayload, payload: MfaDisableRequest) -> None:
-        account = await self.account_repo.get_required(session.account_id)
-        has_totp = bool(account.mfa_enabled)
-        has_webauthn = webauthn_service.account_has_webauthn(account)
-        if not has_totp and not has_webauthn:
-            raise BusinessError("MFA is not enabled")
-        if not verify_password(payload.password, account.password_hash):
-            raise AuthenticationError("Invalid password")
-        if has_totp:
-            if not payload.code:
-                raise AuthenticationError("MFA code is required")
-            secret = mfa_service.decrypt_account_mfa_secret(account)
-            if not mfa_service.verify_totp(secret, payload.code):
-                updated = mfa_service.consume_backup_code(
-                    account.mfa_backup_codes_hash, payload.code
+            if payload.account_type == AccountType.PORTAL:
+                await PortalUserProfileRepository(self.db).upsert(
+                    PortalProfileUpsertPayload(
+                        account_id=account.id,
+                        name=None,
+                        nickname=account_name,
+                        phone=phone,
+                        email=email,
+                        avatar=None,
+                        signature=None,
+                        bio=None,
+                        level=None,
+                    ),
                 )
-                if updated is None:
-                    raise AuthenticationError("Invalid MFA code")
-                account.mfa_backup_codes_hash = updated
-        async with transactional(self.db):
-            await mfa_service.disable_mfa_on_account(self.db, account)
+            await self._assign_register_defaults(account.id, payload.account_type)
+        return account
+
+    async def password_expiry_warning_days(self, account_id: str) -> int | None:
+        warning = settings.password_policy.expiry_warning_days
+        expire_days = settings.password_policy.expire_days
+        if warning <= 0 or expire_days <= 0:
+            return None
+        age = await get_password_age_days(self.db, account_id)
+        if age is None:
+            return None
+        remaining = expire_days - age
+        if 0 < remaining <= warning:
+            return int(remaining)
+        return None
 
     async def _issue_session(self, account: SysAccount, payload: LoginPayload) -> SessionPayload:
         password_expired_ = await is_password_expired(self.db, account.id)
@@ -291,6 +279,15 @@ class AuthService:
         return session_payload
 
     async def register_portal(self, payload: RegisterRequest) -> RegisterResponse:
+        policy = get_register_policy(AccountType.PORTAL)
+        if not policy.enabled:
+            raise BusinessError("Portal registration is disabled")
+        email = (payload.email or "").strip().lower() or None
+        phone = (payload.phone or "").strip() or None
+        if policy.require_email and not email:
+            raise BusinessError("Email is required for registration")
+        if policy.require_phone and not phone:
+            raise BusinessError("Phone is required for registration")
         nickname = (payload.nickname or "").strip() or f"user-{uuid4().hex[:8]}"
         async with transactional(self.db):
             account_payload = AccountCreateRequest(
@@ -300,37 +297,51 @@ class AuthService:
                 account_status=AccountStatusEnum.ENABLED,
                 name=payload.name,
                 nickname=nickname,
-                email=payload.email,
-                email_login_enabled=True,
-                email_identity_verified=bool(payload.email),
+                email=email,
+                phone=phone,
+                email_login_enabled=bool(email),
+                phone_login_enabled=bool(phone),
+                email_identity_verified=bool(email),
+                phone_identity_verified=bool(phone),
             )
             account = await self.account_repo.create(
                 account_payload,
                 password_hash=hash_password(payload.password),
             )
-
-            # 记录密码历史
             await validate_and_record_password(
                 self.db,
                 account.id,
                 payload.password,
                 changed_by=account.id,
                 change_reason="register",
+                account=account,
+                account_name=payload.account,
+                email=email,
+                phone=phone,
             )
-
             await PortalUserProfileRepository(self.db).upsert(
                 PortalProfileUpsertPayload(
                     account_id=account.id,
                     name=payload.name,
                     nickname=nickname,
-                    phone=None,
-                    email=payload.email,
+                    phone=phone,
+                    email=email,
                     avatar=None,
                     signature=None,
                     bio=None,
                     level=None,
                 ),
             )
+            await self._assign_register_defaults(account.id, AccountType.PORTAL)
+        if email:
+            try:
+                await send_templated_mail(
+                    "REGISTER_SUCCESS",
+                    email,
+                    {"app_name": settings.app.name, "account": payload.account},
+                )
+            except BusinessError:
+                pass
         response = RegisterResponse(
             account_id=account.id,
             account=payload.account,
@@ -347,6 +358,21 @@ class AuthService:
             account_type=AccountType.PORTAL.value,
         )
         return response
+
+    async def _assign_register_defaults(self, account_id: str, account_type: AccountType) -> None:
+        policy = get_register_policy(account_type)
+        if policy.default_role_id:
+            await self.account_repo.assign_account_to_role(
+                AccountRoleAssignRequest(account_id=account_id, role_id=policy.default_role_id)
+            )
+        if policy.default_dept_id:
+            await self.account_repo.assign_account_to_dept(
+                AccountDeptAssignRequest(
+                    account_id=account_id,
+                    dept_id=policy.default_dept_id,
+                    is_primary=True,
+                )
+            )
 
     async def forgot_password(
         self,
@@ -382,39 +408,31 @@ class AuthService:
             return
 
         reset_token = generate_token()
-        redis = self._required_redis()
+        redis = self._required_redis("Redis is required for password reset")
         await redis.setex(
             password_reset_token_key(reset_token),
             settings.auth.password_reset_token_ttl_seconds,
             json.dumps(
                 {
                     "account_id": account.id,
+                    "account_type": account_type.value,
                     "email": email,
                     "token_hash": hash_password(reset_token),
                 }
             ),
         )
-        reset_link = self._build_password_reset_link(account_type, email, reset_token)
+        reset_link = self._build_password_reset_link(account_type, reset_token)
         expire_minutes = settings.auth.password_reset_token_ttl_seconds // 60
-        tmpl_subject = (
-            config_reader.get("mail.template.forgot_password.subject") or "{{app_name}} 密码重置"
+        await send_templated_mail(
+            "RESET_PASSWORD_CODE",
+            email,
+            {
+                "app_name": settings.app.name,
+                "reset_link": reset_link,
+                "email": email,
+                "expire_minutes": expire_minutes,
+            },
         )
-        tmpl_body = config_reader.get("mail.template.forgot_password.body") or (
-            "请点击以下链接重置密码，该链接将在 {{expire_minutes}} 分钟内有效。\n\n{{reset_link}}"
-        )
-        subject = (
-            tmpl_subject.replace("{{app_name}}", settings.app.name)
-            .replace("{{reset_link}}", reset_link)
-            .replace("{{email}}", email)
-            .replace("{{expire_minutes}}", str(expire_minutes))
-        )
-        body = (
-            tmpl_body.replace("{{app_name}}", settings.app.name)
-            .replace("{{reset_link}}", reset_link)
-            .replace("{{email}}", email)
-            .replace("{{expire_minutes}}", str(expire_minutes))
-        )
-        await send_mail(email, subject, body)
         await self._record_password_reset_request(
             account_type,
             email,
@@ -432,26 +450,30 @@ class AuthService:
         user_agent: str | None = None,
     ) -> None:
         key = password_reset_token_key(payload.token)
-        redis = self._required_redis()
+        redis = self._required_redis("Redis is required for password reset")
         raw = await redis.get(key)
         raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
         if not raw_text:
             raise AuthenticationError("Invalid or expired reset link")
         data = json.loads(raw_text)
-        email = payload.email.strip().lower()
-        if email != data.get("email") or not verify_password(payload.token, data["token_hash"]):
+        # 身份只绑定在 token→Redis 载荷上，禁止把邮箱放进重置链接或要求客户端回传
+        if (
+            not data.get("account_id")
+            or data.get("account_type") != account_type.value
+            or not verify_password(payload.token, data["token_hash"])
+        ):
             raise AuthenticationError("Invalid or expired reset link")
 
         account = await self.account_repo.get_required(str(data["account_id"]))
         self._validate_account_status(account, account_type)
         async with transactional(self.db):
-            # 校验密码强度 + 复用检查
             await validate_and_record_password(
                 self.db,
                 account.id,
                 payload.password,
                 changed_by=account.id,
                 change_reason="self_reset",
+                account=account,
             )
             await self.account_repo.update_password_hash(
                 account.id, hash_password(payload.password)
@@ -489,6 +511,8 @@ class AuthService:
         session: SessionPayload,
     ) -> None:
         """注销当前登录账号，并清理该账号下全部会话。"""
+        from app.modules.iam.account.schema import AccountCancelPayload
+
         async with transactional(self.db):
             account = await self.account_repo.cancel(
                 AccountCancelPayload(
@@ -522,9 +546,11 @@ class AuthService:
 
     def _validate_account_status(
         self,
-        account: SysAccount,
+        account: SysAccount | None,
         account_type: AccountType,
     ) -> None:
+        if account is None:
+            raise AuthenticationError("Invalid account or password")
         if (
             account.account_status == AccountStatusEnum.CANCELLED.value
             or account.cancelled_at is not None
@@ -537,19 +563,19 @@ class AuthService:
         if account_type == AccountType.PORTAL and account.account_type != AccountType.PORTAL.value:
             raise AuthenticationError("Account is not allowed to access portal account type")
 
-    def _required_redis(self):
+    def _required_redis(self, message: str = "Redis is required"):
         redis = get_redis()
         if redis is None:
-            raise BusinessError("Redis is required for password reset")
+            raise BusinessError(message)
         return redis
 
-    def _build_password_reset_link(
-        self,
-        account_type: AccountType,
-        email: str,
-        token: str,
-    ) -> str:
-        base_url = settings.mail.password_reset_url
+    def _build_password_reset_link(self, account_type: AccountType, token: str) -> str:
+        config_key = _PASSWORD_RESET_URL_KEYS.get(account_type)
+        if not config_key:
+            raise BusinessError(f"Unsupported account type for password reset: {account_type}")
+        base_url = (config_reader.get(config_key) or "").strip()
+        if not base_url:
+            raise BusinessError(f"Missing sys_config: {config_key}")
         separator = "&" if "?" in base_url else "?"
         return f"{base_url}{separator}{urlencode({'token': token})}"
 

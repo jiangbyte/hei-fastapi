@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const configPrefix = '/api/v1/admin/sys/config'
+const configPrefix = `${API_PREFIX}/sys/config`
 
 export function page(params: any) {
   return http.get<any>(`${configPrefix}/page`, {
@@ -10,7 +11,7 @@ export function page(params: any) {
   })
 }
 
-export function list(params: { category?: string }) {
+export function list(params: { category?: string; scope?: string }) {
   return http.get<any[]>(`${configPrefix}/list`, { params })
 }
 
@@ -33,7 +34,12 @@ export function remove(data: any) {
 }
 
 export function batchSave(data: {
-  items: Array<{ id: string; config_key: string; config_value: string | null }>
+  items: Array<{
+    config_key: string
+    config_value: string | null
+    category?: string | null
+    remark?: string | null
+  }>
 }) {
   return http.post<any>(`${configPrefix}/batch-save`, data)
 }
@@ -42,4 +48,14 @@ export function testAuditAlertWebhook(data: { webhook_url: string; webhook_secre
   return http.post<any>(`${configPrefix}/audit-alert/test-webhook`, data, {
     skipErrorMessage: true,
   })
+}
+
+export function testAuditAlertPush() {
+  return http.post<any>(
+    `${configPrefix}/audit-alert/test-push`,
+    {},
+    {
+      skipErrorMessage: true,
+    },
+  )
 }

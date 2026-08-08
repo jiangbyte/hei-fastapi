@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const rolePrefix = '/api/v1/admin/sys/roles'
+const rolePrefix = `${API_PREFIX}/sys/roles`
 
 export function page(params: any) {
   return http.get<any>(`${rolePrefix}/page`, { params })
@@ -32,6 +33,16 @@ export function ownResources(roleId: string, accountType: string) {
 
 export function grantResources(data: any) {
   return http.post<any>(`${rolePrefix}/grant-resource`, data)
+}
+
+export function ownClientResources(roleId: string, accountType: string) {
+  return http.get<any>(`${rolePrefix}/own-client-resource`, {
+    params: { id: roleId, account_type: accountType },
+  })
+}
+
+export function grantClientResources(data: any) {
+  return http.post<any>(`${rolePrefix}/grant-client-resource`, data)
 }
 
 export function ownUsers(roleId: string) {

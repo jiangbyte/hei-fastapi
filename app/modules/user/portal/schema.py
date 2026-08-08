@@ -7,6 +7,7 @@ from pydantic import Field
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool
 from app.core.security.transport import PasswordKeyMixin
+from app.modules.auth.schema import OptionalStr
 
 
 class PortalProfileResponse(ApiSchema):
@@ -65,8 +66,9 @@ class PortalUserCenterProfileUpdateRequest(ApiSchema):
 class PortalUserCenterPasswordUpdateRequest(PasswordKeyMixin):
     """当前门户用户修改密码请求。"""
 
-    old_password: str = Field(min_length=1, max_length=512)
+    old_password: OptionalStr = Field(default=None, min_length=1, max_length=512)
     new_password: str = Field(min_length=1, max_length=512)
+    otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
 
 
 class PortalUserCenterPhoneUpdateRequest(PasswordKeyMixin):

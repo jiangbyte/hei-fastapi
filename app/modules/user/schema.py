@@ -25,7 +25,6 @@ class AdminMeResponse(ApiSchema):
     dept_id_names: list[IdNameResponse] = Field(default_factory=list)
     group_id_names: list[IdNameResponse] = Field(default_factory=list)
     permission_keys: list[str]
-    button_codes: list[str]
     profile: AdminProfileResponse
 
 
@@ -45,5 +44,4 @@ class PortalMeResponse(ApiSchema):
     dept_id_names: list[IdNameResponse] = Field(default_factory=list)
     group_id_names: list[IdNameResponse] = Field(default_factory=list)
     permission_keys: list[str] = Field(default_factory=list)
-    button_codes: list[str] = Field(default_factory=list)
     profile: PortalProfileResponse

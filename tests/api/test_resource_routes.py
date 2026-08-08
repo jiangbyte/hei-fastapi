@@ -6,7 +6,8 @@ from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.session import SessionPayload, session_store
 from app.deps.db import get_db_session
 from app.modules.iam.account.model import SysAccount
-from app.modules.iam.enums import ResourceModuleClient, ResourceType
+from app.core.config.enums import AccountType
+from app.modules.iam.enums import ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 
 
@@ -46,14 +47,14 @@ async def _seed_admin_and_portal_resources(client) -> None:
                     id="module_admin",
                     code="admin",
                     name="Admin",
-                    client=ResourceModuleClient.ADMIN.value,
+                    client=AccountType.ADMIN.value,
                     sort=1,
                 ),
                 SysResourceModule(
                     id="module_portal",
                     code="portal",
                     name="Portal",
-                    client=ResourceModuleClient.PORTAL.value,
+                    client=AccountType.PORTAL.value,
                     sort=2,
                 ),
                 SysResource(
@@ -97,7 +98,7 @@ async def test_admin_current_resources_only_return_admin_client_resources(client
     assert response.json()["code"] == "200"
     data = response.json()["data"]
     assert [item["id"] for item in data] == ["resource_admin"]
-    assert data[0]["module_client"] == ResourceModuleClient.ADMIN.value
+    assert data[0]["module_client"] == AccountType.ADMIN.value
     assert data[0]["module_id"] == "module_admin"
 
 
@@ -120,8 +121,8 @@ async def test_admin_resource_management_interfaces_keep_all_clients_by_default(
     assert [item["id"] for item in page_records] == ["resource_admin", "resource_portal"]
     assert [item["id"] for item in tree_records] == ["resource_admin", "resource_portal"]
     assert {item["module_client"] for item in page_records} == {
-        ResourceModuleClient.ADMIN.value,
-        ResourceModuleClient.PORTAL.value,
+        AccountType.ADMIN.value,
+        AccountType.PORTAL.value,
     }
 
 
@@ -134,5 +135,5 @@ async def test_portal_current_resources_are_public(client):
     assert response.json()["code"] == "200"
     data = response.json()["data"]
     assert [item["id"] for item in data] == ["resource_portal"]
-    assert data[0]["module_client"] == ResourceModuleClient.PORTAL.value
+    assert data[0]["module_client"] == AccountType.PORTAL.value
     assert data[0]["module_id"] == "module_portal"

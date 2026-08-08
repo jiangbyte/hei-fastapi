@@ -1,8 +1,9 @@
 /** Author: Charlie */
 
+import { API_PREFIX } from '@/constants/api'
 import { http } from '@/utils'
 
-const groupPrefix = '/api/v1/admin/sys/groups'
+const groupPrefix = `${API_PREFIX}/sys/groups`
 
 export function page(params: any) {
   return http.get<any>(`${groupPrefix}/page`, { params })
@@ -50,4 +51,14 @@ export function ownResources(groupId: string, accountType: string) {
 
 export function grantResources(data: any) {
   return http.post<any>(`${groupPrefix}/grant-resource`, data)
+}
+
+export function ownClientResources(groupId: string, accountType: string) {
+  return http.get<any>(`${groupPrefix}/own-client-resource`, {
+    params: { id: groupId, account_type: accountType },
+  })
+}
+
+export function grantClientResources(data: any) {
+  return http.post<any>(`${groupPrefix}/grant-client-resource`, data)
 }

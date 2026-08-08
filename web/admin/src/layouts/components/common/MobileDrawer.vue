@@ -15,11 +15,17 @@ const showDrawer = defineModel<boolean>('show', { default: false })
     :mask-closable="true"
     :close-on-esc="true"
   >
-    <n-drawer-content :native-scrollbar="false" :body-content-style="{ padding: '0' }">
+    <n-drawer-content
+      :native-scrollbar="false"
+      :body-content-style="{ padding: '0' }"
+    >
       <template #header>
         <Logo />
       </template>
-      <n-el tag="div" class="min-h-full text-[var(--text-color-base)]">
+      <n-el
+        tag="div"
+        class="min-h-full text-[var(--text-color-base)]"
+      >
         <slot />
       </n-el>
     </n-drawer-content>

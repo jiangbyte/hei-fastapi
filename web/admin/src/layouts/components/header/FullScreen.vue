@@ -19,7 +19,10 @@ useMagicKeys({
 </script>
 
 <template>
-  <n-tooltip placement="bottom" trigger="hover">
+  <n-tooltip
+    placement="bottom"
+    trigger="hover"
+  >
     <template #trigger>
       <CommonWrapper @click="appStore.toggleFullScreen">
         <NovaIcon

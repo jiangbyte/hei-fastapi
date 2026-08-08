@@ -132,10 +132,13 @@ function resetSource() {
       type="file"
       accept="image/jpeg,image/png,image/webp"
       @change="onFileChange"
-    />
+    >
 
     <div class="avatar-upload-modal">
-      <div v-if="state.source" class="avatar-editor">
+      <div
+        v-if="state.source"
+        class="avatar-editor"
+      >
         <div class="avatar-cropper-wrap">
           <Cropper
             ref="cropperRef"
@@ -148,17 +151,43 @@ function resetSource() {
         </div>
         <div class="avatar-preview-panel">
           <div class="avatar-preview">
-            <img v-if="state.previewUrl" :src="state.previewUrl" alt="" />
+            <img
+              v-if="state.previewUrl"
+              :src="state.previewUrl"
+              alt=""
+            >
           </div>
-          <div class="mt-3 text-sm text-[var(--text-color-3)]">实时预览</div>
+          <div class="mt-3 text-sm text-[var(--text-color-3)]">
+            实时预览
+          </div>
         </div>
       </div>
-      <div v-else class="avatar-empty">
-        <NAvatar v-if="avatar" round :size="96" :src="avatar" />
-        <NAvatar v-else round :size="96">
-          <NovaIcon icon="icon-park-outline:user" :size="40" />
+      <div
+        v-else
+        class="avatar-empty"
+      >
+        <NAvatar
+          v-if="avatar"
+          round
+          :size="96"
+          :src="avatar"
+        />
+        <NAvatar
+          v-else
+          round
+          :size="96"
+        >
+          <NovaIcon
+            icon="icon-park-outline:user"
+            :size="40"
+          />
         </NAvatar>
-        <NButton secondary type="primary" class="mt-4" @click="openFilePicker">
+        <NButton
+          secondary
+          type="primary"
+          class="mt-4"
+          @click="openFilePicker"
+        >
           <template #icon>
             <NovaIcon icon="icon-park-outline:upload-picture" />
           </template>
@@ -168,14 +197,29 @@ function resetSource() {
     </div>
 
     <template #footer>
-      <NSpace justify="space-between" align="center">
+      <NSpace
+        justify="space-between"
+        align="center"
+      >
         <div class="max-w-70 truncate text-sm text-[var(--text-color-3)]">
           {{ state.fileName || '仅支持 JPG、PNG 和 WebP 图片，裁剪后上传' }}
         </div>
         <NSpace>
-          <NButton @click="modalShow = false"> 取消 </NButton>
-          <NButton v-if="state.source" secondary @click="openFilePicker"> 重新选择 </NButton>
-          <NButton type="primary" :loading="state.uploading" @click="uploadAvatar">
+          <NButton @click="modalShow = false">
+            取消
+          </NButton>
+          <NButton
+            v-if="state.source"
+            secondary
+            @click="openFilePicker"
+          >
+            重新选择
+          </NButton>
+          <NButton
+            type="primary"
+            :loading="state.uploading"
+            @click="uploadAvatar"
+          >
             裁剪并上传
           </NButton>
         </NSpace>

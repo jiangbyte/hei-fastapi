@@ -1,304 +1,221 @@
 <!-- Author: Charlie -->
 
-<script setup lang="tsx">
-import type { PaginationProps } from 'naive-ui'
-import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
-import { Icon } from '@iconify/vue/offline'
-import { configApi } from '@/api'
-import { formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
-import { NButton, NFlex, NIcon } from 'naive-ui'
-import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
-import { computed, onMounted, reactive, ref } from 'vue'
-import CategoryConfigForm from './components/CategoryConfigForm.vue'
-import ModalDetail from './components/ModalDetail.vue'
-import ModalForm from './components/ModalForm.vue'
-import { readPageMeta } from '@/utils/wire'
+<script setup lang="ts">
+import type { MenuOption } from 'naive-ui'
+import type { Component } from 'vue'
+import { renderIcon } from '@/utils/icon'
+import { computed, reactive, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import './config.css'
+import SysDefaultsForm from './components/SysDefaultsForm.vue'
+import AuthRegisterForm from './components/AuthRegisterForm.vue'
+import AuthLoginForm from './components/AuthLoginForm.vue'
+import AuthPasswordForm from './components/AuthPasswordForm.vue'
+import AuthTokenForm from './components/AuthTokenForm.vue'
+import MailEngineForm from './components/MailEngineForm.vue'
+import MailTemplatePanel from './components/MailTemplatePanel.vue'
+import SmsEngineForm from './components/SmsEngineForm.vue'
+import SmsTemplatePanel from './components/SmsTemplatePanel.vue'
+import StorageConfigForm from './components/StorageConfigForm.vue'
+import UploadConfigForm from './components/UploadConfigForm.vue'
+import PushConfigForm from './components/PushConfigForm.vue'
+import AuditAlertConfigForm from './components/AuditAlertConfigForm.vue'
+import OtherConfigPanel from './components/OtherConfigPanel.vue'
 
-const tabs = [
-  { name: 'AUTH_TOKEN', label: 'Token 配置' },
-  { name: 'AUTH_LOGIN', label: '登录安全配置' },
-  { name: 'AUTH_REGISTER', label: '注册配置' },
-  { name: 'AUTH_PASSWORD', label: '密码配置' },
-  { name: 'AUDIT_ALERT', label: '审计告警配置' },
-  { name: 'STORAGE', label: '存储基础配置' },
-  { name: 'UPLOAD', label: '上传配置' },
-  { name: 'MAIL', label: '邮箱配置' },
-  { name: 'MAIL_TEMPLATE', label: '邮件配置' },
-  { name: 'OTHER', label: '其他配置' },
+const route = useRoute()
+const router = useRouter()
+
+const navItems: Array<{ key: string; label: string }> = [
+  { key: 'SYS', label: '版权信息' },
+  { key: 'AUTH_REGISTER', label: '注册配置' },
+  { key: 'AUTH_LOGIN', label: '登录配置' },
+  { key: 'AUTH_PASSWORD', label: '密码配置' },
+  { key: 'AUTH_TOKEN', label: '令牌配置' },
+  { key: 'MAIL', label: '邮件引擎' },
+  { key: 'MAIL_TEMPLATE', label: '邮件模板' },
+  { key: 'SMS', label: '短信引擎' },
+  { key: 'SMS_TEMPLATE', label: '短信模板' },
+  { key: 'STORAGE', label: '文件存储' },
+  { key: 'UPLOAD', label: '上传限制' },
+  { key: 'PUSH', label: '消息推送' },
+  { key: 'AUDIT_ALERT', label: '审计告警' },
+  { key: 'OTHER', label: '其他配置' },
 ]
 
-const formModalRef = ref<any>(null)
-const detailModalRef = ref<any>(null)
+const panelMap: Record<string, Component> = {
+  SYS: SysDefaultsForm,
+  AUTH_REGISTER: AuthRegisterForm,
+  AUTH_LOGIN: AuthLoginForm,
+  AUTH_PASSWORD: AuthPasswordForm,
+  AUTH_TOKEN: AuthTokenForm,
+  MAIL: MailEngineForm,
+  MAIL_TEMPLATE: MailTemplatePanel,
+  SMS: SmsEngineForm,
+  SMS_TEMPLATE: SmsTemplatePanel,
+  STORAGE: StorageConfigForm,
+  UPLOAD: UploadConfigForm,
+  PUSH: PushConfigForm,
+  AUDIT_ALERT: AuditAlertConfigForm,
+  OTHER: OtherConfigPanel,
+}
+
 const state = reactive({
-  activeTab: 'AUTH_TOKEN',
-  configs: [] as any[],
-  total: 0,
-  loading: false,
-  searchValues: {} as any,
-  checkedRowKeys: [] as string[],
-  page: 1,
-  pageSize: 20,
+  activeTab: resolveInitialTab(),
 })
 
-const searchForm = createProSearchForm<any>({
-  defaultCollapsed: true,
-  onSubmit(values) {
-    state.searchValues = normalizeSearchValues(values, {
-      config_key: (value) => String(value).trim(),
-    })
-    state.page = 1
-    fetchPage()
-  },
-  onReset() {
-    state.searchValues = {}
-    state.page = 1
-    fetchPage()
-  },
-})
-
-const searchColumns = computed<ProSearchFormColumns<any>>(() => {
-  const columns: ProSearchFormColumns<any> = [
-    {
-      title: '配置键',
-      path: 'config_key',
-      field: 'input',
-    },
-  ]
-
-  return columns
-})
-
-const pagination = computed<PaginationProps>(() => ({
-  page: state.page,
-  pageSize: state.pageSize,
-  itemCount: state.total,
-  showSizePicker: true,
-  pageSizes: [10, 20, 30, 50],
-  prefix: ({ itemCount }) => `${itemCount} 条`,
-  onUpdatePage: (value) => {
-    state.page = value
-    fetchPage()
-  },
-  onUpdatePageSize: (value) => {
-    state.pageSize = value
-    state.page = 1
-    fetchPage()
-  },
-}))
-
-const tableColumns = computed<ProDataTableColumns<any>>(() => [
-  { type: 'selection', fixed: 'left' },
-  { title: 'ID', width: 90, path: 'id', ellipsis: { tooltip: true } },
-  { title: '配置键', path: 'config_key', width: 240, ellipsis: { tooltip: true } },
-  { title: '配置值', path: 'config_value', width: 300, ellipsis: { tooltip: true } },
-  { title: '分类', path: 'category', width: 160, ellipsis: { tooltip: true } },
-  { title: '备注', path: 'remark', width: 220, ellipsis: { tooltip: true } },
-  { title: '排序码', path: 'sort_code', width: 100 },
+const menuOptions: MenuOption[] = [
   {
-    title: '更新时间',
-    path: 'updated_at',
-    width: 190,
-    ellipsis: { tooltip: true },
-    render: (row) => formatDateTime(row.updated_at),
+    type: 'group',
+    label: '认证',
+    key: 'g-auth',
+    children: [
+      {
+        key: 'AUTH_REGISTER',
+        label: '注册配置',
+        icon: renderIcon('icon-park-outline:user', 16),
+      },
+      {
+        key: 'AUTH_LOGIN',
+        label: '登录配置',
+        icon: renderIcon('icon-park-outline:login', 16),
+      },
+      {
+        key: 'AUTH_PASSWORD',
+        label: '密码配置',
+        icon: renderIcon('icon-park-outline:lock', 16),
+      },
+      {
+        key: 'AUTH_TOKEN',
+        label: '令牌配置',
+        icon: renderIcon('icon-park-outline:key', 16),
+      },
+    ],
   },
   {
-    title: '操作',
-    key: 'actions',
-    width: 120,
-    fixed: 'right',
-    render: (row) => (
-      <NFlex size={12}>
-        {hasPermission('sys:config:detail') ? (
-          <NButton type="info" size="small" text={true} onClick={() => openDetailModal(row.id)}>
-            {renderButtonIcon('icon-park-outline:preview-open')}
-          </NButton>
-        ) : null}
-        {hasPermission('sys:config:update') ? (
-          <NButton type="primary" size="small" text={true} onClick={() => openEditModal(row.id)}>
-            {renderButtonIcon('icon-park-outline:edit')}
-          </NButton>
-        ) : null}
-        {hasPermission('sys:config:delete') ? (
-          <NButton type="error" size="small" text={true} onClick={() => confirmDelete(row.id)}>
-            {renderButtonIcon('icon-park-outline:delete')}
-          </NButton>
-        ) : null}
-      </NFlex>
-    ),
+    type: 'group',
+    label: '通知',
+    key: 'g-notify',
+    children: [
+      { key: 'MAIL', label: '邮件引擎', icon: renderIcon('icon-park-outline:mail', 16) },
+      {
+        key: 'MAIL_TEMPLATE',
+        label: '邮件模板',
+        icon: renderIcon('icon-park-outline:email-lock', 16),
+      },
+      {
+        key: 'SMS',
+        label: '短信引擎',
+        icon: renderIcon('icon-park-outline:message', 16),
+      },
+      {
+        key: 'SMS_TEMPLATE',
+        label: '短信模板',
+        icon: renderIcon('icon-park-outline:message-emoji', 16),
+      },
+      {
+        key: 'PUSH',
+        label: '消息推送',
+        icon: renderIcon('icon-park-outline:send', 16),
+      },
+    ],
   },
-])
+  {
+    type: 'group',
+    label: '存储',
+    key: 'g-storage',
+    children: [
+      {
+        key: 'STORAGE',
+        label: '文件存储',
+        icon: renderIcon('icon-park-outline:cloud-storage', 16),
+      },
+      {
+        key: 'UPLOAD',
+        label: '上传限制',
+        icon: renderIcon('icon-park-outline:upload', 16),
+      },
+    ],
+  },
+  {
+    type: 'group',
+    label: '安全与集成',
+    key: 'g-security',
+    children: [
+      {
+        key: 'AUDIT_ALERT',
+        label: '审计告警',
+        icon: renderIcon('icon-park-outline:alarm', 16),
+      },
+      {
+        key: 'SYS',
+        label: '版权信息',
+        icon: renderIcon('icon-park-outline:copyright', 16),
+      },
+      {
+        key: 'OTHER',
+        label: '其他配置',
+        icon: renderIcon('icon-park-outline:list', 16),
+      },
+    ],
+  },
+]
 
-const hasCheckedRows = computed(() => state.checkedRowKeys.length > 0)
-const isOtherTab = computed(() => state.activeTab === 'OTHER')
+const activeNav = computed(
+  () => navItems.find((item) => item.key === state.activeTab) ?? navItems[0],
+)
+const activePanel = computed(() => panelMap[state.activeTab] ?? AuthRegisterForm)
 
-onMounted(() => {
-  if (isOtherTab.value) {
-    fetchPage()
+function resolveInitialTab() {
+  const tab = typeof route.query.tab === 'string' ? route.query.tab : ''
+  if (tab && navItems.some((item) => item.key === tab)) {
+    return tab
   }
-})
-
-async function fetchPage() {
-  state.loading = true
-  try {
-    const response = await configApi.page({
-      current: state.page,
-      size: state.pageSize,
-      category: 'OTHER',
-      ...state.searchValues,
-    })
-    const data = response.data ?? {}
-    state.configs = data.records ?? []
-    const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
-    state.total = pageMeta.total
-    state.page = pageMeta.current
-    state.pageSize = pageMeta.size
-    state.checkedRowKeys = state.checkedRowKeys.filter((key) =>
-      state.configs.some((item) => item.id === key),
-    )
-  } finally {
-    state.loading = false
-  }
+  return 'AUTH_REGISTER'
 }
 
-function handleTabUpdate(value: string | number) {
-  state.activeTab = String(value)
-  state.page = 1
-  state.checkedRowKeys = []
-  if (isOtherTab.value) {
-    fetchPage()
-  }
+function selectTab(key: string) {
+  if (!key || state.activeTab === key) return
+  if (!navItems.some((item) => item.key === key)) return
+  state.activeTab = key
+  void router.replace({ query: { ...route.query, tab: key } })
 }
 
-function openDetailModal(id: string) {
-  detailModalRef.value?.openModal(id)
-}
-
-function openCreateModal() {
-  formModalRef.value?.openModal()
-}
-
-function openEditModal(id: string) {
-  formModalRef.value?.openModal(id)
-}
-
-function handleCheckedRowKeys(keys: Array<string | number>) {
-  state.checkedRowKeys = keys.map(String)
-}
-
-function confirmDelete(value: string | string[]) {
-  const ids = Array.isArray(value) ? value : [value]
-  if (!ids.length) return
-  const isBatch = ids.length > 1
-  window.$dialog.warning({
-    title: isBatch ? '批量删除' : '删除',
-    draggable: true,
-    maskClosable: false,
-    content: isBatch ? `删除 ${ids.length} 个系统配置?` : '删除该系统配置?',
-    positiveText: '确认',
-    negativeText: '取消',
-    onPositiveClick: () => deleteData(ids),
-  })
-}
-
-async function deleteData(ids: string[]) {
-  await configApi.remove({ ids })
-  state.checkedRowKeys = state.checkedRowKeys.filter((key) => !ids.includes(key))
-  window.$message.success('删除成功')
-  await fetchPage()
-  if (!state.configs.length && state.total > 0 && state.page > 1) {
-    state.page -= 1
-    await fetchPage()
-  }
-}
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (typeof tab !== 'string' || !navItems.some((item) => item.key === tab)) return
+    if (state.activeTab !== tab) state.activeTab = tab
+  },
+)
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
-    <ProCard class="min-h-0 flex-1" content-class="h-full min-h-0 overflow-auto">
-      <div class="min-h-full flex flex-col gap-16px">
-        <NTabs :value="state.activeTab" type="line" animated @update:value="handleTabUpdate">
-          <NTabPane v-for="tab in tabs" :key="tab.name" :name="tab.name" :tab="tab.label" />
-        </NTabs>
+  <div class="sys-config w-full min-w-0">
+    <div class="sys-config__body">
+      <aside class="sys-config__sidebar">
+        <NMenu
+          :value="state.activeTab"
+          :options="menuOptions"
+          :root-indent="12"
+          :indent="18"
+          @update:value="selectTab"
+        />
+      </aside>
 
-        <!-- 非 OTHER：表单式配置页 -->
-        <CategoryConfigForm v-if="!isOtherTab" :key="state.activeTab" :category="state.activeTab" />
+      <section class="sys-config__content">
+        <div class="sys-config__panel">
+          <h2 class="sys-config__panel-title">
+            {{ activeNav.label }}
+          </h2>
 
-        <!-- OTHER：保持表格 + 搜索 + 分页 -->
-        <template v-else>
-          <ProSearchForm
-            :form="searchForm"
-            :columns="searchColumns"
-            :reset-button-props="{ content: '重置' }"
-            :search-button-props="{ content: '搜索' }"
-            :collapse-button-props="{
-              content: searchForm.collapsed.value ? '展开' : '收起',
-            }"
-          />
-          <ProDataTable
-            class="config-table"
-            remote
-            :title="'系统配置'"
-            row-key="id"
-            :scroll-x="1420"
-            :columns="tableColumns"
-            :data="state.configs"
-            :loading="state.loading"
-            :pagination="pagination"
-            :checked-row-keys="state.checkedRowKeys"
-            :on-update-checked-row-keys="handleCheckedRowKeys"
-          >
-            <template #toolbar>
-              <NFlex>
-                <NButton
-                  v-if="hasPermission('sys:config:create')"
-                  type="primary"
-                  text
-                  :title="'新增'"
-                  :aria-label="'新增'"
-                  @click="openCreateModal"
-                >
-                  <template #icon>
-                    <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
-                  </template>
-                </NButton>
-                <NButton
-                  text
-                  :title="'刷新'"
-                  :aria-label="'刷新'"
-                  :loading="state.loading"
-                  @click="fetchPage"
-                >
-                  <template #icon>
-                    <NIcon><Icon icon="icon-park-outline:reload" /></NIcon>
-                  </template>
-                </NButton>
-                <NButton
-                  v-if="hasPermission('sys:config:delete')"
-                  type="error"
-                  text
-                  :title="'批量删除'"
-                  :aria-label="'批量删除'"
-                  :disabled="!hasCheckedRows"
-                  @click="confirmDelete(state.checkedRowKeys)"
-                >
-                  <template #icon>
-                    <NIcon><Icon icon="icon-park-outline:delete" /></NIcon>
-                  </template>
-                </NButton>
-              </NFlex>
-            </template>
-          </ProDataTable>
-        </template>
-      </div>
-    </ProCard>
-
-    <ModalForm v-if="isOtherTab" ref="formModalRef" @saved="fetchPage" />
-    <ModalDetail v-if="isOtherTab" ref="detailModalRef" />
-  </NFlex>
+          <KeepAlive>
+            <component
+              :is="activePanel"
+              :key="state.activeTab"
+            />
+          </KeepAlive>
+        </div>
+      </section>
+    </div>
+  </div>
 </template>
-
-<style scoped>
-.config-table {
-  min-height: 520px;
-}
-</style>
