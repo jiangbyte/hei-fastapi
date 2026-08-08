@@ -6,7 +6,6 @@ from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.security.session import SessionPayload, session_store
 from app.deps.db import get_db_session
 from app.modules.iam.account.model import SysAccount
-from app.core.config.enums import AccountType
 from app.modules.iam.enums import ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 

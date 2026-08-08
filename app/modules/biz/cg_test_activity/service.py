@@ -16,8 +16,6 @@ from app.core.schema.base import (
 )
 from app.core.security.data_scope import build_data_scope_filter, default_owner_dept_id
 from app.core.security.session import SessionPayload
-from app.modules.user.utils.profile import enrich_audit_names
-from app.platform.db.transaction import transactional
 from app.modules.biz.cg_test_activity.model import CgTestActivity
 from app.modules.biz.cg_test_activity.repository import (
     CgTestActivityRepository,
@@ -28,6 +26,8 @@ from app.modules.biz.cg_test_activity.schema import (
     CgTestActivitySchema,
     CgTestActivityUpdateRequest,
 )
+from app.modules.user.utils.profile import enrich_audit_names
+from app.platform.db.transaction import transactional
 
 
 class CgTestActivityService:

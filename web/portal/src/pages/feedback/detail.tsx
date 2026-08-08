@@ -88,8 +88,8 @@ export function FeedbackDetailPage() {
           <Typography.Title level={3} className="!mb-0 !text-xl">
             {displayValue(detail.title)}
           </Typography.Title>
-          <DictTag type="FEEDBACK_STATUS" value={detail.status} />
-          <DictTag type="FEEDBACK_TYPE" value={detail.type} />
+          <DictTag dictCode="FEEDBACK_STATUS" value={detail.status} />
+          <DictTag dictCode="FEEDBACK_TYPE" value={detail.type} />
         </div>
         <Typography.Paragraph type="secondary" className="!mb-4 text-xs">
           提交于 {formatDateTime(detail.created_at)}

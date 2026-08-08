@@ -9,7 +9,6 @@ from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import resolve_data_scope_dept_ids
 from app.core.security.permission_registry import list_permission_resources
 from app.core.security.session import SessionPayload
-from app.core.config.enums import AccountType
 from app.modules.iam.enums import ResourceType
 from app.modules.iam.permission.service import ensure_registered_permission
 from app.modules.iam.relation.repository import IamRelationRepository

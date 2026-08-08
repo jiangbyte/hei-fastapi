@@ -21,6 +21,7 @@
 
 ```text
 app/                 后端（core / deps / middleware / modules / platform / worker）
+docs/screenshots/    README 界面截图（admin / portal）
 migrations/          Alembic 迁移
 scripts/db/          迁移脚本（migrate / makemigration / check）
 tests/               后端测试
@@ -59,6 +60,46 @@ entrypoint.sh        all | api | worker | beat | migrate
 API 前缀 `/api`，完整路径写在路由上（如 `/v1/admin/...`、`/v1/portal/...`）。
 
 HTTP JSON：**标量均为字符串**（含 `code`、分页字段、业务 bool/int）。
+
+---
+
+## 界面预览
+
+### 管理端（Admin）
+
+| 登录 | 运营工作台 |
+|:---:|:---:|
+| ![管理端登录](docs/screenshots/admin/01-login.png) | ![运营工作台](docs/screenshots/admin/02-dashboard.png) |
+
+| 账号管理 | 资源管理 |
+|:---:|:---:|
+| ![账号管理](docs/screenshots/admin/03-account.png) | ![资源管理](docs/screenshots/admin/04-resource.png) |
+
+| 展示图管理 | 在线会话 |
+|:---:|:---:|
+| ![展示图管理](docs/screenshots/admin/05-banner.png) | ![在线会话](docs/screenshots/admin/06-session.png) |
+
+| 字典管理 | 系统配置 |
+|:---:|:---:|
+| ![字典管理](docs/screenshots/admin/07-dict.png) | ![系统配置](docs/screenshots/admin/08-config.png) |
+
+| 登录日志 | 编辑器测试 |
+|:---:|:---:|
+| ![登录日志](docs/screenshots/admin/09-login-log.png) | ![编辑器测试](docs/screenshots/admin/10-editor.png) |
+
+### 门户端（Portal）
+
+| 首页 | 登录弹窗 |
+|:---:|:---:|
+| ![门户首页](docs/screenshots/portal/01-home.png) | ![门户登录](docs/screenshots/portal/02-login-modal.png) |
+
+| 个人主页 | 公开资料 |
+|:---:|:---:|
+| ![个人主页](docs/screenshots/portal/03-profile.png) | ![公开资料](docs/screenshots/portal/04-usercenter.png) |
+
+| 账号注销 |
+|:---:|
+| ![账号注销](docs/screenshots/portal/05-cancel-account.png) |
 
 ---
 

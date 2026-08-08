@@ -22,16 +22,16 @@ from app.deps.db import get_db_session
 from app.modules.biz.cg_test_order.schema import (
     CgTestOrderAdminPageQuery,
     CgTestOrderCreateRequest,
-    CgTestOrderSchema,
-    CgTestOrderUpdateRequest,
     CgTestOrderItemAdminPageQuery,
     CgTestOrderItemCreateRequest,
     CgTestOrderItemSchema,
     CgTestOrderItemUpdateRequest,
+    CgTestOrderSchema,
+    CgTestOrderUpdateRequest,
 )
 from app.modules.biz.cg_test_order.service import (
-    CgTestOrderService,
     CgTestOrderItemService,
+    CgTestOrderService,
 )
 
 router = APIRouter()

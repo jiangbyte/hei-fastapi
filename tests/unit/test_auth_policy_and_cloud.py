@@ -6,7 +6,6 @@ import pytest
 
 from app.core.config.enums import AccountType
 from app.modules.auth.policy import get_auth_options, get_login_policy
-from app.modules.iam.enums import AccountIdentityType
 from app.platform.cloud.aliyun_rpc import sign_rpc_params
 from app.platform.cloud.tencent_api import _sha256_hex
 

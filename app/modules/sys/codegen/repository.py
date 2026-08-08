@@ -6,9 +6,8 @@ from sqlalchemy import Select, delete, func, inspect, select
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import StatusEnum
+from app.core.config.enums import AccountType, StatusEnum
 from app.core.exceptions.business import ConflictError, NotFoundError
-from app.core.config.enums import AccountType
 from app.modules.iam.enums import ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.sys.codegen.model import SysCodegenField, SysCodegenPlan

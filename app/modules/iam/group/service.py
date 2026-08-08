@@ -12,10 +12,10 @@ from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
+from app.modules.iam.client.service import ClientResourceService
 from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.group.repository import GroupRepository
-from app.modules.iam.client.service import ClientResourceService
 from app.modules.iam.group.schema import (
     GroupAdminPageQuery,
     GroupCreateRequest,

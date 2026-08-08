@@ -4,10 +4,9 @@ Author: Charlie
 生成时间：2026-08-08 21:09:53
 """
 
-from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.platform.db.base import Base

@@ -12,6 +12,7 @@ from sqlalchemy.orm import aliased
 from app.core.config.enums import AccountType, DataScope, StatusEnum
 from app.core.exceptions.business import NotFoundError
 from app.modules.iam.account.model import SysAccount
+from app.modules.iam.client.model import SysClientResource
 from app.modules.iam.enums import (
     GrantMode,
     GrantSubjectType,
@@ -21,7 +22,6 @@ from app.modules.iam.enums import (
 )
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.relation.model import SysIamRelation
-from app.modules.iam.client.model import SysClientResource
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.model import SysRole
 

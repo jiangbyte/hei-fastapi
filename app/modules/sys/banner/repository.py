@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import Select, case, cast, delete, func, or_, select, update, String
+from sqlalchemy import Select, String, case, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StatusEnum

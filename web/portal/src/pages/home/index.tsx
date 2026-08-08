@@ -66,55 +66,80 @@ export function HomePage() {
 
   const displayName = userInfo?.nickname || userInfo?.account || '用户'
   const brand = import.meta.env.VITE_APP_TITLE || 'HEI'
+  const showBannerColumn = bannerLoading || bannerSlides.length > 0
 
   return (
     <div className="page-shell flex w-full flex-col gap-5">
-      {bannerLoading ? (
-        <section className="panel overflow-hidden">
-          <Skeleton.Node
-            active
-            style={{ width: '100%', height: 280, borderRadius: 0 }}
-            className="!flex !w-full"
-          >
-            <div className="h-[280px] w-full" />
-          </Skeleton.Node>
-        </section>
-      ) : bannerSlides.length ? (
-        <PromoCarousel slides={bannerSlides} height={280} />
-      ) : null}
+      <section
+        className={
+          showBannerColumn
+            ? 'grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-stretch'
+            : 'grid grid-cols-1'
+        }
+      >
+        {showBannerColumn ? (
+          <div className="min-w-0 lg:col-span-2">
+            {bannerLoading ? (
+              <div className="panel h-full overflow-hidden">
+                <Skeleton.Node
+                  active
+                  style={{ width: '100%', height: 280, borderRadius: 0 }}
+                  className="!flex !w-full"
+                >
+                  <div className="h-[280px] w-full" />
+                </Skeleton.Node>
+              </div>
+            ) : (
+              <PromoCarousel slides={bannerSlides} height={280} className="h-full" />
+            )}
+          </div>
+        ) : null}
 
-      <section className="panel rounded-xl px-6 py-10 md:px-10">
-        <div className="text-sm text-[var(--ant-color-text-secondary)]">{brand}</div>
-        <h1 className="mt-2 text-2xl font-semibold md:text-3xl">
-          {loggedIn ? `${displayName}，欢迎回来` : `欢迎使用 ${brand}`}
-        </h1>
-        <p className="muted-text mt-3 max-w-2xl text-sm leading-6 md:text-base">
-          这是 HEI FastAPI 门户脚手架。账号认证、个人中心与公告已就绪，可在此基础上扩展业务模块。
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            to="/announcements"
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--ant-color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        <section
+          className={
+            showBannerColumn
+              ? 'panel flex h-full min-h-[280px] flex-col justify-center rounded-xl px-5 py-6 lg:col-span-1 lg:px-6 lg:py-8'
+              : 'panel flex flex-col justify-center rounded-xl px-6 py-10 md:px-10'
+          }
+        >
+          <div className="text-sm text-[var(--ant-color-text-secondary)]">{brand}</div>
+          <h1
+            className={
+              showBannerColumn
+                ? 'mt-2 text-xl font-semibold leading-snug md:text-2xl'
+                : 'mt-2 text-2xl font-semibold md:text-3xl'
+            }
           >
-            查看公告 <RightOutlined />
-          </Link>
-          {loggedIn ? (
+            {loggedIn ? `${displayName}，欢迎回来` : `欢迎使用 ${brand}`}
+          </h1>
+          <p className="muted-text mt-3 text-sm leading-6 md:text-base">
+            这是 HEI FastAPI 门户脚手架。账号认证、个人中心与公告已就绪，可在此基础上扩展业务模块。
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link
-              to="/usercenter"
-              className="inline-flex items-center rounded-lg bg-[var(--ant-color-fill-quaternary)] px-4 py-2 text-sm font-medium hover:bg-[var(--ant-color-fill-secondary)]"
+              to="/announcements"
+              className="inline-flex items-center gap-1 rounded-lg bg-[var(--ant-color-primary)] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
             >
-              账号设置
+              查看公告 <RightOutlined />
             </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openAuthModal('login')}
-              className="inline-flex items-center rounded-lg bg-[var(--ant-color-fill-quaternary)] px-4 py-2 text-sm font-medium hover:bg-[var(--ant-color-fill-secondary)]"
-            >
-              登录
-            </button>
-          )}
-        </div>
+            {loggedIn ? (
+              <Link
+                to="/usercenter"
+                className="inline-flex items-center rounded-lg bg-[var(--ant-color-fill-quaternary)] px-4 py-2 text-sm font-medium hover:bg-[var(--ant-color-fill-secondary)]"
+              >
+                账号设置
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openAuthModal('login')}
+                className="inline-flex items-center rounded-lg bg-[var(--ant-color-fill-quaternary)] px-4 py-2 text-sm font-medium hover:bg-[var(--ant-color-fill-secondary)]"
+              >
+                登录
+              </button>
+            )}
+          </div>
+        </section>
       </section>
 
       <section className="panel overflow-hidden">

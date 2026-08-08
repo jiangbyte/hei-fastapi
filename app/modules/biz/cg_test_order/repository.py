@@ -16,10 +16,10 @@ from app.modules.biz.cg_test_order.model import (
 from app.modules.biz.cg_test_order.schema import (
     CgTestOrderAdminPageQuery,
     CgTestOrderCreateRequest,
-    CgTestOrderUpdateRequest,
     CgTestOrderItemAdminPageQuery,
     CgTestOrderItemCreateRequest,
     CgTestOrderItemUpdateRequest,
+    CgTestOrderUpdateRequest,
 )
 
 

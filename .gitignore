@@ -6,8 +6,6 @@ __pycache__/
 .backup
 .codegraph
 
-.env.local
-
 # vitepress
 vitepress/node_modules/
 vitepress/docs/.vitepress/dist
@@ -168,8 +166,9 @@ activemq-data/
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
+# Environments（项目内 .env / .env.* 可提交；仅忽略本机覆盖与虚拟环境）
+.env.local
+.env.*.local
 .envrc
 .venv
 env/
@@ -246,8 +245,16 @@ uploads
 Thumbs.db
 Desktop.ini
 
-# Auto-generated type stubs from Vite plugins
-web/admin/src/typing/components.d.ts
-web/portal/src/typing/components.d.ts
+# Auto-generated type stubs from unplugin-auto-import / unplugin-vue-components
+**/src/typing/auto-imports.d.ts
+**/src/typing/components.d.ts
+
+# Frontend tool caches / build outputs
+**/.vite/
+**/.turbo/
+**/.eslintcache
+*.tsbuildinfo
+web/*/dist/
+web/*/dist-ssr/
 
 .worktrees/

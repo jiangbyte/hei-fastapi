@@ -13,6 +13,7 @@ from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
 from app.core.schema.wire import WireBool, WireInt
 
+
 class CgTestKnowledgeCategoryCreateRequest(ApiSchema):
     parent_id: str | None = None
     code: str

@@ -41,10 +41,10 @@ from app.modules.iam.account.schema import (
     SysAccountRoleRelSchema,
     SysAccountSchema,
 )
+from app.modules.iam.client.service import ClientResourceService
 from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.group.repository import GroupRepository
-from app.modules.iam.client.service import ClientResourceService
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
