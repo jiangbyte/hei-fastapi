@@ -18,7 +18,7 @@ const router = useRouter()
 const formRef = ref<FormInst | null>(null)
 const locationOptions = computed(() => dictList('NOTIFY_LOCATION'))
 const targetScopeOptions = computed<SelectOption[]>(() =>
-  dictList('TARGET_SCOPE').filter((item) =>
+  dictList('TARGET_SCOPE').filter((item: SelectOption) =>
     ['ALL', 'ACCOUNT_TYPE', 'SPECIFIC'].includes(String(item.value)),
   ),
 )

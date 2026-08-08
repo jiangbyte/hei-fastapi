@@ -98,7 +98,7 @@ async function submitForm() {
   await formRef.value?.validate()
   state.submitLoading = true
   try {
-    const payload = {
+    const payload: Record<string, any> = {
       ...state.formModel,
       url: toNullableString(state.formModel.url),
       summary: toNullableString(state.formModel.summary),

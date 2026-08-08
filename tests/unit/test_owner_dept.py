@@ -34,7 +34,9 @@ def test_biz_main_models_have_owner_dept_mixin():
 
 
 def test_migration_file_present():
-    path = ROOT / "migrations/versions/c3d4e5f6a7b8_biz_owner_dept_id.py"
-    text = path.read_text(encoding="utf-8")
-    assert "c3d4e5f6a7b8_biz_owner_dept" in text
+    versions = ROOT / "migrations/versions"
+    paths = sorted(versions.glob("*_initial_schema.py"))
+    assert paths, "initial schema migration missing"
+    text = paths[-1].read_text(encoding="utf-8")
     assert "owner_dept_id" in text
+    assert "cg_test_activity" in text

@@ -60,7 +60,7 @@ const searchColumns = computed<ProSearchFormColumns<any>>(() => [
     path: 'success',
     field: 'select',
     fieldProps: {
-      options: successOptions,
+      options: successOptions as any,
       clearable: true,
     },
   },

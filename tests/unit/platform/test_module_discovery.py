@@ -31,21 +31,24 @@ def _clear_discovery_cache():
                 os.environ[key] = value
 
 
-def test_runtime_specs_exclude_disabled_modules():
+def test_runtime_specs_include_codegen_example_modules():
     names = {spec.name for spec in load_module_specs()}
-    assert CG_TEST_ACTIVITY not in names
+    assert CG_TEST_ACTIVITY in names
 
 
-def test_include_disabled_loads_codegen_test_modules():
+def test_include_disabled_still_loads_codegen_test_modules():
     names = {spec.name for spec in load_module_specs(include_disabled=True)}
     assert CG_TEST_ACTIVITY in names
 
 
-def test_hei_enabled_modules_force_includes_disabled_spec():
-    os.environ["HEI_ENABLED_MODULES"] = CG_TEST_ACTIVITY
+def test_hei_disabled_modules_excludes_example_module_at_runtime():
+    os.environ["HEI_DISABLED_MODULES"] = CG_TEST_ACTIVITY
     clear_module_specs_cache()
-    names = {spec.name for spec in load_module_specs()}
-    assert CG_TEST_ACTIVITY in names
+    runtime_names = {spec.name for spec in load_module_specs()}
+    assert CG_TEST_ACTIVITY not in runtime_names
+
+    migrate_names = {spec.name for spec in load_module_specs(include_disabled=True)}
+    assert CG_TEST_ACTIVITY in migrate_names
 
 
 def test_hei_disabled_modules_excludes_even_when_include_disabled_false():
