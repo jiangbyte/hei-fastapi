@@ -1,5 +1,8 @@
-<!-- Author: Charlie -->
+<!--
+  Author: Charlie
 
+  分配角色：已选在上、候选在下。
+-->
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { accountApi, roleApi } from '@/api'
@@ -53,7 +56,6 @@ const listColumns = computed<DataTableColumns<any>>(() => [
       <NButton
         text
         type="primary"
-        size="small"
         disabled={selectedIds.value.has(String(row.id))}
         onClick={() => addRecord(row)}
       >
@@ -92,7 +94,7 @@ const selectedColumns = computed<DataTableColumns<any>>(() => [
     align: 'center',
     width: 70,
     render: (row) => (
-      <NButton text type="error" size="small" onClick={() => delRecord(row)}>
+      <NButton text type="error" onClick={() => delRecord(row)}>
         {renderButtonIcon('icon-park-outline:delete')}
       </NButton>
     ),
@@ -275,7 +277,7 @@ defineExpose({ openModal, openPicker })
 <template>
   <NDrawer
     v-model:show="state.showModal"
-    :default-width="800"
+    :default-width="760"
     placement="right"
     resizable
     :mask-closable="false"
@@ -285,12 +287,45 @@ defineExpose({ openModal, openPicker })
       closable
       :native-scrollbar="false"
     >
-      <NGrid
-        :cols="24"
-        :x-gap="10"
-      >
-        <NGi :span="16">
-          <NSpace vertical>
+      <div class="grant-pick">
+        <section class="grant-pick__panel grant-pick__panel--selected">
+          <NFlex
+            class="grant-pick__bar"
+            justify="space-between"
+            align="center"
+          >
+            <div class="grant-pick__meta">
+              <span class="grant-pick__title">已选角色</span>
+              <NText depth="3">
+                {{ state.selectedData.length }} 个
+              </NText>
+            </div>
+            <NButton
+              dashed
+              type="error"
+              :disabled="!state.selectedData.length"
+              @click="delAllRecord"
+            >
+              全部移除
+            </NButton>
+          </NFlex>
+          <NDataTable
+            size="small"
+            :row-key="(row: any) => row.id"
+            :columns="selectedColumns"
+            :data="state.selectedData"
+            :bordered="true"
+            :single-line="false"
+            max-height="220px"
+          />
+        </section>
+
+        <section class="grant-pick__panel">
+          <NFlex
+            class="grant-pick__bar"
+            vertical
+            :size="10"
+          >
             <NInputGroup>
               <NInput
                 v-model:value="state.searchKey"
@@ -313,66 +348,48 @@ defineExpose({ openModal, openPicker })
               justify="space-between"
               align="center"
             >
-              <NText>{{ `待处理: ${state.total}` }}</NText>
+              <div class="grant-pick__meta">
+                <span class="grant-pick__title">候选角色</span>
+                <NText depth="3">
+                  共 {{ state.total }} 个
+                </NText>
+              </div>
               <NButton
                 v-if="!(isPick && !state.multiple)"
                 dashed
-                size="small"
                 @click="addAllPageRecord"
               >
                 新增当前页
               </NButton>
             </NFlex>
-            <NDataTable
-              size="small"
-              :row-key="(row: any) => row.id"
-              :columns="listColumns"
-              :data="state.items"
-              :loading="state.loading"
-              :bordered="true"
-              :single-line="false"
-              max-height="calc(100vh - 320px)"
-            />
+          </NFlex>
+          <NDataTable
+            size="small"
+            :row-key="(row: any) => row.id"
+            :columns="listColumns"
+            :data="state.items"
+            :loading="state.loading"
+            :bordered="true"
+            :single-line="false"
+            max-height="calc(100vh - 520px)"
+          />
+          <NFlex
+            class="grant-pick__pager"
+            justify="end"
+          >
             <NPagination
               :page="state.page"
               :page-size="state.pageSize"
               show-size-picker
-              size="small"
               :item-count="state.total"
               :page-sizes="[10, 20, 50, 100]"
               @update:page="onPageChange"
               @update:page-size="onPageSizeChange"
             />
-          </NSpace>
-        </NGi>
-        <NGi :span="8">
-          <NSpace vertical>
-            <NFlex
-              justify="space-between"
-              align="center"
-            >
-              <NText>{{ `已选择: ${state.selectedData.length}` }}</NText>
-              <NButton
-                dashed
-                type="error"
-                size="small"
-                @click="delAllRecord"
-              >
-                全部移除
-              </NButton>
-            </NFlex>
-            <NDataTable
-              size="small"
-              :row-key="(row: any) => row.id"
-              :columns="selectedColumns"
-              :data="state.selectedData"
-              :bordered="true"
-              :single-line="false"
-              max-height="calc(100vh - 260px)"
-            />
-          </NSpace>
-        </NGi>
-      </NGrid>
+          </NFlex>
+        </section>
+      </div>
+
       <template #footer>
         <NSpace
           justify="end"
@@ -393,3 +410,42 @@ defineExpose({ openModal, openPicker })
     </NDrawerContent>
   </NDrawer>
 </template>
+
+<style scoped>
+.grant-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.grant-pick__panel {
+  min-width: 0;
+}
+
+.grant-pick__panel--selected {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color, #eef2f7);
+}
+
+.grant-pick__bar {
+  margin-bottom: 10px;
+}
+
+.grant-pick__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.grant-pick__title {
+  color: var(--text-color-1, #1f1f1f);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.grant-pick__pager {
+  margin-top: 10px;
+}
+</style>

@@ -11,6 +11,7 @@ from app.core.config.enums import StorageProvider
 FILE_ENGINE_TO_PROVIDER: dict[str, StorageProvider] = {
     "LOCAL": StorageProvider.LOCAL,
     "MINIO": StorageProvider.MINIO,
+    "RUSTFS": StorageProvider.RUSTFS,
     "ALIYUN": StorageProvider.OSS,
     "TENCENT": StorageProvider.S3,
 }
@@ -18,6 +19,7 @@ FILE_ENGINE_TO_PROVIDER: dict[str, StorageProvider] = {
 PROVIDER_TO_FILE_ENGINE: dict[str, str] = {
     StorageProvider.LOCAL.value: "LOCAL",
     StorageProvider.MINIO.value: "MINIO",
+    StorageProvider.RUSTFS.value: "RUSTFS",
     StorageProvider.OSS.value: "ALIYUN",
     StorageProvider.S3.value: "TENCENT",
 }
@@ -26,6 +28,7 @@ PROVIDER_TO_FILE_ENGINE: dict[str, str] = {
 PROVIDER_TO_KEY_PREFIX: dict[StorageProvider, str] = {
     StorageProvider.LOCAL: "STORAGE_LOCAL",
     StorageProvider.MINIO: "STORAGE_MINIO",
+    StorageProvider.RUSTFS: "STORAGE_RUSTFS",
     StorageProvider.OSS: "STORAGE_ALIYUN",
     StorageProvider.S3: "STORAGE_TENCENT",
 }
@@ -33,6 +36,7 @@ PROVIDER_TO_KEY_PREFIX: dict[StorageProvider, str] = {
 PROVIDER_DISPLAY_NAMES: dict[StorageProvider, str] = {
     StorageProvider.LOCAL: "本地文件",
     StorageProvider.MINIO: "MinIO",
+    StorageProvider.RUSTFS: "RustFS",
     StorageProvider.OSS: "阿里云 OSS",
     StorageProvider.S3: "腾讯云 COS",
 }

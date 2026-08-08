@@ -33,6 +33,12 @@ class SysAccount(Base, TimestampMixin):
     )
     cancelled_by: Mapped[str | None] = mapped_column(String(64), comment="注销人")
     cancel_reason: Mapped[str | None] = mapped_column(Text, comment="注销原因")
+    cancel_notify_email: Mapped[str | None] = mapped_column(
+        String(128), comment="注销通知邮箱（清理身份前快照）"
+    )
+    cancel_notify_phone: Mapped[str | None] = mapped_column(
+        String(32), comment="注销通知手机号（清理身份前快照）"
+    )
     last_login_ip: Mapped[str | None] = mapped_column(String(64), comment="上次登录IP")
     last_login_address: Mapped[str | None] = mapped_column(String(255), comment="上次登录地点")
     last_login_time: Mapped[datetime | None] = mapped_column(

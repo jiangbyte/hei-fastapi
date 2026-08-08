@@ -8,6 +8,7 @@ import { computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import './usercenter.css'
 import BasicInfoPanel from './components/BasicInfoPanel.vue'
+import CancelAccountPanel from './components/CancelAccountPanel.vue'
 import EmailPanel from './components/EmailPanel.vue'
 import MyMessagesPanel from './components/MyMessagesPanel.vue'
 import PasswordPanel from './components/PasswordPanel.vue'
@@ -22,6 +23,7 @@ const navItems: Array<{ key: string; label: string; icon: string }> = [
   { key: 'password', label: '密码', icon: 'icon-park-outline:lock' },
   { key: 'phone', label: '手机号', icon: 'icon-park-outline:phone-telephone' },
   { key: 'email', label: '邮箱', icon: 'icon-park-outline:mail' },
+  { key: 'cancel_account', label: '账号注销', icon: 'icon-park-outline:logout' },
 ]
 
 const panelMap: Record<string, Component> = {
@@ -30,6 +32,7 @@ const panelMap: Record<string, Component> = {
   password: PasswordPanel,
   phone: PhonePanel,
   email: EmailPanel,
+  cancel_account: CancelAccountPanel,
 }
 
 const state = reactive({
@@ -74,6 +77,11 @@ const menuOptions: MenuOption[] = [
         key: 'email',
         label: '邮箱',
         icon: renderIcon('icon-park-outline:mail', 16),
+      },
+      {
+        key: 'cancel_account',
+        label: '账号注销',
+        icon: renderIcon('icon-park-outline:logout', 16),
       },
     ],
   },

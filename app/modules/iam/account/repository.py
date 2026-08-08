@@ -1,15 +1,18 @@
 """ Author: Charlie """
 
+import secrets
 from datetime import UTC, datetime
 
-from sqlalchemy import Select, and_, case, delete, func, or_, select
+from sqlalchemy import Select, and_, case, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.config.enums import AccountStatusEnum
-from app.core.exceptions.business import ConflictError, NotFoundError
+from app.core.exceptions.business import BusinessError, ConflictError, NotFoundError
+from app.core.security.password import hash_password
 from app.modules.iam.account.model import SysAccount, SysAccountIdentity
+from app.modules.iam.account.password_history import SysAccountPasswordHistory
 from app.modules.iam.account.schema import (
     AccountAdminPageQuery,
     AccountCancelPayload,
@@ -36,8 +39,18 @@ from app.modules.iam.group.model import SysGroup
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository, account_dept_condition
 from app.modules.iam.role.model import SysRole
+from app.modules.message.feedback.model import MsgFeedback
+from app.modules.message.notice.model import MsgNoticeRead
 from app.modules.user.admin.model import AdminUserProfile
 from app.modules.user.portal.model import PortalUserProfile
+
+_ACCOUNT_SUBJECT_RELATION_TYPES = [
+    IamRelationType.ACCOUNT_ROLE,
+    IamRelationType.ACCOUNT_DEPT,
+    IamRelationType.ACCOUNT_GROUP,
+    IamRelationType.SUBJECT_RESOURCE_GRANT,
+    IamRelationType.SUBJECT_CLIENT_RESOURCE_GRANT,
+]
 
 
 class AccountRepository:
@@ -282,14 +295,71 @@ class AccountRepository:
         payload: AccountCancelPayload,
         cancelled_by: str | None = None,
     ) -> SysAccount:
+        """软注销：标记 CANCELLED，并立即清理身份/授权/资料等关联数据。"""
         entity = await self.get_required(payload.id)
+        if entity.account_status == AccountStatusEnum.CANCELLED.value:
+            raise BusinessError("账号已注销")
+        notify_email, notify_phone = await self._collect_cancel_notify_contacts(entity.id)
         now = datetime.now(UTC)
         entity.account_status = AccountStatusEnum.CANCELLED.value
         entity.cancelled_at = entity.cancelled_at or now
         entity.cancelled_by = cancelled_by
         entity.cancel_reason = payload.cancel_reason
+        entity.cancel_notify_email = notify_email
+        entity.cancel_notify_phone = notify_phone
+        entity.password_hash = hash_password(f"cancelled:{secrets.token_urlsafe(32)}")
+        entity.last_login_ip = None
+        entity.last_login_address = None
+        entity.last_login_device = None
+        entity.latest_login_ip = None
+        entity.latest_login_address = None
+        entity.latest_login_device = None
+        await self._cleanup_account_side_data([entity.id])
         await self.db.flush()
         return entity
+
+    async def _collect_cancel_notify_contacts(
+        self,
+        account_id: str,
+    ) -> tuple[str | None, str | None]:
+        """在清理身份/资料前快照通知用邮箱与手机号。"""
+        identities = await self.list_identities_by_account_ids([account_id])
+        email: str | None = None
+        phone: str | None = None
+        for item in identities:
+            identifier = (item.identifier or "").strip()
+            if not identifier:
+                continue
+            if item.identity_type == AccountIdentityType.EMAIL.value and not email:
+                email = identifier
+            elif item.identity_type == AccountIdentityType.PHONE.value and not phone:
+                phone = identifier
+        if not email or not phone:
+            admin_profile = (
+                await self.db.execute(
+                    select(AdminUserProfile).where(AdminUserProfile.account_id == account_id)
+                )
+            ).scalar_one_or_none()
+            portal_profile = (
+                await self.db.execute(
+                    select(PortalUserProfile).where(PortalUserProfile.account_id == account_id)
+                )
+            ).scalar_one_or_none()
+            if not email:
+                email = (
+                    (admin_profile.email if admin_profile else None)
+                    or (portal_profile.email if portal_profile else None)
+                    or None
+                )
+                email = (email or "").strip() or None
+            if not phone:
+                phone = (
+                    (admin_profile.phone if admin_profile else None)
+                    or (portal_profile.phone if portal_profile else None)
+                    or None
+                )
+                phone = (phone or "").strip() or None
+        return email, phone
 
     async def list_expired_cancelled_account_ids(self, cutoff: datetime) -> list[str]:
         stmt = select(SysAccount.id).where(
@@ -302,22 +372,23 @@ class AccountRepository:
         )
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
-    async def purge_many(self, account_ids: list[str]) -> None:
+    async def _cleanup_account_side_data(self, account_ids: list[str]) -> None:
+        """清理账户侧关联数据（不含 sys_account 主行）。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
         await self.relations.delete_subject_relations_many(
             IamRelationSubjectType.ACCOUNT.value,
             unique_ids,
-            [
-                IamRelationType.ACCOUNT_ROLE,
-                IamRelationType.ACCOUNT_DEPT,
-                IamRelationType.ACCOUNT_GROUP,
-                IamRelationType.SUBJECT_RESOURCE_GRANT,
-            ],
+            _ACCOUNT_SUBJECT_RELATION_TYPES,
         )
         await self.db.execute(
             delete(SysAccountIdentity).where(SysAccountIdentity.account_id.in_(unique_ids))
+        )
+        await self.db.execute(
+            delete(SysAccountPasswordHistory).where(
+                SysAccountPasswordHistory.account_id.in_(unique_ids)
+            )
         )
         await self.db.execute(
             delete(AdminUserProfile).where(AdminUserProfile.account_id.in_(unique_ids))
@@ -325,6 +396,21 @@ class AccountRepository:
         await self.db.execute(
             delete(PortalUserProfile).where(PortalUserProfile.account_id.in_(unique_ids))
         )
+        await self.db.execute(
+            delete(MsgNoticeRead).where(MsgNoticeRead.account_id.in_(unique_ids))
+        )
+        # 反馈保留工单内容，清空联系方式
+        await self.db.execute(
+            update(MsgFeedback)
+            .where(MsgFeedback.submitter_account_id.in_(unique_ids))
+            .values(contact=None)
+        )
+
+    async def purge_many(self, account_ids: list[str]) -> None:
+        unique_ids = list(dict.fromkeys(account_ids))
+        if not unique_ids:
+            return
+        await self._cleanup_account_side_data(unique_ids)
         await self.db.execute(delete(SysAccount).where(SysAccount.id.in_(unique_ids)))
         await self.db.flush()
 

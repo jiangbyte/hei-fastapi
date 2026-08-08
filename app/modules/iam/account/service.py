@@ -15,6 +15,7 @@ from app.core.security.session import SessionPayload
 from app.core.security.transport import decrypt_password
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
+from app.modules.iam.account.notify import notify_account_cancel_lifecycle
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.account.schema import (
@@ -53,6 +54,7 @@ from app.modules.user.admin.repository import AdminUserProfileRepository
 from app.modules.user.admin.schema import AdminProfileUpsertPayload
 from app.modules.user.portal.repository import PortalUserProfileRepository
 from app.modules.user.portal.schema import PortalProfileUpsertPayload
+from app.platform.config.reader import config_reader
 from app.platform.db.transaction import transactional
 
 
@@ -120,19 +122,51 @@ class AccountService:
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:delete", payload.ids)
+        accounts = await self.repo.list_accounts_by_ids(payload.ids)
+        session_targets = [(account.account_type, account.id) for account in accounts]
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
+        if session_targets:
+            await AccountSessionService(self.db).delete_accounts_sessions(session_targets)
 
-    async def purge_expired_cancelled_accounts(self, retention_days: int = 15) -> int:
-        cutoff = datetime.now(UTC) - timedelta(days=retention_days)
+    async def purge_expired_cancelled_accounts(
+        self,
+        retention_days: int | None = None,
+    ) -> int:
+        days = (
+            retention_days
+            if retention_days is not None
+            else config_reader.get_int("ACCOUNT_CANCEL_RETENTION_DAYS", 15)
+        )
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         account_ids = await self.repo.list_expired_cancelled_account_ids(cutoff)
         if not account_ids:
             return 0
         accounts = await self.repo.list_accounts_by_ids(account_ids)
         session_targets = [(account.account_type, account.id) for account in accounts]
+        notify_jobs = [
+            (
+                account.cancel_notify_email,
+                account.cancel_notify_phone,
+            )
+            for account in accounts
+        ]
         async with transactional(self.db):
             await self.repo.purge_many(account_ids)
         await AccountSessionService(self.db).delete_accounts_sessions(session_targets)
+        purged_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+        variables = {
+            "app_name": settings.app.name,
+            "purged_at": purged_at,
+            "retention_days": str(days),
+        }
+        for email, phone in notify_jobs:
+            await notify_account_cancel_lifecycle(
+                scene="ACCOUNT_PURGED",
+                email=email,
+                phone=phone,
+                variables=variables,
+            )
         return len(account_ids)
 
     async def detail(

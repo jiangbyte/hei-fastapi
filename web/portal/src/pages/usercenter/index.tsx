@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from 'react'
 import { Menu } from 'antd'
 import type { MenuProps } from 'antd'
 import {
+  DeleteOutlined,
   LockOutlined,
   MailOutlined,
   MessageOutlined,
@@ -12,6 +13,7 @@ import {
 } from '@ant-design/icons'
 import { useSearchParams } from 'react-router-dom'
 import { BasicInfoPanel } from './components/BasicInfoPanel'
+import { CancelAccountPanel } from './components/CancelAccountPanel'
 import { EmailPanel } from './components/EmailPanel'
 import { MyMessagesPanel } from './components/MyMessagesPanel'
 import { PasswordPanel } from './components/PasswordPanel'
@@ -24,6 +26,7 @@ const NAV_ITEMS = [
   { key: 'password', label: '密码' },
   { key: 'phone', label: '手机号' },
   { key: 'email', label: '邮箱' },
+  { key: 'cancel_account', label: '账号注销' },
 ] as const
 
 type TabKey = (typeof NAV_ITEMS)[number]['key']
@@ -34,6 +37,7 @@ const PANEL_MAP: Record<TabKey, ReactNode> = {
   password: <PasswordPanel />,
   phone: <PhonePanel />,
   email: <EmailPanel />,
+  cancel_account: <CancelAccountPanel />,
 }
 
 function resolveTab(tab: string | null): TabKey {
@@ -84,6 +88,12 @@ export function UserCenterPage() {
             key: 'email',
             icon: <MailOutlined />,
             label: '邮箱',
+          },
+          {
+            key: 'cancel_account',
+            icon: <DeleteOutlined />,
+            label: '账号注销',
+            danger: true,
           },
         ],
       },

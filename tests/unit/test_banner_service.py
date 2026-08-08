@@ -24,7 +24,7 @@ def _banner_create_request(**overrides) -> BannerCreateRequest:
         "category": "HOME",
         "type": "CAROUSEL",
         "position": "HOME_TOP",
-        "display_scope": "PORTAL",
+        "target_account_types": ["PORTAL"],
         "sort": 10,
         "status": StatusEnum.ENABLED,
     }
@@ -41,12 +41,14 @@ async def _create_banner(db_session, service: BannerService, **overrides) -> str
     return banner_id
 
 
-async def test_public_banner_filters_time_status_scope_and_sorts(db_session):
+async def test_public_banner_filters_time_status_account_type_and_sorts(db_session):
     service = BannerService(db_session)
     now = datetime.now(UTC)
     visible_late_id = await _create_banner(db_session, service, title="B", sort=20)
     visible_first_id = await _create_banner(db_session, service, title="A", sort=1)
-    await service.create(_banner_create_request(title="Admin", display_scope="ADMIN"))
+    await service.create(
+        _banner_create_request(title="Admin", target_account_types=["ADMIN"])
+    )
     await service.create(_banner_create_request(title="Disabled", status=StatusEnum.DISABLED))
     await service.create(_banner_create_request(title="Future", start_at=now + timedelta(days=1)))
     await service.create(_banner_create_request(title="Expired", end_at=now - timedelta(days=1)))
@@ -75,7 +77,7 @@ async def test_flush_interaction_deltas_accumulates_and_clears(db_session):
         category="home",
         type="carousel",
         position="home_top",
-        display_scope="PORTAL",
+        target_account_types=["PORTAL"],
         interaction_count=2,
     )
     db_session.add(banner)
@@ -98,7 +100,7 @@ async def test_flush_interaction_deltas_updates_multiple_banners_in_one_statemen
         category="home",
         type="carousel",
         position="home_top",
-        display_scope="PORTAL",
+        target_account_types=["PORTAL"],
         interaction_count=1,
     )
     second = SysBanner(
@@ -107,7 +109,7 @@ async def test_flush_interaction_deltas_updates_multiple_banners_in_one_statemen
         category="home",
         type="carousel",
         position="home_top",
-        display_scope="PORTAL",
+        target_account_types=["PORTAL"],
         interaction_count=10,
     )
     db_session.add_all([first, second])

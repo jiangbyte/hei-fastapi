@@ -90,3 +90,4 @@ class StorageProvider(StrEnum):
     OSS = "oss"  # 阿里云 OSS
     S3 = "s3"  # 腾讯云 COS（S3 兼容）
     MINIO = "minio"  # MinIO
+    RUSTFS = "rustfs"  # RustFS（S3 兼容，path-style）

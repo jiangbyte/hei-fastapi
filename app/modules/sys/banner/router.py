@@ -14,12 +14,26 @@ from app.deps.db import get_db_session
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
     BannerCreateRequest,
+    BannerPublicListQuery,
     BannerUpdateRequest,
     SysBannerSchema,
 )
 from app.modules.sys.banner.service import BannerService
 
 router = APIRouter()
+
+
+@router.get(
+    "/v1/admin/sys/banners/list",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[list[SysBannerSchema]],
+)
+async def list_admin_banners(
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    query: Annotated[BannerPublicListQuery, Depends()],
+) -> ApiResponse[list[SysBannerSchema]]:
+    """管理端消费列表：仅需 ADMIN 登录，按目标账户类型 ADMIN 过滤可见展示图。"""
+    return success(await BannerService(db).list_admin(query))
 
 
 @router.post(

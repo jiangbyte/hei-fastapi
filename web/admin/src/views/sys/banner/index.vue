@@ -6,6 +6,7 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { NButton, NFlex, NIcon, NImage, NTag } from 'naive-ui'
 import { bannerApi } from '@/api'
+import { ACCOUNT_TYPE_OPTIONS, accountTypeLabel } from '@/constants/account'
 import {
   createTagColor,
   formatDateTime,
@@ -46,11 +47,11 @@ const searchForm = createProSearchForm<any>({
 
 const searchColumns = computed<ProSearchFormColumns<any>>(() => [
   {
-    title: '展示范围',
-    path: 'display_scope',
+    title: '目标账户类型',
+    path: 'target_account_type',
     field: 'select',
     fieldProps: {
-      options: dictList('BANNER_DISPLAY_SCOPE'),
+      options: ACCOUNT_TYPE_OPTIONS,
     },
   },
   {
@@ -125,18 +126,22 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     render: (row) => renderImage(row),
   },
   {
-    title: '展示范围',
-    path: 'display_scope',
-    width: 120,
-    render: (row) => (
-      <NTag
-        size="small"
-        color={createTagColor(dictTypeColor('BANNER_DISPLAY_SCOPE', row.display_scope))}
-        bordered={false}
-      >
-        {dictTypeData('BANNER_DISPLAY_SCOPE', row.display_scope)}
-      </NTag>
-    ),
+    title: '目标账户类型',
+    path: 'target_account_types',
+    width: 160,
+    render: (row) => {
+      const types = Array.isArray(row.target_account_types) ? row.target_account_types : []
+      if (!types.length) return <span />
+      return (
+        <NFlex size={4} wrap>
+          {types.map((t: string) => (
+            <NTag key={t} size="small" bordered={false} type="info">
+              {accountTypeLabel(t)}
+            </NTag>
+          ))}
+        </NFlex>
+      )
+    },
   },
   {
     title: '分类',

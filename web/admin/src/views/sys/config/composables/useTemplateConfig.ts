@@ -11,6 +11,8 @@ export const MAIL_SCENE_LABELS: Record<string, string> = {
   PASSWORD_EXPIRING: '密码即将过期',
   BIND_EMAIL_CODE: '绑定邮箱验证码',
   CHANGE_EMAIL_CODE: '修改邮箱验证码',
+  ACCOUNT_CANCELLED: '账号注销确认',
+  ACCOUNT_PURGED: '账号彻底删除',
 }
 
 export const SMS_SCENE_LABELS: Record<string, string> = {
@@ -22,6 +24,8 @@ export const SMS_SCENE_LABELS: Record<string, string> = {
   PASSWORD_EXPIRING: '密码即将过期',
   BIND_PHONE_CODE: '绑定手机验证码',
   CHANGE_PHONE_CODE: '修改手机验证码',
+  ACCOUNT_CANCELLED: '账号注销确认',
+  ACCOUNT_PURGED: '账号彻底删除',
 }
 
 export interface MailTemplateValue {

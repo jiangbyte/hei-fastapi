@@ -1,27 +1,35 @@
-<!-- Author: Charlie -->
+<!--
+  Author: Charlie
 
+  运营工作台：状态条 + 台账式指标 + 主图侧栏，数据来自 dashboard overview / banners list。
+-->
 <script setup lang="ts">
 import { Chart } from '@antv/g2'
-import { dashboardApi } from '@/api'
+import { Icon } from '@iconify/vue/offline'
+import { NIcon } from 'naive-ui'
+import { bannerApi, dashboardApi } from '@/api'
 import { useAuthStore } from '@/stores'
+import { accountTypeLabel } from '@/constants/account'
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { NIcon } from 'naive-ui'
-import { Icon } from '@iconify/vue/offline'
 
 type ChartInstance = InstanceType<typeof Chart>
 
 const authStore = useAuthStore()
 const router = useRouter()
-const accountTrendRef = ref<HTMLDivElement | null>(null)
-const auditTrendRef = ref<HTMLDivElement | null>(null)
-const fileChartRef = ref<HTMLDivElement | null>(null)
-const charts: ChartInstance[] = []
+const trendChartRef = ref<HTMLDivElement | null>(null)
+const filePieChartRef = ref<HTMLDivElement | null>(null)
+let trendChart: ChartInstance | null = null
+let filePieChart: ChartInstance | null = null
+const clockTimer = ref<number | null>(null)
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
+const appTitle = import.meta.env.VITE_APP_TITLE || 'HEI Admin'
 
 const state = reactive({
   loading: false,
   chartLoadError: false,
+  now: Date.now(),
+  banners: [] as any[],
   overview: {
     summary: {
       account_total: 0,
@@ -56,83 +64,6 @@ const state = reactive({
   },
 })
 
-const bannerMetrics = computed(() => [
-  {
-    key: 'account_total',
-    label: '账号总数',
-    value: Number(state.overview.summary.account_total ?? 0),
-    hint: `今日新增 ${Number(state.overview.accounts.today_new ?? 0)}`,
-  },
-  {
-    key: 'online_sessions',
-    label: '在线设备',
-    value: Number(state.overview.summary.online_sessions ?? 0),
-    hint: '当前会话',
-  },
-  {
-    key: 'file_total',
-    label: '文件数量',
-    value: Number(state.overview.summary.file_total ?? 0),
-    hint: '个文件',
-  },
-  {
-    key: 'storage_bytes',
-    label: '存储用量',
-    value: formatFileSize(state.overview.summary.storage_bytes),
-    hint: '累计占用',
-  },
-])
-
-const accountStats = computed(() => [
-  { key: 'enabled', label: '启用账号', value: Number(state.overview.accounts.enabled ?? 0) },
-  { key: 'disabled', label: '禁用账号', value: Number(state.overview.accounts.disabled ?? 0) },
-  { key: 'today_new', label: '今日新增', value: Number(state.overview.accounts.today_new ?? 0) },
-  ...state.overview.accounts.by_type.map((item) => ({
-    key: `type_${item.name}`,
-    label: `类型 ${item.name}`,
-    value: Number(item.value ?? 0),
-  })),
-])
-
-const iamStats = computed(() => [
-  { key: 'role', label: '角色', value: Number(state.overview.iam.role_count ?? 0) },
-  { key: 'dept', label: '部门', value: Number(state.overview.iam.dept_count ?? 0) },
-  { key: 'group', label: '用户组', value: Number(state.overview.iam.group_count ?? 0) },
-  { key: 'menu', label: '菜单', value: Number(state.overview.iam.menu_count ?? 0) },
-])
-
-const opsTodayStats = computed(() => [
-  {
-    key: 'audit_total',
-    label: '今日审计',
-    value: Number(state.overview.ops_today.audit_total ?? 0),
-  },
-  {
-    key: 'audit_failed',
-    label: '今日失败',
-    value: Number(state.overview.ops_today.audit_failed ?? 0),
-  },
-  {
-    key: 'feedback_pending',
-    label: '待处理反馈',
-    value: Number(state.overview.ops_today.feedback_pending ?? 0),
-  },
-])
-
-const accountTrendData = computed(() =>
-  state.overview.trends.account_trend.map((item) => ({
-    ...item,
-    type: '新增账号',
-  })),
-)
-
-const auditTrendData = computed(() =>
-  state.overview.trends.audit_trend.map((item) => ({
-    ...item,
-    type: '审计量',
-  })),
-)
-
 const displayName = computed(() => {
   const user = authStore.userInfo
   const nickname = String(user?.nickname ?? '').trim()
@@ -144,21 +75,168 @@ const displayName = computed(() => {
 })
 
 const avatarUrl = computed(() => authStore.userInfo?.avatar || undefined)
-const roleText = computed(() => mapNames(authStore.userInfo?.roleIdNames))
-const deptText = computed(() => mapNames(authStore.userInfo?.deptIdNames))
-const groupText = computed(() => mapNames(authStore.userInfo?.groupIdNames))
+const deptText = computed(() => mapNames(authStore.userInfo?.deptIdNames) || '未分配部门')
 
-onMounted(fetchOverview)
+const greeting = computed(() => {
+  const hour = new Date(state.now).getHours()
+  if (hour < 6) return '凌晨好'
+  if (hour < 11) return '早上好'
+  if (hour < 14) return '中午好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+})
+
+const clockText = computed(() => {
+  const date = new Date(state.now)
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六']
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mm = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${y}.${m}.${d} 周${weekdays[date.getDay()]} ${hh}:${mm}:${ss}`
+})
+
+const pulseItems = computed(() => [
+  {
+    key: 'audit',
+    label: '今日审计',
+    value: Number(state.overview.ops_today.audit_total ?? 0),
+  },
+  {
+    key: 'failed',
+    label: '失败',
+    value: Number(state.overview.ops_today.audit_failed ?? 0),
+    danger: true,
+  },
+  {
+    key: 'online',
+    label: '在线会话',
+    value: Number(state.overview.summary.online_sessions ?? 0),
+    path: '/auth/session',
+  },
+  {
+    key: 'feedback',
+    label: '待处理反馈',
+    value: Number(state.overview.ops_today.feedback_pending ?? 0),
+    path: '/message/feedback',
+  },
+])
+
+const ledgerItems = computed(() => [
+  {
+    key: 'account',
+    label: '账号',
+    value: Number(state.overview.summary.account_total ?? 0),
+    note: `今日 +${Number(state.overview.accounts.today_new ?? 0)}`,
+    path: '/iam/account',
+  },
+  {
+    key: 'enabled',
+    label: '启用',
+    value: Number(state.overview.accounts.enabled ?? 0),
+    note: `禁用 ${Number(state.overview.accounts.disabled ?? 0)}`,
+    path: '/iam/account',
+  },
+  {
+    key: 'dept',
+    label: '部门',
+    value: Number(state.overview.iam.dept_count ?? 0),
+    note: '组织节点',
+    path: '/iam/dept',
+  },
+  {
+    key: 'role',
+    label: '角色',
+    value: Number(state.overview.iam.role_count ?? 0),
+    note: '授权主体',
+    path: '/iam/role',
+  },
+  {
+    key: 'group',
+    label: '用户组',
+    value: Number(state.overview.iam.group_count ?? 0),
+    note: '批量授权',
+    path: '/iam/group',
+  },
+  {
+    key: 'menu',
+    label: '菜单',
+    value: Number(state.overview.iam.menu_count ?? 0),
+    note: '可见入口',
+    path: '/iam/resource',
+  },
+  {
+    key: 'file',
+    label: '文件',
+    value: Number(state.overview.summary.file_total ?? 0),
+    note: formatFileSize(state.overview.summary.storage_bytes),
+    path: '/sys/file',
+  },
+])
+
+const accountBars = computed(() => {
+  const rows = (state.overview.accounts.by_type ?? []).map((item) => ({
+    name: accountTypeLabel(item.name) || item.name,
+    value: Number(item.value ?? 0),
+  }))
+  const max = Math.max(...rows.map((row) => row.value), 1)
+  return rows.map((row) => ({ ...row, ratio: Math.round((row.value / max) * 100) }))
+})
+
+const filePieData = computed(() =>
+  (state.overview.files.by_content_type ?? [])
+    .slice(0, 6)
+    .map((item) => ({
+      name: simplifyContentType(item.name),
+      value: Number(item.value ?? 0),
+    }))
+    .filter((item) => item.value > 0),
+)
+
+const trendData = computed(() => [
+  ...state.overview.trends.account_trend.map((item) => ({
+    date: item.date,
+    value: Number(item.value ?? 0),
+    type: '新增账号',
+  })),
+  ...state.overview.trends.audit_trend.map((item) => ({
+    date: item.date,
+    value: Number(item.value ?? 0),
+    type: '审计量',
+  })),
+])
+
+onMounted(() => {
+  void fetchOverview()
+  void loadBanners()
+  clockTimer.value = window.setInterval(() => {
+    state.now = Date.now()
+  }, 1000)
+})
 
 onBeforeUnmount(() => {
   destroyCharts()
+  if (clockTimer.value != null) {
+    window.clearInterval(clockTimer.value)
+    clockTimer.value = null
+  }
 })
 
 watch(
-  () => [accountTrendData.value, auditTrendData.value, state.overview.files.by_content_type],
+  () => trendData.value,
   async () => {
     await nextTick()
-    await renderCharts()
+    await renderTrendChart()
+  },
+)
+
+watch(
+  () => filePieData.value,
+  async () => {
+    await nextTick()
+    await renderFilePieChart()
   },
 )
 
@@ -168,9 +246,18 @@ async function fetchOverview() {
     const response = await dashboardApi.overview()
     state.overview = Object.assign(state.overview, response.data ?? {})
     await nextTick()
-    await renderCharts()
+    await Promise.all([renderTrendChart(), renderFilePieChart()])
   } finally {
     state.loading = false
+  }
+}
+
+async function loadBanners() {
+  try {
+    const response = await bannerApi.list({ position: 'ADMIN_TOP' })
+    state.banners = Array.isArray(response.data) ? response.data : []
+  } catch {
+    state.banners = []
   }
 }
 
@@ -179,11 +266,6 @@ function mapNames(items?: Array<{ id?: string; name?: string }>) {
     .map((item) => item.name)
     .filter(Boolean)
     .join(' / ')
-}
-
-function displayValue(value: unknown) {
-  const text = String(value ?? '').trim()
-  return text || '未设置'
 }
 
 function formatFileSize(size?: number | string | null) {
@@ -201,359 +283,699 @@ function formatFileSize(size?: number | string | null) {
   return `${current.toFixed(unitIndex === 0 ? 0 : 2)} ${units[unitIndex]}`
 }
 
-async function renderCharts() {
-  destroyCharts()
+function simplifyContentType(value: string) {
+  const text = String(value || 'unknown')
+  if (text.includes('/')) {
+    return text.split('/').pop() || text
+  }
+  return text
+}
+
+async function renderTrendChart() {
+  destroyTrendChart()
   state.chartLoadError = false
+  if (!trendChartRef.value) {
+    return
+  }
   try {
-    await Promise.all([renderAccountTrend(), renderAuditTrend(), renderFileChart()])
+    const chart = new Chart({
+      container: trendChartRef.value,
+      autoFit: true,
+      height: 300,
+    })
+    chart.options({
+      type: 'view',
+      autoFit: true,
+      data: trendData.value,
+      children: [
+        {
+          type: 'area',
+          encode: { x: 'date', y: 'value', color: 'type' },
+          scale: { color: { range: ['rgba(22,119,255,0.18)', 'rgba(19,194,194,0.16)'] } },
+          style: { fillOpacity: 1 },
+          legend: false,
+          axis: false,
+        },
+        {
+          type: 'line',
+          encode: { x: 'date', y: 'value', color: 'type' },
+          scale: { color: { range: ['#1677FF', '#13C2C2'] } },
+          style: { lineWidth: 2.2 },
+          axis: { x: { title: false }, y: { title: false, grid: true } },
+          legend: { color: { position: 'top' } },
+        },
+      ],
+    })
+    trendChart = chart
+    await chart.render()
   } catch {
     state.chartLoadError = true
   }
 }
 
+async function renderFilePieChart() {
+  destroyFilePieChart()
+  if (!filePieChartRef.value || !filePieData.value.length) {
+    return
+  }
+  try {
+    const chart = new Chart({
+      container: filePieChartRef.value,
+      autoFit: true,
+      height: 220,
+    })
+    chart.options({
+      type: 'interval',
+      autoFit: true,
+      data: filePieData.value,
+      encode: { y: 'value', color: 'name' },
+      transform: [{ type: 'stackY' }],
+      coordinate: { type: 'theta', outerRadius: 0.85 },
+      scale: {
+        color: {
+          range: ['#1677FF', '#13C2C2', '#722ED1', '#FA8C16', '#52C41A', '#EB2F96'],
+        },
+      },
+      legend: {
+        color: {
+          position: 'bottom',
+          layout: { justifyContent: 'center' },
+        },
+      },
+      tooltip: {
+        title: 'name',
+        items: [{ channel: 'y', name: '数量' }],
+      },
+      style: { stroke: '#fff', lineWidth: 1 },
+      animate: false,
+    })
+    filePieChart = chart
+    await chart.render()
+  } catch {
+    // 侧栏饼图失败时保留空态即可，不阻断主图
+  }
+}
+
+function destroyTrendChart() {
+  trendChart?.destroy()
+  trendChart = null
+}
+
+function destroyFilePieChart() {
+  filePieChart?.destroy()
+  filePieChart = null
+}
+
 function destroyCharts() {
-  while (charts.length) {
-    charts.pop()?.destroy()
-  }
+  destroyTrendChart()
+  destroyFilePieChart()
 }
 
-async function renderLineChart(container: HTMLDivElement | null, data: any[], color: string) {
-  if (!container) {
-    return
-  }
-  const chart = new Chart({ container, autoFit: true, height: 260 })
-  chart.options({
-    type: 'line',
-    data,
-    encode: { x: 'date', y: 'value', color: 'type' },
-    scale: { color: { range: [color] } },
-    style: { lineWidth: 2.4 },
-    axis: { x: { title: false }, y: { title: false, grid: true } },
-    legend: { color: { position: 'top' } },
-  })
-  charts.push(chart)
-  await chart.render()
-}
-
-async function renderAccountTrend() {
-  await renderLineChart(accountTrendRef.value, accountTrendData.value, '#2563eb')
-}
-
-async function renderAuditTrend() {
-  await renderLineChart(auditTrendRef.value, auditTrendData.value, '#0f766e')
-}
-
-async function renderFileChart() {
-  if (!fileChartRef.value) {
-    return
-  }
-  const chart = new Chart({ container: fileChartRef.value, autoFit: true, height: 220 })
-  chart.options({
-    type: 'interval',
-    coordinate: { type: 'theta' },
-    data: state.overview.files.by_content_type,
-    encode: { y: 'value', color: 'name' },
-    transform: [{ type: 'stackY' }],
-    legend: { color: { position: 'bottom' } },
-    labels: [{ text: 'name', position: 'outside', style: { fontSize: 12 } }],
-  })
-  charts.push(chart)
-  await chart.render()
-}
-
-function go(path: string) {
+function go(path?: string) {
+  if (!path) return
   router.push(path)
+}
+
+function openBanner(banner: any) {
+  const link = String(banner?.url || '').trim()
+  if (!link || banner?.link_type === 'NONE') return
+  if (banner.link_type === 'ROUTE' || link.startsWith('/')) {
+    router.push(link.startsWith('/') ? link : `/${link}`)
+    return
+  }
+  window.open(link, '_blank', 'noopener,noreferrer')
 }
 </script>
 
 <template>
   <NSpin :show="state.loading">
-    <n-el class="dashboard-page">
-      <NGrid
-        cols="1 m:24"
-        responsive="screen"
-        :x-gap="16"
-        :y-gap="16"
+    <n-el class="board">
+      <!-- 欢迎区：左欢迎卡 + 右轮播（轮播仅占右侧栏） -->
+      <section
+        class="welcome"
+        :class="{ 'welcome--solo': !state.banners.length }"
       >
-        <NGridItem span="1 m:16">
-          <NSpace
-            vertical
-            :size="16"
-            style="width: 100%"
-          >
-            <NCard
-              class="dashboard-banner"
-              :bordered="false"
-              size="small"
-            >
-              <NGrid
-                cols="2 s:4"
-                responsive="screen"
-                :x-gap="12"
-                :y-gap="12"
+        <header class="rail">
+          <div class="rail__top">
+            <div class="rail__identity">
+              <NAvatar
+                v-if="avatarUrl"
+                round
+                :size="44"
+                :src="avatarUrl"
+                :img-props="avatarImgProps"
+              />
+              <NAvatar
+                v-else
+                round
+                :size="44"
               >
-                <NGridItem
-                  v-for="item in bannerMetrics"
-                  :key="item.key"
-                >
-                  <div class="dashboard-banner__item">
-                    <div class="dashboard-banner__label">
-                      {{ item.label }}
-                    </div>
-                    <div class="dashboard-banner__value">
-                      {{ item.value }}
-                    </div>
-                    <div class="dashboard-banner__hint">
-                      {{ item.hint }}
-                    </div>
-                  </div>
-                </NGridItem>
-              </NGrid>
-            </NCard>
+                <NIcon :size="22">
+                  <Icon icon="icon-park-outline:user" />
+                </NIcon>
+              </NAvatar>
+              <div class="rail__copy">
+                <div class="rail__hello">
+                  {{ greeting }}，{{ displayName }}
+                </div>
+                <div class="rail__meta">
+                  {{ deptText }} · {{ appTitle }}
+                </div>
+              </div>
+            </div>
+            <div class="rail__clock">
+              {{ clockText }}
+            </div>
+          </div>
 
-            <NCard
-              title="账号健康度"
-              :bordered="false"
-              size="small"
+          <div class="rail__pulse">
+            <button
+              v-for="item in pulseItems"
+              :key="item.key"
+              type="button"
+              class="pulse"
+              :class="{ 'pulse--danger': item.danger, 'pulse--link': Boolean(item.path) }"
+              @click="go(item.path)"
             >
-              <template #header-extra>
-                <NButton
-                  text
-                  :loading="state.loading"
-                  @click="fetchOverview"
-                >
-                  <template #icon>
-                    <NIcon>
-                      <Icon icon="icon-park-outline:reload" />
-                    </NIcon>
-                  </template>
-                  刷新
-                </NButton>
+              <span class="pulse__label">{{ item.label }}</span>
+              <span class="pulse__value">{{ item.value }}</span>
+            </button>
+          </div>
+        </header>
+
+        <div
+          v-if="state.banners.length"
+          class="promo"
+        >
+          <NCarousel
+            autoplay
+            :interval="5000"
+            show-dots
+          >
+            <button
+              v-for="banner in state.banners"
+              :key="banner.id"
+              type="button"
+              class="promo__slide"
+              @click="openBanner(banner)"
+            >
+              <img
+                v-if="banner.image_url || banner.image"
+                :src="banner.image_url || banner.image"
+                :alt="banner.title"
+                class="promo__image"
+              >
+              <div class="promo__veil" />
+              <div class="promo__text">
+                <strong>{{ banner.title }}</strong>
+                <span v-if="banner.summary">{{ banner.summary }}</span>
+              </div>
+            </button>
+          </NCarousel>
+        </div>
+      </section>
+
+      <!-- 台账式指标：横排分割 -->
+      <section class="ledger">
+        <button
+          v-for="item in ledgerItems"
+          :key="item.key"
+          type="button"
+          class="ledger__cell"
+          @click="go(item.path)"
+        >
+          <span class="ledger__label">{{ item.label }}</span>
+          <span class="ledger__value">{{ item.value }}</span>
+          <span class="ledger__note">{{ item.note }}</span>
+        </button>
+      </section>
+
+      <!-- 主区：趋势图 + 侧栏占比 -->
+      <section class="main">
+        <div class="panel trend">
+          <div class="panel__head">
+            <div>
+              <div class="panel__title">
+                近 7 日动态
+              </div>
+              <div class="panel__sub">
+                新增账号与审计量
+              </div>
+            </div>
+            <NButton
+              text
+              :loading="state.loading"
+              @click="fetchOverview"
+            >
+              <template #icon>
+                <NIcon>
+                  <Icon icon="icon-park-outline:reload" />
+                </NIcon>
               </template>
-              <NGrid
-                cols="2 s:4"
-                responsive="screen"
-                :x-gap="16"
-                :y-gap="16"
-              >
-                <NGridItem
-                  v-for="item in accountStats"
-                  :key="item.key"
-                >
-                  <NStatistic
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </NGridItem>
-              </NGrid>
-            </NCard>
-
-            <NCard
-              title="组织与菜单"
-              :bordered="false"
-              size="small"
-            >
-              <NGrid
-                cols="2 s:4"
-                responsive="screen"
-                :x-gap="16"
-                :y-gap="16"
-              >
-                <NGridItem
-                  v-for="item in iamStats"
-                  :key="item.key"
-                >
-                  <NStatistic
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </NGridItem>
-              </NGrid>
-            </NCard>
-
-            <NCard
-              title="今日运维"
-              :bordered="false"
-              size="small"
-            >
-              <NGrid
-                cols="1 s:3"
-                responsive="screen"
-                :x-gap="16"
-                :y-gap="16"
-              >
-                <NGridItem
-                  v-for="item in opsTodayStats"
-                  :key="item.key"
-                >
-                  <NStatistic
-                    :label="item.label"
-                    :value="item.value"
-                  />
-                </NGridItem>
-              </NGrid>
-            </NCard>
-
-            <NCard
-              title="近 7 日新增账号"
-              :bordered="false"
-            >
-              <div
-                ref="accountTrendRef"
-                class="chart-box"
-              />
-            </NCard>
-
-            <NCard
-              title="近 7 日审计量"
-              :bordered="false"
-            >
-              <div
-                ref="auditTrendRef"
-                class="chart-box"
-              />
-            </NCard>
-          </NSpace>
-        </NGridItem>
-
-        <NGridItem span="1 m:8">
-          <NSpace
-            vertical
-            :size="16"
-            style="width: 100%"
+              刷新
+            </NButton>
+          </div>
+          <div
+            ref="trendChartRef"
+            class="trend__chart"
+          />
+          <NAlert
+            v-if="state.chartLoadError"
+            class="mt-3"
+            type="warning"
+            :show-icon="false"
           >
-            <NCard
-              title="当前账号"
-              :bordered="false"
-              size="small"
-            >
-              <NThing>
-                <template #avatar>
-                  <NAvatar
-                    v-if="avatarUrl"
-                    round
-                    :size="56"
-                    :src="avatarUrl"
-                    :img-props="avatarImgProps"
-                  />
-                  <NAvatar
-                    v-else
-                    round
-                    :size="56"
-                  >
-                    <NovaIcon
-                      icon="icon-park-outline:user"
-                      :size="28"
-                    />
-                  </NAvatar>
-                </template>
-                <template #header>
-                  {{ displayName }}
-                </template>
-                <template #description>
-                  {{ authStore.userInfo?.account || '-' }}
-                </template>
-              </NThing>
+            图表加载失败，请刷新后重试。
+          </NAlert>
+        </div>
 
-              <NSpace
-                class="mt-3"
-                :size="8"
+        <aside class="side">
+          <div class="panel">
+            <div class="panel__head">
+              <div class="panel__title">
+                账号构成
+              </div>
+              <NButton
+                text
+                type="primary"
+                @click="go('/iam/account')"
               >
-                <NButton
-                  size="small"
-                  type="primary"
-                  ghost
-                  @click="go('/usercenter')"
-                >
-                  个人中心
-                </NButton>
-              </NSpace>
-
-              <NDescriptions
-                class="mt-3"
-                :column="1"
-                label-placement="left"
-                size="small"
-              >
-                <NDescriptionsItem label="部门">
-                  {{ displayValue(deptText) }}
-                </NDescriptionsItem>
-                <NDescriptionsItem label="角色">
-                  {{ displayValue(roleText) }}
-                </NDescriptionsItem>
-                <NDescriptionsItem label="用户组">
-                  {{ displayValue(groupText) }}
-                </NDescriptionsItem>
-              </NDescriptions>
-            </NCard>
-
-            <NCard
-              title="文件类型分布"
-              :bordered="false"
-              size="small"
+                管理
+              </NButton>
+            </div>
+            <div
+              v-if="accountBars.length"
+              class="bars"
             >
               <div
-                ref="fileChartRef"
-                class="chart-box chart-box--side"
-              />
-            </NCard>
-          </NSpace>
-        </NGridItem>
-      </NGrid>
+                v-for="row in accountBars"
+                :key="row.name"
+                class="bar-row"
+              >
+                <div class="bar-row__meta">
+                  <span>{{ row.name }}</span>
+                  <strong>{{ row.value }}</strong>
+                </div>
+                <div class="bar-row__track">
+                  <div
+                    class="bar-row__fill bar-row__fill--blue"
+                    :style="{ width: `${row.ratio}%` }"
+                  />
+                </div>
+              </div>
+            </div>
+            <NEmpty
+              v-else
+              description="暂无账号数据"
+              size="small"
+            />
+          </div>
 
-      <NAlert
-        v-if="state.chartLoadError"
-        class="mt-4"
-        type="warning"
-        :show-icon="false"
-      >
-        图表运行时加载失败，请刷新页面或重启开发服务。
-      </NAlert>
+          <div class="panel">
+            <div class="panel__head">
+              <div class="panel__title">
+                文件类型占比
+              </div>
+              <NButton
+                text
+                type="primary"
+                @click="go('/sys/file')"
+              >
+                管理
+              </NButton>
+            </div>
+            <div
+              v-show="filePieData.length"
+              ref="filePieChartRef"
+              class="file-pie"
+            />
+            <NEmpty
+              v-if="!filePieData.length"
+              description="暂无文件数据"
+              size="small"
+            />
+          </div>
+        </aside>
+      </section>
     </n-el>
   </NSpin>
 </template>
 
 <style scoped>
-.dashboard-page {
-  min-height: 100%;
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   min-width: 0;
 }
 
-.dashboard-banner {
-  color: #fff;
-  background-color: var(--primary-color);
+.welcome {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.9fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
-.dashboard-banner :deep(.n-card__content) {
-  color: #fff;
+.welcome--solo {
+  grid-template-columns: 1fr;
 }
 
-.dashboard-banner__item {
+.rail {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #eef2f7);
+}
+
+.rail__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.rail__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
 }
 
-.dashboard-banner__label,
-.dashboard-banner__hint {
-  opacity: 0.86;
-  font-size: 13px;
-  line-height: 1.4;
+.rail__hello {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text-color-1, #1f1f1f);
 }
 
-.dashboard-banner__value {
-  margin: 6px 0 2px;
-  font-size: 28px;
+.rail__meta {
+  margin-top: 4px;
+  color: var(--text-color-3, #999);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail__pulse {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pulse {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 84px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, #eef2f7);
+  background: var(--body-color, #f7f9fc);
+  color: inherit;
+  cursor: default;
+  text-align: left;
+}
+
+.pulse--link {
+  cursor: pointer;
+}
+
+.pulse--link:hover {
+  border-color: color-mix(in srgb, var(--primary-color, #1677ff) 45%, transparent);
+}
+
+.pulse__label {
+  color: var(--text-color-3, #999);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.pulse__value {
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.15;
-  word-break: break-word;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: var(--text-color-1, #1f1f1f);
 }
 
-.chart-box {
-  width: 100%;
+.pulse--danger .pulse__value {
+  color: #cf1322;
+}
+
+.rail__clock {
+  color: var(--text-color-2, #666);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.promo {
   min-width: 0;
-  height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, #eef2f7);
+  background: #0f172a;
 }
 
-.chart-box--side {
-  height: 240px;
+.promo,
+.promo :deep(.n-carousel),
+.promo :deep(.n-carousel__slide) {
+  height: 100%;
+  min-height: 168px;
+}
+
+.promo__slide {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  overflow: hidden;
+  background: linear-gradient(145deg, #0f172a, #1d4ed8);
+  text-align: left;
+}
+
+.promo__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.promo__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.15), rgba(15, 23, 42, 0.72));
+}
+
+.promo__text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+  padding: 14px;
+  color: #fff;
+}
+
+.promo__text strong {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.promo__text span {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.88;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ledger {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #eef2f7);
+}
+
+.ledger__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px 12px;
+  border: 0;
+  border-right: 1px solid var(--border-color, #eef2f7);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ledger__cell:last-child {
+  border-right: 0;
+}
+
+.ledger__cell:hover {
+  background: color-mix(in srgb, var(--primary-color, #1677ff) 6%, transparent);
+}
+
+.ledger__label {
+  color: var(--text-color-3, #999);
+  font-size: 12px;
+}
+
+.ledger__value {
+  color: var(--text-color-1, #1f1f1f);
+  font-size: 24px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ledger__note {
+  color: var(--text-color-3, #999);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.panel {
+  min-width: 0;
+  padding: 14px 16px 16px;
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #eef2f7);
+}
+
+.panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.panel__title {
+  color: var(--text-color-1, #1f1f1f);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.panel__sub {
+  margin-top: 2px;
+  color: var(--text-color-3, #999);
+  font-size: 12px;
+}
+
+.trend__chart {
+  width: 100%;
+  height: 300px;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bar-row__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--text-color-2, #666);
+  font-size: 12px;
+}
+
+.bar-row__meta strong {
+  color: var(--text-color-1, #1f1f1f);
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-row__track {
+  height: 6px;
+  overflow: hidden;
+  background: var(--body-color, #f0f3f8);
+}
+
+.bar-row__fill {
+  height: 100%;
+}
+
+.bar-row__fill--blue {
+  background: #1677ff;
+}
+
+.file-pie {
+  width: 100%;
+  height: 220px;
+}
+
+@media (max-width: 1100px) {
+  .ledger {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .ledger__cell:nth-child(4n) {
+    border-right: 0;
+  }
+
+  .ledger__cell {
+    border-bottom: 1px solid var(--border-color, #eef2f7);
+  }
+}
+
+@media (max-width: 900px) {
+  .welcome,
+  .main {
+    grid-template-columns: 1fr;
+  }
+
+  .promo,
+  .promo :deep(.n-carousel),
+  .promo :deep(.n-carousel__slide),
+  .promo__slide {
+    min-height: 148px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ledger {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ledger__cell:nth-child(2n) {
+    border-right: 0;
+  }
 }
 </style>

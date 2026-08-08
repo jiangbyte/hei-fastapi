@@ -30,7 +30,7 @@ class SysFile(Base, TimestampMixin):
     storage_provider: Mapped[StorageProvider] = mapped_column(
         String(32),
         nullable=False,
-        comment="存储服务商：local/minio/oss/s3",
+        comment="存储服务商：local/minio/rustfs/oss/s3",
     )
     bucket: Mapped[str | None] = mapped_column(String(255), comment="存储桶")
     content_type: Mapped[str] = mapped_column(String(128), nullable=False, comment="文件类型")

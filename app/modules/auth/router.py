@@ -321,9 +321,12 @@ def _device_label(user_agent: str | None) -> str | None:
 )
 async def cancel_account(
     payload: CancelAccountRequest,
+    request: Request,
+    response: Response,
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> CancelAccountApiResponse:
     """统一账号注销接口，只注销当前登录账号。"""
     await AuthService(db).cancel_current_account(payload, session)
+    clear_session_cookie(response, request=request)
     return success(CancelAccountResponse(success=True))

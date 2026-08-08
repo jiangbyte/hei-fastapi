@@ -40,14 +40,6 @@ class BannerPosition(StrEnum):
     ADMIN_SIDEBAR = "ADMIN_SIDEBAR"
 
 
-class BannerDisplayScope(StrEnum):
-    """展示图显示端/渠道，对应 BANNER_DISPLAY_SCOPE；与 AccountType（账户身份）无关。"""
-
-    PORTAL = "PORTAL"
-    ADMIN = "ADMIN"
-    APP = "APP"
-
-
 class BannerLinkType(StrEnum):
     """展示图链接类型，对应 BANNER_LINK_TYPE 字典组子项 value。"""
 

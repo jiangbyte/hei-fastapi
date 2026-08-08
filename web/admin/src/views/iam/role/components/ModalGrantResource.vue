@@ -1,5 +1,8 @@
-<!-- Author: Charlie -->
+<!--
+  Author: Charlie
 
+  分配资源抽屉：表格勾选菜单 / 按钮权限。
+-->
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { roleApi } from '@/api'
@@ -255,6 +258,7 @@ defineExpose({
         <NSpace
           class="mb-10px"
           align="center"
+          :wrap="true"
         >
           <NSelect
             :value="state.accountType"
@@ -263,10 +267,7 @@ defineExpose({
             style="width: 180px"
             @update:value="onAccountTypeChange"
           />
-          <NRadioGroup
-            v-model:value="state.activeModuleId"
-            size="small"
-          >
+          <NRadioGroup v-model:value="state.activeModuleId">
             <NRadioButton
               v-for="module in state.modules"
               :key="module.id"
@@ -277,7 +278,7 @@ defineExpose({
         </NSpace>
 
         <NDataTable
-          size="medium"
+          size="small"
           :row-key="(row: any) => row.id"
           :columns="columns"
           :data="rows"

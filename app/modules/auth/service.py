@@ -2,6 +2,7 @@
 
 import json
 import secrets
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -29,6 +30,7 @@ from app.modules.auth.schema import (
 )
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
+from app.modules.iam.account.notify import notify_account_cancel_lifecycle
 from app.modules.iam.account.password_helper import (
     get_password_age_days,
     is_password_expired,
@@ -531,6 +533,21 @@ class AuthService:
             success=True,
             account_id=account.id,
             account_type=account.account_type,
+        )
+        retention_days = config_reader.get_int("ACCOUNT_CANCEL_RETENTION_DAYS", 15)
+        cancelled_at = account.cancelled_at or datetime.now(UTC)
+        purge_at = (cancelled_at + timedelta(days=retention_days)).strftime(
+            "%Y-%m-%d %H:%M:%S UTC"
+        )
+        await notify_account_cancel_lifecycle(
+            scene="ACCOUNT_CANCELLED",
+            email=account.cancel_notify_email,
+            phone=account.cancel_notify_phone,
+            variables={
+                "app_name": settings.app.name,
+                "retention_days": str(retention_days),
+                "purge_at": purge_at,
+            },
         )
 
     def _validate_account(

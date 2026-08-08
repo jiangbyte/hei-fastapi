@@ -2,12 +2,11 @@
 
 from datetime import datetime
 
-from sqlalchemy import Select, case, delete, func, or_, select, update
+from sqlalchemy import Select, case, cast, delete, func, or_, select, update, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import StatusEnum
+from app.core.config.enums import AccountType, StatusEnum
 from app.core.exceptions.business import NotFoundError
-from app.modules.sys.banner.enums import BannerDisplayScope
 from app.modules.sys.banner.model import SysBanner
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -15,6 +14,11 @@ from app.modules.sys.banner.schema import (
     BannerPublicListQuery,
     BannerUpdateRequest,
 )
+
+
+def _json_array_contains(column, value: str):
+    """跨方言粗匹配：JSON 数组序列化后包含 "VALUE"。"""
+    return cast(column, String).contains(f'"{value}"')
 
 
 class BannerRepository:
@@ -56,8 +60,13 @@ class BannerRepository:
         stmt: Select[tuple[SysBanner]] = select(SysBanner)
         count_stmt = select(func.count(SysBanner.id))
         filters = []
-        if query.display_scope:
-            filters.append(SysBanner.display_scope == str(query.display_scope))
+        if query.target_account_type:
+            filters.append(
+                _json_array_contains(
+                    SysBanner.target_account_types,
+                    str(query.target_account_type),
+                )
+            )
         if query.category:
             filters.append(SysBanner.category == str(query.category))
         if query.type:
@@ -83,9 +92,10 @@ class BannerRepository:
         *,
         now: datetime,
         query: BannerPublicListQuery,
+        account_type: AccountType = AccountType.PORTAL,
     ) -> list[SysBanner]:
         stmt = select(SysBanner).where(
-            SysBanner.display_scope == BannerDisplayScope.PORTAL.value,
+            _json_array_contains(SysBanner.target_account_types, account_type.value),
             SysBanner.status == StatusEnum.ENABLED.value,
             SysBanner.position == str(query.position),
             or_(SysBanner.start_at.is_(None), SysBanner.start_at <= now),
@@ -98,10 +108,16 @@ class BannerRepository:
         stmt = stmt.order_by(SysBanner.sort.asc(), SysBanner.id.desc())
         return list((await self.db.execute(stmt)).scalars().all())
 
-    async def is_public_visible(self, banner_id: str, now: datetime) -> bool:
+    async def is_public_visible(
+        self,
+        banner_id: str,
+        now: datetime,
+        *,
+        account_type: AccountType = AccountType.PORTAL,
+    ) -> bool:
         stmt = select(SysBanner.id).where(
             SysBanner.id == banner_id,
-            SysBanner.display_scope == BannerDisplayScope.PORTAL.value,
+            _json_array_contains(SysBanner.target_account_types, account_type.value),
             SysBanner.status == StatusEnum.ENABLED.value,
             or_(SysBanner.start_at.is_(None), SysBanner.start_at <= now),
             or_(SysBanner.end_at.is_(None), SysBanner.end_at >= now),

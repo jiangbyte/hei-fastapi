@@ -1,5 +1,6 @@
 """ Author: Charlie """
 
+from dataclasses import replace
 from urllib.parse import urljoin
 
 import boto3
@@ -70,4 +71,14 @@ class S3Storage(S3CompatibleStorage):
 
 class MinioStorage(S3CompatibleStorage):
     def __init__(self, config: StorageConfig) -> None:
+        super().__init__(config, force_path_style=True)
+
+
+class RustFSStorage(S3CompatibleStorage):
+    """RustFS：S3 兼容，默认 path-style；region 缺省 us-east-1。"""
+
+    def __init__(self, config: StorageConfig) -> None:
+        region = (config.region or "").strip() or "us-east-1"
+        if region != config.region:
+            config = replace(config, region=region)
         super().__init__(config, force_path_style=True)

@@ -1,5 +1,8 @@
-<!-- Author: Charlie -->
+<!--
+  Author: Charlie
 
+  在线会话管理：台账式总览 + 分端列表。
+-->
 <script setup lang="tsx">
 import type { DataTableColumns, PaginationProps } from 'naive-ui'
 import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
@@ -48,21 +51,38 @@ const searchForm = createProSearchForm<any>({
 })
 
 const analysisCards = computed(() => [
-  { key: 'online_account_count', icon: 'icon-park-outline:people', color: '#2563eb' },
-  { key: 'online_token_count', icon: 'icon-park-outline:devices', color: '#0f766e' },
-  { key: 'admin_account_count', icon: 'icon-park-outline:permissions', color: '#7c3aed' },
-  { key: 'portal_account_count', icon: 'icon-park-outline:user', color: '#0891b2' },
-  { key: 'one_hour_new_count', icon: 'icon-park-outline:time', color: '#f59e0b' },
-  { key: 'max_token_count', icon: 'icon-park-outline:connection', color: '#dc2626' },
+  {
+    key: 'online_account_count',
+    label: '在线账号',
+    note: '当前有会话的账号',
+  },
+  {
+    key: 'online_token_count',
+    label: '在线设备',
+    note: '全部有效令牌',
+  },
+  {
+    key: 'admin_account_count',
+    label: '管理端',
+    note: '管理员在线账号',
+  },
+  {
+    key: 'portal_account_count',
+    label: '门户端',
+    note: '门户用户在线账号',
+  },
+  {
+    key: 'one_hour_new_count',
+    label: '近 1 小时',
+    note: '新增登录次数',
+  },
+  {
+    key: 'max_token_count',
+    label: '单账号峰值',
+    note: '最大同时设备数',
+    danger: true,
+  },
 ])
-const analysisTitleMap: Record<string, string> = {
-  online_account_count: '在线账号数',
-  online_token_count: '在线设备数',
-  admin_account_count: '管理端账号数',
-  portal_account_count: '门户端账号数',
-  one_hour_new_count: '近 1 小时登录数',
-  max_token_count: '单账号最大设备数',
-}
 
 const searchColumns = computed<ProSearchFormColumns<any>>(() => [
   { title: '账号', path: 'account', field: 'input' },
@@ -260,35 +280,45 @@ function confirmExitToken(token: string) {
 
 <template>
   <NFlex
-    class="h-full min-h-0"
+    class="session-page h-full min-h-0"
     vertical
     :size="12"
   >
-    <div class="session-stats">
+    <header class="session-head">
+      <div class="session-head__copy">
+        <div class="session-head__title">
+          在线会话
+        </div>
+        <div class="session-head__sub">
+          查看各端在线账号与设备，必要时可强制下线
+        </div>
+      </div>
+      <NButton
+        text
+        :loading="state.loading"
+        @click="fetchAll"
+      >
+        <template #icon>
+          <NIcon>
+            <Icon icon="icon-park-outline:reload" />
+          </NIcon>
+        </template>
+        刷新总览
+      </NButton>
+    </header>
+
+    <section class="session-ledger">
       <div
         v-for="item in analysisCards"
         :key="item.key"
-        class="session-stat"
+        class="session-ledger__cell"
+        :class="{ 'session-ledger__cell--danger': item.danger }"
       >
-        <div
-          class="session-stat__icon"
-          :style="{ color: item.color, backgroundColor: `${item.color}14` }"
-        >
-          <NovaIcon
-            :icon="item.icon"
-            :size="16"
-          />
-        </div>
-        <div class="session-stat__meta">
-          <div class="session-stat__title">
-            {{ analysisTitleMap[item.key] ?? item.key }}
-          </div>
-          <div class="session-stat__value">
-            {{ state.analysis[item.key] ?? 0 }}
-          </div>
-        </div>
+        <span class="session-ledger__label">{{ item.label }}</span>
+        <span class="session-ledger__value">{{ state.analysis[item.key] ?? 0 }}</span>
+        <span class="session-ledger__note">{{ item.note }}</span>
       </div>
-    </div>
+    </section>
 
     <NTabs
       class="session-account-tabs"
@@ -352,7 +382,7 @@ function confirmExitToken(token: string) {
       :title="'设备详情'"
       style="width: min(960px, calc(100vw - 32px))"
     >
-      <NScrollbar class="h-[540px]">
+      <NScrollbar style="max-height: min(540px, 70vh)">
         <NDataTable
           :row-key="(row) => row.token"
           :scroll-x="1170"
@@ -366,65 +396,136 @@ function confirmExitToken(token: string) {
 </template>
 
 <style scoped>
-.session-stats {
+.session-page {
+  min-width: 0;
+}
+
+.session-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #eef2f7);
+}
+
+.session-head__title {
+  color: var(--text-color-1, #1f1f1f);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.session-head__sub {
+  margin-top: 4px;
+  color: var(--text-color-3, #999);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.session-ledger {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  background: var(--card-color, #fff);
+  border: 1px solid var(--border-color, #eef2f7);
 }
 
-.session-stat {
+.session-ledger__cell {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   min-width: 0;
-  padding: 10px 12px;
-  background: var(--n-color, #fff);
-  border-radius: 8px;
+  padding: 12px 10px;
+  border-right: 1px solid var(--border-color, #eef2f7);
 }
 
-.session-stat__icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+.session-ledger__cell:last-child {
+  border-right: 0;
 }
 
-.session-stat__meta {
-  min-width: 0;
-}
-
-.session-stat__title {
-  color: var(--text-color-3);
+.session-ledger__label {
+  color: var(--text-color-3, #999);
   font-size: 12px;
-  line-height: 1.3;
-  white-space: nowrap;
+}
+
+.session-ledger__value {
+  color: var(--text-color-1, #1f1f1f);
+  font-size: 22px;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.session-ledger__cell--danger .session-ledger__value {
+  color: #cf1322;
+}
+
+.session-ledger__note {
+  color: var(--text-color-3, #999);
+  font-size: 11px;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.session-stat__value {
-  color: var(--text-color-base);
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-@media (max-width: 1280px) {
-  .session-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 720px) {
-  .session-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .session-account-tabs :deep(.n-tabs-pane-wrapper) {
   display: none;
+}
+
+@media (max-width: 1280px) {
+  .session-ledger {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .session-ledger__cell {
+    border-bottom: 1px solid var(--border-color, #eef2f7);
+  }
+
+  .session-ledger__cell:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .session-ledger__cell:nth-last-child(-n + 3) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .session-head {
+    flex-wrap: wrap;
+  }
+
+  .session-ledger__note {
+    display: none;
+  }
+
+  .session-ledger__value {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 720px) {
+  .session-ledger {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .session-ledger__cell:nth-child(3n) {
+    border-right: 1px solid var(--border-color, #eef2f7);
+  }
+
+  .session-ledger__cell:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .session-ledger__cell:nth-last-child(-n + 3) {
+    border-bottom: 1px solid var(--border-color, #eef2f7);
+  }
+
+  .session-ledger__cell:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
 }
 </style>

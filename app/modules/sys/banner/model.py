@@ -4,13 +4,12 @@
 """
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Index, Integer, String, Text
+from sqlalchemy import JSON, BigInteger, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.enums import StatusEnum
 from app.modules.sys.banner.enums import (
     BannerCategory,
-    BannerDisplayScope,
     BannerLinkType,
     BannerPosition,
     BannerType,
@@ -26,8 +25,7 @@ class SysBanner(Base, TimestampMixin):
     __tablename__ = "sys_banner"
     __table_args__ = (
         Index(
-            "ix_sys_banner_scope_position_status_sort",
-            "display_scope",
+            "ix_sys_banner_position_status_sort",
             "position",
             "status",
             "sort",
@@ -68,10 +66,11 @@ class SysBanner(Base, TimestampMixin):
         nullable=False,
         comment=f"显示位置：{BannerPosition.__doc__}",
     )
-    display_scope: Mapped[str] = mapped_column(
-        String(32),
+    target_account_types: Mapped[list] = mapped_column(
+        JSON,
         nullable=False,
-        comment=f"显示端：{BannerDisplayScope.__doc__}",
+        default=list,
+        comment="目标账户类型列表（AccountType：ADMIN/PORTAL）",
     )
     sort: Mapped[int] = mapped_column(Integer, default=0, nullable=False, comment="排序")
     interaction_count: Mapped[int] = mapped_column(

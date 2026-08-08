@@ -5,6 +5,11 @@ import { http } from '@/utils'
 
 const bannerPrefix = `${API_PREFIX}/sys/banners`
 
+/** 管理端可见展示图列表（运营位轮播，仅需 ADMIN 登录） */
+export function list(params: any) {
+  return http.get<any>(`${bannerPrefix}/list`, { params })
+}
+
 export function page(params: any) {
   return http.get<any>(`${bannerPrefix}/page`, { params })
 }

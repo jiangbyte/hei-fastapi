@@ -44,7 +44,7 @@ def _payload(**overrides):
         "category": "HOME",
         "type": "CAROUSEL",
         "position": "HOME_TOP",
-        "display_scope": "PORTAL",
+        "target_account_types": ["PORTAL"],
         "sort": 1,
         "status": "ENABLED",
     }
@@ -54,7 +54,7 @@ def _payload(**overrides):
 
 async def _banner_ids_by_title(client, headers: dict[str, str]) -> dict[str, str]:
     response = await client.get(
-        "/api/v1/admin/sys/banners/page?current=1&size=20&display_scope=PORTAL&position=HOME_TOP",
+        "/api/v1/admin/sys/banners/page?current=1&size=20&target_account_type=PORTAL&position=HOME_TOP",
         headers=headers,
     )
     assert response.status_code == 200
@@ -85,12 +85,13 @@ async def test_admin_banner_create_page_detail_update_delete(client):
     assert create_response.json()["data"] is None
 
     page_response = await client.get(
-        "/api/v1/admin/sys/banners/page?current=1&size=20&display_scope=PORTAL&position=HOME_TOP",
+        "/api/v1/admin/sys/banners/page?current=1&size=20&target_account_type=PORTAL&position=HOME_TOP",
         headers=headers,
     )
     assert page_response.status_code == 200
     assert page_response.json()["data"]["total"] == "1"
     banner_id = page_response.json()["data"]["records"][0]["id"]
+    assert page_response.json()["data"]["records"][0]["target_account_types"] == ["PORTAL"]
 
     detail_response = await client.get(
         f"/api/v1/admin/sys/banners/detail?id={banner_id}",
@@ -98,6 +99,7 @@ async def test_admin_banner_create_page_detail_update_delete(client):
     )
     assert detail_response.status_code == 200
     assert detail_response.json()["data"]["title"] == "Home Banner"
+    assert detail_response.json()["data"]["target_account_types"] == ["PORTAL"]
 
     update_response = await client.post(
         "/api/v1/admin/sys/banners/update",
@@ -151,7 +153,7 @@ async def test_admin_banner_delete_accepts_id_array(client):
     assert response.json()["data"] is None
 
     page_response = await client.get(
-        "/api/v1/admin/sys/banners/page?current=1&size=20&display_scope=PORTAL&position=HOME_TOP",
+        "/api/v1/admin/sys/banners/page?current=1&size=20&target_account_type=PORTAL&position=HOME_TOP",
         headers=headers,
     )
     assert page_response.json()["data"]["total"] == "0"
@@ -187,3 +189,35 @@ async def test_admin_banner_page_without_permission_returns_403(client):
     assert response.status_code == 403
     assert response.json()["code"] == "403"
     assert response.json()["message"] == "Permission denied: sys:banner:page"
+
+
+async def test_admin_banner_list_returns_admin_target_only(client):
+    token = "admin-banner-list-token"
+    await _seed_admin(client, token, ["sys:banner:create"])
+    headers = {"Authorization": token}
+
+    portal = await client.post(
+        "/api/v1/admin/sys/banners/create",
+        headers=headers,
+        json=_payload(title="Portal Only", target_account_types=["PORTAL"], position="HOME_TOP"),
+    )
+    admin = await client.post(
+        "/api/v1/admin/sys/banners/create",
+        headers=headers,
+        json=_payload(
+            title="Admin Carousel",
+            target_account_types=["ADMIN"],
+            position="ADMIN_TOP",
+        ),
+    )
+    assert portal.json()["data"] is None
+    assert admin.json()["data"] is None
+
+    response = await client.get(
+        "/api/v1/admin/sys/banners/list?position=ADMIN_TOP",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["code"] == "200"
+    assert [item["title"] for item in response.json()["data"]] == ["Admin Carousel"]

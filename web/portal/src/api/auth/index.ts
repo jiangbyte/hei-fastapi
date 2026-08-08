@@ -57,6 +57,11 @@ export function logout() {
   })
 }
 
+/** 注销当前登录账号（软注销 + 清理关联数据）。 */
+export function cancelAccount(data?: { cancel_reason?: string | null }) {
+  return http.post<any>(`${prefix}/cancel`, data ?? {})
+}
+
 export function updateUserCenterProfile(data: any) {
   return http.post<any>(`${prefix}/user-center/profile/update`, data)
 }

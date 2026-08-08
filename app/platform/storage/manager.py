@@ -7,7 +7,7 @@ from app.platform.config.reader import config_reader
 from app.platform.storage.config import StorageConfig, fallback_storage_config
 from app.platform.storage.local import LocalStorage
 from app.platform.storage.oss import OSSStorage
-from app.platform.storage.s3 import MinioStorage, S3Storage
+from app.platform.storage.s3 import MinioStorage, RustFSStorage, S3Storage
 
 _storage_cache: dict[tuple[int, StorageConfig], object] = {}
 _storage_cache_lock = RLock()
@@ -71,6 +71,8 @@ def _build_storage(config: StorageConfig):
         return LocalStorage(config)
     if config.provider == StorageProvider.MINIO:
         return MinioStorage(config)
+    if config.provider == StorageProvider.RUSTFS:
+        return RustFSStorage(config)
     if config.provider == StorageProvider.S3:
         return S3Storage(config)
     if config.provider == StorageProvider.OSS:

@@ -7,7 +7,14 @@
 import type { FormInst, FormRules } from 'naive-ui'
 import ImageUpload from '@/components/upload/ImageUpload.vue'
 import { bannerApi } from '@/api'
-import { createRequiredRule, formatDateTime, toApiDateTime, toNullableString } from '@/utils'
+import { ACCOUNT_TYPE_OPTIONS } from '@/constants/account'
+import {
+  createRequiredArrayRule,
+  createRequiredRule,
+  formatDateTime,
+  toApiDateTime,
+  toNullableString,
+} from '@/utils'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -26,7 +33,7 @@ const defaultFormData: Record<string, any> = {
   category: 'HOME',
   type: 'CAROUSEL',
   position: 'HOME_TOP',
-  display_scope: 'PORTAL',
+  target_account_types: [],
   sort: 0,
   status: 'ENABLED',
   dateRange: null,
@@ -48,7 +55,7 @@ const rules = computed<FormRules>(() => ({
   category: createRequiredRule('分类', 'change'),
   type: createRequiredRule('类型', 'change'),
   position: createRequiredRule('位置', 'change'),
-  display_scope: createRequiredRule('展示范围', 'change'),
+  target_account_types: [createRequiredArrayRule('目标账户类型')],
   status: createRequiredRule('状态', 'change'),
 }))
 
@@ -193,15 +200,21 @@ watch(
                 />
               </NFormItem>
             </NGi>
-            <NGi>
+            <NGi :span="2">
               <NFormItem
-                label="展示范围"
-                path="display_scope"
+                label="目标账户类型"
+                path="target_account_types"
               >
-                <DictSelect
-                  v-model="state.formModel.display_scope"
-                  dict-code="BANNER_DISPLAY_SCOPE"
-                />
+                <NCheckboxGroup v-model:value="state.formModel.target_account_types">
+                  <NSpace>
+                    <NCheckbox
+                      v-for="item in ACCOUNT_TYPE_OPTIONS"
+                      :key="item.value"
+                      :value="item.value"
+                      :label="item.label"
+                    />
+                  </NSpace>
+                </NCheckboxGroup>
               </NFormItem>
             </NGi>
             <NGi>

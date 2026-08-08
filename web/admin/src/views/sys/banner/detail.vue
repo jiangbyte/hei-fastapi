@@ -5,6 +5,7 @@
 -->
 <script setup lang="ts">
 import { bannerApi } from '@/api'
+import { accountTypeLabel } from '@/constants/account'
 import { dictTypeData, displayValue, formatDateTime, hasPermission } from '@/utils'
 import { computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,6 +23,10 @@ const dataId = computed(() => {
   const id = route.query.id
   return typeof id === 'string' ? id : ''
 })
+
+const accountTypeLabels = computed(() =>
+  (state.detail.target_account_types || []).map((t: string) => accountTypeLabel(t)),
+)
 
 async function fetchDetail(id: string) {
   if (!id) return
@@ -95,13 +100,11 @@ watch(dataId, (id) => {
             <div class="meta-grid">
               <div class="meta-item">
                 <div class="meta-key">
-                  展示范围
+                  目标账户类型
                 </div>
                 <div class="meta-value">
-                  {{
-                    dictTypeData('BANNER_DISPLAY_SCOPE', state.detail.display_scope) ||
-                      displayValue(state.detail.display_scope)
-                  }}
+                  <span v-if="accountTypeLabels.length">{{ accountTypeLabels.join('、') }}</span>
+                  <span v-else>{{ displayValue(null) }}</span>
                 </div>
               </div>
               <div class="meta-item">

@@ -25,7 +25,7 @@ const state = reactive({
   listKey: 'users',
   selectedKey: 'account_ids',
   submitKey: 'account_ids',
-  searchFields: ['account', 'name'] as string[],
+  searchFields: ['account', 'nickname', 'name'] as string[],
   items: [] as any[],
   selectedData: [] as any[],
   page: 1,
@@ -56,6 +56,10 @@ const tableUsers = computed(() => {
 const selectedIds = computed(() => new Set(state.selectedData.map((item) => String(item.id))))
 const secondaryTitle = computed(() => (state.searchFields.includes('code') ? '角色编码' : '账号'))
 
+function displayName(row: any) {
+  return row?.nickname || row?.name || row?.account || '-'
+}
+
 const userColumns = computed<DataTableColumns<any>>(() => [
   {
     title: '操作',
@@ -66,7 +70,6 @@ const userColumns = computed<DataTableColumns<any>>(() => [
       <NButton
         text
         type="primary"
-        size="small"
         disabled={selectedIds.value.has(String(row.id))}
         onClick={() => addRecord(row)}
       >
@@ -80,12 +83,12 @@ const userColumns = computed<DataTableColumns<any>>(() => [
     width: 56,
     render: (row) => {
       const avatar = row.avatar || undefined
-      const name = row.name || row.account || ''
+      const name = displayName(row)
       return (
-        <NAvatar size="small" src={avatar} imgProps={avatarImgProps}>
+        <NAvatar src={avatar} imgProps={avatarImgProps}>
           {avatar
             ? undefined
-            : String(name || '-')
+            : String(name)
                 .slice(0, 1)
                 .toUpperCase()}
         </NAvatar>
@@ -99,6 +102,7 @@ const userColumns = computed<DataTableColumns<any>>(() => [
     ellipsis: {
       tooltip: true,
     },
+    render: (row) => displayName(row),
   },
   {
     title: secondaryTitle.value,
@@ -117,7 +121,7 @@ const selectedColumns = computed<DataTableColumns<any>>(() => [
     align: 'center',
     width: 70,
     render: (row) => (
-      <NButton text type="error" size="small" onClick={() => delRecord(row)}>
+      <NButton text type="error" onClick={() => delRecord(row)}>
         {renderButtonIcon('icon-park-outline:delete')}
       </NButton>
     ),
@@ -129,6 +133,7 @@ const selectedColumns = computed<DataTableColumns<any>>(() => [
     ellipsis: {
       tooltip: true,
     },
+    render: (row) => displayName(row),
   },
 ])
 
@@ -141,7 +146,7 @@ async function openModal(subject: any, grantApi: any = roleApi, title = '', conf
   state.listKey = config.listKey ?? 'users'
   state.selectedKey = config.selectedKey ?? 'account_ids'
   state.submitKey = config.submitKey ?? state.selectedKey
-  state.searchFields = config.searchFields ?? ['account', 'name']
+  state.searchFields = config.searchFields ?? ['account', 'nickname', 'name']
   state.searchKey = ''
   state.items = []
   state.selectedData = []
@@ -262,7 +267,6 @@ defineExpose({
               </NText>
               <NButton
                 dashed
-                size="small"
                 @click="addAllPageRecord"
               >
                 新增当前页
@@ -282,7 +286,6 @@ defineExpose({
               v-model:page="state.page"
               v-model:page-size="state.pageSize"
               show-size-picker
-              size="small"
               :item-count="filteredUsers.length"
               :page-sizes="[10, 20, 50, 100]"
             />
@@ -298,7 +301,6 @@ defineExpose({
               <NButton
                 dashed
                 type="error"
-                size="small"
                 @click="delAllRecord"
               >
                 全部移除

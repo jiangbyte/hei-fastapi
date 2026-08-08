@@ -55,6 +55,11 @@ export function logout() {
   return http.post<any>(`${authPrefix}/logout`)
 }
 
+/** 注销当前登录账号（软注销 + 清理关联数据）。 */
+export function cancelAccount(data?: { cancel_reason?: string | null }) {
+  return http.post<any>(`${authPrefix}/cancel`, data ?? {})
+}
+
 export function me() {
   return http.get<any>(`${authPrefix}/me`)
 }

@@ -20,6 +20,7 @@ const ENGINE_TO_PROVIDER: Record<string, string> = {
   ALIYUN: 'oss',
   TENCENT: 's3',
   MINIO: 'minio',
+  RUSTFS: 'rustfs',
 }
 
 const state = reactive({

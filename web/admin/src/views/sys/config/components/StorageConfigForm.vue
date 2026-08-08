@@ -8,14 +8,44 @@ import { FILES_PUBLIC_PATH } from '@/constants/api'
 import { loadByCategory, parseBool, saveByKeys, toBoolStr } from '../composables/useConfigForm'
 
 const CATEGORY = 'STORAGE'
-type Engine = 'LOCAL' | 'ALIYUN' | 'TENCENT' | 'MINIO'
+type Engine = 'LOCAL' | 'ALIYUN' | 'TENCENT' | 'MINIO' | 'RUSTFS'
 
 const engineOptions = [
   { label: '本地文件', value: 'LOCAL' as Engine },
   { label: '阿里云 OSS', value: 'ALIYUN' as Engine },
   { label: '腾讯云 COS', value: 'TENCENT' as Engine },
   { label: 'MinIO', value: 'MINIO' as Engine },
+  { label: 'RustFS', value: 'RUSTFS' as Engine },
 ]
+
+type CloudForm = {
+  accessKey: string
+  secretKey: string
+  accessKeySet: boolean
+  secretKeySet: boolean
+  endpoint: string
+  bucket: string
+  region: string
+  useSsl: boolean
+  baseUrl: string
+  publicPath: string
+}
+
+function emptyCloud(defaults: Partial<CloudForm> = {}): CloudForm {
+  return {
+    accessKey: '',
+    secretKey: '',
+    accessKeySet: false,
+    secretKeySet: false,
+    endpoint: '',
+    bucket: 'defaultbucket',
+    region: '',
+    useSsl: false,
+    baseUrl: '',
+    publicPath: FILES_PUBLIC_PATH,
+    ...defaults,
+  }
+}
 
 const emit = defineEmits<{ saved: [] }>()
 const message = useMessage()
@@ -31,48 +61,60 @@ const state = reactive({
     publicPath: FILES_PUBLIC_PATH,
     baseUrl: '',
   },
-  aliyun: {
-    accessKey: '',
-    secretKey: '',
-    accessKeySet: false,
-    secretKeySet: false,
+  aliyun: emptyCloud({
     endpoint: 'oss-cn-hangzhou.aliyuncs.com',
-    bucket: 'defaultbucket',
     region: 'cn-hangzhou',
     useSsl: true,
-    baseUrl: '',
-    publicPath: FILES_PUBLIC_PATH,
-  },
-  tencent: {
-    accessKey: '',
-    secretKey: '',
-    accessKeySet: false,
-    secretKeySet: false,
-    endpoint: '',
-    bucket: 'defaultbucket',
+  }),
+  tencent: emptyCloud({
     region: 'ap-beijing',
     useSsl: true,
-    baseUrl: '',
-    publicPath: FILES_PUBLIC_PATH,
-  },
-  minio: {
-    accessKey: '',
-    secretKey: '',
-    accessKeySet: false,
-    secretKeySet: false,
+  }),
+  minio: emptyCloud({
     endpoint: 'https://play.min.io',
-    bucket: 'defaultbucket',
-    region: '',
+  }),
+  rustfs: emptyCloud({
+    endpoint: 'http://127.0.0.1:9002',
+    region: 'us-east-1',
     useSsl: false,
-    baseUrl: '',
-    publicPath: FILES_PUBLIC_PATH,
-  },
+  }),
   snapshot: '',
 })
 
 onMounted(() => {
   void reload()
 })
+
+function loadCloud(
+  target: CloudForm,
+  map: Record<string, string>,
+  prefix: string,
+  defaults: CloudForm,
+) {
+  target.accessKey = ''
+  target.secretKey = ''
+  target.accessKeySet = parseBool(map[`${prefix}_ACCESS_KEY_SET`])
+  target.secretKeySet = parseBool(map[`${prefix}_SECRET_KEY_SET`])
+  target.endpoint = map[`${prefix}_ENDPOINT`] || defaults.endpoint
+  target.bucket = map[`${prefix}_BUCKET`] || defaults.bucket
+  target.region = map[`${prefix}_REGION`] || defaults.region
+  target.useSsl = map[`${prefix}_USE_SSL`] ? parseBool(map[`${prefix}_USE_SSL`]) : defaults.useSsl
+  target.baseUrl = map[`${prefix}_BASE_URL`] || ''
+  target.publicPath = map[`${prefix}_PUBLIC_PATH`] || defaults.publicPath
+}
+
+function cloudKeys(prefix: string, form: CloudForm) {
+  return [
+    { config_key: `${prefix}_ACCESS_KEY`, config_value: form.accessKey, category: CATEGORY },
+    { config_key: `${prefix}_SECRET_KEY`, config_value: form.secretKey, category: CATEGORY },
+    { config_key: `${prefix}_ENDPOINT`, config_value: form.endpoint, category: CATEGORY },
+    { config_key: `${prefix}_BUCKET`, config_value: form.bucket, category: CATEGORY },
+    { config_key: `${prefix}_REGION`, config_value: form.region, category: CATEGORY },
+    { config_key: `${prefix}_USE_SSL`, config_value: toBoolStr(form.useSsl), category: CATEGORY },
+    { config_key: `${prefix}_BASE_URL`, config_value: form.baseUrl, category: CATEGORY },
+    { config_key: `${prefix}_PUBLIC_PATH`, config_value: form.publicPath, category: CATEGORY },
+  ]
+}
 
 async function reload() {
   state.loading = true
@@ -84,44 +126,23 @@ async function reload() {
     state.local.publicPath = map.STORAGE_LOCAL_PUBLIC_PATH || state.local.publicPath
     state.local.baseUrl = map.STORAGE_LOCAL_BASE_URL || ''
 
-    state.aliyun.accessKey = ''
-    state.aliyun.secretKey = ''
-    state.aliyun.accessKeySet = parseBool(map.STORAGE_ALIYUN_ACCESS_KEY_SET)
-    state.aliyun.secretKeySet = parseBool(map.STORAGE_ALIYUN_SECRET_KEY_SET)
-    state.aliyun.endpoint = map.STORAGE_ALIYUN_ENDPOINT || state.aliyun.endpoint
-    state.aliyun.bucket = map.STORAGE_ALIYUN_BUCKET || state.aliyun.bucket
-    state.aliyun.region = map.STORAGE_ALIYUN_REGION || state.aliyun.region
-    state.aliyun.useSsl = map.STORAGE_ALIYUN_USE_SSL
-      ? parseBool(map.STORAGE_ALIYUN_USE_SSL)
-      : state.aliyun.useSsl
-    state.aliyun.baseUrl = map.STORAGE_ALIYUN_BASE_URL || ''
-    state.aliyun.publicPath = map.STORAGE_ALIYUN_PUBLIC_PATH || state.aliyun.publicPath
-
-    state.tencent.accessKey = ''
-    state.tencent.secretKey = ''
-    state.tencent.accessKeySet = parseBool(map.STORAGE_TENCENT_ACCESS_KEY_SET)
-    state.tencent.secretKeySet = parseBool(map.STORAGE_TENCENT_SECRET_KEY_SET)
-    state.tencent.endpoint = map.STORAGE_TENCENT_ENDPOINT || ''
-    state.tencent.bucket = map.STORAGE_TENCENT_BUCKET || state.tencent.bucket
-    state.tencent.region = map.STORAGE_TENCENT_REGION || state.tencent.region
-    state.tencent.useSsl = map.STORAGE_TENCENT_USE_SSL
-      ? parseBool(map.STORAGE_TENCENT_USE_SSL)
-      : state.tencent.useSsl
-    state.tencent.baseUrl = map.STORAGE_TENCENT_BASE_URL || ''
-    state.tencent.publicPath = map.STORAGE_TENCENT_PUBLIC_PATH || state.tencent.publicPath
-
-    state.minio.accessKey = ''
-    state.minio.secretKey = ''
-    state.minio.accessKeySet = parseBool(map.STORAGE_MINIO_ACCESS_KEY_SET)
-    state.minio.secretKeySet = parseBool(map.STORAGE_MINIO_SECRET_KEY_SET)
-    state.minio.endpoint = map.STORAGE_MINIO_ENDPOINT || state.minio.endpoint
-    state.minio.bucket = map.STORAGE_MINIO_BUCKET || state.minio.bucket
-    state.minio.region = map.STORAGE_MINIO_REGION || ''
-    state.minio.useSsl = map.STORAGE_MINIO_USE_SSL
-      ? parseBool(map.STORAGE_MINIO_USE_SSL)
-      : state.minio.useSsl
-    state.minio.baseUrl = map.STORAGE_MINIO_BASE_URL || ''
-    state.minio.publicPath = map.STORAGE_MINIO_PUBLIC_PATH || state.minio.publicPath
+    loadCloud(state.aliyun, map, 'STORAGE_ALIYUN', emptyCloud({
+      endpoint: 'oss-cn-hangzhou.aliyuncs.com',
+      region: 'cn-hangzhou',
+      useSsl: true,
+    }))
+    loadCloud(state.tencent, map, 'STORAGE_TENCENT', emptyCloud({
+      region: 'ap-beijing',
+      useSsl: true,
+    }))
+    loadCloud(state.minio, map, 'STORAGE_MINIO', emptyCloud({
+      endpoint: 'https://play.min.io',
+    }))
+    loadCloud(state.rustfs, map, 'STORAGE_RUSTFS', emptyCloud({
+      endpoint: 'http://127.0.0.1:9002',
+      region: 'us-east-1',
+      useSsl: false,
+    }))
 
     if (engineOptions.some((o) => o.value === state.defaultEngine)) {
       state.subTab = state.defaultEngine
@@ -132,6 +153,7 @@ async function reload() {
       aliyun: state.aliyun,
       tencent: state.tencent,
       minio: state.minio,
+      rustfs: state.rustfs,
     })
   } finally {
     state.loading = false
@@ -146,6 +168,7 @@ function reset() {
   Object.assign(state.aliyun, data.aliyun)
   Object.assign(state.tencent, data.tencent)
   Object.assign(state.minio, data.minio)
+  Object.assign(state.rustfs, data.rustfs)
 }
 
 async function save() {
@@ -177,126 +200,10 @@ async function save() {
         config_value: state.local.baseUrl,
         category: CATEGORY,
       },
-      {
-        config_key: 'STORAGE_ALIYUN_ACCESS_KEY',
-        config_value: state.aliyun.accessKey,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_SECRET_KEY',
-        config_value: state.aliyun.secretKey,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_ENDPOINT',
-        config_value: state.aliyun.endpoint,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_BUCKET',
-        config_value: state.aliyun.bucket,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_REGION',
-        config_value: state.aliyun.region,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_USE_SSL',
-        config_value: toBoolStr(state.aliyun.useSsl),
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_BASE_URL',
-        config_value: state.aliyun.baseUrl,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_ALIYUN_PUBLIC_PATH',
-        config_value: state.aliyun.publicPath,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_ACCESS_KEY',
-        config_value: state.tencent.accessKey,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_SECRET_KEY',
-        config_value: state.tencent.secretKey,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_ENDPOINT',
-        config_value: state.tencent.endpoint,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_BUCKET',
-        config_value: state.tencent.bucket,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_REGION',
-        config_value: state.tencent.region,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_USE_SSL',
-        config_value: toBoolStr(state.tencent.useSsl),
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_BASE_URL',
-        config_value: state.tencent.baseUrl,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_TENCENT_PUBLIC_PATH',
-        config_value: state.tencent.publicPath,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_ACCESS_KEY',
-        config_value: state.minio.accessKey,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_SECRET_KEY',
-        config_value: state.minio.secretKey,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_ENDPOINT',
-        config_value: state.minio.endpoint,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_BUCKET',
-        config_value: state.minio.bucket,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_REGION',
-        config_value: state.minio.region,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_USE_SSL',
-        config_value: toBoolStr(state.minio.useSsl),
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_BASE_URL',
-        config_value: state.minio.baseUrl,
-        category: CATEGORY,
-      },
-      {
-        config_key: 'STORAGE_MINIO_PUBLIC_PATH',
-        config_value: state.minio.publicPath,
-        category: CATEGORY,
-      },
+      ...cloudKeys('STORAGE_ALIYUN', state.aliyun),
+      ...cloudKeys('STORAGE_TENCENT', state.tencent),
+      ...cloudKeys('STORAGE_MINIO', state.minio),
+      ...cloudKeys('STORAGE_RUSTFS', state.rustfs),
     ])
     message.success('保存成功')
     await reload()
@@ -341,7 +248,7 @@ async function save() {
     </NTabs>
 
     <ConfigSectionLayout
-      description="配置各文件存储引擎参数。上方单选切换默认引擎（互斥）；保存后热重载生效。"
+      description="配置各文件存储引擎参数。上方单选切换默认引擎（互斥）；保存后热重载生效。RustFS 为 S3 兼容存储，默认 path-style，Region 建议 us-east-1。"
       :saving="state.saving"
       @save="save"
       @reset="reset"
@@ -463,7 +370,7 @@ async function save() {
           </NFormItem>
         </template>
 
-        <template v-else>
+        <template v-else-if="state.subTab === 'MINIO'">
           <NFormItem
             label="MINIO通道KEY"
             required
@@ -500,6 +407,69 @@ async function save() {
             <NInput
               v-model:value="state.minio.bucket"
               placeholder="defaultbucket"
+            />
+          </NFormItem>
+        </template>
+
+        <template v-else-if="state.subTab === 'RUSTFS'">
+          <NFormItem
+            label="RustFS Access Key"
+            required
+          >
+            <NInput
+              v-model:value="state.rustfs.accessKey"
+              :placeholder="
+                state.rustfs.accessKeySet ? '已配置，留空不修改' : 'admin'
+              "
+            />
+          </NFormItem>
+          <NFormItem
+            label="RustFS Secret Key"
+            required
+          >
+            <NInput
+              v-model:value="state.rustfs.secretKey"
+              type="password"
+              show-password-on="click"
+              :placeholder="
+                state.rustfs.secretKeySet ? '已配置，留空不修改' : '123456789'
+              "
+            />
+          </NFormItem>
+          <NFormItem
+            label="RustFS 端点"
+            required
+          >
+            <NInput
+              v-model:value="state.rustfs.endpoint"
+              placeholder="http://127.0.0.1:9002"
+            />
+          </NFormItem>
+          <NFormItem
+            label="RustFS Region"
+            required
+          >
+            <NInput
+              v-model:value="state.rustfs.region"
+              placeholder="us-east-1"
+            />
+          </NFormItem>
+          <NFormItem
+            label="RustFS 存储桶"
+            required
+          >
+            <NInput
+              v-model:value="state.rustfs.bucket"
+              placeholder="defaultbucket"
+            />
+          </NFormItem>
+          <NFormItem label="使用 SSL">
+            <NSwitch v-model:value="state.rustfs.useSsl" />
+          </NFormItem>
+          <NFormItem label="自定义基础 URL">
+            <NInput
+              v-model:value="state.rustfs.baseUrl"
+              placeholder="可选，公网访问前缀；留空则用预签名 URL"
             />
           </NFormItem>
         </template>

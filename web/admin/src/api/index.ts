@@ -1,6 +1,7 @@
 export * as authApi from './auth'
 export * as sessionApi from './auth/session'
 export * as dashboardApi from './dashboard'
+export * as auditApi from './sys/audit.ts'
 export * as bannerApi from './sys/banner.ts'
 export * as codegenApi from './sys/codegen.ts'
 export * as configApi from './sys/config.ts'

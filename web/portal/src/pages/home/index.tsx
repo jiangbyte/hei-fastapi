@@ -4,10 +4,14 @@ import { useEffect, useState } from 'react'
 import { Empty, Skeleton, Tag } from 'antd'
 import { NotificationOutlined, RightOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
+import { PromoCarousel } from '@/components/common/PromoCarousel'
+import { useBannerSlides } from '@/hooks/useBannerSlides'
 import { useAuthModalStore } from '@/stores/authModal'
 import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/time'
 import { noticeApi } from '@/api'
+
+const HOME_BANNER_QUERY = { position: 'HOME_TOP' } as const
 
 function announcementSummary(content: string, contentType: string) {
   const raw = content || ''
@@ -31,6 +35,7 @@ export function HomePage() {
 
   const [announcements, setAnnouncements] = useState<any[]>([])
   const [announceLoading, setAnnounceLoading] = useState(true)
+  const { slides: bannerSlides, loading: bannerLoading } = useBannerSlides(HOME_BANNER_QUERY)
 
   useEffect(() => {
     void ensureSession()
@@ -64,6 +69,20 @@ export function HomePage() {
 
   return (
     <div className="page-shell flex w-full flex-col gap-5">
+      {bannerLoading ? (
+        <section className="panel overflow-hidden">
+          <Skeleton.Node
+            active
+            style={{ width: '100%', height: 280, borderRadius: 0 }}
+            className="!flex !w-full"
+          >
+            <div className="h-[280px] w-full" />
+          </Skeleton.Node>
+        </section>
+      ) : bannerSlides.length ? (
+        <PromoCarousel slides={bannerSlides} height={280} />
+      ) : null}
+
       <section className="panel rounded-xl px-6 py-10 md:px-10">
         <div className="text-sm text-[var(--ant-color-text-secondary)]">{brand}</div>
         <h1 className="mt-2 text-2xl font-semibold md:text-3xl">

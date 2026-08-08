@@ -41,7 +41,7 @@ entrypoint.sh        all | api | worker | beat | migrate
 | 后端 | FastAPI / SQLAlchemy 2 Async / Pydantic v2 / Gunicorn / Uvicorn |
 | 数据 | PostgreSQL / Redis；可选 MySQL、SQLite extras |
 | 任务 | Celery + celery-redbeat（Redis broker） |
-| 存储 | Local / MinIO / S3 / OSS（`sys_config` 维护） |
+| 存储 | Local / MinIO / RustFS / S3 / OSS（`sys_config` 维护） |
 | 管理端 | Vue 3 / Naive UI / Vite / TypeScript / UnoCSS |
 | 门户端 | React 19 / Ant Design 6 / Vite / TypeScript / UnoCSS |
 | 移动端 | uni-app 3 / Vue 3 / Pinia / uview-pro |
@@ -66,7 +66,7 @@ HTTP JSON：**标量均为字符串**（含 `code`、分页字段、业务 bool/
 
 ### 1. 基础设施
 
-准备 PostgreSQL 与 Redis（可用 `./dev.sh` 启动本地 `dev-postgres` / `dev-redis` 等容器）。
+准备 PostgreSQL 与 Redis（可用 `./dev.sh` 启动本地 `dev-postgres` / `dev-redis` / `dev-rustfs` 等容器）。
 
 ### 2. 后端
 

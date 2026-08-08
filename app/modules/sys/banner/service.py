@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.enums import AccountType
 from app.core.exceptions.business import NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -16,6 +17,7 @@ from app.modules.sys.banner.schema import (
     BannerUpdateRequest,
     SysBannerSchema,
 )
+from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.cache.keys import banner_interaction_delta_key
 from app.platform.cache.redis import get_redis
 from app.platform.db.transaction import transactional
@@ -55,14 +57,38 @@ class BannerService:
         await _resolve_nicknames(self.db, schemas)
         return build_page(query, total, schemas)
 
-    async def list_public(self, query: BannerPublicListQuery) -> list[SysBannerSchema]:
-        items = await self.repo.list_public(now=datetime.now(UTC), query=query)
+    async def list_visible(
+        self,
+        query: BannerPublicListQuery,
+        *,
+        account_type: AccountType,
+    ) -> list[SysBannerSchema]:
+        items = await self.repo.list_public(
+            now=datetime.now(UTC),
+            query=query,
+            account_type=account_type,
+        )
         schemas = to_schema_list(SysBannerSchema, items)
         _resolve_image_urls(schemas)
         return schemas
 
-    async def record_interaction(self, payload: IdQuery) -> None:
-        if not await self.repo.is_public_visible(payload.id, datetime.now(UTC)):
+    async def list_public(self, query: BannerPublicListQuery) -> list[SysBannerSchema]:
+        return await self.list_visible(query, account_type=AccountType.PORTAL)
+
+    async def list_admin(self, query: BannerPublicListQuery) -> list[SysBannerSchema]:
+        return await self.list_visible(query, account_type=AccountType.ADMIN)
+
+    async def record_interaction(
+        self,
+        payload: IdQuery,
+        *,
+        account_type: AccountType = AccountType.PORTAL,
+    ) -> None:
+        if not await self.repo.is_public_visible(
+            payload.id,
+            datetime.now(UTC),
+            account_type=account_type,
+        ):
             raise NotFoundError("Display image not found")
         redis = get_redis()
         if redis is None:
@@ -77,9 +103,6 @@ def _resolve_image_urls(items: list[SysBannerSchema]) -> None:
 
 
 async def _resolve_nicknames(db, items: list) -> list:
-    from app.core.config.enums import AccountType
-    from app.modules.user.utils.profile import get_profiles_batch
-
     creator_ids = list({i.created_by for i in items if i.created_by})
     updater_ids = list({i.updated_by for i in items if i.updated_by})
     all_ids = list(dict.fromkeys(creator_ids + updater_ids))

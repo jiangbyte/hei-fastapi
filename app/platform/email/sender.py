@@ -18,6 +18,36 @@ from app.platform.config.reader import config_reader
 logger = logging.getLogger(__name__)
 
 
+def is_mail_configured() -> bool:
+    """当前邮件引擎所需关键配置是否齐全（未配置则不应尝试发送）。"""
+    engine = (config_reader.get("DEFAULT_EMAIL_ENGINE") or "LOCAL").strip().upper()
+    if engine == "LOCAL":
+        host = (config_reader.get("MAIL_LOCAL_HOST") or settings.mail.host or "").strip()
+        from_email = (
+            config_reader.get("MAIL_LOCAL_FROM_EMAIL") or settings.mail.from_email or ""
+        ).strip()
+        return bool(host and from_email)
+    if engine == "ALIYUN":
+        return all(
+            (config_reader.get(key) or "").strip()
+            for key in (
+                "MAIL_ALIYUN_ACCESS_KEY_ID",
+                "MAIL_ALIYUN_ACCESS_KEY_SECRET",
+                "MAIL_ALIYUN_ACCOUNT_NAME",
+            )
+        )
+    if engine == "TENCENT":
+        return all(
+            (config_reader.get(key) or "").strip()
+            for key in (
+                "MAIL_TENCENT_SECRET_ID",
+                "MAIL_TENCENT_SECRET_KEY",
+                "MAIL_TENCENT_FROM_EMAIL",
+            )
+        )
+    return False
+
+
 async def send_mail(to_email: str, subject: str, body: str) -> None:
     """按 DEFAULT_EMAIL_ENGINE 发送纯文本邮件。"""
     engine = (config_reader.get("DEFAULT_EMAIL_ENGINE") or "LOCAL").strip().upper()
