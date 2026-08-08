@@ -1,6 +1,8 @@
 # 数据库迁移
 
-Alembic 版本目录，只管理表结构。
+Alembic 版本目录，只管理表结构。当前基线为单一初始迁移 `*_initial_schema.py`。
+
+业务数据不在迁移里维护，见 `scripts/db/seed/`。
 
 ```bash
 python scripts/db/makemigration.py "describe schema change"

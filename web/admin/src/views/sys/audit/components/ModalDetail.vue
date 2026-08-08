@@ -98,11 +98,7 @@ defineExpose({
             {{ displayValue(state.record.account_id) }}
           </NDescriptionsItem>
           <NDescriptionsItem label="账号类型">
-            {{
-              state.record.account_type
-                ? accountTypeLabel(state.record.account_type)
-                : '-'
-            }}
+            {{ state.record.account_type ? accountTypeLabel(state.record.account_type) : '-' }}
           </NDescriptionsItem>
           <NDescriptionsItem label="资源类型">
             {{ displayValue(state.record.resource_type) }}

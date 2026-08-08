@@ -126,23 +126,43 @@ async function reload() {
     state.local.publicPath = map.STORAGE_LOCAL_PUBLIC_PATH || state.local.publicPath
     state.local.baseUrl = map.STORAGE_LOCAL_BASE_URL || ''
 
-    loadCloud(state.aliyun, map, 'STORAGE_ALIYUN', emptyCloud({
-      endpoint: 'oss-cn-hangzhou.aliyuncs.com',
-      region: 'cn-hangzhou',
-      useSsl: true,
-    }))
-    loadCloud(state.tencent, map, 'STORAGE_TENCENT', emptyCloud({
-      region: 'ap-beijing',
-      useSsl: true,
-    }))
-    loadCloud(state.minio, map, 'STORAGE_MINIO', emptyCloud({
-      endpoint: 'https://play.min.io',
-    }))
-    loadCloud(state.rustfs, map, 'STORAGE_RUSTFS', emptyCloud({
-      endpoint: 'http://127.0.0.1:9002',
-      region: 'us-east-1',
-      useSsl: false,
-    }))
+    loadCloud(
+      state.aliyun,
+      map,
+      'STORAGE_ALIYUN',
+      emptyCloud({
+        endpoint: 'oss-cn-hangzhou.aliyuncs.com',
+        region: 'cn-hangzhou',
+        useSsl: true,
+      }),
+    )
+    loadCloud(
+      state.tencent,
+      map,
+      'STORAGE_TENCENT',
+      emptyCloud({
+        region: 'ap-beijing',
+        useSsl: true,
+      }),
+    )
+    loadCloud(
+      state.minio,
+      map,
+      'STORAGE_MINIO',
+      emptyCloud({
+        endpoint: 'https://play.min.io',
+      }),
+    )
+    loadCloud(
+      state.rustfs,
+      map,
+      'STORAGE_RUSTFS',
+      emptyCloud({
+        endpoint: 'http://127.0.0.1:9002',
+        region: 'us-east-1',
+        useSsl: false,
+      }),
+    )
 
     if (engineOptions.some((o) => o.value === state.defaultEngine)) {
       state.subTab = state.defaultEngine
@@ -418,9 +438,7 @@ async function save() {
           >
             <NInput
               v-model:value="state.rustfs.accessKey"
-              :placeholder="
-                state.rustfs.accessKeySet ? '已配置，留空不修改' : 'admin'
-              "
+              :placeholder="state.rustfs.accessKeySet ? '已配置，留空不修改' : 'admin'"
             />
           </NFormItem>
           <NFormItem
@@ -431,9 +449,7 @@ async function save() {
               v-model:value="state.rustfs.secretKey"
               type="password"
               show-password-on="click"
-              :placeholder="
-                state.rustfs.secretKeySet ? '已配置，留空不修改' : '123456789'
-              "
+              :placeholder="state.rustfs.secretKeySet ? '已配置，留空不修改' : '123456789'"
             />
           </NFormItem>
           <NFormItem

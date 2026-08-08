@@ -59,12 +59,11 @@ async function doCancel() {
       class="mb-16px"
     >
       注销为不可逆操作：将清理个人资料、登录标识、角色/部门/用户组与资源授权，并强制下线全部会话。系统按保留天数（默认
-      15 天）暂存账号主记录；到期且未再登录使用后彻底删除，并通过已绑定邮箱通知（短信需在系统配置中填写模板编号）。
+      15
+      天）暂存账号主记录；到期且未再登录使用后彻底删除，并通过已绑定邮箱通知（短信需在系统配置中填写模板编号）。
     </NAlert>
 
-    <NForm
-      label-placement="top"
-    >
+    <NForm label-placement="top">
       <NFormItem label="注销原因（可选）">
         <NInput
           v-model:value="state.cancelReason"

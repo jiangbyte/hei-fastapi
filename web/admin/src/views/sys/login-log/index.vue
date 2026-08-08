@@ -99,11 +99,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     render: (row) => {
       const ok = wireBool(row.success)
       return (
-        <NTag
-          size="small"
-          color={createTagColor(ok ? '#52c41a' : '#ff4d4f')}
-          bordered={false}
-        >
+        <NTag size="small" color={createTagColor(ok ? '#52c41a' : '#ff4d4f')} bordered={false}>
           {ok ? '成功' : '失败'}
         </NTag>
       )

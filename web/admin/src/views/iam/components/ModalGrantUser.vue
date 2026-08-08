@@ -86,11 +86,7 @@ const userColumns = computed<DataTableColumns<any>>(() => [
       const name = displayName(row)
       return (
         <NAvatar src={avatar} imgProps={avatarImgProps}>
-          {avatar
-            ? undefined
-            : String(name)
-                .slice(0, 1)
-                .toUpperCase()}
+          {avatar ? undefined : String(name).slice(0, 1).toUpperCase()}
         </NAvatar>
       )
     },
