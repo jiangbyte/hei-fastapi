@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Select, case, delete, func, or_, select
+from sqlalchemy import Select, and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import ColumnElement
@@ -422,11 +422,16 @@ class AccountRepository:
         return accounts, total
 
     async def assign_account_to_role(self, payload: AccountRoleAssignRequest) -> SysIamRelation:
-        if not await self.db.get(SysAccount, payload.account_id):
+        account = await self.db.get(SysAccount, payload.account_id)
+        if not account:
             raise NotFoundError("Account not found")
         if not await self.db.get(SysRole, payload.role_id):
             raise NotFoundError("Role not found")
-        relation = self.relations.account_role(payload.account_id, payload.role_id)
+        relation = self.relations.account_role(
+            payload.account_id,
+            payload.role_id,
+            account.account_type,
+        )
         self.db.add(relation)
         await self.db.flush()
         return relation
@@ -435,36 +440,45 @@ class AccountRepository:
         self,
         payload: AccountGroupAssignRequest,
     ) -> SysIamRelation:
-        if not await self.db.get(SysAccount, payload.account_id):
+        account = await self.db.get(SysAccount, payload.account_id)
+        if not account:
             raise NotFoundError("Account not found")
         if not await self.db.get(SysGroup, payload.group_id):
             raise NotFoundError("Group not found")
-        relation = self.relations.account_group(payload.account_id, payload.group_id)
+        relation = self.relations.account_group(
+            payload.account_id,
+            payload.group_id,
+            account.account_type,
+        )
         self.db.add(relation)
         await self.db.flush()
         return relation
 
     async def assign_account_to_dept(self, payload: AccountDeptAssignRequest) -> SysIamRelation:
-        if not await self.db.get(SysAccount, payload.account_id):
+        account = await self.db.get(SysAccount, payload.account_id)
+        if not account:
             raise NotFoundError("Account not found")
         if not await self.db.get(SysDept, payload.dept_id):
             raise NotFoundError("Dept not found")
         relation = self.relations.account_dept(
             payload.account_id,
             payload.dept_id,
+            account.account_type,
             payload.is_primary,
         )
         self.db.add(relation)
         await self.db.flush()
         return relation
 
-    async def list_all_roles(
-        self,
-        data_scope_filter: ColumnElement[bool] | None = None,
-    ) -> list[SysRole]:
-        stmt = select(SysRole).order_by(SysRole.sort.asc(), SysRole.id.desc())
-        if data_scope_filter is not None:
-            stmt = stmt.where(data_scope_filter)
+    async def list_roles_by_ids(self, role_ids: list[str]) -> list[SysRole]:
+        unique_ids = list(dict.fromkeys(role_ids))
+        if not unique_ids:
+            return []
+        stmt = (
+            select(SysRole)
+            .where(SysRole.id.in_(unique_ids))
+            .order_by(SysRole.sort.asc(), SysRole.id.desc())
+        )
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_account_direct_role_ids(
@@ -486,7 +500,7 @@ class AccountRepository:
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
     async def replace_account_roles(self, payload: AccountGrantRoleRequest) -> None:
-        await self.get_required(payload.id)
+        account = await self.get_required(payload.id)
         role_ids = list(dict.fromkeys(payload.role_ids))
         if role_ids:
             stmt = select(SysRole.id).where(SysRole.id.in_(role_ids))
@@ -497,18 +511,23 @@ class AccountRepository:
             IamRelationSubjectType.ACCOUNT.value,
             payload.id,
             IamRelationType.ACCOUNT_ROLE,
+            account_type=account.account_type,
         )
         for role_id in role_ids:
-            self.db.add(self.relations.account_role(payload.id, role_id))
+            self.db.add(
+                self.relations.account_role(payload.id, role_id, account.account_type)
+            )
         await self.db.flush()
 
-    async def list_all_groups(
-        self,
-        data_scope_filter: ColumnElement[bool] | None = None,
-    ) -> list[SysGroup]:
-        stmt = select(SysGroup).order_by(SysGroup.id.desc())
-        if data_scope_filter is not None:
-            stmt = stmt.where(data_scope_filter)
+    async def list_groups_by_ids(self, group_ids: list[str]) -> list[SysGroup]:
+        unique_ids = list(dict.fromkeys(group_ids))
+        if not unique_ids:
+            return []
+        stmt = (
+            select(SysGroup)
+            .where(SysGroup.id.in_(unique_ids))
+            .order_by(SysGroup.id.desc())
+        )
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_account_direct_group_ids(
@@ -530,7 +549,7 @@ class AccountRepository:
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
     async def replace_account_groups(self, payload: AccountGrantGroupRequest) -> None:
-        await self.get_required(payload.id)
+        account = await self.get_required(payload.id)
         group_ids = list(dict.fromkeys(payload.group_ids))
         if group_ids:
             stmt = select(SysGroup.id).where(SysGroup.id.in_(group_ids))
@@ -541,9 +560,12 @@ class AccountRepository:
             IamRelationSubjectType.ACCOUNT.value,
             payload.id,
             IamRelationType.ACCOUNT_GROUP,
+            account_type=account.account_type,
         )
         for group_id in group_ids:
-            self.db.add(self.relations.account_group(payload.id, group_id))
+            self.db.add(
+                self.relations.account_group(payload.id, group_id, account.account_type)
+            )
         await self.db.flush()
 
     async def list_account_dept_grants(
@@ -571,7 +593,7 @@ class AccountRepository:
         ]
 
     async def replace_account_depts(self, payload: AccountGrantDeptRequest) -> None:
-        await self.get_required(payload.id)
+        account = await self.get_required(payload.id)
         dept_ids = list(dict.fromkeys(item.dept_id for item in payload.grant_info_list))
         if dept_ids:
             stmt = select(SysDept.id).where(SysDept.id.in_(dept_ids))
@@ -583,14 +605,24 @@ class AccountRepository:
             IamRelationSubjectType.ACCOUNT.value,
             payload.id,
             IamRelationType.ACCOUNT_DEPT,
+            account_type=account.account_type,
         )
         for item in payload.grant_info_list:
             is_primary = bool(item.is_primary) and not primary_seen
             primary_seen = primary_seen or is_primary
-            self.db.add(self.relations.account_dept(payload.id, item.dept_id, is_primary))
+            self.db.add(
+                self.relations.account_dept(
+                    payload.id,
+                    item.dept_id,
+                    account.account_type,
+                    is_primary,
+                )
+            )
         await self.db.flush()
 
     async def get_account_role_ids(self, account_id: str) -> list[str]:
+        account = await self.get_required(account_id)
+        account_type = account.account_type
         account_group_rel = aliased(SysIamRelation)
         group_role_rel = aliased(SysIamRelation)
         direct_stmt = select(SysIamRelation.target_id).where(
@@ -598,18 +630,23 @@ class AccountRepository:
             SysIamRelation.subject_id == account_id,
             SysIamRelation.relation_type == IamRelationType.ACCOUNT_ROLE.value,
             SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
+            SysIamRelation.account_type == account_type,
         )
         group_stmt = (
             select(group_role_rel.target_id)
             .join(
                 account_group_rel,
-                account_group_rel.target_id == group_role_rel.subject_id,
+                and_(
+                    account_group_rel.target_id == group_role_rel.subject_id,
+                    account_group_rel.account_type == group_role_rel.account_type,
+                ),
             )
             .where(
                 account_group_rel.subject_type == IamRelationSubjectType.ACCOUNT.value,
                 account_group_rel.subject_id == account_id,
                 account_group_rel.relation_type == IamRelationType.ACCOUNT_GROUP.value,
                 account_group_rel.target_type == IamRelationTargetType.GROUP.value,
+                account_group_rel.account_type == account_type,
                 group_role_rel.subject_type == IamRelationSubjectType.GROUP.value,
                 group_role_rel.relation_type == IamRelationType.GROUP_ROLE.value,
                 group_role_rel.target_type == IamRelationTargetType.ROLE.value,
@@ -620,6 +657,8 @@ class AccountRepository:
         return sorted(set(direct + group))
 
     async def get_account_role_codes(self, account_id: str) -> list[str]:
+        account = await self.get_required(account_id)
+        account_type = account.account_type
         account_group_rel = aliased(SysIamRelation)
         group_role_rel = aliased(SysIamRelation)
         direct_stmt = (
@@ -630,17 +669,25 @@ class AccountRepository:
                 SysIamRelation.subject_id == account_id,
                 SysIamRelation.relation_type == IamRelationType.ACCOUNT_ROLE.value,
                 SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
+                SysIamRelation.account_type == account_type,
             )
         )
         group_stmt = (
             select(SysRole.code)
             .join(group_role_rel, group_role_rel.target_id == SysRole.id)
-            .join(account_group_rel, account_group_rel.target_id == group_role_rel.subject_id)
+            .join(
+                account_group_rel,
+                and_(
+                    account_group_rel.target_id == group_role_rel.subject_id,
+                    account_group_rel.account_type == group_role_rel.account_type,
+                ),
+            )
             .where(
                 account_group_rel.subject_type == IamRelationSubjectType.ACCOUNT.value,
                 account_group_rel.subject_id == account_id,
                 account_group_rel.relation_type == IamRelationType.ACCOUNT_GROUP.value,
                 account_group_rel.target_type == IamRelationTargetType.GROUP.value,
+                account_group_rel.account_type == account_type,
                 group_role_rel.subject_type == IamRelationSubjectType.GROUP.value,
                 group_role_rel.relation_type == IamRelationType.GROUP_ROLE.value,
                 group_role_rel.target_type == IamRelationTargetType.ROLE.value,

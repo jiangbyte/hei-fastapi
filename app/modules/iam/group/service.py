@@ -21,7 +21,9 @@ from app.modules.iam.group.schema import (
     GroupGrantResourceRequest,
     GroupGrantRoleRequest,
     GroupGrantUserRequest,
+    GroupOwnResourceQuery,
     GroupOwnResourceResponse,
+    GroupOwnRoleQuery,
     GroupOwnRoleResponse,
     GroupOwnUserResponse,
     GroupResourceGrantInfo,
@@ -145,7 +147,7 @@ class GroupService:
 
     async def own_role(
         self,
-        query: IdQuery,
+        query: GroupOwnRoleQuery,
         session: SessionPayload | None = None,
     ) -> GroupOwnRoleResponse:
         role_filter = (
@@ -155,10 +157,15 @@ class GroupService:
         )
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:ownrole", [query.id])
+        role_ids = await self.repo.list_group_role_ids(
+            query.id,
+            role_filter,
+            account_type=query.account_type.value,
+        )
         return GroupOwnRoleResponse(
             id=query.id,
-            roles=await self.repo.list_all_roles(role_filter),
-            role_ids=await self.repo.list_group_role_ids(query.id, role_filter),
+            roles=await self.repo.list_roles_by_ids(role_ids),
+            role_ids=role_ids,
         )
 
     async def grant_role(
@@ -176,7 +183,7 @@ class GroupService:
 
     async def own_resource(
         self,
-        query: IdQuery,
+        query: GroupOwnResourceQuery,
         session: SessionPayload | None = None,
     ) -> GroupOwnResourceResponse:
         if session is not None:
@@ -189,6 +196,7 @@ class GroupService:
                 for grant in await self.relation_repo.list_subject_resource_grants(
                     GrantSubjectType.GROUP,
                     query.id,
+                    account_type=query.account_type,
                 )
             ],
         )
@@ -206,6 +214,7 @@ class GroupService:
                 GrantSubjectType.GROUP,
                 payload.id,
                 payload.grant_info_list,
+                account_type=payload.account_type,
             )
         await self._refresh_accounts(account_ids)
 

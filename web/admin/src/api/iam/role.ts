@@ -24,8 +24,10 @@ export function remove(data: any) {
   return http.post<any>(`${rolePrefix}/delete`, data)
 }
 
-export function ownResources(roleId: string) {
-  return http.get<any>(`${rolePrefix}/own-resource`, { params: { id: roleId } })
+export function ownResources(roleId: string, accountType: string) {
+  return http.get<any>(`${rolePrefix}/own-resource`, {
+    params: { id: roleId, account_type: accountType },
+  })
 }
 
 export function grantResources(data: any) {

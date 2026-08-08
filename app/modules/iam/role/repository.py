@@ -120,16 +120,23 @@ class RoleRepository:
         stmt = select(SysRole).where(SysRole.id.in_(unique_ids))
         return list((await self.db.execute(stmt)).scalars().all())
 
-    async def list_resource_grants(self, role_id: str) -> list[RoleResourceGrantInfo]:
+    async def list_resource_grants(
+        self,
+        role_id: str,
+        account_type: str | None = None,
+    ) -> list[RoleResourceGrantInfo]:
         await self.get_required(role_id)
+        filters = [
+            SysIamRelation.subject_type == GrantSubjectType.ROLE.value,
+            SysIamRelation.subject_id == role_id,
+            SysIamRelation.relation_type == IamRelationType.SUBJECT_RESOURCE_GRANT.value,
+            SysIamRelation.target_type == IamRelationTargetType.RESOURCE.value,
+        ]
+        if account_type is not None:
+            filters.append(SysIamRelation.account_type == account_type)
         stmt = (
             select(SysIamRelation)
-            .where(
-                SysIamRelation.subject_type == GrantSubjectType.ROLE.value,
-                SysIamRelation.subject_id == role_id,
-                SysIamRelation.relation_type == IamRelationType.SUBJECT_RESOURCE_GRANT.value,
-                SysIamRelation.target_type == IamRelationTargetType.RESOURCE.value,
-            )
+            .where(*filters)
             .order_by(SysIamRelation.id.asc())
         )
         grants = list((await self.db.execute(stmt)).scalars().all())
@@ -141,12 +148,15 @@ class RoleRepository:
         resources = list((await self.db.execute(resource_stmt)).scalars().all())
         resource_map = {resource.id: resource for resource in resources}
 
-        permission_stmt = select(SysIamRelation).where(
+        permission_filters = [
             SysIamRelation.subject_type == IamRelationSubjectType.RESOURCE.value,
             SysIamRelation.relation_type == IamRelationType.RESOURCE_PERMISSION.value,
             SysIamRelation.target_type == IamRelationTargetType.PERMISSION.value,
             SysIamRelation.subject_id.in_(resource_ids),
-        )
+        ]
+        if account_type is not None:
+            permission_filters.append(SysIamRelation.account_type == account_type)
+        permission_stmt = select(SysIamRelation).where(*permission_filters)
         permissions = list((await self.db.execute(permission_stmt)).scalars().all())
         permission_map: dict[str, list[str]] = defaultdict(list)
         for permission in permissions:
@@ -198,6 +208,7 @@ class RoleRepository:
             existing_ids = set((await self.db.execute(stmt)).scalars().all())
             if len(existing_ids) != len(resource_ids):
                 raise NotFoundError("Resource not found")
+        account_type = payload.account_type.value
         if permission_keys:
             permission_resource_stmt = select(
                 SysIamRelation.target_key,
@@ -206,6 +217,7 @@ class RoleRepository:
                 SysIamRelation.subject_type == IamRelationSubjectType.RESOURCE.value,
                 SysIamRelation.relation_type == IamRelationType.RESOURCE_PERMISSION.value,
                 SysIamRelation.target_type == IamRelationTargetType.PERMISSION.value,
+                SysIamRelation.account_type == account_type,
                 SysIamRelation.target_key.in_(permission_keys),
             )
             permission_resource_rows = list((await self.db.execute(permission_resource_stmt)).all())
@@ -235,6 +247,7 @@ class RoleRepository:
             GrantSubjectType.ROLE.value,
             payload.id,
             IamRelationType.SUBJECT_RESOURCE_GRANT,
+            account_type=account_type,
         )
         for resource_id in resource_ids:
             grant_mode = (
@@ -247,6 +260,7 @@ class RoleRepository:
                     GrantSubjectType.ROLE,
                     payload.id,
                     resource_id,
+                    account_type,
                     GrantMode(grant_mode),
                 )
             )
@@ -301,8 +315,24 @@ class RoleRepository:
             IamRelationTargetType.ROLE.value,
             [payload.id],
         )
+        accounts = list(
+            (
+                await self.db.execute(
+                    select(SysAccount).where(SysAccount.id.in_(account_ids))
+                )
+            )
+            .scalars()
+            .all()
+        ) if account_ids else []
+        account_type_map = {account.id: account.account_type for account in accounts}
         for account_id in account_ids:
-            self.db.add(self.relations.account_role(account_id, payload.id))
+            self.db.add(
+                self.relations.account_role(
+                    account_id,
+                    payload.id,
+                    account_type_map[account_id],
+                )
+            )
         await self.db.flush()
 
     async def resolve_dept_names(self, dept_ids: list[str]) -> dict[str, str]:

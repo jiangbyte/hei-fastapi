@@ -17,6 +17,7 @@ from app.modules.iam.role.schema import (
     RoleCreateRequest,
     RoleGrantResourceRequest,
     RoleGrantUserRequest,
+    RoleOwnResourceQuery,
     RoleOwnResourceResponse,
     RoleOwnUserResponse,
     RoleUpdateRequest,
@@ -120,7 +121,7 @@ async def page(
     summary="获取角色拥有资源",
 )
 async def own_resource(
-    query: Annotated[IdQuery, Depends()],
+    query: Annotated[RoleOwnResourceQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[RoleOwnResourceResponse]:

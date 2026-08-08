@@ -4,9 +4,9 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.core.config.enums import StatusEnum
+from app.core.config.enums import AccountType, StatusEnum
 from app.core.response.pagination import PageQuery
-from app.core.schema.base import ApiSchema
+from app.core.schema.base import ApiSchema, IdQuery
 from app.modules.iam.schema import (
     ResourceGrantModuleOption,
     RoleOption,
@@ -49,12 +49,14 @@ class SysGroupSchema(ApiSchema):
 class GroupRoleAssignRequest(ApiSchema):
     group_id: str
     role_id: str
+    account_type: AccountType
 
 
 class SysGroupRoleRelSchema(ApiSchema):
     id: str
     group_id: str
     role_id: str
+    account_type: str
     created_at: datetime
     created_by: str | None = None
     updated_at: datetime
@@ -77,6 +79,10 @@ class GroupGrantUserRequest(ApiSchema):
     account_ids: list[str] = Field(default_factory=list)
 
 
+class GroupOwnRoleQuery(IdQuery):
+    account_type: AccountType
+
+
 class GroupOwnRoleResponse(ApiSchema):
     id: str
     roles: list[RoleOption] = Field(default_factory=list)
@@ -85,7 +91,12 @@ class GroupOwnRoleResponse(ApiSchema):
 
 class GroupGrantRoleRequest(ApiSchema):
     id: str = Field(min_length=1, max_length=64)
+    account_type: AccountType
     role_ids: list[str] = Field(default_factory=list)
+
+
+class GroupOwnResourceQuery(IdQuery):
+    account_type: AccountType
 
 
 class GroupOwnResourceResponse(ApiSchema):
@@ -96,4 +107,5 @@ class GroupOwnResourceResponse(ApiSchema):
 
 class GroupGrantResourceRequest(ApiSchema):
     id: str = Field(min_length=1, max_length=64)
+    account_type: AccountType
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)

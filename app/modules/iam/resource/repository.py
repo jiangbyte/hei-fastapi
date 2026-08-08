@@ -3,13 +3,12 @@
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import StatusEnum
+from app.core.config.enums import AccountType, StatusEnum
 from app.core.exceptions.business import ConflictError, NotFoundError
 from app.modules.iam.enums import (
     IamRelationSubjectType,
     IamRelationTargetType,
     IamRelationType,
-    ResourceModuleClient,
     ResourceType,
 )
 from app.modules.iam.reference_guard import (
@@ -228,7 +227,7 @@ class ResourceRepository:
     async def list_resources(
         self,
         module_id: str | None = None,
-        module_client: ResourceModuleClient | None = None,
+        module_client: AccountType | None = None,
     ) -> list[SysResource]:
         stmt = (
             select(SysResource)
@@ -266,7 +265,9 @@ class ResourceRepository:
     ) -> SysIamRelation:
         if not await self.db.get(SysResource, payload.resource_id):
             raise NotFoundError("Resource not found")
-        relation = self.relations.resource_permission(**payload.model_dump())
+        data = payload.model_dump()
+        data["account_type"] = payload.account_type.value
+        relation = self.relations.resource_permission(**data)
         self.db.add(relation)
         await self.db.flush()
         return relation
@@ -281,8 +282,11 @@ class ResourceRepository:
             IamRelationSubjectType.RESOURCE.value,
             payload.resource_id,
             IamRelationType.RESOURCE_PERMISSION,
+            account_type=payload.account_type.value,
         )
-        relation = self.relations.resource_permission(**payload.model_dump())
+        data = payload.model_dump()
+        data["account_type"] = payload.account_type.value
+        relation = self.relations.resource_permission(**data)
         self.db.add(relation)
         await self.db.flush()
         return relation
@@ -336,7 +340,7 @@ class ResourceRepository:
     async def list_resources_by_ids_with_parents(
         self,
         resource_ids: list[str],
-        module_client: ResourceModuleClient | None = None,
+        module_client: AccountType | None = None,
     ) -> list[SysResource]:
         unique_ids = set(resource_ids)
         if not unique_ids:
@@ -490,7 +494,7 @@ class ResourceModuleRepository:
 
     async def list_enabled_modules(
         self,
-        client: ResourceModuleClient | None = None,
+        client: AccountType | None = None,
     ) -> list[SysResourceModule]:
         stmt = (
             select(SysResourceModule)

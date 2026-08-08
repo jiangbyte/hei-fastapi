@@ -109,7 +109,11 @@ class GroupRepository:
             raise NotFoundError("Group not found")
         if not await self.db.get(SysRole, payload.role_id):
             raise NotFoundError("Role not found")
-        relation = self.relations.group_role(payload.group_id, payload.role_id)
+        relation = self.relations.group_role(
+            payload.group_id,
+            payload.role_id,
+            payload.account_type,
+        )
         self.db.add(relation)
         await self.db.flush()
         return relation
@@ -173,31 +177,53 @@ class GroupRepository:
             IamRelationTargetType.GROUP.value,
             [payload.id],
         )
+        accounts = list(
+            (
+                await self.db.execute(
+                    select(SysAccount).where(SysAccount.id.in_(account_ids))
+                )
+            )
+            .scalars()
+            .all()
+        ) if account_ids else []
+        account_type_map = {account.id: account.account_type for account in accounts}
         for account_id in account_ids:
-            self.db.add(self.relations.account_group(account_id, payload.id))
+            self.db.add(
+                self.relations.account_group(
+                    account_id,
+                    payload.id,
+                    account_type_map[account_id],
+                )
+            )
         await self.db.flush()
 
-    async def list_all_roles(
-        self,
-        data_scope_filter: ColumnElement[bool] | None = None,
-    ) -> list[SysRole]:
-        stmt = select(SysRole).order_by(SysRole.sort.asc(), SysRole.id.desc())
-        if data_scope_filter is not None:
-            stmt = stmt.where(data_scope_filter)
+    async def list_roles_by_ids(self, role_ids: list[str]) -> list[SysRole]:
+        unique_ids = list(dict.fromkeys(role_ids))
+        if not unique_ids:
+            return []
+        stmt = (
+            select(SysRole)
+            .where(SysRole.id.in_(unique_ids))
+            .order_by(SysRole.sort.asc(), SysRole.id.desc())
+        )
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_group_role_ids(
         self,
         group_id: str,
         data_scope_filter: ColumnElement[bool] | None = None,
+        account_type: str | None = None,
     ) -> list[str]:
         await self.get_required(group_id)
-        stmt = select(SysIamRelation.target_id).where(
+        filters = [
             SysIamRelation.subject_type == IamRelationSubjectType.GROUP.value,
             SysIamRelation.subject_id == group_id,
             SysIamRelation.relation_type == IamRelationType.GROUP_ROLE.value,
             SysIamRelation.target_type == IamRelationTargetType.ROLE.value,
-        )
+        ]
+        if account_type is not None:
+            filters.append(SysIamRelation.account_type == account_type)
+        stmt = select(SysIamRelation.target_id).where(*filters)
         if data_scope_filter is not None:
             stmt = stmt.join(SysRole, SysRole.id == SysIamRelation.target_id).where(
                 data_scope_filter
@@ -212,11 +238,13 @@ class GroupRepository:
             existing_ids = set((await self.db.execute(stmt)).scalars().all())
             if len(existing_ids) != len(role_ids):
                 raise NotFoundError("Role not found")
+        account_type = payload.account_type.value
         await self.relations.delete_subject_relations(
             IamRelationSubjectType.GROUP.value,
             payload.id,
             IamRelationType.GROUP_ROLE,
+            account_type=account_type,
         )
         for role_id in role_ids:
-            self.db.add(self.relations.group_role(payload.id, role_id))
+            self.db.add(self.relations.group_role(payload.id, role_id, account_type))
         await self.db.flush()

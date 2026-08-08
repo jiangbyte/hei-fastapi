@@ -4,11 +4,11 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.core.config.enums import DataScope, StatusEnum
+from app.core.config.enums import AccountType, DataScope, StatusEnum
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool, WireInt
-from app.modules.iam.enums import ResourceModuleClient, ResourceType
+from app.modules.iam.enums import ResourceType
 
 
 class ResourceCreateRequest(ApiSchema):
@@ -42,7 +42,7 @@ class ResourceAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     resource_type: ResourceType | None = None
     module_id: str | None = Field(default=None, max_length=64)
-    module_client: ResourceModuleClient | None = None
+    module_client: AccountType | None = None
     parent_id: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=32)
 
@@ -62,7 +62,7 @@ class SysResourceSchema(ApiSchema):
     resource_type: ResourceType
     module_id: str | None = None
     module_id_name: str | None = None
-    module_client: ResourceModuleClient | None = None
+    module_client: AccountType | None = None
     path: str | None = None
     component: str | None = None
     redirect: str | None = None
@@ -88,6 +88,7 @@ class SysResourceSchema(ApiSchema):
 class ResourcePermissionBindRequest(ApiSchema):
     resource_id: str
     permission_key: str
+    account_type: AccountType = AccountType.ADMIN
     data_scope: DataScope = DataScope.SELF
     custom_scope_dept_ids: list[str] = Field(default_factory=list)
     sort: WireInt = 99
@@ -141,17 +142,17 @@ class ResourceTreeNode(SysResourceSchema):
 
 class ResourceTreeQuery(ApiSchema):
     module_id: str | None = Field(default=None, max_length=64)
-    module_client: ResourceModuleClient | None = None
+    module_client: AccountType | None = None
 
 
 class ResourceModuleSelectorQuery(ApiSchema):
-    client: ResourceModuleClient | None = None
+    client: AccountType | None = None
 
 
 class ResourceModuleCreateRequest(ApiSchema):
     name: str = Field(min_length=1, max_length=64)
     code: str = Field(min_length=1, max_length=64)
-    client: ResourceModuleClient = ResourceModuleClient.ADMIN
+    client: AccountType = AccountType.ADMIN
     icon: str | None = Field(default=None, max_length=255)
     color: str | None = Field(default=None, max_length=32)
     sort: WireInt = 99
@@ -167,7 +168,7 @@ class ResourceModuleUpdateRequest(ResourceModuleCreateRequest):
 class ResourceModuleAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     code: str | None = Field(default=None, max_length=64)
-    client: ResourceModuleClient | None = None
+    client: AccountType | None = None
     status: str | None = Field(default=None, max_length=32)
 
 
@@ -175,7 +176,7 @@ class SysResourceModuleSchema(ApiSchema):
     id: str
     name: str
     code: str
-    client: ResourceModuleClient
+    client: AccountType
     icon: str | None = None
     color: str | None = None
     sort: WireInt
@@ -194,6 +195,6 @@ class ResourceModuleSelectorOption(ApiSchema):
     id: str
     name: str
     code: str
-    client: ResourceModuleClient
+    client: AccountType
     icon: str | None = None
     color: str | None = None

@@ -4,9 +4,9 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.core.config.enums import StatusEnum
+from app.core.config.enums import AccountType, StatusEnum
 from app.core.response.pagination import PageQuery
-from app.core.schema.base import ApiSchema
+from app.core.schema.base import ApiSchema, IdQuery
 from app.core.schema.wire import WireBool, WireInt
 from app.modules.iam.enums import RoleScopeType
 from app.modules.iam.schema import (
@@ -66,6 +66,10 @@ class RoleResourceGrantInfo(ApiSchema):
     permission_keys: list[str] = Field(default_factory=list)
 
 
+class RoleOwnResourceQuery(IdQuery):
+    account_type: AccountType
+
+
 class RoleOwnResourceResponse(ApiSchema):
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
@@ -74,6 +78,7 @@ class RoleOwnResourceResponse(ApiSchema):
 
 class RoleGrantResourceRequest(ApiSchema):
     id: str = Field(min_length=1, max_length=64)
+    account_type: AccountType
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 

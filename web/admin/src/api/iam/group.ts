@@ -32,16 +32,20 @@ export function grantUsers(data: any) {
   return http.post<any>(`${groupPrefix}/grant-user`, data)
 }
 
-export function ownRoles(groupId: string) {
-  return http.get<any>(`${groupPrefix}/own-role`, { params: { id: groupId } })
+export function ownRoles(groupId: string, accountType: string) {
+  return http.get<any>(`${groupPrefix}/own-role`, {
+    params: { id: groupId, account_type: accountType },
+  })
 }
 
 export function grantRoles(data: any) {
   return http.post<any>(`${groupPrefix}/grant-role`, data)
 }
 
-export function ownResources(groupId: string) {
-  return http.get<any>(`${groupPrefix}/own-resource`, { params: { id: groupId } })
+export function ownResources(groupId: string, accountType: string) {
+  return http.get<any>(`${groupPrefix}/own-resource`, {
+    params: { id: groupId, account_type: accountType },
+  })
 }
 
 export function grantResources(data: any) {

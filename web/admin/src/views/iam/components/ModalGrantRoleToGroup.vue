@@ -2,47 +2,41 @@
 
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
-import { groupApi } from '@/api'
-import { renderButtonIcon } from '@/utils'
-import { createTagColor } from '@/utils'
+import { groupApi, roleApi } from '@/api'
+import {
+  ACCOUNT_TYPE_TABS,
+  DEFAULT_ACCOUNT_TYPE,
+  type AccountType,
+} from '@/constants/account'
+import { createTagColor, renderButtonIcon } from '@/utils'
 import { dictTypeColor, dictTypeData } from '@/utils/dict'
 import { NButton, NTag } from 'naive-ui'
 import { computed, reactive } from 'vue'
 
 const emit = defineEmits<{ saved: [] }>()
 
+const accountTypeOptions = ACCOUNT_TYPE_TABS.map((item) => ({
+  label: item.label,
+  value: item.key,
+}))
+
 const state = reactive({
   showModal: false,
   loading: false,
   submitLoading: false,
   searchKey: '',
+  accountType: DEFAULT_ACCOUNT_TYPE as AccountType,
   group: {} as any,
   items: [] as any[],
   selectedData: [] as any[],
   page: 1,
   pageSize: 10,
+  total: 0,
 })
 
 const modalTitle = computed(() =>
   state.group?.name ? `分配角色 - ${state.group.name}` : '分配角色',
 )
-
-const filteredItems = computed(() => {
-  const keyword = state.searchKey.trim().toLowerCase()
-  if (!keyword) return state.items
-  return state.items.filter((item) =>
-    ['code', 'name'].some((f) =>
-      String(item[f] || '')
-        .toLowerCase()
-        .includes(keyword),
-    ),
-  )
-})
-
-const tableItems = computed(() => {
-  const start = (state.page - 1) * state.pageSize
-  return filteredItems.value.slice(start, start + state.pageSize)
-})
 
 const selectedIds = computed(() => new Set(state.selectedData.map((i) => String(i.id))))
 
@@ -93,24 +87,35 @@ const selectedColumns = computed<DataTableColumns<any>>(() => [
   { title: '名称', key: 'name', minWidth: 120, ellipsis: { tooltip: true } },
 ])
 
-async function openModal(group: any) {
+async function openModal(group: any, options?: { accountType?: AccountType }) {
   state.group = group ?? {}
+  state.accountType = options?.accountType || DEFAULT_ACCOUNT_TYPE
   state.searchKey = ''
   state.items = []
   state.selectedData = []
   state.page = 1
+  state.total = 0
   state.showModal = true
-  await fetchData()
+  await Promise.all([fetchGrantedSelected(), fetchCandidatePage()])
 }
 
-async function fetchData() {
+async function fetchGrantedSelected() {
   if (!state.group?.id) return
+  const resp = await groupApi.ownRoles(state.group.id, state.accountType)
+  state.selectedData = resp.data?.roles ?? []
+}
+
+async function fetchCandidatePage() {
   state.loading = true
   try {
-    const resp = await groupApi.ownRoles(state.group.id)
-    state.items = resp.data?.roles ?? []
-    const ids = new Set((resp.data?.role_ids ?? []).map(String))
-    state.selectedData = state.items.filter((i) => ids.has(String(i.id)))
+    const keyword = state.searchKey.trim()
+    const response = await roleApi.page({
+      current: state.page,
+      size: state.pageSize,
+      ...(keyword ? { name: keyword } : {}),
+    })
+    state.items = response.data?.records ?? []
+    state.total = Number(response.data?.total ?? 0)
   } finally {
     state.loading = false
   }
@@ -119,7 +124,11 @@ async function fetchData() {
 async function submitGrant() {
   state.submitLoading = true
   try {
-    await groupApi.grantRoles({ id: state.group.id, role_ids: state.selectedData.map((i) => i.id) })
+    await groupApi.grantRoles({
+      id: state.group.id,
+      account_type: state.accountType,
+      role_ids: state.selectedData.map((i) => i.id),
+    })
     window.$message.success('授权保存成功')
     closeModal()
     emit('saved')
@@ -131,25 +140,56 @@ async function submitGrant() {
 function closeModal() {
   state.items = []
   state.selectedData = []
+  state.total = 0
   state.showModal = false
   state.submitLoading = false
 }
+
 function addRecord(r: any) {
   if (!selectedIds.value.has(String(r.id))) state.selectedData.push(r)
 }
+
 function addAllPageRecord() {
-  tableItems.value.forEach(addRecord)
+  state.items.forEach(addRecord)
 }
+
 function delRecord(r: any) {
   state.selectedData = state.selectedData.filter((i) => String(i.id) !== String(r.id))
 }
+
 function delAllRecord() {
   state.selectedData = []
 }
+
+function doSearch() {
+  state.page = 1
+  void fetchCandidatePage()
+}
+
 function resetSearch() {
   state.searchKey = ''
   state.page = 1
+  void fetchCandidatePage()
 }
+
+async function onAccountTypeChange(value: AccountType) {
+  state.accountType = value
+  state.page = 1
+  state.selectedData = []
+  await Promise.all([fetchGrantedSelected(), fetchCandidatePage()])
+}
+
+function onPageChange(page: number) {
+  state.page = page
+  void fetchCandidatePage()
+}
+
+function onPageSizeChange(size: number) {
+  state.pageSize = size
+  state.page = 1
+  void fetchCandidatePage()
+}
+
 defineExpose({ openModal })
 </script>
 
@@ -165,38 +205,46 @@ defineExpose({ openModal })
       <NGrid :cols="24" :x-gap="10">
         <NGi :span="16">
           <NSpace vertical>
+            <NSelect
+              :value="state.accountType"
+              :options="accountTypeOptions"
+              style="width: 180px"
+              @update:value="onAccountTypeChange"
+            />
             <NInputGroup>
               <NInput
                 v-model:value="state.searchKey"
                 clearable
-                placeholder="请输入角色编码或名称"
-                @keyup.enter="state.page = 1"
+                placeholder="请输入角色名称"
+                @keyup.enter="doSearch"
                 @clear="resetSearch"
               />
-              <NButton type="primary" @click="state.page = 1"> 搜索 </NButton>
+              <NButton type="primary" @click="doSearch"> 搜索 </NButton>
               <NButton @click="resetSearch"> 重置 </NButton>
             </NInputGroup>
             <NFlex justify="space-between" align="center">
-              <NText>{{ `待处理: ${filteredItems.length}` }}</NText>
+              <NText>{{ `待处理: ${state.total}` }}</NText>
               <NButton dashed size="small" @click="addAllPageRecord"> 新增当前页 </NButton>
             </NFlex>
             <NDataTable
               size="small"
               :row-key="(r: any) => r.id"
               :columns="listColumns"
-              :data="tableItems"
+              :data="state.items"
               :loading="state.loading"
               :bordered="true"
               :single-line="false"
               max-height="calc(100vh - 320px)"
             />
             <NPagination
-              v-model:page="state.page"
-              v-model:page-size="state.pageSize"
+              :page="state.page"
+              :page-size="state.pageSize"
               show-size-picker
               size="small"
-              :item-count="filteredItems.length"
+              :item-count="state.total"
               :page-sizes="[10, 20, 50, 100]"
+              @update:page="onPageChange"
+              @update:page-size="onPageSizeChange"
             />
           </NSpace>
         </NGi>

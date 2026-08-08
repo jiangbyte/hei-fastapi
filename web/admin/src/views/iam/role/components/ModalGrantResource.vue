@@ -3,6 +3,11 @@
 <script setup lang="tsx">
 import type { DataTableColumns } from 'naive-ui'
 import { roleApi } from '@/api'
+import {
+  ACCOUNT_TYPE_TABS,
+  DEFAULT_ACCOUNT_TYPE,
+  type AccountType,
+} from '@/constants/account'
 import { NCheckbox } from 'naive-ui'
 import { computed, reactive } from 'vue'
 
@@ -10,10 +15,16 @@ const emit = defineEmits<{
   saved: []
 }>()
 
+const accountTypeOptions = ACCOUNT_TYPE_TABS.map((item) => ({
+  label: item.label,
+  value: item.key,
+}))
+
 const state = reactive({
   showModal: false,
   loading: false,
   submitLoading: false,
+  accountType: DEFAULT_ACCOUNT_TYPE as AccountType,
   subject: {} as any,
   grantApi: roleApi as any,
   title: '',
@@ -98,10 +109,16 @@ const columns = computed<DataTableColumns<any>>(() => [
   },
 ])
 
-async function openModal(subject: any, grantApi: any = roleApi, title = '') {
+async function openModal(
+  subject: any,
+  grantApi: any = roleApi,
+  title = '',
+  options?: { accountType?: AccountType },
+) {
   state.subject = subject ?? {}
   state.grantApi = grantApi
   state.title = title
+  state.accountType = options?.accountType || DEFAULT_ACCOUNT_TYPE
   state.modules = []
   state.activeModuleId = null
   state.showModal = true
@@ -114,7 +131,7 @@ async function fetchGrant() {
   }
   state.loading = true
   try {
-    const response = await state.grantApi.ownResources(state.subject.id)
+    const response = await state.grantApi.ownResources(state.subject.id, state.accountType)
     const modules = echoModuleData(
       response.data?.modules ?? [],
       response.data?.grant_info_list ?? [],
@@ -131,6 +148,7 @@ async function submitGrant() {
   try {
     await state.grantApi.grantResources({
       id: state.subject.id,
+      account_type: state.accountType,
       grant_info_list: convertData(),
     })
     window.$message.success('授权保存成功')
@@ -139,6 +157,11 @@ async function submitGrant() {
   } finally {
     state.submitLoading = false
   }
+}
+
+async function onAccountTypeChange(value: AccountType) {
+  state.accountType = value
+  await fetchGrant()
 }
 
 function closeModal() {
@@ -231,14 +254,22 @@ defineExpose({
   >
     <NDrawerContent :title="modalTitle" closable :native-scrollbar="false">
       <NSpin :show="state.loading">
-        <NRadioGroup v-model:value="state.activeModuleId" size="small" class="mb-10px">
-          <NRadioButton
-            v-for="module in state.modules"
-            :key="module.id"
-            :value="module.id"
-            :label="module.title_display"
+        <NSpace class="mb-10px" align="center">
+          <NSelect
+            :value="state.accountType"
+            :options="accountTypeOptions"
+            style="width: 180px"
+            @update:value="onAccountTypeChange"
           />
-        </NRadioGroup>
+          <NRadioGroup v-model:value="state.activeModuleId" size="small">
+            <NRadioButton
+              v-for="module in state.modules"
+              :key="module.id"
+              :value="module.id"
+              :label="module.title_display"
+            />
+          </NRadioGroup>
+        </NSpace>
 
         <NDataTable
           size="medium"

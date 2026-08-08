@@ -72,14 +72,17 @@ class AccountService:
                 payload,
                 password_hash=hash_password(password),
             )
-            if payload.account_type == AccountType.ADMIN:
-                await AdminUserProfileRepository(self.db).upsert(
-                    self._admin_profile_payload(account.id, payload),
-                )
-            elif payload.account_type == AccountType.PORTAL:
-                await PortalUserProfileRepository(self.db).upsert(
-                    self._portal_profile_payload(account.id, payload),
-                )
+            match payload.account_type:
+                case AccountType.ADMIN:
+                    await AdminUserProfileRepository(self.db).upsert(
+                        self._admin_profile_payload(account.id, payload),
+                    )
+                case AccountType.PORTAL:
+                    await PortalUserProfileRepository(self.db).upsert(
+                        self._portal_profile_payload(account.id, payload),
+                    )
+                case _:
+                    raise BusinessError(f"Unsupported account type: {payload.account_type}")
 
     async def update(
         self,
@@ -99,14 +102,17 @@ class AccountService:
             password_hash = hash_password(password) if password else None
             await self.repo.update(payload, password_hash)
             account = await self.repo.get_required(payload.id)
-            if account.account_type == AccountType.ADMIN.value:
-                await AdminUserProfileRepository(self.db).upsert(
-                    self._admin_profile_payload(payload.id, payload),
-                )
-            elif account.account_type == AccountType.PORTAL.value:
-                await PortalUserProfileRepository(self.db).upsert(
-                    self._portal_profile_payload(payload.id, payload),
-                )
+            match account.account_type:
+                case AccountType.ADMIN.value:
+                    await AdminUserProfileRepository(self.db).upsert(
+                        self._admin_profile_payload(payload.id, payload),
+                    )
+                case AccountType.PORTAL.value:
+                    await PortalUserProfileRepository(self.db).upsert(
+                        self._portal_profile_payload(payload.id, payload),
+                    )
+                case _:
+                    raise BusinessError(f"Unsupported account type: {account.account_type}")
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         if session is not None:
@@ -211,6 +217,7 @@ class AccountService:
     ) -> AccountOwnResourceResponse:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:ownresource", [query.id])
+        account = await self.repo.get_required(query.id)
         return AccountOwnResourceResponse(
             id=query.id,
             modules=await ResourceService(self.db).list_grant_modules(),
@@ -219,6 +226,7 @@ class AccountService:
                 for grant in await self.relation_repo.list_subject_resource_grants(
                     GrantSubjectType.ACCOUNT,
                     query.id,
+                    account_type=account.account_type,
                 )
             ],
         )
@@ -230,11 +238,13 @@ class AccountService:
     ) -> None:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantresource", [payload.id])
+        account = await self.repo.get_required(payload.id)
         async with transactional(self.db):
             await self.relation_repo.replace_subject_resource_grant_infos(
                 GrantSubjectType.ACCOUNT,
                 payload.id,
                 payload.grant_info_list,
+                account_type=account.account_type,
             )
         await self._refresh_accounts([payload.id])
 
@@ -250,10 +260,11 @@ class AccountService:
         )
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:ownrole", [query.id])
+        role_ids = await self.repo.list_account_direct_role_ids(query.id, role_filter)
         return AccountOwnRoleResponse(
             id=query.id,
-            roles=await self.repo.list_all_roles(role_filter),
-            role_ids=await self.repo.list_account_direct_role_ids(query.id, role_filter),
+            roles=await self.repo.list_roles_by_ids(role_ids),
+            role_ids=role_ids,
         )
 
     async def grant_role(
@@ -280,10 +291,11 @@ class AccountService:
         )
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:owngroup", [query.id])
+        group_ids = await self.repo.list_account_direct_group_ids(query.id, group_filter)
         return AccountOwnGroupResponse(
             id=query.id,
-            groups=await self.repo.list_all_groups(group_filter),
-            group_ids=await self.repo.list_account_direct_group_ids(query.id, group_filter),
+            groups=await self.repo.list_groups_by_ids(group_ids),
+            group_ids=group_ids,
         )
 
     async def grant_group(
@@ -447,16 +459,7 @@ class AccountService:
             signature=payload.signature,
             phone=payload.phone,
             email=payload.email,
-            bio=payload.bio,
-            level=payload.level,
         )
-
-    def _ensure_status_not_cancelled(
-        self,
-        payload: AccountCreateRequest | AccountUpdateRequest,
-    ) -> None:
-        if payload.account_status == AccountStatusEnum.CANCELLED:
-            raise BusinessError("注销状态不允许通过管理端设置")
 
     def _ensure_status_not_cancelled(
         self,

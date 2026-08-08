@@ -120,7 +120,11 @@ async def test_assign_group_role_success(db_session):
         ),
     )
     relation = await GroupService(db_session).assign_group_role(
-        GroupRoleAssignRequest(group_id=group_id, role_id=role_id)
+        GroupRoleAssignRequest(
+            group_id=group_id,
+            role_id=role_id,
+            account_type=AccountType.ADMIN,
+        )
     )
     await db_session.commit()
     assert relation.group_id == group_id
@@ -148,6 +152,7 @@ async def test_grant_role_resource_success(db_session):
     await RoleService(db_session).grant_resource(
         RoleGrantResourceRequest(
             id=role_id,
+            account_type=AccountType.ADMIN,
             grant_info_list=[RoleResourceGrantInfo(resource_id=resource_id, permission_keys=[])],
         )
     )

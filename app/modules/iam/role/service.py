@@ -21,6 +21,7 @@ from app.modules.iam.role.schema import (
     RoleCreateRequest,
     RoleGrantResourceRequest,
     RoleGrantUserRequest,
+    RoleOwnResourceQuery,
     RoleOwnResourceResponse,
     RoleOwnUserResponse,
     RoleUpdateRequest,
@@ -89,7 +90,7 @@ class RoleService:
 
     async def own_resource(
         self,
-        query: IdQuery,
+        query: RoleOwnResourceQuery,
         session: SessionPayload | None = None,
     ) -> RoleOwnResourceResponse:
         if session is not None:
@@ -97,7 +98,10 @@ class RoleService:
         return RoleOwnResourceResponse(
             id=query.id,
             modules=await ResourceService(self.db).list_grant_modules(),
-            grant_info_list=await self.repo.list_resource_grants(query.id),
+            grant_info_list=await self.repo.list_resource_grants(
+                query.id,
+                account_type=query.account_type.value,
+            ),
         )
 
     async def grant_resource(

@@ -265,6 +265,7 @@ async def ensure_account_role_rel(db: AsyncSession) -> str:
                 id=SUPER_ADMIN_ACCOUNT_ROLE_REL_ID,
                 subject_type=IamRelationSubjectType.ACCOUNT.value,
                 subject_id=SUPER_ADMIN_ACCOUNT_ID,
+                account_type=AccountType.ADMIN.value,
                 relation_type=IamRelationType.ACCOUNT_ROLE.value,
                 target_type=IamRelationTargetType.ROLE.value,
                 target_id=SUPER_ADMIN_ROLE_ID,
@@ -275,6 +276,7 @@ async def ensure_account_role_rel(db: AsyncSession) -> str:
             SysIamRelation(
                 subject_type=IamRelationSubjectType.ACCOUNT.value,
                 subject_id=SUPER_ADMIN_ACCOUNT_ID,
+                account_type=AccountType.ADMIN.value,
                 relation_type=IamRelationType.ACCOUNT_ROLE.value,
                 target_type=IamRelationTargetType.ROLE.value,
                 target_id=SUPER_ADMIN_ROLE_ID,

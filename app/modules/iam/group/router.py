@@ -18,7 +18,9 @@ from app.modules.iam.group.schema import (
     GroupGrantResourceRequest,
     GroupGrantRoleRequest,
     GroupGrantUserRequest,
+    GroupOwnResourceQuery,
     GroupOwnResourceResponse,
+    GroupOwnRoleQuery,
     GroupOwnRoleResponse,
     GroupOwnUserResponse,
     GroupRoleAssignRequest,
@@ -175,7 +177,7 @@ async def grant_user(
     summary="获取用户组角色授权",
 )
 async def own_role(
-    query: Annotated[IdQuery, Depends()],
+    query: Annotated[GroupOwnRoleQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[GroupOwnRoleResponse]:
@@ -210,7 +212,7 @@ async def grant_role(
     summary="获取用户组资源授权",
 )
 async def own_resource(
-    query: Annotated[IdQuery, Depends()],
+    query: Annotated[GroupOwnResourceQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[GroupOwnResourceResponse]:

@@ -2,10 +2,11 @@
 
 import pytest
 
-from app.core.config.enums import AccountType, StatusEnum
+from app.core.config.enums import AccountStatusEnum, AccountType, StatusEnum
 from app.core.exceptions.business import ConflictError
 from app.core.security.session import SessionPayload
-from app.modules.iam.enums import GrantSubjectType, ResourceModuleClient, ResourceType
+from app.modules.iam.account.model import SysAccount
+from app.modules.iam.enums import GrantSubjectType, ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.iam.resource.schema import (
     ResourceCreateRequest,
@@ -209,6 +210,12 @@ async def test_resource_module_move_checks_descendant_code_conflicts(db_session)
 async def test_current_resources_regular_account_returns_granted_resources_with_parents(db_session):
     db_session.add_all(
         [
+            SysAccount(
+                id="account_1",
+                password_hash="x",
+                account_type=AccountType.ADMIN.value,
+                account_status=AccountStatusEnum.ENABLED.value,
+            ),
             SysResourceModule(
                 id="module_iam",
                 code="iam",
@@ -245,6 +252,7 @@ async def test_current_resources_regular_account_returns_granted_resources_with_
                 GrantSubjectType.ACCOUNT,
                 "account_1",
                 "resource_granted",
+                account_type=AccountType.ADMIN.value,
             ),
         ]
     )
@@ -295,13 +303,13 @@ async def test_current_resources_filters_by_portal_module_client(db_session):
                 id="module_admin",
                 code="admin",
                 name="Admin",
-                client=ResourceModuleClient.ADMIN.value,
+                client=AccountType.ADMIN.value,
             ),
             SysResourceModule(
                 id="module_portal",
                 code="portal",
                 name="Portal",
-                client=ResourceModuleClient.PORTAL.value,
+                client=AccountType.PORTAL.value,
             ),
             SysResource(
                 id="resource_admin",
@@ -325,11 +333,11 @@ async def test_current_resources_filters_by_portal_module_client(db_session):
 
     resources = await ResourceService(db_session).list_current_resources(
         _session("portal", ["*:*:*"]),
-        module_client=ResourceModuleClient.PORTAL,
+        module_client=AccountType.PORTAL,
     )
 
     assert [resource.id for resource in resources] == ["resource_portal"]
-    assert resources[0].module_client == ResourceModuleClient.PORTAL.value
+    assert resources[0].module_client == AccountType.PORTAL.value
 
 
 async def test_current_resource_modules_group_admin_resources(db_session):
@@ -339,14 +347,14 @@ async def test_current_resource_modules_group_admin_resources(db_session):
                 id="module_admin",
                 code="admin",
                 name="Admin",
-                client=ResourceModuleClient.ADMIN.value,
+                client=AccountType.ADMIN.value,
                 sort=1,
             ),
             SysResourceModule(
                 id="module_portal",
                 code="HEADER",
                 name="Header",
-                client=ResourceModuleClient.PORTAL.value,
+                client=AccountType.PORTAL.value,
                 sort=2,
             ),
             SysResource(
@@ -371,11 +379,11 @@ async def test_current_resource_modules_group_admin_resources(db_session):
 
     resources = await ResourceService(db_session).list_current_resources(
         _session("admin", ["*:*:*"]),
-        module_client=ResourceModuleClient.ADMIN,
+        module_client=AccountType.ADMIN,
     )
 
     assert [resource.id for resource in resources] == ["resource_admin"]
-    assert resources[0].module_client == ResourceModuleClient.ADMIN.value
+    assert resources[0].module_client == AccountType.ADMIN.value
 
 
 async def test_public_portal_resources_return_enabled_portal_resources_without_session(db_session):
@@ -385,13 +393,13 @@ async def test_public_portal_resources_return_enabled_portal_resources_without_s
                 id="module_admin",
                 code="admin",
                 name="Admin",
-                client=ResourceModuleClient.ADMIN.value,
+                client=AccountType.ADMIN.value,
             ),
             SysResourceModule(
                 id="module_portal",
                 code="portal",
                 name="Portal",
-                client=ResourceModuleClient.PORTAL.value,
+                client=AccountType.PORTAL.value,
             ),
             SysResource(
                 id="resource_admin",
@@ -425,7 +433,7 @@ async def test_public_portal_resources_return_enabled_portal_resources_without_s
     resources = await ResourceService(db_session).list_public_portal_resources()
 
     assert [resource.id for resource in resources] == ["resource_portal"]
-    assert resources[0].module_client == ResourceModuleClient.PORTAL.value
+    assert resources[0].module_client == AccountType.PORTAL.value
 
 
 async def test_public_portal_resource_modules_group_resources(db_session):
@@ -435,14 +443,14 @@ async def test_public_portal_resource_modules_group_resources(db_session):
                 id="module_header",
                 code="HEADER",
                 name="Header",
-                client=ResourceModuleClient.PORTAL.value,
+                client=AccountType.PORTAL.value,
                 sort=1,
             ),
             SysResourceModule(
                 id="module_content",
                 code="CONTENT",
                 name="Content",
-                client=ResourceModuleClient.PORTAL.value,
+                client=AccountType.PORTAL.value,
                 sort=2,
             ),
             SysResource(
@@ -480,14 +488,14 @@ async def test_resource_tree_filters_by_module_id_and_client(db_session):
                 id="module_admin_a",
                 code="admin-a",
                 name="Admin A",
-                client=ResourceModuleClient.ADMIN.value,
+                client=AccountType.ADMIN.value,
                 sort=1,
             ),
             SysResourceModule(
                 id="module_admin_b",
                 code="admin-b",
                 name="Admin B",
-                client=ResourceModuleClient.ADMIN.value,
+                client=AccountType.ADMIN.value,
                 sort=2,
             ),
             SysResource(
@@ -514,13 +522,13 @@ async def test_resource_tree_filters_by_module_id_and_client(db_session):
         _session("admin", ["*:*:*"]),
         ResourceTreeQuery(
             module_id="module_admin_b",
-            module_client=ResourceModuleClient.ADMIN,
+            module_client=AccountType.ADMIN,
         ),
     )
 
     assert [node.id for node in tree] == ["resource_admin_b"]
     assert tree[0].module_id_name == "Admin B"
-    assert tree[0].module_client == ResourceModuleClient.ADMIN.value
+    assert tree[0].module_client == AccountType.ADMIN.value
 
 
 async def test_resource_module_selector_and_page_filter_by_client(db_session):
@@ -530,14 +538,14 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
                 id="module_admin",
                 code="admin",
                 name="Admin",
-                client=ResourceModuleClient.ADMIN.value,
+                client=AccountType.ADMIN.value,
                 sort=1,
             ),
             SysResourceModule(
                 id="module_portal",
                 code="portal",
                 name="Portal",
-                client=ResourceModuleClient.PORTAL.value,
+                client=AccountType.PORTAL.value,
                 sort=2,
             ),
         ]
@@ -546,11 +554,11 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
 
     service = ResourceModuleService(db_session)
     selector = await service.selector(
-        ResourceModuleSelectorQuery(client=ResourceModuleClient.PORTAL)
+        ResourceModuleSelectorQuery(client=AccountType.PORTAL)
     )
     page = await service.page_admin(
         ResourceModuleAdminPageQuery(
-            current=1, size=20, client=ResourceModuleClient.PORTAL,
+            current=1, size=20, client=AccountType.PORTAL,
         )
     )
 
