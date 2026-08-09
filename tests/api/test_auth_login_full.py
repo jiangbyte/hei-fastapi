@@ -41,7 +41,7 @@ def _encrypt_password(public_key_b64: str, password: str) -> str:
 @pytest.mark.asyncio
 async def test_admin_login_full_crypto_cookie(fake_redis, db_session: AsyncSession, monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
-    monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
+    monkeypatch.setattr(settings.auth, "session_cookie_name", "Authorization")
     monkeypatch.setattr(settings.swagger, "enabled", False)
 
     account = SysAccount(
@@ -98,5 +98,5 @@ async def test_admin_login_full_crypto_cookie(fake_redis, db_session: AsyncSessi
     assert response.status_code == 200, response.text
     data = response.json()["data"]
     assert data["account_id"] == account.id
-    assert response.cookies.get("hei_session")
+    assert response.cookies.get("Authorization")
     assert data["token"]

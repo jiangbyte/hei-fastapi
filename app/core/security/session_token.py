@@ -91,6 +91,7 @@ def set_session_cookie(
             key=settings.auth.session_cookie_name,
             path=legacy_path,
         )
+    _clear_legacy_cookie_names(response, cookie_path=cookie_path)
 
 
 def clear_session_cookie(
@@ -100,12 +101,25 @@ def clear_session_cookie(
 ) -> None:
     if not settings.auth.session_cookie_enabled:
         return
+    cookie_path = session_cookie_path_from_request(request)
     response.delete_cookie(
         key=settings.auth.session_cookie_name,
-        path=session_cookie_path_from_request(request),
+        path=cookie_path,
     )
     # 兼容清理旧版 Path=/ Cookie
     response.delete_cookie(
         key=settings.auth.session_cookie_name,
         path=settings.auth.session_cookie_path,
     )
+    _clear_legacy_cookie_names(response, cookie_path=cookie_path)
+
+
+def _clear_legacy_cookie_names(response: Response, *, cookie_path: str) -> None:
+    """清理历史 Cookie 名（如 hei_session），避免与 Authorization 并存。"""
+    legacy_name = "hei_session"
+    if settings.auth.session_cookie_name == legacy_name:
+        return
+    response.delete_cookie(key=legacy_name, path=cookie_path)
+    legacy_path = settings.auth.session_cookie_path
+    if legacy_path != cookie_path:
+        response.delete_cookie(key=legacy_name, path=legacy_path)

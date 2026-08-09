@@ -3,6 +3,7 @@
 import { createHttp } from './axios'
 
 export * from './dict'
+export * from './session'
 export * from './storage'
 export * from './time'
 export * from './wire'

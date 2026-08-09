@@ -7,8 +7,8 @@ import { removeStorage } from './storage'
  * 会话为 local storage 中的原始 opaque token，以 Authorization 发送（非 Bearer）。
  * H5 构建下该 token 存在 XSS 风险。
  */
-export const tokenKey = 'admin_token'
-export const userInfoKey = 'admin_user_info'
+export const tokenKey = 'token'
+export const userInfoKey = 'user_info'
 
 const clearListeners = new Set<() => void>()
 

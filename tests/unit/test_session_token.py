@@ -34,11 +34,11 @@ def _asgi_request(path: str) -> Request:
 
 def test_extract_prefers_cookie_over_authorization(monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
-    monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
+    monkeypatch.setattr(settings.auth, "session_cookie_name", "Authorization")
     monkeypatch.setattr(settings.auth, "token_name", "Authorization")
 
     request = MagicMock()
-    request.cookies = {"hei_session": "cookie-token"}
+    request.cookies = {"Authorization": "cookie-token"}
     request.headers = {"Authorization": "header-token"}
 
     assert extract_session_token(request) == "cookie-token"
@@ -46,7 +46,7 @@ def test_extract_prefers_cookie_over_authorization(monkeypatch):
 
 def test_extract_rejects_bearer_scheme(monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
-    monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
+    monkeypatch.setattr(settings.auth, "session_cookie_name", "Authorization")
     monkeypatch.setattr(settings.auth, "token_name", "Authorization")
 
     request = MagicMock()
@@ -59,7 +59,7 @@ def test_extract_rejects_bearer_scheme(monkeypatch):
 
 def test_extract_raw_authorization_for_native(monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
-    monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
+    monkeypatch.setattr(settings.auth, "session_cookie_name", "Authorization")
     monkeypatch.setattr(settings.auth, "token_name", "Authorization")
 
     request = MagicMock()
@@ -78,7 +78,7 @@ def test_session_cookie_path_from_request_uses_parent():
 
 def test_set_session_cookie_uses_request_parent_path(monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
-    monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
+    monkeypatch.setattr(settings.auth, "session_cookie_name", "Authorization")
     monkeypatch.setattr(settings.auth, "session_cookie_path", "/")
     monkeypatch.setattr(settings.auth, "session_cookie_secure", False)
     monkeypatch.setattr(settings.auth, "session_cookie_samesite", "lax")
@@ -95,9 +95,9 @@ def test_set_session_cookie_uses_request_parent_path(monkeypatch):
 
     set_cookie_headers = response.headers.getlist("set-cookie")
     assert any(
-        "hei_session=tok-1" in item and "Path=/api/v9/admin" in item for item in set_cookie_headers
+        "Authorization=tok-1" in item and "Path=/api/v9/admin" in item for item in set_cookie_headers
     )
     assert any(
-        "hei_session=" in item and "Path=/" in item and "Max-Age=0" in item
+        "Authorization=" in item and "Path=/" in item and "Max-Age=0" in item
         for item in set_cookie_headers
     )

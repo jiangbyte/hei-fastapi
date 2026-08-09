@@ -67,10 +67,10 @@ class AuthSettings(BaseSettings):
     session_bind_user_agent: bool = False
     max_concurrent_sessions: int = 5
     # Cookie 优先的 Web 会话；原生客户端可在 token_name 头发送不透明 token
-    # （非 HTTP Bearer）。各端共用 cookie 名，登录/登出时 Path 取自请求路径父级；
-    # session_cookie_path 仅用于清理旧版 Path=/ 共享 Cookie。
+    # （非 HTTP Bearer）。Cookie 名与 token_name 同为 Authorization；
+    # 登录/登出时 Path 取自请求路径父级；session_cookie_path 仅用于清理旧版 Path=/。
     session_cookie_enabled: bool = True
-    session_cookie_name: str = "hei_session"
+    session_cookie_name: str = "Authorization"
     session_cookie_secure: bool = False
     session_cookie_samesite: str = "lax"
     session_cookie_path: str = "/"

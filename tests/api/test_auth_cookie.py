@@ -15,7 +15,7 @@ from app.factory import create_app
 @pytest.mark.asyncio
 async def test_admin_login_sets_session_cookie(monkeypatch):
     monkeypatch.setattr(settings.auth, "session_cookie_enabled", True)
-    monkeypatch.setattr(settings.auth, "session_cookie_name", "hei_session")
+    monkeypatch.setattr(settings.auth, "session_cookie_name", "Authorization")
     monkeypatch.setattr(settings.swagger, "enabled", False)
 
     session = SessionPayload(
@@ -69,7 +69,7 @@ async def test_admin_login_sets_session_cookie(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["data"]["token"] == "tok-cookie-1"
-    cookie = response.cookies.get("hei_session")
+    cookie = response.cookies.get("Authorization")
     assert cookie == "tok-cookie-1"
     set_cookie = ";".join(response.headers.get_list("set-cookie"))
     assert "Path=/api/v1/admin" in set_cookie

@@ -4,6 +4,7 @@ import { create } from 'zustand'
 import { message } from 'antd'
 import { authApi } from '@/api'
 import { clearDict, refreshDict, syncDictTree } from '@/utils/dict'
+import { clearToken, setToken } from '@/utils/session'
 import { clearAuthStorage, getStoredUserInfo, setStoredUserInfo } from '@/utils/storage'
 import { getSafeRedirect } from '@/utils/validate'
 import { wireBool } from '@/utils/wire'
@@ -85,13 +86,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     set({ sessionChecked: true })
     try {
-      // 静默探测 cookie 会话；未登录时的 401 属预期，不弹错、不弹登录框
+      // 静默探测会话（Cookie 和/或本地 Authorization）；未登录时的 401 属预期
       const meResponse = await authApi.me({ probe: true })
       const userInfo = mapMe(meResponse.data, get().userInfo?.loginAt ?? Date.now())
       setStoredUserInfo(userInfo)
       set({ userInfo })
       return true
     } catch {
+      clearToken()
       clearAuthStorage()
       set({ userInfo: null })
       return false
@@ -118,8 +120,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       ...(security?.otp_code ? { otp_code: security.otp_code } : {}),
     })
 
-    // 服务端设置 HttpOnly cookie；不在浏览器持久化 session token。
+    // Cookie 与 Header 双通道：本地持久化 opaque token，供无 Cookie 时鉴权。
+    clearToken()
     clearAuthStorage()
+    if (response.data.token) {
+      setToken(String(response.data.token), rememberMe)
+    }
     set({ sessionChecked: true })
 
     // WireBool 序列化为 "true"/"false" 字符串，不能直接当 JS 真值用
@@ -148,6 +154,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetSession: () => {
+    clearToken()
     clearAuthStorage()
     clearDict()
     set({ userInfo: null, sessionChecked: true })

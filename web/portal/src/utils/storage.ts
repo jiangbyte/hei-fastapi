@@ -1,6 +1,6 @@
 /** Author: Charlie */
 
-export const USER_INFO_KEY = 'userInfo'
+export const USER_INFO_KEY = 'user_info'
 
 export function getStoredUserInfo<T>() {
   const raw = localStorage.getItem(USER_INFO_KEY)

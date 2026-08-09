@@ -19,4 +19,5 @@ export const http = createHttp({
   withCredentials: true,
 })
 
+export * from './session'
 export * from './dict'

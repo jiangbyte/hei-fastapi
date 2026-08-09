@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { router } from '@/router'
 import { authApi } from '@/api'
 import { clearDict, refreshDict, syncDictTree } from '@/utils/dict'
+import { clearToken, setToken } from '@/utils/session'
 import { wireBool } from '@/utils/wire'
 import { useRouteStore } from './route'
 import { useTabStore } from './tab'
@@ -31,7 +32,7 @@ interface AuthState {
   sessionChecked: boolean
 }
 
-const userInfoKey = 'userInfo'
+const userInfoKey = 'user_info'
 const loginPath = '/auth/login'
 const userCenterPasswordPath = '/usercenter?tab=password'
 
@@ -93,17 +94,24 @@ export const useAuthStore = defineStore('auth-store', {
         otp_code?: string
       },
     ) {
+      const persist = rememberMe ?? true
       const response = await authApi.login({
         account,
         password: password || undefined,
         identity_type: identityType,
-        remember_me: rememberMe ?? true,
+        remember_me: persist,
         password_key_id: security?.password_key_id,
         captcha_id: security?.captcha_id,
         captcha_value: security?.captcha_value,
         login_mode: security?.login_mode || 'PASSWORD',
         ...(security?.otp_code ? { otp_code: security.otp_code } : {}),
       })
+
+      // Cookie 与 Header 双通道：本地持久化 opaque token，供无 Cookie 时鉴权。
+      clearToken()
+      if (response.data.token) {
+        setToken(String(response.data.token), persist)
+      }
 
       this.sessionChecked = true
 
@@ -164,6 +172,7 @@ export const useAuthStore = defineStore('auth-store', {
     },
 
     clearAuthStorage() {
+      clearToken()
       localStorage.removeItem(userInfoKey)
       this.userInfo = null
     },

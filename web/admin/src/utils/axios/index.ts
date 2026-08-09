@@ -8,7 +8,7 @@ import { setupResponseInterceptors } from './response-interceptors'
 export { ApiResponseError } from './handle'
 
 /**
- * 创建项目 HTTP 客户端（cookie 会话 + 统一解包/错误处理）。
+ * 创建项目 HTTP 客户端（Cookie + Authorization Header 双通道会话 + 统一解包/错误处理）。
  */
 export function createHttp(config?: CreateAxiosDefaults) {
   const http = axios.create(config)

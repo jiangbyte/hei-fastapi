@@ -40,9 +40,9 @@ def test_extract_token_prefers_cookie(monkeypatch):
     )
     monkeypatch.setattr(
         "app.core.security.session_token.settings.auth.session_cookie_name",
-        "hei_session",
+        "Authorization",
     )
-    req = _request(headers={"Authorization": "hdr-token"}, cookies={"hei_session": "cookie-token"})
+    req = _request(headers={"Authorization": "hdr-token"}, cookies={"Authorization": "cookie-token"})
     assert extract_session_token(req, "hdr-token") == "cookie-token"
 
 
@@ -53,7 +53,7 @@ def test_extract_token_rejects_bearer_scheme(monkeypatch):
     )
     monkeypatch.setattr(
         "app.core.security.session_token.settings.auth.session_cookie_name",
-        "hei_session",
+        "Authorization",
     )
     req = _request(headers={"Authorization": "Bearer legacy"})
     assert extract_session_token(req) is None
@@ -66,9 +66,9 @@ def test_extract_token_falls_back_to_cookie(monkeypatch):
     )
     monkeypatch.setattr(
         "app.core.security.session_token.settings.auth.session_cookie_name",
-        "hei_session",
+        "Authorization",
     )
-    req = _request(cookies={"hei_session": "cookie-token"})
+    req = _request(cookies={"Authorization": "cookie-token"})
     assert extract_session_token(req, None) == "cookie-token"
 
 
