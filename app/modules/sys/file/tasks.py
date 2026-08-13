@@ -9,6 +9,7 @@ import logging
 import time
 from pathlib import Path
 
+from snailjob import ExecuteResult, ExecutorManager, JobArgs, job
 from sqlalchemy import select
 
 from app.core.config.enums import StorageProvider
@@ -17,25 +18,23 @@ from app.platform.db.session import get_session_factory
 from app.platform.storage.local import LocalStorage
 from app.platform.storage.manager import get_storage
 from app.platform.tasks.async_runner import worker_async_runner
-from app.platform.tasks.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="sys.file.cleanup_local_orphans", bind=True, max_retries=1)
-def cleanup_local_orphans(self, *, min_age_seconds: int = 3600, limit: int = 200):
+@job("sysFileCleanupLocalOrphans")
+def cleanup_local_orphans(_args: JobArgs) -> ExecuteResult:
     """删除早于 min_age 且无对应 sys_file 行的本地文件。"""
     try:
-        # 必须走 worker 持久 loop；asyncio.run() 会与已绑定的 DB 连接冲突
-        return worker_async_runner.run(
-            _cleanup(min_age_seconds=min_age_seconds, limit=limit)
-        )
-    except Exception:
+        result = worker_async_runner.run(_cleanup(min_age_seconds=3600, limit=200))
+        return ExecuteResult.success(result)
+    except Exception as exc:
         logger.exception("Local orphan cleanup failed")
-        raise self.retry() from None
+        return ExecuteResult.failure(str(exc))
 
 
 async def _cleanup(*, min_age_seconds: int, limit: int) -> dict[str, int]:
+    """扫描本地存储中无对应元数据行的过期文件并删除。"""
     storage = get_storage(provider=StorageProvider.LOCAL, allow_settings_fallback=True)
     if not isinstance(storage, LocalStorage):
         return {"scanned": 0, "deleted": 0, "skipped": 0}
@@ -91,3 +90,6 @@ async def _cleanup(*, min_age_seconds: int, limit: int) -> dict[str, int]:
         "Local orphan cleanup scanned=%s deleted=%s skipped=%s", len(candidates), deleted, skipped
     )
     return {"scanned": len(candidates), "deleted": deleted, "skipped": skipped}
+
+
+ExecutorManager.register(cleanup_local_orphans)

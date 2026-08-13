@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+进程组管理：在同一进程中拉起 API 与 SnailJob worker 两个子进程并统一协调生命周期。
+
+监听 SIGINT/SIGTERM，任一子进程退出或收到信号时优雅终止其余进程。
+"""
 
 from __future__ import annotations
 
@@ -9,58 +14,22 @@ import sys
 
 
 def _env(name: str, default: str) -> str:
+    """读取环境变量，缺失时返回默认值。"""
     return os.environ.get(name, default)
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def _worker_command() -> list[str]:
-    command = [
-        "celery",
-        "-A",
-        "app.worker.main:celery_app",
-        "worker",
-    ]
-    if _env_bool("CELERY__WORKER_WITHOUT_MINGLE", True):
-        command.append("--without-mingle")
-    if _env_bool("CELERY__WORKER_WITHOUT_GOSSIP", True):
-        command.append("--without-gossip")
-    command.extend(
-        [
-            "--pool",
-            _env("CELERY__WORKER_POOL", "solo"),
-            "--concurrency",
-            _env("CELERY__WORKER_CONCURRENCY", "1"),
-            "--loglevel",
-            _env("CELERY__WORKER_LOG_LEVEL", "INFO"),
-        ]
-    )
-    return command
-
-
-def _beat_command() -> list[str]:
-    return [
-        "celery",
-        "-A",
-        "app.worker.main:celery_app",
-        "beat",
-        "--loglevel",
-        _env("CELERY__BEAT_LOG_LEVEL", "INFO"),
-        "--scheduler",
-        "redbeat.RedBeatScheduler",
-    ]
+    """构造 SnailJob Python 执行器子进程命令行。"""
+    return [sys.executable, "-m", "app.worker.main"]
 
 
 def _api_command() -> list[str]:
+    """构造 Gunicorn 运行 FastAPI 应用的子进程命令行。"""
     return ["gunicorn", "app.main:app", "-c", "gunicorn.conf.py"]
 
 
 async def _terminate(processes: dict[str, asyncio.subprocess.Process]) -> None:
+    """先 terminate、超时后 kill 地终止所有子进程。"""
     timeout = float(_env("APP__PROCESS_SHUTDOWN_TIMEOUT_SECONDS", "20"))
     for process in processes.values():
         if process.returncode is None:
@@ -79,9 +48,9 @@ async def _terminate(processes: dict[str, asyncio.subprocess.Process]) -> None:
 
 
 async def run_all() -> int:
+    """启动并监管全部子进程，返回进程退出码。"""
     commands = {
         "worker": _worker_command(),
-        "beat": _beat_command(),
         "api": _api_command(),
     }
     processes: dict[str, asyncio.subprocess.Process] = {}
@@ -124,6 +93,7 @@ async def run_all() -> int:
 
 
 def main() -> None:
+    """命令行入口：运行进程组并按退出码退出。"""
     raise SystemExit(asyncio.run(run_all()))
 
 

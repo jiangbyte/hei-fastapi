@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+文件元数据模型：记录对象存储路径、类型与访问地址等元信息。
+"""
 
 from sqlalchemy import BigInteger, String
 from sqlalchemy.orm import Mapped, mapped_column

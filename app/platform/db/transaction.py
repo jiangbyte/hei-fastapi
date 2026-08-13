@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+事务工具：提供可嵌套的事务上下文管理器，安全处理事务提交与回滚。
+"""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager

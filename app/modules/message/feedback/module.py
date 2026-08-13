@@ -2,7 +2,10 @@
 
 由 HEI 代码生成器生成。
 Author: jiangbyte
+
+反馈模块装配：注册管理端与门户端的反馈路由及数据模型。
 """
+
 from app.platform.module import ModuleSpec, RouteSpec
 
 module = ModuleSpec(

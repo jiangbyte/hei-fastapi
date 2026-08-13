@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+角色 Schema：角色创建/更新/分页查询及资源授权相关请求与响应结构。
+"""
 
 from datetime import datetime
 
@@ -16,6 +19,8 @@ from app.modules.iam.schema import (
 
 
 class RoleCreateRequest(ApiSchema):
+    """创建角色请求。"""
+
     code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=64)
     category: str = Field(min_length=1, max_length=64)
@@ -29,10 +34,14 @@ class RoleCreateRequest(ApiSchema):
 
 
 class RoleUpdateRequest(RoleCreateRequest):
+    """更新角色请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class RoleAdminPageQuery(PageQuery):
+    """角色管理端分页查询条件。"""
+
     code: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
     category: str | None = Field(default=None, max_length=64)
@@ -41,6 +50,8 @@ class RoleAdminPageQuery(PageQuery):
 
 
 class SysRoleSchema(ApiSchema):
+    """角色响应结构，含所属部门名称与创建人昵称回显。"""
+
     id: str
     code: str
     name: str
@@ -62,48 +73,66 @@ class SysRoleSchema(ApiSchema):
 
 
 class RoleResourceGrantInfo(ApiSchema):
+    """角色资源授权项结构。"""
+
     resource_id: str = Field(min_length=1, max_length=64)
     permission_keys: list[str] = Field(default_factory=list)
 
 
 class RoleOwnResourceQuery(IdQuery):
+    """角色资源查询条件（附带账户体系）。"""
+
     account_type: AccountType
 
 
 class RoleOwnResourceResponse(ApiSchema):
+    """角色拥有的资源响应结构。"""
+
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 
 class RoleGrantResourceRequest(ApiSchema):
+    """给角色授权资源的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_type: AccountType
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 
 class RoleOwnClientResourceQuery(IdQuery):
+    """角色客户端资源查询条件（附带账户体系）。"""
+
     account_type: AccountType
 
 
 class RoleOwnClientResourceResponse(ApiSchema):
+    """角色拥有的客户端资源响应结构。"""
+
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 
 class RoleGrantClientResourceRequest(ApiSchema):
+    """给角色授权客户端资源的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_type: AccountType
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 
 class RoleOwnUserResponse(ApiSchema):
+    """角色拥有的用户响应结构。"""
+
     id: str
     users: list[SysAccountSchema] = Field(default_factory=list)
     account_ids: list[str] = Field(default_factory=list)
 
 
 class RoleGrantUserRequest(ApiSchema):
+    """给角色授权用户的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_ids: list[str] = Field(default_factory=list)

@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+全局通用枚举：账户类型、数据范围、状态与存储服务商。
+
+业务模块专用的枚举请放置在各模块自己的 enums.py 中。
+"""
 
 from enum import StrEnum
 

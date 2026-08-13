@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+应用生命周期：启动/关闭时初始化与清理各平台组件。
+"""
 
 import logging
 from collections.abc import AsyncIterator
@@ -32,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """应用生命周期：启动初始化各组件，关闭时依次清理。"""
     logger.info("lifespan startup: app.routes count = %d", len(app.routes))
 
     module_specs = load_module_specs()

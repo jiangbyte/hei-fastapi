@@ -14,12 +14,16 @@ from app.core.config.settings import settings
 
 
 class SecretsBackend(Protocol):
+    """secrets 后端协议：加密与解密（解密失败返回 None）。"""
+
     def encrypt(self, plaintext: str) -> str: ...
 
     def decrypt(self, ciphertext: str) -> str | None: ...
 
 
 class FernetEnvBackend:
+    """基于环境变量密钥的 Fernet 加解密后端。"""
+
     def __init__(self, key: str) -> None:
         key = (key or "").strip()
         if not key:
@@ -27,9 +31,11 @@ class FernetEnvBackend:
         self._fernet = Fernet(key.encode())
 
     def encrypt(self, plaintext: str) -> str:
+        """加密明文并返回文本。"""
         return self._fernet.encrypt(plaintext.encode()).decode()
 
     def decrypt(self, ciphertext: str) -> str | None:
+        """解密文本，失败返回 None。"""
         try:
             return self._fernet.decrypt(ciphertext.encode()).decode()
         except Exception:
@@ -58,6 +64,7 @@ class VaultKvBackend:
         self._fernet: Fernet | None = None
 
     def _ensure_fernet(self) -> Fernet:
+        """懒加载地从 Vault KV v2 读取 Fernet 密钥，失败时 fail-closed。"""
         if self._fernet is not None:
             return self._fernet
         url = f"{self._addr}/v1/{self._mount}/data/{self._path}"
@@ -79,9 +86,11 @@ class VaultKvBackend:
         return self._fernet
 
     def encrypt(self, plaintext: str) -> str:
+        """加密明文并返回文本。"""
         return self._ensure_fernet().encrypt(plaintext.encode()).decode()
 
     def decrypt(self, ciphertext: str) -> str | None:
+        """解密文本，失败返回 None。"""
         try:
             return self._ensure_fernet().decrypt(ciphertext.encode()).decode()
         except Exception:
@@ -90,6 +99,7 @@ class VaultKvBackend:
 
 @lru_cache(maxsize=1)
 def get_secrets_backend() -> SecretsBackend:
+    """按配置返回缓存的 secrets 后端实例（Vault 或 Fernet 环境密钥）。"""
     backend = (settings.secrets.backend or "fernet").strip().lower()
     if backend == "vault":
         return VaultKvBackend(
@@ -104,12 +114,15 @@ def get_secrets_backend() -> SecretsBackend:
 
 
 def clear_secrets_backend_cache() -> None:
+    """清除后端缓存（配置变更后调用）。"""
     get_secrets_backend.cache_clear()
 
 
 def encrypt_plaintext(value: str) -> str:
+    """加密明文。"""
     return get_secrets_backend().encrypt(value)
 
 
 def decrypt_plaintext(value: str) -> str | None:
+    """解密密文，失败返回 None。"""
     return get_secrets_backend().decrypt(value)

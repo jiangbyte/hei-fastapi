@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+门户用户中心路由：当前账户信息、资料、头像、密码、手机与邮箱维护，及公开主页。
+"""
 
 from typing import Annotated
 
@@ -90,6 +93,7 @@ async def update_user_center_profile(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新当前门户用户个人资料。"""
     await PortalUserProfileService(db).update_current_profile(payload, session)
     return success()
 
@@ -104,6 +108,7 @@ async def upload_user_center_avatar(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PortalUserCenterAvatarUpdateResponse]:
+    """上传并更新当前门户用户头像。"""
     content = await file.read(AVATAR_MAX_SIZE + 1)
     return success(
         await PortalUserProfileService(db).update_current_avatar(
@@ -123,6 +128,7 @@ async def send_user_center_password_code(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """向当前门户用户发送改密验证码。"""
     from app.modules.auth.password_change import send_change_password_code
     from app.modules.iam.account.repository import AccountRepository
 
@@ -143,6 +149,7 @@ async def update_user_center_password(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """修改当前门户用户密码。"""
     old_password, new_password = await decrypt_passwords(
         payload.password_key_id,
         payload.old_password,
@@ -170,6 +177,7 @@ async def update_user_center_phone(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新当前门户用户手机号绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
     await PortalUserProfileService(db).update_current_phone(
         payload.model_copy(update={"password": password or ""}),
@@ -188,6 +196,7 @@ async def update_user_center_email(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新当前门户用户邮箱绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
     await PortalUserProfileService(db).update_current_email(
         payload.model_copy(update={"password": password or ""}),
@@ -204,10 +213,12 @@ async def get_public_space(
     query: Annotated[PortalPublicSpaceQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PortalPublicProfileResponse]:
+    """查询门户用户公开主页资料。"""
     return success(await PortalUserProfileService(db).get_public_profile(query))
 
 
 def _identity_login_enabled(identity) -> bool:
+    """判断绑定身份是否可用于登录（已绑定且已验证）。"""
     return bool(
         identity
         and identity.identifier

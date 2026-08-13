@@ -65,6 +65,7 @@ class AlertDispatcher:
             )
 
     def _notify_method(self) -> str:
+        """汇总当前启用的通知渠道，用于记录到告警历史。"""
         cfg = settings.audit_alert
         parts = []
         if cfg.notify_email and settings.mail.host and settings.mail.from_email:

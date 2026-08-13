@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # 与 permission_registry 一致：路径段随 AccountType 枚举自动扩展
 _ACCOUNT_TYPE_PATH_ALTS = "|".join(account_type_url_segment(item) for item in AccountType)
 
+# 限流规则：(路径正则, 次数上限, 时间窗秒, 作用域)。
 RATE_LIMIT_RULES: list[tuple[re.Pattern[str], int, int, str]] = [
     (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/login"), 10, 60, "ip"),
     (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/register"), 5, 60, "ip"),
@@ -44,17 +45,21 @@ RATE_LIMIT_RULES: list[tuple[re.Pattern[str], int, int, str]] = [
     (re.compile(r"^/api/v\d+/"), 120, 60, "mix"),
 ]
 
+# 免限流路径。
 RATE_LIMIT_EXEMPT: list[re.Pattern[str]] = [
     re.compile(r"^/api/v\d+/internal/health"),
     re.compile(r"^/(docs|redoc|openapi\.json)"),
 ]
 
+# 需要审计的写操作 HTTP 方法。
 AUDIT_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# 解析审计目标路径的正则：捕获账户类型、模块路径与动作。
 AUDIT_PATH_RE = re.compile(
     rf"^/api/v\d+/(?P<account_type>{_ACCOUNT_TYPE_PATH_ALTS})/"
     r"(?P<module_path>[a-z][a-z0-9/_-]*)"
     r"(?P<action>/[^?]*)?"
 )
+# 审计跳过的路径后缀。
 SKIP_AUDIT_PATH_PATTERNS = (
     "/captcha",
     "/password-key",
@@ -66,6 +71,7 @@ SKIP_AUDIT_PATH_PATTERNS = (
     "/me",
 )
 
+# 注入到响应中的安全头。
 SECURITY_HEADERS = {
     b"strict-transport-security": b"max-age=31536000; includeSubDomains",
     b"x-content-type-options": b"nosniff",
@@ -86,10 +92,13 @@ SECURITY_HEADERS = {
 
 
 class SecurityHeadersMiddleware:
+    """安全响应头中间件：为 HTTP 响应补充缺失的安全头。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """在响应起始消息中补齐缺失的安全头。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -108,10 +117,13 @@ class SecurityHeadersMiddleware:
 
 
 class AuthWhitelistMiddleware:
+    """认证白名单中间件：白名单外路径强制解析会话，未认证返回 401。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """对白名单外的 API 路径强制要求会话，否则返回 401。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -140,10 +152,13 @@ class AuthWhitelistMiddleware:
 
 
 class RateLimitMiddleware:
+    """限流中间件：基于 Redis 按规则对敏感端点限流。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """匹配限流规则并在超限时返回 429。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -202,6 +217,7 @@ class RateLimitMiddleware:
         await self.app(scope, receive, send)
 
     async def _build_key(self, request: Request, pattern: str, scope: str) -> str | None:
+        """根据限流作用域构造 Redis 键（ip / user / mix）。"""
         ip = client_ip_ctx.get() or get_client_ip(request) or "unknown"
         if scope == "ip":
             return f"rl:ip:{ip}:{pattern}"
@@ -217,6 +233,7 @@ class RateLimitMiddleware:
         return f"rl:ip:{ip}:{pattern}"
 
     async def _resolve_account_id(self, request: Request) -> str | None:
+        """从缓存或 token 解析账户 ID（不触碰会话）。"""
         cached = get_request_session(request)
         if cached is not None:
             return cached.account_id
@@ -233,6 +250,7 @@ class RateLimitMiddleware:
             return None
 
     async def _increment_and_check(self, redis, key: str, limit: int, window_sec: int) -> int:
+        """用 ZSET 滑动窗口计数并返回当前计数。"""
         now = time.time()
         window_start = now - window_sec
         member = f"{now:.6f}:{uuid.uuid4().hex[:8]}"
@@ -246,10 +264,13 @@ class RateLimitMiddleware:
 
 
 class OperationAuditMiddleware:
+    """操作审计中间件：对写操作匹配资源/动作并投递审计事件。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """包裹下游应用，请求结束后投递审计事件。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -296,6 +317,7 @@ class OperationAuditMiddleware:
 
 
 def _should_skip_path(path: str) -> bool:
+    """判断路径是否命中审计跳过清单。"""
     path_lower = path.lower()
     for pattern in SKIP_AUDIT_PATH_PATTERNS:
         if path_lower.endswith(pattern):
@@ -304,6 +326,7 @@ def _should_skip_path(path: str) -> bool:
 
 
 def _extract_resource_type(module_path: str) -> str:
+    """从模块路径推导资源类型，剔除 UUID 段。"""
     parts = module_path.strip("/").split("/")
     resource = parts[-1] if parts else module_path
     resource = re.sub(r"[0-9a-f]{8,}", "", resource).strip("-_")
@@ -311,6 +334,7 @@ def _extract_resource_type(module_path: str) -> str:
 
 
 def _extract_action(action_str: str | None, method: str) -> str:
+    """从动作串或 HTTP 方法推导审计动作名。"""
     if not action_str:
         return method.lower()
     action = action_str.strip("/").split("/", 1)[0]
@@ -318,6 +342,7 @@ def _extract_action(action_str: str | None, method: str) -> str:
 
 
 def _match_audit_target(request: Request) -> tuple[str, str] | None:
+    """匹配请求的审计目标（资源类型, 动作），不匹配返回 None。"""
     if request.method.upper() not in AUDIT_METHODS:
         return None
     path = request.url.path

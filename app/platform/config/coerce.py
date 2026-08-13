@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+配置值类型转换：将 DB 中存为字符串的配置值按 settings 字段声明的注解强制转换。
+
+支持 str/bool/int/float 与 list/dict（JSON），以及 Optional 与枚举类型。
+"""
 
 from __future__ import annotations
 
@@ -39,12 +44,14 @@ def coerce_config_value(value: Any, annotation: Any) -> Any:
 
 
 def _coerce_bool(value: Any) -> bool:
+    """把字符串解析为布尔（识别 true/1/yes/y/on 等）。"""
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in {"true", "1", "yes", "y", "on"}
 
 
 def _coerce_int(value: Any) -> int | None:
+    """把值解析为整数，失败返回 None。"""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -52,6 +59,7 @@ def _coerce_int(value: Any) -> int | None:
 
 
 def _coerce_float(value: Any) -> float | None:
+    """把值解析为浮点数，失败返回 None。"""
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -59,6 +67,7 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def _coerce_json(value: Any, expected_type: type) -> Any:
+    """把字符串按 JSON 解析并校验目标容器类型，失败返回 None。"""
     if isinstance(value, expected_type):
         return value
     try:

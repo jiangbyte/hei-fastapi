@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 资源模块注册：声明管理端与门户端路由及模型。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

@@ -2,7 +2,10 @@
 
 由 HEI 代码生成器生成。
 Author: jiangbyte
+
+反馈路由：管理端 CRUD、提交与「我的反馈」接口，及门户端提交与查询接口。
 """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -43,6 +46,7 @@ async def page(
     query: Annotated[MsgFeedbackAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[MsgFeedbackSchema]]:
+    """管理端分页查询反馈列表。"""
     return success(await MsgFeedbackService(db).page_admin(query))
 
 
@@ -58,6 +62,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[MsgFeedbackSchema]:
+    """管理端查询反馈详情。"""
     return success(await MsgFeedbackService(db).detail(query))
 
 
@@ -74,6 +79,7 @@ async def update(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
+    """管理端更新反馈状态与回复。"""
     await MsgFeedbackService(db).update(payload, session)
     return success()
 
@@ -90,6 +96,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """管理端批量删除反馈。"""
     await MsgFeedbackService(db).delete(payload)
     return success()
 
@@ -107,6 +114,7 @@ async def admin_submit(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
+    """管理端提交反馈。"""
     await MsgFeedbackService(db).submit(payload, session)
     return success()
 
@@ -121,6 +129,7 @@ async def admin_my_page(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[PageData[MsgFeedbackSchema]]:
+    """管理端分页查询当前用户的反馈。"""
     return success(await MsgFeedbackService(db).page_my(query, session))
 
 
@@ -134,6 +143,7 @@ async def admin_my_detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[MsgFeedbackSchema]:
+    """管理端查询当前用户反馈详情。"""
     return success(await MsgFeedbackService(db).detail_my(query, session))
 
 
@@ -147,6 +157,7 @@ async def submit(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
+    """门户端提交反馈。"""
     await MsgFeedbackService(db).submit(payload, session)
     return success()
 
@@ -161,6 +172,7 @@ async def my_page(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[PageData[MsgFeedbackSchema]]:
+    """门户端分页查询当前用户的反馈。"""
     return success(await MsgFeedbackService(db).page_my(query, session))
 
 
@@ -174,4 +186,5 @@ async def my_detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[MsgFeedbackSchema]:
+    """门户端查询当前用户反馈详情。"""
     return success(await MsgFeedbackService(db).detail_my(query, session))

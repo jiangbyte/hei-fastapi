@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+配置跨实例同步：通过 Redis Pub/Sub 广播配置变更事件，使多实例/多进程保持一致。
+
+提供 asyncio 监听与独立线程（SnailJob worker）两种运行方式，并记录最近事件与错误。
+"""
 
 from __future__ import annotations
 
@@ -16,8 +21,10 @@ from app.platform.config.reader import config_reader
 
 logger = logging.getLogger(__name__)
 
+# 配置变更事件的 Redis 频道名。
 CONFIG_SYNC_CHANNEL = "hei:config:changed"
 
+# 本进程实例 ID，用于区分事件来源、避免回环重载。
 _instance_id = uuid.uuid4().hex
 _listener_task: asyncio.Task | None = None
 _pubsub = None
@@ -30,6 +37,8 @@ _listener_thread_task: asyncio.Task | None = None
 
 @dataclass(slots=True)
 class ConfigSyncState:
+    """配置同步运行状态快照。"""
+
     enabled: bool
     running: bool
     channel: str
@@ -44,6 +53,7 @@ async def reload_and_publish(reason: str) -> bool:
 
 
 async def publish_config_changed(reason: str) -> bool:
+    """向其他实例发布配置变更事件，Redis 不可用时返回 False。"""
     redis = get_redis()
     if redis is None:
         _set_error("redis not initialized")
@@ -67,6 +77,7 @@ async def publish_config_changed(reason: str) -> bool:
 
 
 async def start_config_sync_listener() -> None:
+    """在 asyncio 事件循环中启动配置同步监听任务，幂等。"""
     global _listener_task
     if _listener_task is not None and not _listener_task.done():
         return
@@ -79,6 +90,7 @@ async def start_config_sync_listener() -> None:
 
 
 async def stop_config_sync_listener() -> None:
+    """停止配置同步监听任务并关闭订阅。"""
     global _listener_task, _pubsub
     if _listener_task is not None:
         _listener_task.cancel()
@@ -96,7 +108,7 @@ async def stop_config_sync_listener() -> None:
 
 
 def start_config_sync_listener_thread() -> None:
-    """在 Celery worker 进程的专用事件循环中启动配置同步。"""
+    """在 worker 进程的独立线程中启动配置同步。"""
     global _listener_thread
     if _listener_thread is not None and _listener_thread.is_alive():
         return
@@ -109,6 +121,7 @@ def start_config_sync_listener_thread() -> None:
 
 
 def stop_config_sync_listener_thread(timeout: float = 5.0) -> None:
+    """停止独立线程中的配置同步监听，并等待线程退出。"""
     global _listener_thread, _listener_thread_loop, _listener_thread_task
     if _listener_thread_loop is not None and _listener_thread_task is not None:
         _listener_thread_loop.call_soon_threadsafe(_listener_thread_task.cancel)
@@ -120,6 +133,7 @@ def stop_config_sync_listener_thread(timeout: float = 5.0) -> None:
 
 
 def get_config_sync_state() -> ConfigSyncState:
+    """返回配置同步当前运行状态。"""
     redis = get_redis()
     running = _listener_task is not None and not _listener_task.done()
     thread_running = _listener_thread is not None and _listener_thread.is_alive()
@@ -133,6 +147,7 @@ def get_config_sync_state() -> ConfigSyncState:
 
 
 async def _listen(redis) -> None:
+    """订阅配置频道并循环处理事件；忽略本机事件，断线后重连。"""
     global _pubsub, _last_event_at
     while True:
         _pubsub = redis.pubsub()
@@ -167,6 +182,7 @@ async def _listen(redis) -> None:
 
 
 def _decode_event(raw: object) -> dict | None:
+    """把 Pub/Sub 原始载荷解码为字典事件，非法载荷返回 None。"""
     if raw is None:
         return None
     if isinstance(raw, bytes):
@@ -181,11 +197,13 @@ def _decode_event(raw: object) -> dict | None:
 
 
 def _set_error(value: str | None) -> None:
+    """记录或清除最近的同步错误信息。"""
     global _last_error
     _last_error = value
 
 
 async def _close_pubsub() -> None:
+    """关闭并清空当前 Pub/Sub 订阅。"""
     global _pubsub
     if _pubsub is None:
         return
@@ -199,6 +217,7 @@ async def _close_pubsub() -> None:
 
 
 def _run_listener_thread() -> None:
+    """在独立线程中创建并运行专用事件循环。"""
     global _listener_thread_loop, _listener_thread_task
     loop = asyncio.new_event_loop()
     _listener_thread_loop = loop
@@ -213,6 +232,7 @@ def _run_listener_thread() -> None:
 
 
 async def _listen_with_dedicated_redis() -> None:
+    """用独立 Redis 连接监听，结束后关闭连接。"""
     from redis.asyncio import Redis
 
     redis = Redis.from_url(

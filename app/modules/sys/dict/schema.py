@@ -12,10 +12,12 @@ from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireInt
 
-DictId = Annotated[str, Field(min_length=1, max_length=32)]
+DictId = Annotated[str, Field(min_length=1, max_length=32)]  # 字典主键类型，长度 1-32
 
 
 class DictCreateRequest(ApiSchema):
+    """字典创建请求。"""
+
     code: str = Field(min_length=1, max_length=50, pattern=r"^[A-Z0-9_]+$")
     label: str | None = Field(default=None, max_length=255)
     value: str | None = Field(default=None, max_length=255)
@@ -27,18 +29,26 @@ class DictCreateRequest(ApiSchema):
 
 
 class DictUpdateRequest(DictCreateRequest):
+    """字典更新请求，在创建字段基础上增加主键。"""
+
     id: DictId
 
 
 class DictIdQuery(ApiSchema):
+    """字典主键查询参数。"""
+
     id: DictId
 
 
 class DictIdsRequest(ApiSchema):
+    """字典批量删除请求。"""
+
     ids: list[DictId] = Field(min_length=1)
 
 
 class DictAdminPageQuery(PageQuery):
+    """字典后台分页查询参数。"""
+
     code: str | None = Field(default=None, max_length=50, pattern=r"^[A-Z0-9_]+$")
     category: SysBizCategory | None = None
     parent_id: str | None = Field(default=None, max_length=32)
@@ -46,10 +56,14 @@ class DictAdminPageQuery(PageQuery):
 
 
 class DictTreeQuery(ApiSchema):
+    """字典树查询参数。"""
+
     category: SysBizCategory | None = None
 
 
 class SysDictSchema(ApiSchema):
+    """字典响应模型，含父级名称与创建/更新人昵称。"""
+
     id: str
     code: str
     label: str | None = None
@@ -69,6 +83,8 @@ class SysDictSchema(ApiSchema):
 
 
 class SysDictTreeNode(ApiSchema):
+    """字典树节点响应模型。"""
+
     id: str
     code: str
     label: str | None = None

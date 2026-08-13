@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+部门管理 HTTP 路由：部门 CRUD 与部门树查询。
+"""
 
 from typing import Annotated
 

@@ -43,15 +43,18 @@ PROVIDER_DISPLAY_NAMES: dict[StorageProvider, str] = {
 
 
 def engine_to_provider(engine: str | None) -> StorageProvider | None:
+    """把 DEFAULT_FILE_ENGINE 字符串映射为 StorageProvider。"""
     if not engine:
         return None
     return FILE_ENGINE_TO_PROVIDER.get(str(engine).strip().upper())
 
 
 def provider_to_engine(provider: StorageProvider | str) -> str | None:
+    """把 StorageProvider 反向映射为引擎字符串。"""
     value = provider.value if isinstance(provider, StorageProvider) else str(provider)
     return PROVIDER_TO_FILE_ENGINE.get(value)
 
 
 def config_key(provider: StorageProvider, field_suffix: str) -> str:
+    """拼接某存储提供方的 sys_config 键。"""
     return f"{PROVIDER_TO_KEY_PREFIX[provider]}_{field_suffix}"

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+系统字典模块声明：注册管理端/公开端路由与字典模型。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+会话管理服务：统计在线会话、分页聚合账户维度信息并支持强制下线。
+"""
 
 from collections import Counter
 from datetime import UTC, datetime, timedelta
@@ -20,11 +23,15 @@ from app.modules.iam.account.repository import AccountRepository
 
 
 class SessionAdminService:
+    """会话管理服务：在线会话分析、分页与强制下线。"""
+
     def __init__(self, db: AsyncSession) -> None:
+        """初始化账户仓储。"""
         self.db = db
         self.account_repo = AccountRepository(db)
 
     async def analysis(self) -> SessionAnalysisResponse:
+        """统计在线账户、token 与近一小时新增等指标。"""
         grouped = await self._group_online_sessions()
         token_counts = [len(items) for items in grouped.values()]
         now = datetime.now(UTC)
@@ -46,6 +53,7 @@ class SessionAdminService:
         )
 
     async def page(self, query: SessionPageQuery) -> PageData[SessionAccountItem]:
+        """按账户维度分页返回在线会话。"""
         grouped = await self._group_online_sessions()
         items = await self._build_items(grouped)
         items = self._filter_items(items, query)
@@ -57,21 +65,25 @@ class SessionAdminService:
         return build_page(query, total, page_items)
 
     async def tokens(self, query: SessionTokensQuery) -> list[SessionTokenInfo]:
+        """返回指定账户的在线 token 详情列表。"""
         tokens = await session_store.get_account_tokens(query.account_type.value, query.account_id)
         sessions = await session_store.list_sessions_by_tokens(tokens)
         return [_token_info(session) for session in sessions]
 
     async def exit_sessions(self, targets: list[SessionTokensQuery]) -> None:
+        """批量删除指定账户的全部会话。"""
         for target in targets:
             await session_store.delete_account_sessions(
                 target.account_type.value, target.account_id
             )
 
     async def exit_tokens(self, tokens: list[str]) -> None:
+        """批量删除指定 token 的会话（去重后逐个删除）。"""
         for token in list(dict.fromkeys(tokens)):
             await session_store.delete(token)
 
     async def _group_online_sessions(self) -> dict[tuple[str, str], list[SessionPayload]]:
+        """拉取全部会话并按（账户类型, 账户 ID）分组。"""
         tokens = await session_store.list_tokens()
         sessions = await session_store.list_sessions_by_tokens(tokens)
         grouped: dict[tuple[str, str], list[SessionPayload]] = {}
@@ -83,6 +95,7 @@ class SessionAdminService:
         self,
         grouped: dict[tuple[str, str], list[SessionPayload]],
     ) -> list[SessionAccountItem]:
+        """把分组会话聚合为账户维度的展示项。"""
         if not grouped:
             return []
         account_ids = [account_id for _, account_id in grouped]
@@ -126,6 +139,7 @@ class SessionAdminService:
         items: list[SessionAccountItem],
         query: SessionPageQuery,
     ) -> list[SessionAccountItem]:
+        """按查询条件过滤账户维度会话项。"""
         result = items
         if query.account_type:
             result = [item for item in result if str(item.account_type) == query.account_type.value]
@@ -149,6 +163,7 @@ class SessionAdminService:
         return result
 
     def _sort_key(self, item: SessionAccountItem) -> tuple[datetime, str]:
+        """会话项排序键：最近活跃时间 + 账户 ID。"""
         active_at = item.latest_active_at or item.first_login_at or datetime.min.replace(tzinfo=UTC)
         if active_at.tzinfo is None:
             active_at = active_at.replace(tzinfo=UTC)
@@ -156,6 +171,7 @@ class SessionAdminService:
 
 
 def _token_info(session: SessionPayload) -> SessionTokenInfo:
+    """把会话载荷转换为 token 信息模型。"""
     return SessionTokenInfo(
         token=session.token,
         device_label=session.device_label,
@@ -168,6 +184,7 @@ def _token_info(session: SessionPayload) -> SessionTokenInfo:
 
 
 def _parse_datetime(value: str | None) -> datetime | None:
+    """解析 ISO 时间字符串，失败返回 None。"""
     if not value:
         return None
     try:

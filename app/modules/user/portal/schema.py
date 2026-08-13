@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+门户用户中心与公开主页请求/响应模型。
+"""
 
 from datetime import datetime
 

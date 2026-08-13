@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+职位领域模型：职位表，用于描述岗位体系，本身不直接承载授权关系。
+"""
 
 from sqlalchemy import JSON, Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column

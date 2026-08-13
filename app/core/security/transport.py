@@ -1,4 +1,10 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+认证传输层安全：图形验证码与一次性 RSA 密码传输密钥。
+
+密码在客户端用公钥加密后经 HTTP 传输，服务端用临时私钥解密，
+避免明文密码出现在日志与链路上。
+"""
 
 import base64
 import html
@@ -21,32 +27,42 @@ from app.platform.cache.redis import get_redis
 
 
 class CaptchaResponse(ApiSchema):
+    """图形验证码响应：验证码 ID 与图片内容。"""
+
     captcha_id: str
     image_base64: str
     image_type: str = "image/svg+xml"
 
 
 class PasswordKeyResponse(ApiSchema):
+    """一次性密码传输密钥响应：密钥 ID 与公钥。"""
+
     key_id: str
     public_key: str
 
 
 class CaptchaMixin(ApiSchema):
+    """需要携带图形验证码的请求参数。"""
+
     captcha_id: str = Field(min_length=1, max_length=64)
     captcha_value: str = Field(min_length=1, max_length=16)
 
 
 class PasswordKeyMixin(ApiSchema):
+    """需要携带密码传输密钥 ID 的请求参数。"""
+
     password_key_id: str = Field(min_length=1, max_length=64)
 
 
 CaptchaApiResponse = ApiResponse[CaptchaResponse]
 PasswordKeyApiResponse = ApiResponse[PasswordKeyResponse]
 
+# 去除易混淆字符（0/O、1/I/L）的验证码字母表。
 CAPTCHA_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 
 async def create_captcha(image_format: str = "svg") -> CaptchaResponse:
+    """生成图形验证码，并将明文哈希后写入 Redis。"""
     value = "".join(secrets.choice(CAPTCHA_ALPHABET) for _ in range(4))
     captcha_id = uuid4().hex
     redis = _required_redis("Redis is required for captcha")
@@ -65,6 +81,7 @@ async def create_captcha(image_format: str = "svg") -> CaptchaResponse:
 
 
 async def verify_captcha(captcha_id: str, captcha_value: str) -> None:
+    """校验并一次性消费验证码（无论对错都删除，防止重放）。"""
     redis = _required_redis("Redis is required for captcha")
     key = captcha_key(captcha_id)
     raw = await redis.get(key)
@@ -75,6 +92,7 @@ async def verify_captcha(captcha_id: str, captcha_value: str) -> None:
 
 
 async def create_password_key() -> PasswordKeyResponse:
+    """生成一次性 RSA 密钥对，私钥存入 Redis，公钥下发给客户端。"""
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -102,6 +120,7 @@ async def decrypt_passwords(
     password_key_id: str,
     *encrypted_values: str | None,
 ) -> list[str | None]:
+    """用一次性私钥批量解密传输层加密的密码，解密后即删除私钥。"""
     redis = _required_redis("Redis is required for password encryption")
     key = password_crypto_key(password_key_id)
     raw = await redis.get(key)
@@ -127,6 +146,7 @@ async def decrypt_password(password_key_id: str, encrypted_value: str | None) ->
 
 
 def _decrypt_password(private_key, encrypted_value: str) -> str:
+    """用 RSA-OAEP 解密单个密文，失败转为统一业务错误。"""
     try:
         ciphertext = base64.b64decode(encrypted_value)
         plaintext = private_key.decrypt(
@@ -143,6 +163,7 @@ def _decrypt_password(private_key, encrypted_value: str) -> str:
 
 
 def _captcha_svg_base64(value: str) -> str:
+    """渲染带噪点与随机旋转的 SVG 验证码并编码为 base64。"""
     escaped = html.escape(value)
     noise = "\n".join(
         f'<line x1="{secrets.randbelow(140)}" y1="{secrets.randbelow(44)}" '
@@ -167,6 +188,7 @@ def _captcha_svg_base64(value: str) -> str:
     return base64.b64encode(svg.encode("utf-8")).decode("ascii")
 
 
+# 每个字符的 7x5 点阵字模，用于 PNG 验证码的逐像素绘制。
 CAPTCHA_GLYPHS: dict[str, tuple[str, ...]] = {
     "2": ("11110", "00001", "00001", "11110", "10000", "10000", "11111"),
     "3": ("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
@@ -204,6 +226,7 @@ CAPTCHA_GLYPHS: dict[str, tuple[str, ...]] = {
 
 
 def _captcha_png_base64(value: str) -> str:
+    """手工构造 PNG（IHDR/IDAT/IEND）验证码并编码为 base64。"""
     width = 140
     height = 44
     pixels = bytearray([248, 250, 252] * width * height)
@@ -254,6 +277,7 @@ def _draw_glyph(
     scale: int,
     color: tuple[int, int, int],
 ) -> None:
+    """在像素缓冲上按比例绘制单个字符字模。"""
     glyph = CAPTCHA_GLYPHS.get(char)
     if not glyph:
         return
@@ -283,6 +307,7 @@ def _draw_line(
     y2: int,
     color: tuple[int, int, int],
 ) -> None:
+    """用 Bresenham 直线算法在像素缓冲上绘制噪点线段。"""
     dx = abs(x2 - x1)
     dy = -abs(y2 - y1)
     sx = 1 if x1 < x2 else -1
@@ -309,6 +334,7 @@ def _set_pixel(
     y: int,
     color: tuple[int, int, int],
 ) -> None:
+    """越界安全地在像素缓冲上写入单个 RGB 像素。"""
     if x < 0 or x >= width or y < 0 or y >= height:
         return
     offset = (y * width + x) * 3
@@ -316,6 +342,7 @@ def _set_pixel(
 
 
 def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
+    """构造带长度与 CRC32 校验的 PNG chunk。"""
     return (
         struct.pack(">I", len(data))
         + chunk_type
@@ -325,6 +352,7 @@ def _png_chunk(chunk_type: bytes, data: bytes) -> bytes:
 
 
 def _required_redis(message: str):
+    """获取 Redis 客户端，未初始化时抛出统一业务错误。"""
     redis = get_redis()
     if redis is None:
         raise BusinessError(message)

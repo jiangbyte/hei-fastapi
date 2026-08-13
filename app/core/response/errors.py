@@ -12,6 +12,7 @@ from app.core.response.schema import ApiErrorResponse
 
 
 def api_error_body(code: int, message: str, data: Any = None) -> dict[str, Any]:
+    """构造统一错误响应的 JSON 字典体。"""
     return ApiErrorResponse(code=code, message=message, data=data).model_dump(mode="json")
 
 
@@ -23,6 +24,7 @@ def api_error_response(
     data: Any = None,
     headers: dict[str, str] | None = None,
 ) -> JSONResponse:
+    """构造统一错误 JSONResponse；code 缺省时回退为 HTTP 状态码。"""
     return JSONResponse(
         status_code=status_code,
         content=api_error_body(code if code is not None else status_code, message, data),

@@ -29,7 +29,7 @@ async def test_ready_endpoint_shape(client):
     assert "database" in data["checks"]
     assert "redis" in data["checks"]
     assert "config_sync" in data["checks"]
-    assert "celery_broker" in data["checks"]
+    assert "snail_job" in data["checks"]
     assert "storage" in data["checks"]
     assert "enabled" in data["checks"]["database"]
     assert "ok" in data["checks"]["database"]
@@ -42,7 +42,7 @@ async def test_ready_endpoint_checks_required_redis(client):
     assert data["checks"]["redis"]["enabled"] == "true"
     assert data["checks"]["redis"]["ok"] == "true"
     assert data["checks"]["redis"]["detail"] == "connection ok"
-    # 单元环境中 celery/storage 等不可用时整体仍可能为 503。
+    # 单元环境中 snail_job/storage 等不可用时整体仍可能为 503。
     assert response.status_code in {200, 503}
     if data["status"] == "ready":
         assert response.status_code == 200

@@ -1,4 +1,10 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+应用配置：集中定义数据库、Redis、认证、存储、可观测性等子系统的设置项。
+
+所有配置类均基于 pydantic-settings，支持环境变量与 .env 文件覆盖，
+并通过 get_settings() 以进程级缓存提供全局单例。
+"""
 
 from functools import lru_cache
 from pathlib import Path
@@ -14,6 +20,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 class AppSettings(BaseSettings):
+    """应用基础设置：名称、监听地址、进程角色与时区。"""
+
     model_config = SettingsConfigDict(extra="ignore")
 
     name: str = "hei-fastapi"
@@ -29,6 +37,8 @@ class AppSettings(BaseSettings):
 
 
 class DatabaseSettings(BaseSettings):
+    """数据库连接池设置（SQLAlchemy async）。"""
+
     url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/hei_fastapi"
     echo: bool = False
     pool_size: int = 10
@@ -39,16 +49,22 @@ class DatabaseSettings(BaseSettings):
 
 
 class AuditSettings(BaseSettings):
+    """操作审计队列设置。"""
+
     operation_queue_size: int = 1000
     operation_shutdown_timeout_seconds: float = 5.0
 
 
 class RedisSettings(BaseSettings):
+    """Redis 连接设置。"""
+
     url: str = "redis://localhost:6379/0"
     max_connections: int = 1000
 
 
 class AuthSettings(BaseSettings):
+    """认证与会话设置：token 时效、登录锁定、Cookie 会话等。"""
+
     token_name: str = "Authorization"
     token_ttl_seconds: int = 60 * 60 * 4
     token_ttl_short_seconds: int = 60 * 60 * 2
@@ -79,6 +95,8 @@ class AuthSettings(BaseSettings):
 
 
 class SecretsSettings(BaseSettings):
+    """密钥后端设置：Fernet 本地密钥或 Vault KV v2。"""
+
     model_config = SettingsConfigDict(extra="ignore")
 
     # fernet = APP__CONFIG_CRYPTO_KEY；vault = 从 KV v2 加载 Fernet 密钥
@@ -95,6 +113,8 @@ class SecretsSettings(BaseSettings):
 
 
 class MailSettings(BaseSettings):
+    """SMTP 邮件发送设置。"""
+
     host: str = ""
     port: int = 587
     username: str = ""
@@ -106,6 +126,8 @@ class MailSettings(BaseSettings):
 
 
 class CorsSettings(BaseSettings):
+    """跨域（CORS）白名单设置。"""
+
     allow_origins: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -132,26 +154,24 @@ class CorsSettings(BaseSettings):
     ]
 
 
-class CelerySettings(BaseSettings):
-    # 优先 Redis broker（独立 DB）。
-    broker_url: str = "redis://127.0.0.1:6379/1"
-    # 空 → Redis 结果后端（settings.redis.url）。
-    result_backend: str = ""
-    # 必须大于最长任务墙钟时间。Redis broker 超时后会 un-ack。
-    broker_visibility_timeout: int = 3600
-    worker_log_level: str = "INFO"
-    log_dir: str = "logs"
-    log_file_max_mb: int = 100
-    beat_log_level: str = "INFO"
-    worker_pool: str = "solo"
-    worker_concurrency: int = 1
-    worker_without_mingle: bool = True
-    worker_without_gossip: bool = True
-    worker_remote_control_enabled: bool = False
-    worker_cancel_long_running_tasks_on_connection_loss: bool = True
+class SnailJobSettings(BaseSettings):
+    """SnailJob Python 执行器客户端设置（对接外部 Server）。"""
+
+    model_config = SettingsConfigDict(extra="ignore")
+
+    server_host: str = "127.0.0.1"
+    server_port: int = 17888
+    host_ip: str = "127.0.0.1"
+    host_port: int = 17889
+    namespace: str = "764d604ec6fc45f68cd92514c40e9e1a"
+    group_name: str = "hei_fastapi_group"
+    token: str = "SJ_Wyz3dmsdbDOkDujOTSSoBjGQP1BMsVnj"
+    labels: str = "env:dev,app:hei-fastapi"
 
 
 class StorageSettings(BaseSettings):
+    """文件存储设置：本地 / OSS / S3 / MinIO 及上传限制。"""
+
     provider: StorageProvider = StorageProvider.LOCAL
     bucket: str = ""
     endpoint: str = ""
@@ -200,16 +220,22 @@ class StorageSettings(BaseSettings):
 
 
 class IdGeneratorSettings(BaseSettings):
+    """雪花 ID 生成器 worker/datacenter 设置。"""
+
     # 0 = 从 hostname/pid 自动派生唯一 worker（多副本推荐）
     worker_id: int = 0
     datacenter_id: int = 1
 
 
 class SwaggerSettings(BaseSettings):
+    """Swagger 文档开关。"""
+
     enabled: bool = False
 
 
 class ObservabilitySettings(BaseSettings):
+    """可观测性设置：日志、指标、链路追踪。"""
+
     enabled: bool = False
     service_name: str = "hei-fastapi"
     service_version: str = "0.1.0"
@@ -225,12 +251,13 @@ class ObservabilitySettings(BaseSettings):
     otlp_enabled: bool = False
     otlp_endpoint: str = ""
     sample_ratio: float = 1.0
-    celery_observability_enabled: bool = False
     db_observability_enabled: bool = False
     http_client_observability_enabled: bool = False
 
 
 class AuditAlertSettings(BaseSettings):
+    """审计告警规则设置。"""
+
     enabled: bool = False
     notify_email: bool = True
     notify_push: bool = True
@@ -250,6 +277,8 @@ class AuditAlertSettings(BaseSettings):
 
 
 class PasswordPolicySettings(BaseSettings):
+    """密码策略设置：强度、过期、历史检查。"""
+
     min_length: int = 8
     max_length: int = 128
     require_uppercase: bool = True
@@ -268,6 +297,8 @@ class PasswordPolicySettings(BaseSettings):
 
 
 class Settings(BaseSettings):
+    """聚合根设置，嵌套各子系统配置并从环境变量/.env 加载。"""
+
     model_config = SettingsConfigDict(
         env_file=(PROJECT_ROOT / ".env", PROJECT_ROOT / ".env.local"),
         env_nested_delimiter="__",
@@ -282,7 +313,7 @@ class Settings(BaseSettings):
     secrets: SecretsSettings = Field(default_factory=SecretsSettings)
     mail: MailSettings = Field(default_factory=MailSettings)
     cors: CorsSettings = Field(default_factory=CorsSettings)
-    celery: CelerySettings = Field(default_factory=CelerySettings)
+    snail_job: SnailJobSettings = Field(default_factory=SnailJobSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     password_policy: PasswordPolicySettings = Field(default_factory=PasswordPolicySettings)
     audit_alert: AuditAlertSettings = Field(default_factory=AuditAlertSettings)
@@ -295,6 +326,7 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
+    """返回进程级缓存的 Settings 单例。"""
     return Settings()
 
 

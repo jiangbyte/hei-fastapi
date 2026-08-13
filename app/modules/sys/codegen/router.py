@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+代码生成管理端接口：方案的增删改查、数据库内省与预览下载。
+"""
 
 from typing import Annotated
 
@@ -43,6 +46,7 @@ async def create(
     payload: CodegenPlanCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """新增代码生成方案。"""
     await CodegenService(db).create(payload)
     return success()
 
@@ -59,6 +63,7 @@ async def update(
     payload: CodegenPlanUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新代码生成方案。"""
     await CodegenService(db).update(payload)
     return success()
 
@@ -75,6 +80,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量删除代码生成方案。"""
     await CodegenService(db).delete(payload)
     return success()
 
@@ -91,6 +97,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysCodegenPlanSchema]:
+    """查询方案详情。"""
     return success(await CodegenService(db).detail(query))
 
 
@@ -106,6 +113,7 @@ async def page(
     query: Annotated[CodegenPlanPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SysCodegenPlanSchema]]:
+    """分页查询方案。"""
     return success(await CodegenService(db).page_admin(query))
 
 
@@ -120,6 +128,7 @@ async def page(
 async def tables(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[DatabaseTableSchema]]:
+    """列出可生成的数据库表。"""
     return success(await CodegenService(db).tables())
 
 
@@ -135,6 +144,7 @@ async def table_columns(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[CodegenTableColumnsQuery, Depends()],
 ) -> ApiResponse[list[DatabaseColumnSchema]]:
+    """查询指定表的列元数据。"""
     return success(await CodegenService(db).table_columns(query))
 
 
@@ -150,6 +160,7 @@ async def fields(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[CodegenFieldsQuery, Depends()],
 ) -> ApiResponse[list[SysCodegenFieldSchema]]:
+    """查询方案的字段配置。"""
     return success(await CodegenService(db).fields(query))
 
 
@@ -165,6 +176,7 @@ async def update_fields_batch(
     payload: CodegenFieldsUpdateBatchRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量替换方案的字段配置。"""
     await CodegenService(db).update_fields_batch(payload)
     return success()
 
@@ -181,6 +193,7 @@ async def parent_resources(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[CodegenParentResourcesQuery, Depends()],
 ) -> ApiResponse[list[CodegenParentResourceOption]]:
+    """查询可作为父资源的资源选项。"""
     return success(await CodegenService(db).parent_resources(query))
 
 
@@ -196,6 +209,7 @@ async def preview(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[CodegenPreviewSchema]:
+    """渲染方案生成文件的预览。"""
     return success(await CodegenService(db).preview(query))
 
 
@@ -210,6 +224,7 @@ async def download(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> Response:
+    """将预览文件打包为 zip 下载。"""
     content, filename = await CodegenService(db).download(query)
     return Response(
         content=content,

@@ -16,6 +16,7 @@ def validate_message_targets(
     target_dept_ids: list[str],
     target_role_ids: list[str],
 ) -> None:
+    """校验消息目标范围与目标列表的一致性，不合法时抛出 ValueError。"""
     scope = str(target_scope or "").upper()
     allowed = {s.value for s in TargetScope}
     if scope not in allowed:
@@ -28,6 +29,7 @@ def validate_message_targets(
 
 
 def has_enabled_publish_location(publish_locations: dict[str, Any] | None) -> bool:
+    """判断公告是否至少开启了一个发布位置。"""
     if not publish_locations:
         return False
     return any(bool(v) for v in publish_locations.values())

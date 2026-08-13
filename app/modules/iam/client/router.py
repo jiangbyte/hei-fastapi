@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+客户端模块与客户端资源管理 HTTP 路由。
+"""
 
 from typing import Annotated
 

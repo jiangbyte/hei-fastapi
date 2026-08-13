@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户会话服务：从授权信息构建/刷新会话载荷，并代理会话存储的删除操作。
+"""
 
 from datetime import UTC, datetime, timedelta
 
@@ -16,6 +19,7 @@ class AccountSessionService:
     """构建并刷新账户会话，不依赖 auth 业务流程。"""
 
     def __init__(self, db: AsyncSession):
+        """初始化账户与关系仓储。"""
         self.db = db
         self.account_repo = AccountRepository(db)
         self.relation_repo = IamRelationRepository(db)
@@ -31,6 +35,7 @@ class AccountSessionService:
         user_agent: str | None = None,
         device_label: str | None = None,
     ) -> SessionPayload:
+        """根据账户授权构建会话载荷。"""
         authorization = await self.relation_repo.get_account_authorization(account.id)
         return self._build_session_payload_from_authorization(
             account,
@@ -44,9 +49,11 @@ class AccountSessionService:
         )
 
     async def refresh_account_sessions(self, account_id: str) -> None:
+        """刷新单个账户的在线会话。"""
         await self.refresh_accounts_sessions([account_id])
 
     async def refresh_accounts_sessions(self, account_ids: list[str]) -> None:
+        """批量刷新账户的在线会话（重新计算授权）。"""
         accounts = await self.account_repo.list_accounts_by_ids(account_ids)
         if not accounts:
             return
@@ -79,9 +86,11 @@ class AccountSessionService:
         await session_store.refresh_accounts_sessions(targets, payload_factories)
 
     async def delete_account_sessions(self, account_type: str, account_id: str) -> None:
+        """删除单个账户的在线会话。"""
         await session_store.delete_account_sessions(account_type, account_id)
 
     async def delete_accounts_sessions(self, targets: list[tuple[str, str]]) -> None:
+        """批量删除账户的在线会话。"""
         await session_store.delete_accounts_sessions(targets)
 
     def _build_session_payload_from_authorization(
@@ -96,6 +105,7 @@ class AccountSessionService:
         user_agent: str | None = None,
         device_label: str | None = None,
     ) -> SessionPayload:
+        """从授权信息组装会话载荷，含超管权限注入。"""
         permission_keys = set(authorization["permission_keys"])
         if SUPER_ADMIN_ROLE_CODE in authorization["role_codes"]:
             permission_keys.add("*:*:*")

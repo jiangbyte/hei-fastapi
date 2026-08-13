@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+认证模块：声明 admin / portal 端路由的挂载规格，供平台模块加载器注册。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

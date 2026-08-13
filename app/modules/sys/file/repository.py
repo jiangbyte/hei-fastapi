@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+文件仓储层：封装文件元数据的持久化、查询与分页。
+"""
 
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +16,7 @@ class FileRepository:
     """文件仓储，负责对象存储元数据的持久化和查询。"""
 
     def __init__(self, db: AsyncSession):
+        """绑定数据库会话。"""
         self.db = db
 
     async def create(self, payload: FileRecordCreate) -> SysFile:
@@ -32,22 +36,26 @@ class FileRepository:
         return await self.db.get(SysFile, file_id)
 
     async def get_required(self, file_id: str) -> SysFile:
+        """按主键查询文件元数据，不存在时抛出 NotFoundError。"""
         entity = await self.get_by_id(file_id)
         if entity is None:
             raise NotFoundError("File not found")
         return entity
 
     async def update(self, payload: FileUpdateRequest) -> None:
+        """更新文件的原始文件名。"""
         entity = await self.get_required(payload.id)
         entity.original_name = payload.original_name
         await self.db.flush()
 
     async def list_by_ids(self, file_ids: list[str]) -> list[SysFile]:
+        """按 ID 列表批量查询文件元数据。"""
         unique_ids = list(dict.fromkeys(file_ids))
         stmt = select(SysFile).where(SysFile.id.in_(unique_ids))
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_by_object_names(self, object_names: list[str]) -> list[SysFile]:
+        """按对象名列表批量查询文件元数据。"""
         unique_names = list(dict.fromkeys(object_names))
         if not unique_names:
             return []
@@ -55,6 +63,7 @@ class FileRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def delete_many(self, file_ids: list[str]) -> None:
+        """按 ID 列表批量删除文件元数据。"""
         unique_ids = list(dict.fromkeys(file_ids))
         await self.db.execute(delete(SysFile).where(SysFile.id.in_(unique_ids)))
 

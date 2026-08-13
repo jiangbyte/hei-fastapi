@@ -1,4 +1,8 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+客户端真实 IP 解析：仅当直连方是可信代理时才采纳 X-Real-IP / X-Forwarded-For，
+防止客户端伪造转发头绕过 IP 风控。
+"""
 
 from __future__ import annotations
 
@@ -26,6 +30,7 @@ def get_client_ip(request: Request) -> str | None:
 
 
 def _first_header_ip(value: str | None) -> str | None:
+    """取转发头列表中的首个 IP（最靠近客户端的地址）。"""
     if not value:
         return None
     candidate = value.split(",", 1)[0].strip()
@@ -33,6 +38,7 @@ def _first_header_ip(value: str | None) -> str | None:
 
 
 def _is_trusted_proxy(remote_ip: str) -> bool:
+    """判断直连 IP 是否命中可信代理白名单（支持 *、精确 IP 与 CIDR）。"""
     trusted = settings.app.trusted_proxy_ips
     if not trusted:
         return False

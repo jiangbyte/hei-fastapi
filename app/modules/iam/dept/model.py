@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+部门领域模型：部门表，承载组织归属、层级关系与部门管理元信息。
+"""
 
 from sqlalchemy import JSON, Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column

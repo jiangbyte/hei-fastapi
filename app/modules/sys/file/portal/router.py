@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+文件公开端接口：上传、下载、详情、URL 与签名地址。
+"""
 
 from typing import Annotated
 
@@ -21,6 +24,7 @@ from app.modules.sys.file.schema import (
 from app.modules.sys.file.service import FileService
 
 router = APIRouter()
+# 公开端接口统一要求 PORTAL 账户登录。
 portal_dependencies = [Depends(require_account_type(AccountType.PORTAL))]
 
 
@@ -34,6 +38,7 @@ async def upload(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     storage_provider: Annotated[StorageProvider | None, Form()] = None,
 ) -> ApiResponse[SysFileSchema]:
+    """上传文件并返回元数据。"""
     content = await file.read(settings.storage.upload_max_bytes + 1)
     return success(
         await FileService(db).upload(
@@ -56,6 +61,7 @@ async def detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[IdQuery, Depends()],
 ) -> ApiResponse[SysFileSchema]:
+    """查询文件元数据详情。"""
     return success(await FileService(db).detail(query))
 
 
@@ -68,6 +74,7 @@ async def list_by_ids(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[SysFileSchema]]:
+    """按 ID 列表批量查询文件元数据。"""
     return success(await FileService(db).list_by_ids(payload))
 
 
@@ -80,6 +87,7 @@ async def download(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[IdQuery, Depends()],
 ) -> Response:
+    """按 ID 下载文件。"""
     return await FileService(db).download_by_id(query)
 
 
@@ -92,6 +100,7 @@ async def url(
     payload: FileUrlRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[FileUrlResponse]:
+    """获取文件的访问 URL。"""
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
@@ -109,6 +118,7 @@ async def presigned_url(
     payload: FileUrlRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[FileUrlResponse]:
+    """获取文件的签名访问 URL。"""
     return success(
         FileUrlResponse(
             object_name=payload.object_name,

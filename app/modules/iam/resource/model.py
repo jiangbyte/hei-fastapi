@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+资源领域模型：资源树（目录/菜单/页面/按钮等节点）与资源模块分组。
+"""
 
 from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+密码哈希工具：统一使用 bcrypt 进行密码哈希与校验。
+"""
 
 import bcrypt
 

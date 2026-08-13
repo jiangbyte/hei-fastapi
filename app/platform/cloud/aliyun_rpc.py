@@ -16,10 +16,12 @@ from app.platform.http.client import get_http_client
 
 
 def _percent_encode(value: str) -> str:
+    """按阿里云签名规则做百分号编码，保留 ``~``。"""
     return quote(str(value), safe="~")
 
 
 def sign_rpc_params(params: dict[str, str], access_key_secret: str) -> str:
+    """按 RPC 1.0 规范（HMAC-SHA1）计算请求签名。"""
     sorted_query = "&".join(
         f"{_percent_encode(k)}={_percent_encode(v)}" for k, v in sorted(params.items())
     )
@@ -41,6 +43,7 @@ async def aliyun_rpc_get(
     version: str,
     business_params: dict[str, str],
 ) -> dict:
+    """发起阿里云 RPC GET 调用，签名并检查 HTTP 与业务错误码。"""
     params = {
         "Format": "JSON",
         "Version": version,

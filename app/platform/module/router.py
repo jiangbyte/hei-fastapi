@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+API 路由装配：按模块清单导入各模块路由并按顺序挂载到统一的根路由。
+"""
 
 from __future__ import annotations
 
@@ -18,10 +21,12 @@ __all__ = ["API_ROOT_PREFIX", "build_api_router", "get_api_router"]
 
 @cache
 def get_api_router(package_name: str = "app.modules") -> APIRouter:
+    """返回缓存的 API 根路由，避免重复装配。"""
     return build_api_router(load_module_specs(package_name))
 
 
 def build_api_router(module_specs: list[ModuleSpec]) -> APIRouter:
+    """按模块清单构建 API 根路由，子路由统一挂载 /api 前缀。"""
     api_router = APIRouter()
     route_specs: list[tuple[ModuleSpec, RouteSpec]] = [
         (module_spec, route_spec)

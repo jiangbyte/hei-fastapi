@@ -12,7 +12,10 @@ from app.modules.iam.dept.model import SysDept
 
 
 class DeptDataScopeResolver:
+    """部门数据范围解析器，返回部门及全部子部门 ID。"""
+
     async def list_dept_and_child_ids(self, db: AsyncSession, dept_ids: Iterable[str]) -> list[str]:
+        """展开给定部门的全部后代部门 ID（含自身），结果去重排序。"""
         root_ids = sorted({str(dept_id) for dept_id in dept_ids if dept_id})
         if not root_ids:
             return []

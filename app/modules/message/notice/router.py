@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+消息通知路由：管理端消息管理接口，及动态注册的当前用户消息接口。
+"""
 
 from typing import Annotated
 
@@ -41,6 +44,7 @@ async def portal_notice_list(
     query: Annotated[MyNoticePageQuery, Depends()],
     session: Annotated[SessionPayload | None, Depends(get_optional_session)] = None,
 ) -> ApiResponse[PageData[MsgNoticeSchema]]:
+    """门户端公告列表查询。"""
     return success(await MsgNoticeService(db).page_portal_list(query, session))
 
 
@@ -56,6 +60,7 @@ async def create(
     payload: MsgNoticeCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """管理端创建消息。"""
     await MsgNoticeService(db).create(payload)
     return success()
 
@@ -72,6 +77,7 @@ async def update(
     payload: MsgNoticeUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """管理端更新消息。"""
     await MsgNoticeService(db).update(payload)
     return success()
 
@@ -88,6 +94,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """管理端批量删除消息。"""
     await MsgNoticeService(db).delete(payload)
     return success()
 
@@ -104,6 +111,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[MsgNoticeSchema]:
+    """管理端查询消息详情。"""
     return success(await MsgNoticeService(db).detail(query))
 
 
@@ -119,6 +127,7 @@ async def page(
     query: Annotated[MsgNoticeAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[MsgNoticeSchema]]:
+    """管理端分页查询消息。"""
     return success(await MsgNoticeService(db).page_admin(query))
 
 
@@ -135,6 +144,7 @@ async def publish(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
+    """管理端发布消息。"""
     await MsgNoticeService(db).publish(payload, session)
     return success()
 
@@ -151,6 +161,7 @@ async def revoke(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """管理端撤回消息。"""
     await MsgNoticeService(db).revoke(payload)
     return success()
 
@@ -167,11 +178,13 @@ async def pin(
     payload: PinNoticeRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """管理端置顶/取消置顶公告。"""
     await MsgNoticeService(db).pin(payload)
     return success()
 
 
 def register_current_user_routes(router: APIRouter, account_type: AccountType) -> None:
+    """为指定账户类型动态注册「我的消息」相关路由。"""
     # 与静态装饰器相同：字面量 /v1/ + 账户类型段（勿另造版本常量）。
     base = f"/v1/{account_type_url_segment(account_type)}/message/notices"
     deps = [Depends(require_account_type(account_type))]
@@ -186,6 +199,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         session: Annotated[SessionPayload, Depends(get_current_session)],
         query: Annotated[MyNoticePageQuery, Depends()],
     ) -> ApiResponse[PageData[MsgNoticeSchema]]:
+        """当前用户分页查询可见消息。"""
         return success(await MsgNoticeService(db).page_my(query, session))
 
     @router.get(
@@ -198,6 +212,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[MsgNoticeSchema]:
+        """当前用户查询消息详情。"""
         return success(await MsgNoticeService(db).my_detail(query, session))
 
     @router.get(
@@ -209,6 +224,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[int]:
+        """当前用户未读消息数。"""
         return success(await MsgNoticeService(db).count_unread(session))
 
     @router.post(
@@ -221,6 +237,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[None]:
+        """当前用户标记指定消息为已读。"""
         await MsgNoticeService(db).mark_read(payload, session)
         return success()
 
@@ -233,6 +250,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[None]:
+        """当前用户标记全部消息为已读。"""
         await MsgNoticeService(db).mark_all_read(session)
         return success()
 

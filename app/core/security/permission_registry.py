@@ -1,4 +1,10 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+权限资源注册表：从路由装饰器扫描 permission_key 并同步到 Redis，
+供前端菜单/按钮渲染与运行时权限校验使用。
+
+同时提供「权限未注册即拒绝」的校验入口，避免前端引用不存在的权限码。
+"""
 
 import json
 import logging
@@ -36,6 +42,8 @@ RESOURCE_NAME_FALLBACK = "未定义接口名称"
 
 @dataclass(slots=True)
 class PermissionResource:
+    """单个权限资源：权限码、名称、业务路径与 HTTP 方法。"""
+
     permission_key: str
     name: str
     route_path: str
@@ -43,10 +51,12 @@ class PermissionResource:
 
     @property
     def resource_text(self) -> str:
+        """渲染为 ``permission_key[name]`` 形式供 Redis 与前端使用。"""
         return f"{self.permission_key}[{self.name}]"
 
 
 def _iter_dependant_calls(dependant: Any) -> list[Any]:
+    """递归收集依赖树中的全部可调用对象（含嵌套 Depends）。"""
     calls: list[Any] = []
     for dependency in getattr(dependant, "dependencies", []):
         call = getattr(dependency, "call", None)
@@ -57,6 +67,7 @@ def _iter_dependant_calls(dependant: Any) -> list[Any]:
 
 
 def _normalize_methods(route: Any) -> list[str]:
+    """返回去重并排除 HEAD/OPTIONS 的 HTTP 方法列表。"""
     return sorted(
         method for method in (route.methods or set()) if method not in {"HEAD", "OPTIONS"}
     )
@@ -73,10 +84,12 @@ def normalize_route_path(path: str) -> str:
 
 
 def normalize_permission_route_path(route: Any) -> str:
+    """返回路由的业务路径（剥离 /api、版本与客户端段）。"""
     return normalize_route_path(route.path)
 
 
 def _resolve_route_name(route: Any) -> str:
+    """优先取路由 summary，否则取端点函数名，最后回退默认名。"""
     if route.summary:
         return route.summary
     endpoint_name = getattr(route.endpoint, "__name__", "")
@@ -84,6 +97,7 @@ def _resolve_route_name(route: Any) -> str:
 
 
 def _extract_permission_key(route: Any) -> str | None:
+    """从路由依赖装饰器中提取首个合法 permission_key，无则返回 None。"""
     permission_keys: list[str] = []
     for call in _iter_dependant_calls(route.dependant):
         permission_meta = getattr(call, PERMISSION_META_ATTR, None)
@@ -103,6 +117,7 @@ def _extract_permission_key(route: Any) -> str | None:
 
 
 def _is_api_route_like(route: Any) -> bool:
+    """判断路由是否为可直接使用的 APIRoute（或其代理包装）。"""
     return isinstance(route, APIRoute) or isinstance(
         getattr(route, "original_route", None),
         APIRoute,
@@ -110,6 +125,7 @@ def _is_api_route_like(route: Any) -> bool:
 
 
 def _iter_api_route_candidates(routes: list[Any]) -> list[Any]:
+    """展开嵌套路由，收集全部 API 路由候选。"""
     api_routes: list[Any] = []
     for route in routes:
         if _is_api_route_like(route):
@@ -179,6 +195,7 @@ def scan_permission_registry(app: FastAPI) -> list[PermissionResource]:
 
 
 async def sync_permission_registry(app: FastAPI) -> list[PermissionResource]:
+    """扫描权限并写入 Redis；扫描为空时拒绝写入以防清空注册表。"""
     resources = scan_permission_registry(app)
     if not resources:
         api_route_count = len(_iter_api_route_candidates(list(app.routes)))
@@ -209,6 +226,7 @@ async def sync_permission_registry(app: FastAPI) -> list[PermissionResource]:
 
 
 async def list_permission_resources() -> list[str]:
+    """从 Redis 读取已注册的权限资源文本列表。"""
     redis = get_redis()
     if not redis:
         raise RuntimeError("Redis is required to read permission registry")
@@ -220,6 +238,7 @@ async def list_permission_resources() -> list[str]:
 
 
 async def list_registered_permission_keys() -> set[str]:
+    """从注册表资源文本中提取权限码集合。"""
     resources = await list_permission_resources()
     permission_keys: set[str] = set()
     for resource in resources:
@@ -229,10 +248,12 @@ async def list_registered_permission_keys() -> set[str]:
 
 
 async def ensure_registered_permission_key(permission_key: str) -> None:
+    """校验单个权限码已注册，否则抛业务错误。"""
     await ensure_registered_permission_keys([permission_key])
 
 
 async def ensure_registered_permission_keys(permission_keys: list[str]) -> None:
+    """批量校验权限码已注册，未注册项统一抛业务错误。"""
     unique_permission_keys = sorted({key for key in permission_keys if key})
     if not unique_permission_keys:
         return

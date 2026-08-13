@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+角色仓储：角色 CRUD、资源授权与成员账户关系的查询和替换。
+"""
 
 from collections import defaultdict
 
@@ -34,25 +37,31 @@ from app.modules.iam.role.schema import (
 
 
 class RoleRepository:
+    """角色仓储。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.relations = IamRelationRepository(db)
 
     async def create(self, payload: RoleCreateRequest) -> None:
+        """创建角色。"""
         role = SysRole(**payload.model_dump())
         self.db.add(role)
         await self.db.flush()
 
     async def get_by_id(self, role_id: str) -> SysRole | None:
+        """按主键查询角色。"""
         return await self.db.get(SysRole, role_id)
 
     async def get_required(self, role_id: str) -> SysRole:
+        """按主键查询角色，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(role_id)
         if entity is None:
             raise NotFoundError("Role not found")
         return entity
 
     async def update(self, payload: RoleUpdateRequest) -> None:
+        """更新角色。"""
         entity = await self.get_required(payload.id)
         data = payload.model_dump(exclude={"id"})
         for key, value in data.items():
@@ -60,6 +69,7 @@ class RoleRepository:
         await self.db.flush()
 
     async def delete_many(self, role_ids: list[str]) -> None:
+        """删除角色，存在引用时抛冲突错误。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
@@ -75,6 +85,7 @@ class RoleRepository:
         role_ids: list[str],
         data_scope_filter: ColumnElement[bool],
     ) -> int:
+        """统计处于当前数据范围内的目标角色数量。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return 0
@@ -86,6 +97,7 @@ class RoleRepository:
         query: RoleAdminPageQuery,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> tuple[list[SysRole], int]:
+        """按条件分页查询角色并统计总数。"""
         stmt: Select[tuple[SysRole]] = select(SysRole)
         count_stmt = select(func.count(SysRole.id))
         filters = []
@@ -114,6 +126,7 @@ class RoleRepository:
         return roles, total
 
     async def list_by_ids(self, role_ids: list[str]) -> list[SysRole]:
+        """按 ID 列表批量查询角色。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return []
@@ -125,6 +138,7 @@ class RoleRepository:
         role_id: str,
         account_type: str | None = None,
     ) -> list[RoleResourceGrantInfo]:
+        """列出角色的资源授权明细（按钮权限归并到父菜单）。"""
         await self.get_required(role_id)
         filters = [
             SysIamRelation.subject_type == GrantSubjectType.ROLE.value,
@@ -193,6 +207,7 @@ class RoleRepository:
         ]
 
     async def replace_resource_grants(self, payload: RoleGrantResourceRequest) -> None:
+        """全量替换角色资源授权，权限码自动展开为对应资源并写入级联授权。"""
         await self.get_required(payload.id)
         resource_ids = list(dict.fromkeys(item.resource_id for item in payload.grant_info_list))
         original_resource_ids = set(resource_ids)
@@ -271,6 +286,7 @@ class RoleRepository:
         role_id: str,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[SysAccount]:
+        """列出拥有该角色的账户，可叠加数据范围过滤。"""
         await self.get_required(role_id)
         account_role_rel = aliased(SysIamRelation)
         stmt = (
@@ -295,6 +311,7 @@ class RoleRepository:
         self,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[SysAccount]:
+        """列出账户，可按数据范围过滤。"""
         stmt = select(SysAccount).order_by(SysAccount.id.desc())
         if data_scope_filter is not None:
             stmt = stmt.outerjoin(
@@ -303,6 +320,7 @@ class RoleRepository:
         return list((await self.db.execute(stmt)).unique().scalars().all())
 
     async def replace_role_accounts(self, payload: RoleGrantUserRequest) -> None:
+        """全量替换角色的账户成员（先删后建，账户需全部存在）。"""
         await self.get_required(payload.id)
         account_ids = list(dict.fromkeys(payload.account_ids))
         if account_ids:
@@ -345,6 +363,7 @@ class RoleRepository:
         return {row[0]: row[1] for row in rows}
 
     async def list_account_ids_by_role(self, role_id: str) -> list[str]:
+        """列出角色当前成员的账户 ID。"""
         stmt = select(SysIamRelation.subject_id).where(
             SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
             SysIamRelation.relation_type == IamRelationType.ACCOUNT_ROLE.value,

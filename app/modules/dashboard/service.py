@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+仪表盘服务层：聚合账户、IAM、运营、趋势与文件分布等概览数据。
+"""
 
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
@@ -32,10 +35,13 @@ from app.modules.sys.file.model import SysFile
 
 
 class DashboardService:
+    """仪表盘数据聚合服务，汇总各子系统统计指标。"""
+
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
     async def overview(self) -> DashboardOverviewResponse:
+        """聚合生成仪表盘概览数据。"""
         since = datetime.now(UTC) - timedelta(days=6)
         day_start = _day_start()
 
@@ -106,12 +112,14 @@ class DashboardService:
         )
 
     async def _count(self, column, *filters) -> int:
+        """对指定列计数，并叠加可选过滤条件。"""
         stmt = select(func.count(column))
         if filters:
             stmt = stmt.where(*filters)
         return int((await self.db.execute(stmt)).scalar_one())
 
     async def _account_by_type(self) -> list[DashboardStatusItem]:
+        """按账户类型分组统计账户数量。"""
         rows = (
             await self.db.execute(
                 select(SysAccount.account_type, func.count(SysAccount.id))
@@ -125,6 +133,7 @@ class DashboardService:
         ]
 
     async def _daily_trend(self, column, since: datetime, label: str) -> list[DashboardTrendPoint]:
+        """统计近 7 日每日新增数量，缺失日期补零。"""
         rows = (await self.db.execute(select(column).where(column >= since))).scalars().all()
         counts: dict[str, int] = defaultdict(int)
         for value in rows:
@@ -137,6 +146,7 @@ class DashboardService:
         ]
 
     async def _file_type_share(self) -> list[DashboardStatusItem]:
+        """按内容类型统计文件分布（取数量前 8）。"""
         rows = (
             await self.db.execute(
                 select(SysFile.content_type, func.count(SysFile.id))
@@ -152,5 +162,6 @@ class DashboardService:
 
 
 def _day_start() -> datetime:
+    """返回今天（UTC）的零点时刻。"""
     now = datetime.now(UTC)
     return now.replace(hour=0, minute=0, second=0, microsecond=0)

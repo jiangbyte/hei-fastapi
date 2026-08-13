@@ -1,4 +1,10 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+数据权限：根据会话中的权限授权计算数据范围，并生成 SQLAlchemy 过滤条件。
+
+数据范围枚举为 ALL / DEPT_AND_CHILD / DEPT / SELF / CUSTOM，
+由 find_permission_grant 定位授权后转换为布尔表达式。
+"""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -15,6 +21,8 @@ from app.platform.interfaces.data_scope_resolver import DataScopeResolverProtoco
 
 @dataclass(frozen=True, slots=True)
 class DataScopeColumns:
+    """数据范围过滤所依赖的列：负责人列与部门列。"""
+
     owner: ColumnElement[bool] | None = None
     dept: ColumnElement[bool] | None = None
 
@@ -23,6 +31,7 @@ def find_permission_grant(
     session: SessionPayload,
     permission_key: str,
 ) -> PermissionGrantPayload | None:
+    """在会话授权列表中定位指定权限码的授权（取最后一条）。"""
     for grant in reversed(session.permission_grants):
         if grant["permission_key"] == permission_key:
             return grant
@@ -30,6 +39,7 @@ def find_permission_grant(
 
 
 def has_unrestricted_data_scope(session: SessionPayload, permission_key: str) -> bool:
+    """判断是否持有超级权限（*:*:*）或 ALL 数据范围。"""
     if "*:*:*" in session.permission_keys:
         return True
     grant = find_permission_grant(session, permission_key)
@@ -48,6 +58,7 @@ async def resolve_data_scope_dept_ids(
     session: SessionPayload,
     permission_key: str,
 ) -> list[str] | None:
+    """将数据范围解析为可见部门 ID 列表；None 表示不限制。"""
     if has_unrestricted_data_scope(session, permission_key):
         return None
 
@@ -74,6 +85,7 @@ async def build_data_scope_filter(
     owner_column=None,
     dept_column=None,
 ) -> ColumnElement[bool]:
+    """按数据范围构造 SQLAlchemy 过滤条件，供仓储层查询复用。"""
     if has_unrestricted_data_scope(session, permission_key):
         return true()
 
@@ -97,6 +109,7 @@ async def build_data_scope_filter(
 
 
 async def list_dept_and_child_ids(db: AsyncSession, dept_ids: Iterable[str]) -> list[str]:
+    """通过部门解析器展开部门及所有子部门 ID。"""
     from typing import cast
 
     resolver = cast(DataScopeResolverProtocol, resolve("data_scope_resolver"))
@@ -104,6 +117,7 @@ async def list_dept_and_child_ids(db: AsyncSession, dept_ids: Iterable[str]) -> 
 
 
 def _in_or_false(column, values: Iterable[str]) -> ColumnElement[bool]:
+    """构造 IN 过滤；列缺失或值列表为空时返回恒假。"""
     unique_values = _unique_ids(values)
     if column is None or not unique_values:
         return false()
@@ -111,4 +125,5 @@ def _in_or_false(column, values: Iterable[str]) -> ColumnElement[bool]:
 
 
 def _unique_ids(values: Iterable[str]) -> list[str]:
+    """去重、去空并按字典序排序的 ID 列表。"""
     return sorted({str(value) for value in values if value})

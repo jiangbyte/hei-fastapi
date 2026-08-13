@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+系统配置管理端接口：配置增删改查、批量保存与告警通知测试。
+"""
 
 from typing import Annotated
 
@@ -24,6 +27,8 @@ from app.modules.sys.config.service import ConfigService
 
 
 class TestWebhookRequest(ApiSchema):
+    """审计告警 Webhook 测试请求。"""
+
     webhook_url: str = Field(default="", max_length=1024)
     webhook_secret: str = Field(default="", max_length=256)
 
@@ -43,6 +48,7 @@ async def create(
     payload: ConfigCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """新增系统配置。"""
     await ConfigService(db).create(payload)
     return success()
 
@@ -59,6 +65,7 @@ async def update(
     payload: ConfigUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新系统配置。"""
     await ConfigService(db).update(payload)
     return success()
 
@@ -75,6 +82,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量删除系统配置。"""
     await ConfigService(db).delete(payload)
     return success()
 
@@ -91,6 +99,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysConfigSchema]:
+    """查询配置详情。"""
     return success(await ConfigService(db).detail(query))
 
 
@@ -106,6 +115,7 @@ async def page(
     query: Annotated[ConfigAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SysConfigSchema]]:
+    """后台分页查询系统配置。"""
     return success(await ConfigService(db).page_admin(query))
 
 
@@ -121,6 +131,7 @@ async def list_config(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[CategoryQuery, Depends()],
 ) -> ApiResponse[list[SysConfigSchema]]:
+    """按分类/作用域查询配置列表。"""
     return success(await ConfigService(db).list_by_category(query))
 
 
@@ -136,6 +147,7 @@ async def batch_save(
     payload: ConfigBatchSaveRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量保存系统配置。"""
     await ConfigService(db).batch_save(payload)
     return success()
 
@@ -147,6 +159,7 @@ async def batch_save(
 async def test_audit_alert_webhook(
     payload: TestWebhookRequest,
 ) -> ApiResponse[dict]:
+    """发送审计告警测试 Webhook，失败时抛出业务错误。"""
     from app.modules.sys.audit.alert import send_test_webhook
 
     err = await send_test_webhook(payload.webhook_url, payload.webhook_secret)
@@ -162,6 +175,7 @@ async def test_audit_alert_webhook(
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
 )
 async def test_audit_alert_push() -> ApiResponse[dict]:
+    """发送审计告警测试推送，失败时抛出业务错误。"""
     from app.modules.sys.audit.alert import send_test_push
 
     err = await send_test_push()

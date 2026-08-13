@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户组 Schema：账户组创建/更新/分页查询及授权相关请求与响应结构。
+"""
 
 from datetime import datetime
 
@@ -15,6 +18,8 @@ from app.modules.iam.schema import (
 
 
 class GroupCreateRequest(ApiSchema):
+    """创建账户组请求。"""
+
     name: str = Field(min_length=1, max_length=64)
     owner_dept_id: str | None = Field(default=None, max_length=64)
     description: str | None = None
@@ -23,15 +28,21 @@ class GroupCreateRequest(ApiSchema):
 
 
 class GroupUpdateRequest(GroupCreateRequest):
+    """更新账户组请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class GroupAdminPageQuery(PageQuery):
+    """账户组管理端分页查询条件。"""
+
     name: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=32)
 
 
 class SysGroupSchema(ApiSchema):
+    """账户组响应结构。"""
+
     id: str
     name: str
     owner_dept_id: str | None = None
@@ -47,12 +58,16 @@ class SysGroupSchema(ApiSchema):
 
 
 class GroupRoleAssignRequest(ApiSchema):
+    """为账户组追加单个角色的请求。"""
+
     group_id: str
     role_id: str
     account_type: AccountType
 
 
 class SysGroupRoleRelSchema(ApiSchema):
+    """账户组-角色关系响应结构。"""
+
     id: str
     group_id: str
     role_id: str
@@ -64,64 +79,88 @@ class SysGroupRoleRelSchema(ApiSchema):
 
 
 class GroupResourceGrantInfo(ApiSchema):
+    """账户组资源授权项结构。"""
+
     resource_id: str = Field(min_length=1, max_length=64)
     permission_keys: list[str] = Field(default_factory=list)
 
 
 class GroupOwnUserResponse(ApiSchema):
+    """账户组拥有的成员响应结构。"""
+
     id: str
     users: list[SysAccountSchema] = Field(default_factory=list)
     account_ids: list[str] = Field(default_factory=list)
 
 
 class GroupGrantUserRequest(ApiSchema):
+    """给账户组授权成员的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_ids: list[str] = Field(default_factory=list)
 
 
 class GroupOwnRoleQuery(IdQuery):
+    """账户组角色查询条件（附带账户体系）。"""
+
     account_type: AccountType
 
 
 class GroupOwnRoleResponse(ApiSchema):
+    """账户组拥有的角色响应结构。"""
+
     id: str
     roles: list[RoleOption] = Field(default_factory=list)
     role_ids: list[str] = Field(default_factory=list)
 
 
 class GroupGrantRoleRequest(ApiSchema):
+    """给账户组授权角色的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_type: AccountType
     role_ids: list[str] = Field(default_factory=list)
 
 
 class GroupOwnResourceQuery(IdQuery):
+    """账户组资源查询条件（附带账户体系）。"""
+
     account_type: AccountType
 
 
 class GroupOwnResourceResponse(ApiSchema):
+    """账户组拥有的资源响应结构。"""
+
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)
 
 
 class GroupGrantResourceRequest(ApiSchema):
+    """给账户组授权资源的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_type: AccountType
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)
 
 
 class GroupOwnClientResourceQuery(IdQuery):
+    """账户组客户端资源查询条件（附带账户体系）。"""
+
     account_type: AccountType
 
 
 class GroupOwnClientResourceResponse(ApiSchema):
+    """账户组拥有的客户端资源响应结构。"""
+
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)
 
 
 class GroupGrantClientResourceRequest(ApiSchema):
+    """给账户组授权客户端资源的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     account_type: AccountType
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)

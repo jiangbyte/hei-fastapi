@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+展示图管理端接口：增删改查与分页，受权限校验保护。
+"""
 
 from typing import Annotated
 
@@ -48,6 +51,7 @@ async def create(
     payload: BannerCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """新增展示图。"""
     await BannerService(db).create(payload)
     return success()
 
@@ -64,6 +68,7 @@ async def update(
     payload: BannerUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新展示图。"""
     await BannerService(db).update(payload)
     return success()
 
@@ -80,6 +85,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量删除展示图。"""
     await BannerService(db).delete(payload)
     return success()
 
@@ -96,6 +102,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysBannerSchema]:
+    """查询单条展示图详情。"""
     return success(await BannerService(db).detail(query))
 
 
@@ -111,4 +118,5 @@ async def page(
     query: Annotated[BannerAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SysBannerSchema]]:
+    """管理端分页查询展示图。"""
     return success(await BannerService(db).page_admin(query))

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 关系模块注册：声明关系模型。
+"""
 
 from app.platform.module import ModuleSpec
 

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+引用守卫：统计实体的被引用数量，并在删除/调整层级前阻断存在引用或非法层级关系的操作。
+"""
 
 from collections.abc import Iterable
 
@@ -19,10 +22,12 @@ from app.modules.iam.role.model import SysRole
 
 
 def unique_ids(values: Iterable[str]) -> list[str]:
+    """按原始顺序去重并保留非重复的 ID 列表。"""
     return list(dict.fromkeys(values))
 
 
 def raise_if_referenced(entity_name: str, counts: dict[str, int]) -> None:
+    """当存在引用计数大于 0 时抛出冲突错误，附带各引用来源明细。"""
     references = {key: value for key, value in counts.items() if value > 0}
     if not references:
         return
@@ -31,6 +36,7 @@ def raise_if_referenced(entity_name: str, counts: dict[str, int]) -> None:
 
 
 async def count_role_references(db: AsyncSession, role_ids: list[str]) -> dict[str, int]:
+    """统计角色被账户、组及资源授权引用的数量。"""
     ids = unique_ids(role_ids)
     if not ids:
         return {}
@@ -55,6 +61,7 @@ async def count_role_references(db: AsyncSession, role_ids: list[str]) -> dict[s
 
 
 async def count_group_references(db: AsyncSession, group_ids: list[str]) -> dict[str, int]:
+    """统计账户组被账户、角色及资源授权引用的数量。"""
     ids = unique_ids(group_ids)
     if not ids:
         return {}
@@ -86,6 +93,7 @@ async def count_group_references(db: AsyncSession, group_ids: list[str]) -> dict
 
 
 async def count_dept_references(db: AsyncSession, dept_ids: list[str]) -> dict[str, int]:
+    """统计部门被子部门、账户、角色及资源权限作用域引用的数量。"""
     ids = unique_ids(dept_ids)
     if not ids:
         return {}
@@ -104,6 +112,7 @@ async def count_dept_references(db: AsyncSession, dept_ids: list[str]) -> dict[s
 
 
 async def count_resource_references(db: AsyncSession, resource_ids: list[str]) -> dict[str, int]:
+    """统计资源被子资源、权限及授权关系引用的数量。"""
     ids = unique_ids(resource_ids)
     if not ids:
         return {}
@@ -130,6 +139,7 @@ async def count_resource_references(db: AsyncSession, resource_ids: list[str]) -
 async def ensure_parent_exists(
     db: AsyncSession, model, parent_id: str | None, entity_name: str
 ) -> None:
+    """校验父级实体存在，不存在则抛出冲突错误。"""
     if not parent_id:
         return
     if not await db.get(model, parent_id):
@@ -143,6 +153,7 @@ async def ensure_not_self_or_descendant(
     parent_id: str | None,
     entity_name: str,
 ) -> None:
+    """校验父级既不是自身也不是自身后代，防止形成环或自引用。"""
     if not parent_id:
         return
     if parent_id == entity_id:
@@ -153,6 +164,7 @@ async def ensure_not_self_or_descendant(
 
 
 async def list_descendant_ids(db: AsyncSession, model, entity_id: str) -> set[str]:
+    """从全表父子关系构建邻接表，广度优先收集实体全部后代 ID。"""
     rows = (await db.execute(select(model.id, model.parent_id))).all()
     children_by_parent: dict[str, list[str]] = {}
     for current_id, parent_id in rows:
@@ -171,6 +183,7 @@ async def list_descendant_ids(db: AsyncSession, model, entity_id: str) -> set[st
 
 
 async def _count(db: AsyncSession, stmt) -> int:
+    """执行 count 语句并返回标量结果。"""
     return int((await db.execute(stmt)).scalar_one())
 
 
@@ -180,6 +193,7 @@ async def _count_relation_targets(
     target_type: str,
     target_ids: list[str],
 ) -> int:
+    """统计指定关系类型下目标类型命中目标 ID 列表的关系数量。"""
     return await _count(
         db,
         select(func.count())
@@ -193,6 +207,7 @@ async def _count_relation_targets(
 
 
 async def _count_resource_permission_scope_refs(db: AsyncSession, dept_ids: list[str]) -> int:
+    """统计资源权限的 custom_scope_dept_ids 中引用了目标部门的关系数量。"""
     rows = (
         (
             await db.execute(
@@ -209,6 +224,7 @@ async def _count_resource_permission_scope_refs(db: AsyncSession, dept_ids: list
 
 
 def _count_scope_refs(rows, dept_ids: list[str]) -> int:
+    """统计自定义作用域列表中与目标部门集合存在交集的行数。"""
     target_ids = set(dept_ids)
     count = 0
     for row in rows:

@@ -16,12 +16,15 @@ _EXPORT_AS_RE = re.compile(r"export\s+\*\s+as\s+(\w+)\s+from\s+")
 
 @dataclass
 class ApplyResult:
+    """应用预览文件的结果统计：已写入、已合并、已跳过。"""
+
     written: list[str] = field(default_factory=list)
     merged: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
 
 
 def extract_export_aliases(text: str) -> set[str]:
+    """提取 index.ts 中 ``export * as xxx from`` 的别名集合。"""
     return set(_EXPORT_AS_RE.findall(text))
 
 
@@ -66,6 +69,7 @@ def merge_api_index_export(index_text: str, export_block: str) -> tuple[str, boo
 
 
 def is_api_index_append(path: str) -> bool:
+    """判断路径是否为 API 索引追加文件（index.ts.append）。"""
     normalized = path.replace("\\", "/")
     return normalized.endswith("index.ts.append") or normalized.endswith("/api/index.ts.append")
 

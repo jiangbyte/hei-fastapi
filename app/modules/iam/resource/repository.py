@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+资源仓储：资源树、资源模块与资源权限的增删改查及授权模块组装。
+"""
 
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,11 +41,14 @@ from app.modules.iam.schema import (
 
 
 class ResourceRepository:
+    """资源树仓储，负责资源节点 CRUD、权限挂载与授权模块组装。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.relations = IamRelationRepository(db)
 
     async def create(self, payload: ResourceCreateRequest) -> SysResource:
+        """创建资源，先校验模块、父级与编码合法性。"""
         await self._ensure_payload_valid(payload)
         resource = SysResource(**payload.model_dump())
         self.db.add(resource)
@@ -50,15 +56,18 @@ class ResourceRepository:
         return resource
 
     async def get_by_id(self, resource_id: str) -> SysResource | None:
+        """按主键查询资源。"""
         return await self.db.get(SysResource, resource_id)
 
     async def get_required(self, resource_id: str) -> SysResource:
+        """按主键查询资源，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(resource_id)
         if entity is None:
             raise NotFoundError("Resource not found")
         return entity
 
     async def update(self, payload: ResourceUpdateRequest) -> None:
+        """更新资源；跨模块移动时同步更新所有后代资源的模块归属。"""
         entity = await self.get_required(payload.id)
         await ensure_not_self_or_descendant(
             self.db,
@@ -89,6 +98,7 @@ class ResourceRepository:
         payload: ResourceCreateRequest | ResourceUpdateRequest,
         resource_id: str | None = None,
     ) -> None:
+        """校验模块存在、编码唯一及父级与模块归属一致。"""
         if payload.module_id and not await self.db.get(SysResourceModule, payload.module_id):
             raise ConflictError("Resource module does not exist")
         await self._ensure_resource_code_unique(payload.code, payload.module_id, resource_id)
@@ -108,6 +118,7 @@ class ResourceRepository:
         module_id: str | None,
         resource_id: str | None = None,
     ) -> None:
+        """校验资源编码在模块内唯一，重复时抛冲突错误。"""
         stmt = select(SysResource.id).where(SysResource.code == code)
         if module_id is None:
             stmt = stmt.where(SysResource.module_id.is_(None))
@@ -123,6 +134,7 @@ class ResourceRepository:
         resource_id: str,
         module_id: str | None,
     ) -> None:
+        """跨模块移动前校验后代编码在目标模块内不冲突。"""
         descendant_ids = await list_descendant_ids(self.db, SysResource, resource_id)
         if not descendant_ids:
             return
@@ -151,6 +163,7 @@ class ResourceRepository:
             raise ConflictError("Resource code already exists in module")
 
     async def delete_many(self, resource_ids: list[str]) -> None:
+        """删除资源，存在引用时抛冲突错误。"""
         unique_ids = list(dict.fromkeys(resource_ids))
         if not unique_ids:
             return
@@ -162,6 +175,7 @@ class ResourceRepository:
         await self.db.execute(delete(SysResource).where(SysResource.id.in_(unique_ids)))
 
     async def page_admin(self, query: ResourceAdminPageQuery) -> tuple[list[SysResource], int]:
+        """按条件分页查询资源并统计总数。"""
         stmt: Select[tuple[SysResource]] = select(SysResource)
         count_stmt = select(func.count(SysResource.id))
         filters = []
@@ -197,6 +211,7 @@ class ResourceRepository:
         return resources, total
 
     async def page_buttons(self, query: ResourceButtonPageQuery) -> tuple[list[SysResource], int]:
+        """分页查询指定父级下的按钮资源。"""
         stmt: Select[tuple[SysResource]] = select(SysResource).where(
             SysResource.parent_id == query.parent_id,
             SysResource.resource_type == ResourceType.BUTTON.value,
@@ -229,6 +244,7 @@ class ResourceRepository:
         module_id: str | None = None,
         module_client: AccountType | None = None,
     ) -> list[SysResource]:
+        """列出启用的资源，可按模块或所属端过滤。"""
         stmt = (
             select(SysResource)
             .where(SysResource.status == StatusEnum.ENABLED.value)
@@ -245,6 +261,7 @@ class ResourceRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_module_meta_map(self, module_ids: list[str]) -> dict[str, tuple[str, str]]:
+        """批量查询资源模块元信息，返回 {module_id: (name, client)}。"""
         unique_ids = list(dict.fromkeys(module_ids))
         if not unique_ids:
             return {}
@@ -263,6 +280,7 @@ class ResourceRepository:
         self,
         payload: ResourcePermissionBindRequest,
     ) -> SysIamRelation:
+        """为资源追加权限挂载关系。"""
         if not await self.db.get(SysResource, payload.resource_id):
             raise NotFoundError("Resource not found")
         data = payload.model_dump()
@@ -276,6 +294,7 @@ class ResourceRepository:
         self,
         payload: ResourcePermissionBindRequest,
     ) -> SysIamRelation:
+        """替换资源的权限挂载并返回新关系。"""
         if not await self.db.get(SysResource, payload.resource_id):
             raise NotFoundError("Resource not found")
         await self.relations.delete_subject_relations(
@@ -292,6 +311,7 @@ class ResourceRepository:
         return relation
 
     async def delete_button(self, button_id: str) -> None:
+        """删除按钮资源及其权限挂载，非按钮资源时抛冲突错误。"""
         button = await self.get_required(button_id)
         if button.resource_type != ResourceType.BUTTON.value:
             raise ConflictError("Resource is not a button")
@@ -306,6 +326,7 @@ class ResourceRepository:
         self,
         account_type: AccountType | None = None,
     ) -> list[SysIamRelation]:
+        """列出启用中的资源权限关系，可按账户体系过滤。"""
         stmt = (
             select(SysIamRelation)
             .where(
@@ -324,6 +345,7 @@ class ResourceRepository:
         self,
         resource_ids: list[str],
     ) -> dict[str, list[SysIamRelation]]:
+        """按资源 ID 列表批量查询权限关系，返回分组映射。"""
         unique_ids = list(dict.fromkeys(resource_ids))
         if not unique_ids:
             return {}
@@ -347,6 +369,7 @@ class ResourceRepository:
         resource_ids: list[str],
         module_client: AccountType | None = None,
     ) -> list[SysResource]:
+        """返回给定资源及其全部祖先资源（用于渲染树路径）。"""
         unique_ids = set(resource_ids)
         if not unique_ids:
             return []
@@ -364,6 +387,7 @@ class ResourceRepository:
         self,
         module_client: AccountType | None = None,
     ) -> list[ResourceGrantModuleOption]:
+        """组装授权页所需的资源模块树（模块-菜单-按钮/权限）。"""
         resources = await self.list_resources(module_client=module_client)
         permissions = await self.list_resource_permissions(account_type=module_client)
         modules = await ResourceModuleRepository(self.db).list_enabled_modules(client=module_client)
@@ -441,25 +465,31 @@ class ResourceRepository:
 
 
 class ResourceModuleRepository:
+    """资源模块仓储。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def create(self, payload: ResourceModuleCreateRequest) -> None:
+        """创建资源模块，编码已存在时抛冲突错误。"""
         await self._ensure_code_unique(payload.code)
         module = SysResourceModule(**payload.model_dump())
         self.db.add(module)
         await self.db.flush()
 
     async def get_by_id(self, module_id: str) -> SysResourceModule | None:
+        """按主键查询资源模块。"""
         return await self.db.get(SysResourceModule, module_id)
 
     async def get_required(self, module_id: str) -> SysResourceModule:
+        """按主键查询资源模块，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(module_id)
         if entity is None:
             raise NotFoundError("Resource module not found")
         return entity
 
     async def update(self, payload: ResourceModuleUpdateRequest) -> None:
+        """更新资源模块，编码被其他模块占用时抛冲突错误。"""
         entity = await self.get_required(payload.id)
         await self._ensure_code_unique(payload.code, payload.id)
         data = payload.model_dump(exclude={"id"})
@@ -468,6 +498,7 @@ class ResourceModuleRepository:
         await self.db.flush()
 
     async def delete_many(self, module_ids: list[str]) -> None:
+        """删除资源模块，存在下属资源时拒绝删除。"""
         unique_ids = list(dict.fromkeys(module_ids))
         if not unique_ids:
             return
@@ -484,6 +515,7 @@ class ResourceModuleRepository:
         self,
         query: ResourceModuleAdminPageQuery,
     ) -> tuple[list[SysResourceModule], int]:
+        """按条件分页查询资源模块并统计总数。"""
         stmt: Select[tuple[SysResourceModule]] = select(SysResourceModule)
         count_stmt = select(func.count(SysResourceModule.id))
         filters = []
@@ -511,6 +543,7 @@ class ResourceModuleRepository:
         self,
         client: AccountType | None = None,
     ) -> list[SysResourceModule]:
+        """列出启用的资源模块，可按所属端过滤。"""
         stmt = (
             select(SysResourceModule)
             .where(SysResourceModule.status == StatusEnum.ENABLED.value)
@@ -521,6 +554,7 @@ class ResourceModuleRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def count_resource_references(self, module_ids: list[str]) -> int:
+        """统计归属这些模块的资源数量。"""
         unique_ids = list(dict.fromkeys(module_ids))
         if not unique_ids:
             return 0
@@ -528,6 +562,7 @@ class ResourceModuleRepository:
         return int((await self.db.execute(stmt)).scalar_one())
 
     async def _ensure_code_unique(self, code: str, module_id: str | None = None) -> None:
+        """校验模块编码唯一，重复时抛冲突错误。"""
         stmt = select(SysResourceModule.id).where(SysResourceModule.code == code)
         if module_id is not None:
             stmt = stmt.where(SysResourceModule.id != module_id)

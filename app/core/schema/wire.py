@@ -96,20 +96,25 @@ def serialize_wire_value(value: Any) -> Any:
 
 
 def _serialize_bool(value: bool) -> str:
+    """bool 序列化为 "true"/"false" 字符串。"""
     return "true" if value else "false"
 
 
 def _serialize_int(value: int) -> str:
+    """int 序列化为十进制字符串。"""
     return str(value)
 
 
 def _serialize_float(value: float) -> str:
+    """float 序列化为字符串。"""
     return str(value)
 
 
+# JSON Schema 元数据：标量在 wire 层均以字符串呈现。
 _STRING_SCHEMA = WithJsonSchema({"type": "string"})
 _BOOL_STRING_SCHEMA = WithJsonSchema({"type": "string", "enum": ["true", "false"]})
 
+# 线型布尔：入站解析字符串，出站输出 "true"/"false"。
 WireBool = Annotated[
     bool,
     BeforeValidator(parse_wire_bool),
@@ -117,6 +122,7 @@ WireBool = Annotated[
     _BOOL_STRING_SCHEMA,
 ]
 
+# 线型整数：入站解析字符串/Decimal，出站输出字符串。
 WireInt = Annotated[
     int,
     BeforeValidator(parse_wire_int),
@@ -124,6 +130,7 @@ WireInt = Annotated[
     _STRING_SCHEMA,
 ]
 
+# 线型浮点：入站解析字符串/Decimal，出站输出字符串。
 WireFloat = Annotated[
     float,
     BeforeValidator(parse_wire_float),

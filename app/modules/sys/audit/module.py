@@ -1,7 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from app.core.config.settings import settings
-from app.platform.module import BeatScheduleSpec, ModuleSpec, RouteSpec
+审计模块声明：注册路由、模型、周期任务与事件处理器。
+"""
+
+from app.platform.module import ModuleSpec, RouteSpec
 
 module = ModuleSpec(
     name="sys.audit",
@@ -17,13 +19,5 @@ module = ModuleSpec(
         "app.modules.sys.audit.outbox",
     ),
     tasks=("app.modules.sys.audit.tasks",),
-    beat_schedules=(
-        BeatScheduleSpec(
-            name="audit-analysis-cycle",
-            task="audit.analysis_cycle",
-            # 启动时读 settings；配置热更新由 sync_audit_interval_to_redbeat 覆盖
-            schedule=float(settings.audit_alert.analysis_interval_seconds),
-        ),
-    ),
     event_handlers=("app.modules.sys.audit.event_handler:register",),
 )

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+门户资源 HTTP 路由：向 Portal 端公开当前可见资源。
+"""
 
 from typing import Annotated
 

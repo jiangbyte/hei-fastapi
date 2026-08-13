@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+管理端用户中心路由：当前账户信息、资料、头像、密码、手机与邮箱维护。
+"""
 
 from typing import Annotated
 
@@ -38,6 +41,7 @@ async def get_me(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[AdminMeResponse]:
+    """查询当前管理端账户信息与组织归属。"""
     account_entity = await AccountRepository(db).get_required(session.account_id)
     account = (await AccountQueryService(db).build_account_schemas([account_entity]))[0]
     avatar = resolve_file_url(account.avatar)
@@ -93,6 +97,7 @@ async def update_user_center_profile(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新当前管理端账户个人资料。"""
     await AdminUserProfileService(db).update_current_profile(payload, session)
     return success()
 
@@ -107,6 +112,7 @@ async def upload_user_center_avatar(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[AdminUserCenterAvatarUpdateResponse]:
+    """上传并更新当前管理端账户头像。"""
     content = await file.read(AVATAR_MAX_SIZE + 1)
     return success(
         await AdminUserProfileService(db).update_current_avatar(
@@ -126,6 +132,7 @@ async def send_user_center_password_code(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """向当前管理端账户发送改密验证码。"""
     from app.modules.auth.password_change import send_change_password_code
     from app.modules.iam.account.repository import AccountRepository
 
@@ -146,6 +153,7 @@ async def update_user_center_password(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """修改当前管理端账户密码。"""
     old_password, new_password = await decrypt_passwords(
         payload.password_key_id,
         payload.old_password,
@@ -173,6 +181,7 @@ async def update_user_center_phone(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新当前管理端账户手机号绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
     await AdminUserProfileService(db).update_current_phone(
         payload.model_copy(update={"password": password or ""}),
@@ -191,6 +200,7 @@ async def update_user_center_email(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新当前管理端账户邮箱绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
     await AdminUserProfileService(db).update_current_email(
         payload.model_copy(update={"password": password or ""}),
@@ -208,4 +218,5 @@ async def get_user_center_org_info(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[AdminUserCenterOrgInfoResponse]:
+    """查询当前管理端账户的角色/部门/群组组织信息。"""
     return success(await AdminUserProfileService(db).get_org_info(session))

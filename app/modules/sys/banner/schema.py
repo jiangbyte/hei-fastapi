@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+展示图相关 Schema：创建/更新载荷、管理端分页查询与公开端列表查询。
+"""
 
 from datetime import datetime
 
@@ -14,6 +17,8 @@ _ALLOWED_ACCOUNT_TYPES = {item.value for item in AccountType}
 
 
 class BannerCreateRequest(ApiSchema):
+    """展示图创建请求。"""
+
     title: str = Field(min_length=1, max_length=255)
     image: str = Field(min_length=1, max_length=500)
     url: str | None = Field(default=None, max_length=500)
@@ -32,6 +37,7 @@ class BannerCreateRequest(ApiSchema):
     @field_validator("target_account_types", mode="before")
     @classmethod
     def normalize_target_account_types(cls, value: object) -> list[str]:
+        """将目标账户类型规范化为大写字符串列表（支持单值字符串与数组）。"""
         if value is None:
             return []
         if isinstance(value, str):
@@ -42,6 +48,7 @@ class BannerCreateRequest(ApiSchema):
 
     @model_validator(mode="after")
     def validate_target_account_types(self):
+        """校验目标账户类型非空且合法，并去重。"""
         types = list(dict.fromkeys(self.target_account_types))
         if not types:
             raise ValueError("必须选择目标账户类型")
@@ -53,10 +60,14 @@ class BannerCreateRequest(ApiSchema):
 
 
 class BannerUpdateRequest(BannerCreateRequest):
+    """展示图更新请求，在创建字段基础上增加主键。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class BannerAdminPageQuery(PageQuery):
+    """展示图管理端分页查询参数。"""
+
     target_account_type: AccountType | None = None
     category: str | None = Field(default=None, max_length=32)
     type: str | None = Field(default=None, max_length=32)
@@ -65,12 +76,16 @@ class BannerAdminPageQuery(PageQuery):
 
 
 class BannerPublicListQuery(ApiSchema):
+    """展示图公开端列表查询参数。"""
+
     position: str = Field(min_length=1, max_length=32)
     category: str | None = Field(default=None, max_length=32)
     type: str | None = Field(default=None, max_length=32)
 
 
 class SysBannerSchema(ApiSchema):
+    """展示图响应模型，含图片 URL 与创建/更新人昵称。"""
+
     id: str
     title: str
     image: str

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+消息数据模型：统一运营消息（MsgNotice）与阅读记录（MsgNoticeRead）。
+"""
 
 from datetime import datetime
 from typing import Any
@@ -73,6 +76,8 @@ class MsgNotice(Base, TimestampMixin):
 
 
 class MsgNoticeRead(Base):
+    """消息阅读记录，对应 msg_notice_read 表。"""
+
     __tablename__ = "msg_notice_read"
 
     id: Mapped[str] = mapped_column(

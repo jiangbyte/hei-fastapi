@@ -1,6 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from app.platform.module import BeatScheduleSpec, ModuleSpec, RouteSpec, ServiceRegistration
+IAM 账户模块注册：声明路由、模型、定时任务与 account_lookup 服务实现。
+"""
+
+from app.platform.module import ModuleSpec, RouteSpec, ServiceRegistration
 
 module = ModuleSpec(
     name="iam.account",
@@ -15,13 +18,6 @@ module = ModuleSpec(
         "app.modules.iam.account.password_history",
     ),
     tasks=("app.modules.iam.account.tasks",),
-    beat_schedules=(
-        BeatScheduleSpec(
-            name="purge-cancelled-accounts-daily",
-            task="account.purge_cancelled_accounts",
-            schedule=86400.0,
-        ),
-    ),
     services=(
         ServiceRegistration(
             interface="account_lookup",

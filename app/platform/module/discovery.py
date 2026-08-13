@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+模块发现：扫描 app.modules 下的子包，加载各模块的 ModuleSpec 清单并做拓扑排序。
+
+支持禁用/启用开关（环境变量或清单 enabled 字段）与进程级缓存。
+"""
 
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def _iter_module_manifest_names(package_name: str) -> list[str]:
+    """遍历包下的子包，收集拥有 ``module`` 清单的子包名。"""
     import pkgutil
 
     package = importlib.import_module(package_name)
@@ -105,6 +111,7 @@ def _load_module_specs_cached(
 
 
 def _resolve_package_names(package_name: str) -> list[str]:
+    """合并显式包名与环境变量 HEI_MODULE_PACKAGES 中的包名。"""
     package_names = [item.strip() for item in package_name.split(",") if item.strip()]
     env_packages = [
         item.strip()
@@ -118,6 +125,7 @@ def _resolve_package_names(package_name: str) -> list[str]:
 
 
 def _is_module_enabled(spec: ModuleSpec) -> bool:
+    """判断模块是否启用：禁用/启用环境变量优先于清单 enabled。"""
     disabled = _env_name_set("HEI_DISABLED_MODULES")
     enabled = _env_name_set("HEI_ENABLED_MODULES")
     if spec.name in disabled:
@@ -128,6 +136,7 @@ def _is_module_enabled(spec: ModuleSpec) -> bool:
 
 
 def _env_name_set(name: str) -> set[str]:
+    """解析逗号分隔的环境变量为去空白的集合。"""
     return {item.strip() for item in os.environ.get(name, "").split(",") if item.strip()}
 
 

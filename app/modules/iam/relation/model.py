@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 通用关系领域模型：sys_iam_relation 统一承载成员关系、资源权限挂载与主体授权规则。
+"""
 
 from datetime import datetime
 
@@ -92,6 +95,7 @@ class SysIamRelation(Base, TimestampMixin):
 
     @property
     def account_id(self) -> str | None:
+        """从主体或目标侧提取账户 ID（无账户参与时返回 None）。"""
         if self.subject_type == IamRelationSubjectType.ACCOUNT.value:
             return self.subject_id
         if self.target_type == IamRelationTargetType.ACCOUNT.value:
@@ -100,6 +104,7 @@ class SysIamRelation(Base, TimestampMixin):
 
     @property
     def group_id(self) -> str | None:
+        """从主体或目标侧提取账户组 ID。"""
         if self.subject_type == IamRelationSubjectType.GROUP.value:
             return self.subject_id
         if self.target_type == IamRelationTargetType.GROUP.value:
@@ -108,6 +113,7 @@ class SysIamRelation(Base, TimestampMixin):
 
     @property
     def role_id(self) -> str | None:
+        """从主体或目标侧提取角色 ID。"""
         if self.subject_type == IamRelationSubjectType.ROLE.value:
             return self.subject_id
         if self.target_type == IamRelationTargetType.ROLE.value:
@@ -116,12 +122,14 @@ class SysIamRelation(Base, TimestampMixin):
 
     @property
     def dept_id(self) -> str | None:
+        """当目标为部门时返回部门 ID。"""
         if self.target_type == IamRelationTargetType.DEPT.value:
             return self.target_id
         return None
 
     @property
     def resource_id(self) -> str | None:
+        """从主体或目标侧提取资源 ID。"""
         if self.subject_type == IamRelationSubjectType.RESOURCE.value:
             return self.subject_id
         if self.target_type == IamRelationTargetType.RESOURCE.value:
@@ -130,6 +138,7 @@ class SysIamRelation(Base, TimestampMixin):
 
     @property
     def permission_key(self) -> str | None:
+        """当目标为权限时返回权限码。"""
         if self.target_type == IamRelationTargetType.PERMISSION.value:
             return self.target_key
         return None

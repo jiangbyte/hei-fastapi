@@ -34,6 +34,7 @@ async def send_push(title: str, content: str) -> None:
 
 
 async def _send_dingtalk(text: str) -> None:
+    """通过钉钉机器人 Webhook 推送文本消息（可选加签）。"""
     webhook = (config_reader.get("PUSH_DINGTALK_WEBHOOK") or "").strip()
     if not webhook:
         raise BusinessError("钉钉推送未配置: PUSH_DINGTALK_WEBHOOK")
@@ -59,6 +60,7 @@ async def _send_dingtalk(text: str) -> None:
 
 
 async def _send_lark(text: str) -> None:
+    """通过飞书机器人 Webhook 推送文本消息（可选加签）。"""
     webhook = (config_reader.get("PUSH_LARK_WEBHOOK") or "").strip()
     if not webhook:
         raise BusinessError("飞书推送未配置: PUSH_LARK_WEBHOOK")
@@ -82,6 +84,7 @@ async def _send_lark(text: str) -> None:
 
 
 async def _send_wecom(text: str) -> None:
+    """通过企业微信机器人 Webhook 推送文本消息。"""
     webhook = (config_reader.get("PUSH_WECHAT_WORK_WEBHOOK") or "").strip()
     if not webhook:
         raise BusinessError("企业微信推送未配置: PUSH_WECHAT_WORK_WEBHOOK")
@@ -90,6 +93,7 @@ async def _send_wecom(text: str) -> None:
 
 
 async def _post_json(url: str, payload: dict, label: str) -> None:
+    """向 Webhook POST JSON，HTTP 异常统一转为业务错误。"""
     try:
         client = get_http_client()
         resp = await client.post(url, json=payload)

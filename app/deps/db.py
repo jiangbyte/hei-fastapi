@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+数据库依赖：提供请求级异步会话，成功提交、异常回滚。
+"""
 
 from collections.abc import AsyncIterator
 

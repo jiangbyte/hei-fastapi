@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+请求级上下文变量：通过 ContextVar 在单次请求内传递追踪与账户信息。
+"""
 
 from contextvars import ContextVar
 

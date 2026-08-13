@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+模块清单数据结构：定义路由、定时任务、服务注册与模块元信息等声明类型。
+"""
 
 from __future__ import annotations
 
@@ -23,13 +26,6 @@ class RouteSpec:
 
 
 @dataclass(frozen=True, slots=True)
-class BeatScheduleSpec:
-    name: str
-    task: str
-    schedule: float
-
-
-@dataclass(frozen=True, slots=True)
 class ServiceRegistration:
     """注册模块提供的框架服务实现。"""
 
@@ -39,12 +35,13 @@ class ServiceRegistration:
 
 @dataclass(frozen=True, slots=True)
 class ModuleSpec:
+    """模块清单：声明路由、模型、任务、钩子、依赖与配置等元信息。"""
+
     name: str
     enabled: bool = True
     routes: tuple[RouteSpec, ...] = ()
     models: tuple[str, ...] = ()
     tasks: tuple[str, ...] = ()
-    beat_schedules: tuple[BeatScheduleSpec, ...] = ()
     startup_hooks: tuple[str, ...] = ()
     shutdown_hooks: tuple[str, ...] = ()
     order: int = 100
@@ -56,6 +53,7 @@ class ModuleSpec:
 
 
 def import_string(path: str) -> Any:
+    """按 ``module:attribute`` 字符串导入并返回对象（支持多级属性）。"""
     module_path, separator, attr = path.partition(":")
     if not separator or not module_path or not attr:
         raise ValueError(f"Import path must use 'module:attribute' format: {path}")

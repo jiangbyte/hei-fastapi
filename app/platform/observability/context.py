@@ -15,4 +15,5 @@ def bind_request_log_context(**values: object) -> None:
 
 
 def clear_request_log_context() -> None:
+    """清空当前请求/任务绑定的 structlog 上下文。"""
     structlog.contextvars.clear_contextvars()

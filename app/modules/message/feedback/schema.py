@@ -2,7 +2,10 @@
 
 由 HEI 代码生成器生成。
 Author: jiangbyte
+
+反馈请求与响应模型：创建/更新请求、分页查询条件与详情响应。
 """
+
 from datetime import datetime
 
 from pydantic import Field
@@ -14,6 +17,8 @@ from app.core.schema.wire import WireInt
 
 
 class MsgFeedbackCreateRequest(ApiSchema):
+    """创建反馈请求。"""
+
     title: str = Field(min_length=1, max_length=255)
     content: str
     category: str
@@ -22,12 +27,16 @@ class MsgFeedbackCreateRequest(ApiSchema):
 
 
 class MsgFeedbackUpdateRequest(ApiSchema):
+    """更新反馈请求（状态与回复）。"""
+
     id: str = Field(min_length=1, max_length=64)
     status: str
     reply: str | None = None
 
 
 class MsgFeedbackAdminPageQuery(PageQuery):
+    """管理端反馈分页查询条件。"""
+
     title: str | None = None
     category: str | None = None
     status: str | None = None
@@ -35,10 +44,14 @@ class MsgFeedbackAdminPageQuery(PageQuery):
 
 
 class MyFeedbackPageQuery(PageQuery):
+    """「我的反馈」分页查询条件（无额外过滤）。"""
+
     pass
 
 
 class MsgFeedbackAttachmentSchema(ApiSchema):
+    """反馈附件信息。"""
+
     object_name: str
     id: str | None = None
     original_name: str | None = None
@@ -48,6 +61,8 @@ class MsgFeedbackAttachmentSchema(ApiSchema):
 
 
 class MsgFeedbackSchema(ApiSchema):
+    """反馈详情响应，含附件与提交者资料。"""
+
     id: str
     title: str
     content: str

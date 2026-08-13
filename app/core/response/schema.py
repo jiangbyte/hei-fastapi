@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+统一 API 响应模型：所有接口成功/失败均返回 ApiResponse / ApiErrorResponse 外壳。
+"""
 
 from typing import Generic, TypeVar
 

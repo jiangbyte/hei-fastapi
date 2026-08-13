@@ -12,6 +12,7 @@
 """
 from __future__ import annotations
 
+# 模块路由挂载的全局 API 前缀。
 API_ROOT_PREFIX = "/api"
 
 # 与装饰器里的 /v1/... 及公开文件路由保持一致；不是全库版本开关。

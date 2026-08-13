@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+弱密码库管理端接口：弱密码的增删改查与列表。
+"""
 
 from typing import Annotated
 
@@ -35,6 +38,7 @@ async def create(
     payload: WeakPasswordCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """新增弱密码。"""
     await WeakPasswordService(db).create(payload)
     return success()
 
@@ -51,6 +55,7 @@ async def update(
     payload: WeakPasswordUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新弱密码。"""
     await WeakPasswordService(db).update(payload)
     return success()
 
@@ -67,6 +72,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量删除弱密码。"""
     await WeakPasswordService(db).delete(payload)
     return success()
 
@@ -83,6 +89,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysWeakPasswordSchema]:
+    """查询弱密码详情。"""
     return success(await WeakPasswordService(db).detail(query))
 
 
@@ -98,6 +105,7 @@ async def page(
     query: Annotated[WeakPasswordAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SysWeakPasswordSchema]]:
+    """分页查询弱密码。"""
     return success(await WeakPasswordService(db).page_admin(query))
 
 
@@ -113,4 +121,5 @@ async def list_all(
     query: Annotated[WeakPasswordListQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[SysWeakPasswordSchema]]:
+    """列出全部弱密码。"""
     return success(await WeakPasswordService(db).list_all(query))

@@ -1,4 +1,10 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+会话存储：基于 Redis 保存登录会话载荷，并提供 token 反向索引、
+空闲超时、并发会话裁剪与授权变更后的批量刷新能力。
+
+会话以 JSON 形式存于 Redis，账户维度维护 token 集合以便统一踢下线。
+"""
 
 import json
 import logging

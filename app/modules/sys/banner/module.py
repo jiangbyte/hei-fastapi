@@ -1,6 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from app.platform.module import BeatScheduleSpec, ModuleSpec, RouteSpec
+展示图模块声明：注册管理端/公开端路由、模型与周期任务。
+"""
+
+from app.platform.module import ModuleSpec, RouteSpec
 
 module = ModuleSpec(
     name="sys.banner",
@@ -16,11 +19,4 @@ module = ModuleSpec(
     ),
     models=("app.modules.sys.banner.model",),
     tasks=("app.modules.sys.banner.tasks",),
-    beat_schedules=(
-        BeatScheduleSpec(
-            name="flush-banner-interactions-every-5-minutes",
-            task="banner.flush_interactions",
-            schedule=300.0,
-        ),
-    ),
 )

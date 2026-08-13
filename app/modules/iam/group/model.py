@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户组领域模型：账户组表，作为批量授权与分组管理的载体。
+"""
 
 from sqlalchemy import JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column

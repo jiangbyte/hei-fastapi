@@ -1,4 +1,8 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+全局基础 DTO 与通用查询参数：所有 API schema 继承 ApiSchema，
+统一处理 JSON 字符串化与 datetime 的 UTC 规范化。
+"""
 
 from collections.abc import Iterable
 from typing import Annotated, TypeVar
@@ -42,14 +46,20 @@ class ApiSchema(BaseModel):
 
 
 class IdQuery(ApiSchema):
+    """单条 ID 查询参数。"""
+
     id: Id
 
 
 class IdsRequest(ApiSchema):
+    """批量 ID 请求体（至少 1 个）。"""
+
     ids: list[Id] = Field(min_length=1)
 
 
 class KeywordQuery(ApiSchema):
+    """通用关键字查询参数。"""
+
     keyword: str | None = None
 
 

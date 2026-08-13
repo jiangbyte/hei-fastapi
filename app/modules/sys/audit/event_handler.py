@@ -12,10 +12,12 @@ logger = logging.getLogger(__name__)
 
 
 def _build_module(resource_type: str) -> str:
+    """将资源类型映射为审计模块名（iam 资源归入 iam，其余归入 resource）。"""
     return "iam" if resource_type != "resources" else "resource"
 
 
 async def _persist_audit_event(event: OperationAuditEvent) -> None:
+    """将收到的审计事件写入 sys_operation_audit 表。"""
     from app.modules.sys.audit.service import OperationAuditService
 
     async with get_session_factory()() as session:
@@ -35,4 +37,5 @@ async def _persist_audit_event(event: OperationAuditEvent) -> None:
 
 
 def register() -> None:
+    """订阅 on_audit_event 事件，触发审计事件持久化。"""
     subscribe("on_audit_event", _persist_audit_event)

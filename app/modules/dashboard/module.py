@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+仪表盘模块装配：注册管理端仪表盘路由。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

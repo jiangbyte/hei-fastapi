@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+存储管理器：按配置解析并缓存存储客户端，供仓储层获取对应引擎实例。
+"""
 
 from threading import RLock
 
@@ -7,13 +10,15 @@ from app.platform.config.reader import config_reader
 from app.platform.storage.config import StorageConfig, fallback_storage_config
 from app.platform.storage.local import LocalStorage
 from app.platform.storage.oss import OSSStorage
-from app.platform.storage.s3 import MinioStorage, RustFSStorage, S3Storage
+from app.platform.storage.s3 import MinioStorage, RustFSStorage, S3CompatibleStorage
 
+# (配置版本, StorageConfig) → 存储客户端实例 的进程级缓存。
 _storage_cache: dict[tuple[int, StorageConfig], object] = {}
 _storage_cache_lock = RLock()
 
 
 def clear_storage_cache() -> None:
+    """清空存储客户端缓存（配置重载后调用）。"""
     with _storage_cache_lock:
         _storage_cache.clear()
 
@@ -45,6 +50,7 @@ def resolve_storage_config(
     provider: StorageProvider | str | None = None,
     allow_settings_fallback: bool = True,
 ) -> StorageConfig:
+    """解析目标存储配置：优先 DB 配置，缺失时按 settings 回退。"""
     config: StorageConfig | None = None
     explicit_config_id = bool(config_id) and config_id != "__settings__"
     if config_id:
@@ -67,6 +73,7 @@ def resolve_storage_config(
 
 
 def _build_storage(config: StorageConfig):
+    """按配置的 provider 构建对应的存储客户端实例。"""
     if config.provider == StorageProvider.LOCAL:
         return LocalStorage(config)
     if config.provider == StorageProvider.MINIO:
@@ -74,7 +81,7 @@ def _build_storage(config: StorageConfig):
     if config.provider == StorageProvider.RUSTFS:
         return RustFSStorage(config)
     if config.provider == StorageProvider.S3:
-        return S3Storage(config)
+        return S3CompatibleStorage(config)
     if config.provider == StorageProvider.OSS:
         return OSSStorage(config)
     raise ValueError(f"Unsupported storage provider: {config.provider}")

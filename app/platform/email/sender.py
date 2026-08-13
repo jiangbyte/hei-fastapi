@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+邮件发送：按 DEFAULT_EMAIL_ENGINE 分发到本地 SMTP、阿里云、腾讯云三种渠道。
+
+支持模板渲染（{{变量}}）与同步 SMTP 发送（放到线程池执行以免阻塞事件循环）。
+"""
 
 from __future__ import annotations
 
@@ -76,6 +81,7 @@ async def send_templated_mail(scene: str, to_email: str, variables: dict[str, An
 
 
 def _render(text: str, variables: dict[str, Any]) -> str:
+    """用 ``{{key}}`` 占位符替换变量，缺失变量按替换不到原样保留。"""
     out = text
     for key, value in variables.items():
         out = out.replace("{{" + key + "}}", str(value))
@@ -83,6 +89,7 @@ def _render(text: str, variables: dict[str, Any]) -> str:
 
 
 async def _send_local_smtp(to_email: str, subject: str, body: str) -> None:
+    """构造邮件并通过本地 SMTP 发送（同步部分放到线程池）。"""
     host = (config_reader.get("MAIL_LOCAL_HOST") or settings.mail.host or "").strip()
     port = config_reader.get_int("MAIL_LOCAL_PORT", settings.mail.port)
     from_email = (config_reader.get("MAIL_LOCAL_FROM_EMAIL") or settings.mail.from_email or "").strip()
@@ -135,6 +142,7 @@ def _send_sync(
     password: str,
     timeout: float,
 ) -> None:
+    """同步执行 SMTP 发送，支持 SSL/TLS/STARTTLS 与登录鉴权。"""
     try:
         context = ssl.create_default_context()
         if use_ssl:
@@ -156,6 +164,7 @@ def _send_sync(
 
 
 async def _send_aliyun_mail(to_email: str, subject: str, body: str) -> None:
+    """通过阿里云 DirectMail 发送邮件。"""
     access_key_id = _require("MAIL_ALIYUN_ACCESS_KEY_ID")
     access_key_secret = _require("MAIL_ALIYUN_ACCESS_KEY_SECRET")
     account_name = _require("MAIL_ALIYUN_ACCOUNT_NAME")
@@ -183,6 +192,7 @@ async def _send_aliyun_mail(to_email: str, subject: str, body: str) -> None:
 
 
 async def _send_tencent_mail(to_email: str, subject: str, body: str) -> None:
+    """通过腾讯云 SES 发送邮件。"""
     secret_id = _require("MAIL_TENCENT_SECRET_ID")
     secret_key = _require("MAIL_TENCENT_SECRET_KEY")
     from_email = _require("MAIL_TENCENT_FROM_EMAIL")

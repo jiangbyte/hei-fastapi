@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+管理端用户中心请求与响应模型。
+"""
 
 from datetime import datetime
 

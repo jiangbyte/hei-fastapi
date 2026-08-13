@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户 Schema：账户创建/更新/分页查询以及角色/组/部门/资源授权的请求与响应结构。
+"""
 
 from datetime import datetime
 
@@ -22,6 +25,8 @@ from app.modules.iam.schema import (
 
 
 class AccountIdentityUpsertPayload(ApiSchema):
+    """账户登录标识的新增/更新载荷。"""
+
     account_id: str
     identity_type: AccountIdentityType
     identifier: str = Field(min_length=1, max_length=128)
@@ -31,6 +36,8 @@ class AccountIdentityUpsertPayload(ApiSchema):
 
 
 class AccountCreateRequest(ApiSchema):
+    """创建账户请求。"""
+
     account: str = Field(min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=512)
     password_key_id: str | None = Field(default=None, max_length=64)
@@ -56,6 +63,8 @@ class AccountCreateRequest(ApiSchema):
 
 
 class AccountUpdateRequest(ApiSchema):
+    """更新账户请求，密码为空时保持不变。"""
+
     id: str = Field(min_length=1, max_length=64)
     account: str = Field(min_length=3, max_length=64)
     password: str | None = Field(default=None, min_length=1, max_length=512)
@@ -82,11 +91,15 @@ class AccountUpdateRequest(ApiSchema):
 
 
 class AccountCancelPayload(ApiSchema):
+    """注销账户请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     cancel_reason: str | None = None
 
 
 class AccountAdminPageQuery(PageQuery):
+    """账户管理端分页查询条件。"""
+
     account: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
     phone: str | None = Field(default=None, max_length=32)
@@ -96,38 +109,52 @@ class AccountAdminPageQuery(PageQuery):
 
 
 class AccountRoleAssignRequest(ApiSchema):
+    """为账户追加单个角色的请求。"""
+
     account_id: str
     role_id: str
 
 
 class AccountGroupAssignRequest(ApiSchema):
+    """为账户追加单个账户组的请求。"""
+
     account_id: str
     group_id: str
 
 
 class AccountDeptAssignRequest(ApiSchema):
+    """为账户追加单个部门的请求。"""
+
     account_id: str
     dept_id: str
     is_primary: WireBool = False
 
 
 class AccountGroupOption(ApiSchema):
+    """账户组下拉选项结构。"""
+
     id: str
     name: str
     status: str
 
 
 class AccountDeptGrantInfo(ApiSchema):
+    """账户部门授权项结构。"""
+
     dept_id: str
     is_primary: WireBool = False
 
 
 class AccountResourceGrantInfo(ApiSchema):
+    """账户资源授权项结构。"""
+
     resource_id: str = Field(min_length=1, max_length=64)
     permission_keys: list[str] = Field(default_factory=list)
 
 
 class SysAccountRoleRelSchema(ApiSchema):
+    """账户-角色关系响应结构。"""
+
     id: str
     account_id: str
     role_id: str
@@ -138,6 +165,8 @@ class SysAccountRoleRelSchema(ApiSchema):
 
 
 class SysAccountGroupRelSchema(ApiSchema):
+    """账户-账户组关系响应结构。"""
+
     id: str
     account_id: str
     group_id: str
@@ -148,6 +177,8 @@ class SysAccountGroupRelSchema(ApiSchema):
 
 
 class SysAccountDeptRelSchema(ApiSchema):
+    """账户-部门关系响应结构。"""
+
     id: str
     account_id: str
     dept_id: str
@@ -159,54 +190,74 @@ class SysAccountDeptRelSchema(ApiSchema):
 
 
 class AccountOwnResourceResponse(ApiSchema):
+    """账户拥有的资源授权响应结构。"""
+
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
     grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
 
 
 class AccountGrantResourceRequest(ApiSchema):
+    """给账户授权资源的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
 
 
 class AccountOwnClientResourceResponse(ApiSchema):
+    """账户拥有的客户端资源授权响应结构。"""
+
     id: str
     modules: list[ResourceGrantModuleOption] = Field(default_factory=list)
     grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
 
 
 class AccountGrantClientResourceRequest(ApiSchema):
+    """给账户授权客户端资源的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     grant_info_list: list[AccountResourceGrantInfo] = Field(default_factory=list)
 
 
 class AccountOwnRoleResponse(ApiSchema):
+    """账户拥有的角色授权响应结构。"""
+
     id: str
     roles: list[RoleOption] = Field(default_factory=list)
     role_ids: list[str] = Field(default_factory=list)
 
 
 class AccountGrantRoleRequest(ApiSchema):
+    """给账户授权角色的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     role_ids: list[str] = Field(default_factory=list)
 
 
 class AccountOwnGroupResponse(ApiSchema):
+    """账户拥有的账户组授权响应结构。"""
+
     id: str
     groups: list[AccountGroupOption] = Field(default_factory=list)
     group_ids: list[str] = Field(default_factory=list)
 
 
 class AccountGrantGroupRequest(ApiSchema):
+    """给账户授权账户组的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     group_ids: list[str] = Field(default_factory=list)
 
 
 class AccountOwnDeptResponse(ApiSchema):
+    """账户拥有的部门授权响应结构。"""
+
     id: str
     grant_info_list: list[AccountDeptGrantInfo] = Field(default_factory=list)
 
 
 class AccountGrantDeptRequest(ApiSchema):
+    """给账户授权部门的请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     grant_info_list: list[AccountDeptGrantInfo] = Field(default_factory=list)

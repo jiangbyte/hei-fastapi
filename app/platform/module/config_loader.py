@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def load_module_configs(module_specs: list[ModuleSpec]) -> None:
+    """按模块声明实例化配置类，注入 settings 并可应用 DB 覆盖。"""
     for spec in module_specs:
         if not spec.config_model:
             continue
@@ -28,10 +29,12 @@ def load_module_configs(module_specs: list[ModuleSpec]) -> None:
 
 
 def get_module_config(module_name: str) -> BaseSettings | None:
+    """按模块名返回其配置实例，未注册时返回 None。"""
     return settings.module_configs.get(module_name)
 
 
 def _import_config_class(import_path: str) -> type[BaseSettings]:
+    """解析 ``module:Class`` 字符串并返回 BaseSettings 子类。"""
     module_path, _, attr = import_path.partition(":")
     if not attr:
         raise ValueError(f"config_model must use 'module:Class' format: {import_path}")
@@ -43,6 +46,7 @@ def _import_config_class(import_path: str) -> type[BaseSettings]:
 
 
 def _apply_db_overrides(instance: BaseSettings, module_name: str) -> None:
+    """把 DB 中以 ``模块名.`` 为前缀的配置覆盖到模块配置实例。"""
     prefix = module_name + "."
     for key, value in config_reader.raw_items().items():
         if not key.startswith(prefix):

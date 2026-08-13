@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+消息通知请求与响应模型，含按类型（通知/公告）区分的校验逻辑。
+"""
 
 from datetime import datetime
 from typing import Any
@@ -16,6 +19,8 @@ from app.modules.message.target_scope import (
 
 
 class MsgNoticeCreateRequest(ApiSchema):
+    """创建消息请求。"""
+
     kind: str = Field(min_length=1)
     title: str = Field(min_length=1)
     content: str = Field(min_length=1)
@@ -43,6 +48,7 @@ class MsgNoticeCreateRequest(ApiSchema):
 
     @model_validator(mode="after")
     def validate_by_kind(self):
+        """按消息类型校验目标与发布位置等约束。"""
         kind = str(self.kind or "").upper()
         if kind not in {NoticeKind.NOTIFICATION.value, NoticeKind.ANNOUNCEMENT.value}:
             raise ValueError("kind 必须是 NOTIFICATION 或 ANNOUNCEMENT")
@@ -68,30 +74,42 @@ class MsgNoticeCreateRequest(ApiSchema):
 
 
 class MsgNoticeUpdateRequest(MsgNoticeCreateRequest):
+    """更新消息请求（在创建请求基础上增加 ID）。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class MsgNoticeAdminPageQuery(PageQuery):
+    """管理端消息分页查询条件。"""
+
     title: str | None = None
     status: str | None = None
     kind: str | None = None
 
 
 class NoticeReadRequest(ApiSchema):
+    """标记已读请求。"""
+
     ids: list[Id] = Field(min_length=1)
 
 
 class MyNoticePageQuery(PageQuery):
+    """当前用户消息分页查询条件。"""
+
     kind: str | None = None
 
 
 class PinNoticeRequest(ApiSchema):
+    """公告置顶请求。"""
+
     id: Id
     is_pinned: WireBool
     pinned_until: datetime | None = None
 
 
 class MsgNoticeSchema(ApiSchema):
+    """消息详情响应。"""
+
     id: str
     kind: str
     title: str

@@ -25,10 +25,12 @@ def get_request_session(request: Request) -> SessionPayload | None:
 
 
 def get_request_session_token(request: Request) -> str | None:
+    """返回本请求已解析的 token（若有）。"""
     return getattr(request.state, _STATE_TOKEN, None)
 
 
 def _validate_session_ip(request: Request, session: SessionPayload) -> None:
+    """按配置校验会话 IP 绑定，防止 token 被盗用。"""
     if not settings.auth.session_bind_ip:
         return
     session_ip = session.client_ip
@@ -40,6 +42,7 @@ def _validate_session_ip(request: Request, session: SessionPayload) -> None:
 
 
 def _validate_session_user_agent(request: Request, session: SessionPayload) -> None:
+    """按配置校验会话 UA 绑定。"""
     if not settings.auth.session_bind_user_agent:
         return
     session_ua = session.user_agent
@@ -51,6 +54,7 @@ def _validate_session_user_agent(request: Request, session: SessionPayload) -> N
 
 
 def _touch_session_background(token: str) -> None:
+    """在事件循环后台滑动会话 TTL（不阻塞请求响应）。"""
     try:
         loop = asyncio.get_running_loop()
         loop.create_task(session_store.touch(token))
@@ -59,6 +63,7 @@ def _touch_session_background(token: str) -> None:
 
 
 def _bind_context(session: SessionPayload) -> None:
+    """把账户信息绑定到上下文与日志上下文。"""
     account_id_ctx.set(session.account_id)
     account_type_ctx.set(session.account_type)
     from app.platform.observability.context import bind_request_log_context
@@ -70,6 +75,7 @@ def _bind_context(session: SessionPayload) -> None:
 
 
 def _cache_on_request(request: Request, token: str, session: SessionPayload) -> None:
+    """把会话与 token 缓存到请求状态，避免同请求重复解析。"""
     setattr(request.state, _STATE_SESSION, session)
     setattr(request.state, _STATE_TOKEN, token)
 

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+展示图仓储层：封装展示图持久化、后台分页与公开可见性查询。
+"""
 
 from datetime import datetime
 
@@ -25,23 +28,28 @@ class BannerRepository:
     """展示图仓储，负责直接持久化和展示查询。"""
 
     def __init__(self, db: AsyncSession):
+        """绑定数据库会话。"""
         self.db = db
 
     async def create(self, payload: BannerCreateRequest) -> None:
+        """新增展示图并 flush。"""
         entity = SysBanner(**payload.model_dump())
         self.db.add(entity)
         await self.db.flush()
 
     async def get_by_id(self, banner_id: str) -> SysBanner | None:
+        """按主键查询展示图，不存在返回 None。"""
         return await self.db.get(SysBanner, banner_id)
 
     async def get_required(self, banner_id: str) -> SysBanner:
+        """按主键查询展示图，不存在时抛出 NotFoundError。"""
         entity = await self.get_by_id(banner_id)
         if entity is None:
             raise NotFoundError("Display image not found")
         return entity
 
     async def update(self, payload: BannerUpdateRequest) -> None:
+        """按主键更新展示图字段（排除 id）。"""
         entity = await self.get_required(payload.id)
         data = payload.model_dump(exclude={"id"})
         for key, value in data.items():
@@ -49,6 +57,7 @@ class BannerRepository:
         await self.db.flush()
 
     async def delete_many(self, banner_ids: list[str]) -> None:
+        """批量删除展示图；存在不存在的 ID 时抛出 NotFoundError。"""
         unique_ids = list(dict.fromkeys(banner_ids))
         stmt = select(SysBanner.id).where(SysBanner.id.in_(unique_ids))
         existing_ids = set((await self.db.execute(stmt)).scalars().all())
@@ -57,6 +66,7 @@ class BannerRepository:
         await self.db.execute(delete(SysBanner).where(SysBanner.id.in_(unique_ids)))
 
     async def page_admin(self, query: BannerAdminPageQuery) -> tuple[list[SysBanner], int]:
+        """按查询条件后台分页，返回记录列表与总数。"""
         stmt: Select[tuple[SysBanner]] = select(SysBanner)
         count_stmt = select(func.count(SysBanner.id))
         filters = []
@@ -94,6 +104,7 @@ class BannerRepository:
         query: BannerPublicListQuery,
         account_type: AccountType = AccountType.PORTAL,
     ) -> list[SysBanner]:
+        """查询指定账户类型可见且处于展示期内的展示图列表。"""
         stmt = select(SysBanner).where(
             _json_array_contains(SysBanner.target_account_types, account_type.value),
             SysBanner.status == StatusEnum.ENABLED.value,
@@ -115,6 +126,7 @@ class BannerRepository:
         *,
         account_type: AccountType = AccountType.PORTAL,
     ) -> bool:
+        """判断指定展示图对目标账户类型是否当前可见。"""
         stmt = select(SysBanner.id).where(
             SysBanner.id == banner_id,
             _json_array_contains(SysBanner.target_account_types, account_type.value),
@@ -125,6 +137,7 @@ class BannerRepository:
         return (await self.db.execute(stmt)).scalar_one_or_none() is not None
 
     async def increment_interactions(self, deltas: dict[str, int]) -> None:
+        """按 banner_id 批量累加交互次数（仅处理正增量）。"""
         positive_deltas = {banner_id: delta for banner_id, delta in deltas.items() if delta > 0}
         if not positive_deltas:
             return

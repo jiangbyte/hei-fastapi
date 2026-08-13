@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+内部健康检查路由：存活探针与聚合各依赖可用性的就绪探针。
+"""
 
 from fastapi import APIRouter, Response
 from sqlalchemy import text
@@ -14,7 +17,7 @@ from app.platform.cache.redis import get_redis
 from app.platform.config.sync import get_config_sync_state
 from app.platform.db.session import get_session_factory
 from app.platform.storage.manager import get_storage
-from app.platform.tasks.celery_app import celery_app
+from app.platform.tasks.snailjob_client import probe_snailjob_server
 
 router = APIRouter()
 
@@ -28,13 +31,15 @@ async def live() -> LiveHealthResponse:
 @router.get("/v1/internal/health/ready", response_model=ReadyHealthResponse)
 async def ready(response: Response) -> ReadyHealthResponse:
     """就绪探针，聚合数据库、Redis、消息队列和存储配置的可用性检查。"""
+    snail_configured = bool(settings.snail_job.server_host)
     checks = ReadyChecksResponse(
         database=HealthCheckItem(enabled=True, ok=False, detail=None),
         redis=HealthCheckItem(enabled=True, ok=False, detail=None),
         config_sync=HealthCheckItem(enabled=False, ok=False, detail=None),
-        celery_broker=HealthCheckItem(
-            enabled=bool(settings.celery.broker_url),
-            ok=False,
+        # API 进程不依赖 SnailJob Server 才可服务；配置齐全即视为 ok，探活写入 detail。
+        snail_job=HealthCheckItem(
+            enabled=snail_configured,
+            ok=snail_configured,
             detail=None,
         ),
         storage=HealthCheckItem(enabled=True, ok=False, detail=None),
@@ -64,17 +69,11 @@ async def ready(response: Response) -> ReadyHealthResponse:
         if sync_state.running
         else sync_state.last_error or "listener not running"
     )
-    if not checks.celery_broker.enabled:
-        checks.celery_broker.detail = "celery broker not configured"
+    if not checks.snail_job.enabled:
+        checks.snail_job.detail = "snailjob server host not configured"
     else:
-        try:
-            connection = celery_app.connection_for_read()
-            with connection.ensure_connection(max_retries=1):
-                pass
-            checks.celery_broker.ok = True
-            checks.celery_broker.detail = "connection ok"
-        except Exception as exc:
-            checks.celery_broker.detail = _safe_detail(exc)
+        reachable, probe_detail = probe_snailjob_server()
+        checks.snail_job.detail = probe_detail if reachable else f"configured; {probe_detail}"
     try:
         storage = get_storage()
         checks.storage.ok = True
@@ -87,7 +86,7 @@ async def ready(response: Response) -> ReadyHealthResponse:
             checks.database,
             checks.redis,
             checks.config_sync,
-            checks.celery_broker,
+            checks.snail_job,
             checks.storage,
         ]
         if component.enabled
@@ -101,6 +100,7 @@ async def ready(response: Response) -> ReadyHealthResponse:
 
 
 def _safe_detail(exc: Exception) -> str:
+    """按调试开关决定异常详情：调试返回完整信息，否则仅返回类型名。"""
     if settings.app.debug:
         return str(exc)
     return exc.__class__.__name__

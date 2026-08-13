@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+资源应用服务：资源树/模块 CRUD、权限绑定与授权模块渲染。
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,10 +10,12 @@ from app.core.exceptions.business import AuthorizationError, ConflictError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import resolve_data_scope_dept_ids
-from app.core.security.permission_registry import list_permission_resources
+from app.core.security.permission_registry import (
+    ensure_registered_permission_key,
+    list_permission_resources,
+)
 from app.core.security.session import SessionPayload
 from app.modules.iam.enums import ResourceType
-from app.modules.iam.permission.service import ensure_registered_permission
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.resource.repository import ResourceModuleRepository, ResourceRepository
@@ -58,30 +63,38 @@ async def _resolve_creator_names(db: AsyncSession, items: list) -> None:
 
 
 class ResourceService:
+    """资源应用服务，负责资源树/按钮 CRUD、权限绑定与授权渲染。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = ResourceRepository(db)
 
     async def create(self, payload: ResourceCreateRequest) -> None:
+        """创建资源。"""
         async with transactional(self.db):
             await self.repo.create(payload)
 
     async def update(self, payload: ResourceUpdateRequest) -> None:
+        """更新资源。"""
         async with transactional(self.db):
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest) -> None:
+        """批量删除资源。"""
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery) -> SysResourceSchema:
+        """查询资源详情。"""
         return (await self._build_resource_schemas([await self.repo.get_required(query.id)]))[0]
 
     async def page_admin(self, query: ResourceAdminPageQuery) -> PageData[SysResourceSchema]:
+        """分页查询资源。"""
         items, total = await self.repo.page_admin(query)
         return build_page(query, total, await self._build_resource_schemas(items))
 
     async def page_buttons(self, query: ResourceButtonPageQuery) -> PageData[ResourceButtonSchema]:
+        """分页查询按钮资源。"""
         await self._get_button_parent(query.parent_id)
         items, total = await self.repo.page_buttons(query)
         return build_page(query, total, await self._build_button_schemas(items))
@@ -91,13 +104,14 @@ class ResourceService:
         payload: ResourcePermissionBindRequest,
         session: SessionPayload | None = None,
     ) -> SysResourcePermissionRelSchema:
+        """校验权限码后绑定资源权限，传入 session 时校验作用域部门可见性。"""
         if session is not None:
             await self._ensure_depts_visible(
                 session,
                 "iam:resource:grant",
                 payload.custom_scope_dept_ids,
             )
-        await ensure_registered_permission(payload.permission_key)
+        await ensure_registered_permission_key(payload.permission_key)
         async with transactional(self.db):
             return to_schema(
                 SysResourcePermissionRelSchema,
@@ -109,6 +123,7 @@ class ResourceService:
         payload: ResourceButtonCreateRequest,
         session: SessionPayload | None = None,
     ) -> ResourceButtonSchema:
+        """创建按钮资源并绑定权限。"""
         parent = await self._prepare_button_permission(payload, session)
         async with transactional(self.db):
             button = await self.repo.create(self._build_button_resource_payload(payload, parent))
@@ -122,6 +137,7 @@ class ResourceService:
         payload: ResourceButtonUpdateRequest,
         session: SessionPayload | None = None,
     ) -> ResourceButtonSchema:
+        """更新按钮资源并重建权限绑定。"""
         button = await self.repo.get_required(payload.id)
         if button.resource_type != ResourceType.BUTTON.value:
             raise ConflictError("Resource is not a button")
@@ -139,6 +155,7 @@ class ResourceService:
             return (await self._build_button_schemas([await self.repo.get_required(payload.id)]))[0]
 
     async def delete_button(self, payload: IdsRequest) -> None:
+        """批量删除按钮资源。"""
         async with transactional(self.db):
             for button_id in dict.fromkeys(payload.ids):
                 await self.repo.delete_button(button_id)
@@ -148,6 +165,7 @@ class ResourceService:
         session: SessionPayload,
         query: ResourceTreeQuery,
     ) -> list[ResourceTreeNode]:
+        """返回可见资源树（排除按钮/操作节点）。"""
         resources = await self._list_visible_resources(
             session,
             module_id=query.module_id,
@@ -165,6 +183,7 @@ class ResourceService:
         session: SessionPayload,
         module_client: AccountType | None = None,
     ) -> list[SysResourceSchema]:
+        """返回当前会话可见的资源列表。"""
         resources = await self._list_visible_resources(
             session,
             module_client=module_client,
@@ -172,6 +191,7 @@ class ResourceService:
         return await self._build_resource_schemas(resources)
 
     async def list_public_portal_resources(self) -> list[SysResourceSchema]:
+        """返回门户端公开可见的资源列表。"""
         resources = await self.repo.list_resources(module_client=AccountType.PORTAL)
         return await self._build_resource_schemas(resources)
 
@@ -181,6 +201,7 @@ class ResourceService:
         module_id: str | None = None,
         module_client: AccountType | None = None,
     ) -> list[SysResource]:
+        """按会话权限计算可见资源，超级权限返回全部。"""
         if "*:*:*" in session.permission_keys:
             return await self.repo.list_resources(
                 module_id=module_id,
@@ -203,12 +224,14 @@ class ResourceService:
         self,
         module_client: AccountType | None = None,
     ) -> list[ResourceGrantModuleOption]:
+        """返回授权页所需的资源模块树。"""
         return await self.repo.list_all_resource_grant_modules(module_client=module_client)
 
     async def _build_resource_schemas(
         self,
         resources: list[SysResource],
     ) -> list[SysResourceSchema]:
+        """组装资源响应并批量填充模块元信息与创建人昵称。"""
         module_meta_map = await self.repo.list_module_meta_map(
             [resource.module_id for resource in resources if resource.module_id]
         )
@@ -224,6 +247,7 @@ class ResourceService:
         self,
         resources: list[SysResource],
     ) -> list[ResourceButtonSchema]:
+        """组装按钮响应并挂接首条权限关系信息。"""
         schemas = to_schema_list(ResourceButtonSchema, resources)
         permission_map = await self.repo.list_permissions_by_resource_ids(
             [resource.id for resource in resources]
@@ -244,12 +268,14 @@ class ResourceService:
         self,
         resources: list[SysResource],
     ) -> list[ResourceTreeNode]:
+        """组装资源树节点。"""
         module_meta_map = await self.repo.list_module_meta_map(
             [resource.module_id for resource in resources if resource.module_id]
         )
         return _build_resource_tree_nodes(resources, module_meta_map)
 
     async def list_permission_registry_items(self) -> list[PermissionRegistryItem]:
+        """解析 Redis 权限注册表文本为条目结构，按权限码排序。"""
         resources = await list_permission_resources()
         items: list[PermissionRegistryItem] = []
         for resource in resources:
@@ -269,6 +295,7 @@ class ResourceService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
@@ -280,6 +307,7 @@ class ResourceService:
             raise AuthorizationError("Dept is outside current data scope")
 
     async def _get_button_parent(self, parent_id: str) -> SysResource:
+        """查询按钮父级并校验其类型（按钮/操作不可作父级）。"""
         parent = await self.repo.get_required(parent_id)
         if parent.resource_type in {ResourceType.BUTTON.value, ResourceType.ACTION.value}:
             raise ConflictError("Button resource cannot be parent resource")
@@ -290,6 +318,7 @@ class ResourceService:
         payload: ResourceButtonCreateRequest | ResourceButtonUpdateRequest,
         session: SessionPayload | None,
     ) -> SysResource:
+        """校验按钮父级、作用域部门可见性与权限码注册情况。"""
         parent = await self._get_button_parent(payload.parent_id)
         if session is not None:
             await self._ensure_depts_visible(
@@ -297,7 +326,7 @@ class ResourceService:
                 "iam:resource:grant",
                 payload.custom_scope_dept_ids,
             )
-        await ensure_registered_permission(payload.permission_key)
+        await ensure_registered_permission_key(payload.permission_key)
         return parent
 
     def _build_button_resource_payload(
@@ -305,6 +334,7 @@ class ResourceService:
         payload: ResourceButtonCreateRequest | ResourceButtonUpdateRequest,
         parent: SysResource,
     ) -> ResourceCreateRequest:
+        """由按钮请求构造底层资源创建载荷（继承父级模块归属）。"""
         return ResourceCreateRequest(
             code=payload.code,
             name=payload.name,
@@ -331,6 +361,7 @@ class ResourceService:
         button_id: str,
         payload: ResourceButtonCreateRequest | ResourceButtonUpdateRequest,
     ) -> ResourcePermissionBindRequest:
+        """由按钮请求构造权限绑定载荷。"""
         return ResourcePermissionBindRequest(
             resource_id=button_id,
             permission_key=payload.permission_key,
@@ -342,23 +373,29 @@ class ResourceService:
 
 
 class ResourceModuleService:
+    """资源模块应用服务。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = ResourceModuleRepository(db)
 
     async def create(self, payload: ResourceModuleCreateRequest) -> None:
+        """创建资源模块。"""
         async with transactional(self.db):
             await self.repo.create(payload)
 
     async def update(self, payload: ResourceModuleUpdateRequest) -> None:
+        """更新资源模块。"""
         async with transactional(self.db):
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest) -> None:
+        """批量删除资源模块。"""
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery) -> SysResourceModuleSchema:
+        """查询资源模块详情并回显创建人昵称。"""
         schema = to_schema(SysResourceModuleSchema, await self.repo.get_required(query.id))
         await _resolve_creator_names(self.db, [schema])
         return schema
@@ -367,6 +404,7 @@ class ResourceModuleService:
         self,
         query: ResourceModuleAdminPageQuery,
     ) -> PageData[SysResourceModuleSchema]:
+        """分页查询资源模块。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysResourceModuleSchema, items)
         await _resolve_creator_names(self.db, schemas)
@@ -376,6 +414,7 @@ class ResourceModuleService:
         self,
         query: ResourceModuleSelectorQuery,
     ) -> list[ResourceModuleSelectorOption]:
+        """返回启用的资源模块下拉选项。"""
         return to_schema_list(
             ResourceModuleSelectorOption,
             await self.repo.list_enabled_modules(query.client),
@@ -386,6 +425,7 @@ def _build_resource_tree_nodes(
     resources: list[SysResource],
     module_meta_map: dict[str, tuple[str, str]],
 ) -> list[ResourceTreeNode]:
+    """将扁平资源列表组装为带模块元信息的树节点。"""
     node_map = {resource.id: to_schema(ResourceTreeNode, resource) for resource in resources}
     for node in node_map.values():
         module_name, module_client = module_meta_map.get(node.module_id or "", ("", None))

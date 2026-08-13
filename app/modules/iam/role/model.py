@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+角色领域模型：角色表，作为授权主载体，通过资源授权间接获得权限与数据范围。
+"""
 
 from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column

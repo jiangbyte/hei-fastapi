@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+文件 URL 工具：对象名编码、公开访问 URL 构建与对象名归一化。
+"""
 
 from urllib.parse import quote, urljoin, urlparse
 
@@ -6,10 +9,12 @@ from app.platform.module.paths import DEFAULT_FILES_PUBLIC_PATH
 
 
 def quote_object_name(object_name: str) -> str:
+    """对对象名各段做 URL 编码（保留斜杠分隔）。"""
     return "/".join(quote(part) for part in object_name.strip("/").split("/") if part)
 
 
 def _default_storage_urls() -> tuple[str, str]:
+    """读取默认存储的 base_url 与 public_path，无默认存储时返回约定值。"""
     from app.platform.config.reader import config_reader
 
     active = config_reader.get_default_storage()
@@ -35,11 +40,13 @@ def build_file_access_url(
 
 
 def is_external_url(value: str) -> bool:
+    """判断字符串是否为外部 URL（http/https/data/blob）。"""
     parsed = urlparse(value)
     return parsed.scheme in {"http", "https", "data", "blob"}
 
 
 def normalize_object_name(value: str | None, *, public_path: str | None = None) -> str | None:
+    """从公开 URL 或路径中归一化出纯对象名；外部 URL 原样返回。"""
     if not value:
         return None
     raw_value = str(value).strip()
@@ -65,6 +72,7 @@ def resolve_file_url(
     base_url: str | None = None,
     public_path: str | None = None,
 ) -> str | None:
+    """把对象名或 URL 归一化为最终可访问的文件 URL。"""
     object_name = normalize_object_name(value, public_path=public_path)
     if not object_name:
         return None

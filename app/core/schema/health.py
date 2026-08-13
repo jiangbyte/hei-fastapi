@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+健康检查响应模型：根探针、存活探针与就绪探针。
+"""
 
 from app.core.schema.base import ApiSchema
 
@@ -30,7 +33,7 @@ class ReadyChecksResponse(ApiSchema):
     database: HealthCheckItem
     redis: HealthCheckItem
     config_sync: HealthCheckItem
-    celery_broker: HealthCheckItem
+    snail_job: HealthCheckItem
     storage: HealthCheckItem
 
 

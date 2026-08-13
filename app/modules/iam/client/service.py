@@ -1,10 +1,14 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+客户端模块/资源应用服务：CRUD、树组装与授权模块渲染。
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
+from app.core.security.permission_registry import ensure_registered_permission_key
 from app.core.security.session import SessionPayload
 from app.modules.iam.client.model import SysClientResource
 from app.modules.iam.client.repository import ClientModuleRepository, ClientResourceRepository
@@ -24,13 +28,13 @@ from app.modules.iam.client.schema import (
     SysClientResourcePermissionRelSchema,
     SysClientResourceSchema,
 )
-from app.modules.iam.permission.service import ensure_registered_permission
 from app.modules.iam.schema import ResourceGrantModuleOption
 from app.modules.user.utils.profile import get_profiles_batch
 from app.platform.db.transaction import transactional
 
 
 async def _resolve_creator_names(db: AsyncSession, items: list) -> None:
+    """批量回显 created_by / updated_by 对应的昵称，避免逐条查询。"""
     account_ids: set[str] = set()
     for item in items:
         if item.created_by:
@@ -48,23 +52,29 @@ async def _resolve_creator_names(db: AsyncSession, items: list) -> None:
 
 
 class ClientModuleService:
+    """客户端模块应用服务。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = ClientModuleRepository(db)
 
     async def create(self, payload: ClientModuleCreateRequest) -> None:
+        """创建客户端模块。"""
         async with transactional(self.db):
             await self.repo.create(payload)
 
     async def update(self, payload: ClientModuleUpdateRequest) -> None:
+        """更新客户端模块。"""
         async with transactional(self.db):
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest) -> None:
+        """批量删除客户端模块。"""
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery) -> SysClientModuleSchema:
+        """查询客户端模块详情并回显创建人/更新人昵称。"""
         schema = to_schema(SysClientModuleSchema, await self.repo.get_required(query.id))
         await _resolve_creator_names(self.db, [schema])
         return schema
@@ -73,6 +83,7 @@ class ClientModuleService:
         self,
         query: ClientModuleAdminPageQuery,
     ) -> PageData[SysClientModuleSchema]:
+        """分页查询客户端模块。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysClientModuleSchema, items)
         await _resolve_creator_names(self.db, schemas)
@@ -82,6 +93,7 @@ class ClientModuleService:
         self,
         query: ClientModuleSelectorQuery,
     ) -> list[ClientModuleSelectorOption]:
+        """返回启用的客户端模块下拉选项。"""
         return to_schema_list(
             ClientModuleSelectorOption,
             await self.repo.list_enabled(query.account_type),
@@ -89,23 +101,29 @@ class ClientModuleService:
 
 
 class ClientResourceService:
+    """客户端资源应用服务，负责资源 CRUD、树组装与权限绑定。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = ClientResourceRepository(db)
 
     async def create(self, payload: ClientResourceCreateRequest) -> None:
+        """创建客户端资源。"""
         async with transactional(self.db):
             await self.repo.create(payload)
 
     async def update(self, payload: ClientResourceUpdateRequest) -> None:
+        """更新客户端资源。"""
         async with transactional(self.db):
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest) -> None:
+        """批量删除客户端资源。"""
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery) -> SysClientResourceSchema:
+        """查询客户端资源详情，填充模块元信息与创建人昵称。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysClientResourceSchema, entity)
         await self._fill_module_meta([schema])
@@ -116,6 +134,7 @@ class ClientResourceService:
         self,
         query: ClientResourceAdminPageQuery,
     ) -> PageData[SysClientResourceSchema]:
+        """分页查询客户端资源。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysClientResourceSchema, items)
         await self._fill_module_meta(schemas)
@@ -127,6 +146,7 @@ class ClientResourceService:
         _session: SessionPayload | None,
         query: ClientResourceTreeQuery,
     ) -> list[ClientResourceTreeNode]:
+        """查询客户端资源并组装为树结构。"""
         resources = await self.repo.list_resources(
             module_id=query.module_id,
             account_type=query.account_type,
@@ -138,7 +158,8 @@ class ClientResourceService:
         payload: ClientResourcePermissionBindRequest,
         _session: SessionPayload | None = None,
     ) -> SysClientResourcePermissionRelSchema:
-        await ensure_registered_permission(payload.permission_key)
+        """校验权限码后绑定客户端资源权限。"""
+        await ensure_registered_permission_key(payload.permission_key)
         async with transactional(self.db):
             relation = await self.repo.bind_permission(payload)
         return SysClientResourcePermissionRelSchema(
@@ -160,9 +181,11 @@ class ClientResourceService:
         self,
         account_type: AccountType | None = None,
     ) -> list[ResourceGrantModuleOption]:
+        """返回授权页所需的客户端资源模块树。"""
         return await self.repo.list_all_client_resource_grant_modules(account_type=account_type)
 
     async def _fill_module_meta(self, schemas: list[SysClientResourceSchema]) -> None:
+        """批量填充模块名称与账户体系到资源 Schema。"""
         meta = await self.repo.list_module_meta_map(
             [item.module_id for item in schemas if item.module_id]
         )
@@ -175,6 +198,7 @@ class ClientResourceService:
         self,
         resources: list[SysClientResource],
     ) -> list[ClientResourceTreeNode]:
+        """将扁平资源列表组装为带模块元信息的树节点。"""
         meta = await self.repo.list_module_meta_map(
             [resource.module_id for resource in resources if resource.module_id]
         )

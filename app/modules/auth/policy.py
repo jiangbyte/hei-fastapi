@@ -16,6 +16,8 @@ from app.platform.config.reader import config_reader
 
 @dataclass(frozen=True, slots=True)
 class LoginTypePolicy:
+    """登录类型策略：允许的登录渠道与失败锁定参数。"""
+
     allow_phone: bool
     phone_no_user_policy: str
     allow_email: bool
@@ -28,6 +30,8 @@ class LoginTypePolicy:
 
 @dataclass(frozen=True, slots=True)
 class RegisterTypePolicy:
+    """注册类型策略：是否开启注册及必填项与默认归属。"""
+
     enabled: bool
     require_phone: bool
     require_email: bool
@@ -37,6 +41,8 @@ class RegisterTypePolicy:
 
 @dataclass(frozen=True, slots=True)
 class AuthOptions:
+    """对外暴露的认证选项：登录/注册策略与版权信息。"""
+
     account_type: AccountType
     allow_account: bool
     allow_email: bool
@@ -51,6 +57,7 @@ class AuthOptions:
 
 
 def get_login_policy(account_type: AccountType) -> LoginTypePolicy:
+    """读取指定账户类型的登录策略（sys_config 覆盖 + 设置默认值）。"""
     prefix = "AUTH_LOGIN"
     shared_window = settings.auth.login_failure_window_seconds
     shared_max = settings.auth.login_account_max_failures
@@ -89,6 +96,7 @@ def get_login_policy(account_type: AccountType) -> LoginTypePolicy:
 
 
 def get_register_policy(account_type: AccountType) -> RegisterTypePolicy:
+    """读取指定账户类型的注册策略。"""
     prefix = "AUTH_REGISTER"
     default_enabled = (
         settings.auth.portal_register_enabled
@@ -117,6 +125,7 @@ def get_register_policy(account_type: AccountType) -> RegisterTypePolicy:
 
 
 def get_auth_options(account_type: AccountType) -> AuthOptions:
+    """汇总登录与注册策略为对外认证选项。"""
     login = get_login_policy(account_type)
     register = get_register_policy(account_type)
     return AuthOptions(
@@ -142,6 +151,7 @@ def ensure_identity_allowed(
     *,
     login_mode: str = "PASSWORD",
 ) -> LoginTypePolicy:
+    """校验登录渠道与身份类型是否被允许，违规抛业务错误。"""
     policy = get_login_policy(account_type)
     mode = (login_mode or "PASSWORD").strip().upper()
     if mode == "OTP" and not policy.allow_otp:
@@ -159,6 +169,7 @@ def no_user_policy_for(
     policy: LoginTypePolicy,
     identity_type: AccountIdentityType,
 ) -> str:
+    """返回指定身份类型对应的「无用户」处理策略。"""
     if identity_type == AccountIdentityType.EMAIL:
         return policy.email_no_user_policy
     if identity_type == AccountIdentityType.PHONE:
@@ -167,4 +178,5 @@ def no_user_policy_for(
 
 
 def deny_if_locked_message() -> AuthenticationError:
+    """构造账户锁定的认证错误。"""
     return AuthenticationError("Account is temporarily locked")

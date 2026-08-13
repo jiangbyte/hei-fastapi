@@ -3,16 +3,10 @@ set -e
 
 echo "Stopping all services started by entrypoint.sh..."
 
-if pkill -f "celery.*app\.worker\.main:celery_app.*worker" 2>/dev/null; then
-  echo "  celery worker   stopped"
+if pkill -f "python -m app.worker.main" 2>/dev/null; then
+  echo "  snailjob worker stopped"
 else
-  echo "  celery worker   not found"
-fi
-
-if pkill -f "celery.*app\.worker\.main:celery_app.*beat" 2>/dev/null; then
-  echo "  celery beat     stopped"
-else
-  echo "  celery beat     not found"
+  echo "  snailjob worker not found"
 fi
 
 if pkill -f "gunicorn.*app\.main:app" 2>/dev/null; then

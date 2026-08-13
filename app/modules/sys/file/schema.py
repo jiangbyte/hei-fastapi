@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+文件相关 Schema：元数据响应、上传/创建载荷与查询参数。
+"""
 
 from datetime import datetime
 
@@ -11,6 +14,8 @@ from app.core.schema.wire import WireInt
 
 
 class SysFileSchema(ApiSchema):
+    """文件元数据响应模型，含创建/更新人昵称。"""
+
     id: str
     object_name: str
     original_name: str
@@ -51,11 +56,15 @@ class FileRecordCreate(ApiSchema):
 
 
 class FileUpdateRequest(ApiSchema):
+    """文件更新请求。"""
+
     id: str = Field(min_length=1, max_length=64)
     original_name: str = Field(min_length=1, max_length=255)
 
 
 class FileAdminPageQuery(PageQuery):
+    """文件后台分页查询参数。"""
+
     original_name: str | None = Field(default=None, max_length=255)
     object_name: str | None = Field(default=None, max_length=255)
     storage_provider: StorageProvider | None = None
@@ -63,13 +72,19 @@ class FileAdminPageQuery(PageQuery):
 
 
 class ObjectNameQuery(ApiSchema):
+    """对象名查询参数。"""
+
     object_name: str = Field(min_length=1, max_length=255)
 
 
 class FileUrlRequest(ObjectNameQuery):
+    """获取文件 URL 的请求参数。"""
+
     pass
 
 
 class FileUrlResponse(ApiSchema):
+    """文件 URL 响应。"""
+
     object_name: str
     url: str

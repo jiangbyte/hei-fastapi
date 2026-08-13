@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+代码生成模板渲染：构建渲染上下文并调用 Jinja2 模板生成前后端源码。
+"""
 
 from __future__ import annotations
 
@@ -31,6 +34,8 @@ TREE_MENU_PERMISSION_ACTION = ("list", "树列表", 90)
 
 @dataclass(frozen=True)
 class RenderContext:
+    """模板渲染上下文：封装方案与字段并派生各类路径。"""
+
     plan: SysCodegenPlan
     main_fields: list[SysCodegenField]
     sub_fields: list[SysCodegenField]
@@ -95,6 +100,7 @@ def render_files(
     main_fields: list[SysCodegenField],
     sub_fields: list[SysCodegenField],
 ) -> list[CodegenPreviewFile]:
+    """根据方案与字段渲染全部生成文件。"""
     ctx = RenderContext(
         plan=plan,
         main_fields=main_fields,
@@ -147,6 +153,7 @@ def render_files(
 
 
 def render_template(template_name: str, ctx: RenderContext) -> str:
+    """渲染单个模板，构造主表/子表与权限上下文。"""
     env = _environment()
     template = env.get_template(template_name)
     has_tree = ctx.plan.gen_type in {"TREE", "LEFT_TREE_TABLE"}
@@ -200,6 +207,7 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
 
 
 def _environment() -> Environment:
+    """构建关闭自动转义的 Jinja2 环境并注册过滤器。"""
     # 代码生成输出 Python/TS/Vue 源码而非 HTML — autoescape 会破坏模板。
     env = Environment(  # nosec B701
         loader=FileSystemLoader(TEMPLATE_DIR),
@@ -226,6 +234,7 @@ def entity_context(
     fields: list[SysCodegenField],
     table_exclude: set[str] | None = None,
 ) -> dict[str, Any]:
+    """构造实体渲染上下文（模型/表单/查询/表格/详情字段）。"""
     if not entity_name or not table_name or not pk_name:
         return {}
     table_exclude = table_exclude or set()
@@ -291,6 +300,7 @@ def entity_context(
 
 
 def menu_permission_context(needs_list_permission: bool) -> dict[str, Any]:
+    """构造菜单权限 SQL 上下文，含动作与雪花 ID。"""
     actions = list(MENU_PERMISSION_ACTIONS)
     if needs_list_permission:
         actions.append(TREE_MENU_PERMISSION_ACTION)
@@ -310,6 +320,7 @@ def menu_permission_context(needs_list_permission: bool) -> dict[str, Any]:
 
 
 def field_context(field: SysCodegenField) -> dict[str, Any]:
+    """将字段配置转为模板所需上下文。"""
     python_type = normalized_py_type(field)
     is_datetime = field.form_widget == "datetime" or python_type == "datetime"
     is_json = is_json_field(field, python_type)
@@ -343,12 +354,14 @@ def field_context(field: SysCodegenField) -> dict[str, Any]:
 
 
 def is_form_field(field: SysCodegenField) -> bool:
+    """判断字段是否出现在表单中。"""
     return (
         field.show_in_form and not field.is_primary_key and field.column_name not in AUDIT_COLUMNS
     )
 
 
 def normalized_py_type(field: SysCodegenField) -> str:
+    """归一化 Python 类型表示。"""
     if field.python_type == "datetime":
         return "datetime"
     if field.python_type == "dict":
@@ -357,16 +370,19 @@ def normalized_py_type(field: SysCodegenField) -> str:
 
 
 def is_json_field(field: SysCodegenField, python_type: str | None = None) -> bool:
+    """判断字段是否为 JSON 类型。"""
     raw_python_type = python_type or normalized_py_type(field)
     return raw_python_type in {"dict", "dict[str, Any]"} or "json" in field.db_type.lower()
 
 
 def _wire_schema_type(raw: str) -> str:
+    """将基础类型映射为 Wire 类型名。"""
     mapping = {"int": "WireInt", "bool": "WireBool", "float": "WireFloat"}
     return mapping.get(raw, raw)
 
 
 def schema_py_type(field: SysCodegenField) -> str:
+    """构造 schema 字段的 Python 类型标注。"""
     raw = _wire_schema_type(normalized_py_type(field))
     if field.is_nullable and not field.is_primary_key:
         return f"{raw} | None"
@@ -374,6 +390,7 @@ def schema_py_type(field: SysCodegenField) -> str:
 
 
 def query_schema_py_type(field: SysCodegenField) -> str:
+    """构造查询 schema 字段的 Python 类型标注。"""
     raw = _wire_schema_type(normalized_py_type(field))
     if raw.endswith(" | None"):
         return raw
@@ -381,6 +398,7 @@ def query_schema_py_type(field: SysCodegenField) -> str:
 
 
 def schema_default(field: SysCodegenField) -> str:
+    """推断 schema 字段的默认值表达式。"""
     if field.is_primary_key or field.is_required:
         return ""
     if field.python_type in {"dict", "dict[str, Any]"}:
@@ -395,6 +413,7 @@ def schema_default(field: SysCodegenField) -> str:
 
 
 def sa_type(field: SysCodegenField) -> str:
+    """将数据库类型映射为 SQLAlchemy 列类型。"""
     raw = field.db_type.lower()
     if "json" in raw:
         return "JSON"
@@ -416,6 +435,7 @@ def sa_type(field: SysCodegenField) -> str:
 
 
 def vue_default(field: SysCodegenField | dict[str, Any]) -> str:
+    """推断前端表单字段的默认值表达式。"""
     python_type = field["python_type"] if isinstance(field, dict) else field.python_type
     form_widget = field["form_widget"] if isinstance(field, dict) else field.form_widget
     if isinstance(field, dict) and "is_json" in field:
@@ -436,12 +456,14 @@ def vue_default(field: SysCodegenField | dict[str, Any]) -> str:
 
 
 def snake_case(value: str) -> str:
+    """将驼峰/连字符字符串转为 snake_case。"""
     value = sub(r"(.)([A-Z][a-z]+)", r"\1_\2", value)
     value = sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
     return value.replace("-", "_").replace(" ", "_").lower().strip("_")
 
 
 def python_identifier(value: str) -> str:
+    """将任意字符串转为合法的 Python 标识符。"""
     value = sub(r"[^0-9a-zA-Z_]", "_", snake_case(value))
     value = sub(r"_+", "_", value).strip("_")
     if not value:
@@ -452,12 +474,14 @@ def python_identifier(value: str) -> str:
 
 
 def camel_case(value: str) -> str:
+    """将字符串转为 camelCase。"""
     snake = snake_case(value)
     head, *tail = snake.split("_")
     return head + "".join(item.capitalize() for item in tail)
 
 
 def sql_str(value: str | None) -> str:
+    """转义并包裹 SQL 字符串字面量，空值返回 NULL。"""
     if value is None or value == "":
         return "NULL"
     return "'" + value.replace("'", "''") + "'"

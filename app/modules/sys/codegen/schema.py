@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+代码生成相关 Schema：方案创建/更新、字段配置、数据库内省与预览文件。
+"""
 
 from datetime import datetime
 from typing import Literal
@@ -9,11 +12,13 @@ from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool, WireInt
 
-CodegenType = Literal["TABLE", "TREE", "LEFT_TREE_TABLE", "MASTER_DETAIL"]
-CodegenTableRole = Literal["MAIN", "SUB"]
+CodegenType = Literal["TABLE", "TREE", "LEFT_TREE_TABLE", "MASTER_DETAIL"]  # 生成类型
+CodegenTableRole = Literal["MAIN", "SUB"]  # 表角色：主表/子表
 
 
 class CodegenPlanCreateRequest(ApiSchema):
+    """代码生成方案创建请求。"""
+
     name: str = Field(min_length=1, max_length=128)
     gen_type: CodegenType = "TABLE"
     author: str = Field(min_length=1, max_length=64)
@@ -43,6 +48,7 @@ class CodegenPlanCreateRequest(ApiSchema):
     @field_validator("author")
     @classmethod
     def validate_author(cls, value: str) -> str:
+        """去除作者名首尾空白并校验非空。"""
         value = value.strip()
         if not value:
             raise ValueError("author is required")
@@ -50,6 +56,7 @@ class CodegenPlanCreateRequest(ApiSchema):
 
     @model_validator(mode="after")
     def validate_codegen_type(self):
+        """校验树形/关系型方案所需的树字段与子表配置齐全。"""
         if self.gen_type in {"TREE", "LEFT_TREE_TABLE"}:
             if not self.tree_parent_field:
                 raise ValueError("tree_parent_field is required for tree codegen")
@@ -70,16 +77,22 @@ class CodegenPlanCreateRequest(ApiSchema):
 
 
 class CodegenPlanUpdateRequest(CodegenPlanCreateRequest):
+    """代码生成方案更新请求，在创建字段基础上增加主键。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class CodegenPlanPageQuery(PageQuery):
+    """代码生成方案分页查询参数。"""
+
     name: str | None = Field(default=None, max_length=128)
     main_table: str | None = Field(default=None, max_length=128)
     gen_type: CodegenType | None = None
 
 
 class SysCodegenPlanSchema(ApiSchema):
+    """代码生成方案响应模型。"""
+
     id: str
     name: str
     gen_type: CodegenType
@@ -113,6 +126,8 @@ class SysCodegenPlanSchema(ApiSchema):
 
 
 class CodegenFieldUpdateItem(ApiSchema):
+    """代码生成字段配置项。"""
+
     id: str | None = Field(default=None, max_length=64)
     table_role: CodegenTableRole = "MAIN"
     column_name: str = Field(min_length=1, max_length=128)
@@ -136,11 +151,15 @@ class CodegenFieldUpdateItem(ApiSchema):
 
 
 class CodegenFieldsUpdateBatchRequest(ApiSchema):
+    """代码生成字段批量更新请求。"""
+
     plan_id: str = Field(min_length=1, max_length=64)
     fields: list[CodegenFieldUpdateItem]
 
 
 class SysCodegenFieldSchema(CodegenFieldUpdateItem):
+    """代码生成字段响应模型。"""
+
     id: str
     plan_id: str
     created_at: datetime
@@ -150,11 +169,15 @@ class SysCodegenFieldSchema(CodegenFieldUpdateItem):
 
 
 class DatabaseTableSchema(ApiSchema):
+    """数据库表响应模型。"""
+
     table_name: str
     table_comment: str | None = None
 
 
 class DatabaseColumnSchema(ApiSchema):
+    """数据库列响应模型。"""
+
     column_name: str
     column_comment: str | None = None
     db_type: str
@@ -166,29 +189,41 @@ class DatabaseColumnSchema(ApiSchema):
 
 
 class CodegenPreviewFile(ApiSchema):
+    """代码生成预览文件。"""
+
     path: str
     language: str
     content: str
 
 
 class CodegenPreviewSchema(ApiSchema):
+    """代码生成预览响应，包含文件列表。"""
+
     files: list[CodegenPreviewFile]
 
 
 class CodegenTableColumnsQuery(ApiSchema):
+    """查询表列的请求参数。"""
+
     table_name: str = Field(min_length=1, max_length=128)
 
 
 class CodegenFieldsQuery(ApiSchema):
+    """查询字段的请求参数。"""
+
     plan_id: str = Field(min_length=1, max_length=64)
     table_role: str | None = Field(default=None, max_length=16)
 
 
 class CodegenParentResourcesQuery(ApiSchema):
+    """查询父资源的请求参数。"""
+
     module_id: str | None = Field(default=None, max_length=64)
 
 
 class CodegenParentResourceOption(ApiSchema):
+    """父资源选项（树形结构）。"""
+
     id: str
     parent_id: str | None = None
     code: str

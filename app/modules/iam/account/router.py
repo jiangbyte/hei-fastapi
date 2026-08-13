@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户管理 HTTP 路由：账户 CRUD 与角色/组/部门/资源授权接口。
+"""
 
 from typing import Annotated
 

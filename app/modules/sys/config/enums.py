@@ -1,10 +1,13 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+系统配置分类枚举：定义配置项所属的分类编码。
+"""
 
 from enum import StrEnum
 
 
 class ConfigCategory(StrEnum):
-    """系统配置分类"""
+    """系统配置分类。"""
 
     SYS = "SYS"
     AUTH_TOKEN = "AUTH_TOKEN"

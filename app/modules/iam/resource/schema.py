@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+资源 Schema：资源、资源模块与资源权限的请求与响应结构。
+"""
 
 from datetime import datetime
 
@@ -12,6 +15,8 @@ from app.modules.iam.enums import ResourceType
 
 
 class ResourceCreateRequest(ApiSchema):
+    """创建资源请求。"""
+
     code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=64)
     resource_type: ResourceType
@@ -34,10 +39,14 @@ class ResourceCreateRequest(ApiSchema):
 
 
 class ResourceUpdateRequest(ResourceCreateRequest):
+    """更新资源请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class ResourceAdminPageQuery(PageQuery):
+    """资源管理端分页查询条件。"""
+
     code: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
     resource_type: ResourceType | None = None
@@ -48,6 +57,8 @@ class ResourceAdminPageQuery(PageQuery):
 
 
 class ResourceButtonPageQuery(PageQuery):
+    """按钮资源分页查询条件。"""
+
     parent_id: str = Field(min_length=1, max_length=64)
     code: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
@@ -55,6 +66,8 @@ class ResourceButtonPageQuery(PageQuery):
 
 
 class SysResourceSchema(ApiSchema):
+    """资源响应结构，含模块名称与所属端回显。"""
+
     id: str
     parent_id: str | None = None
     code: str
@@ -86,6 +99,8 @@ class SysResourceSchema(ApiSchema):
 
 
 class ResourcePermissionBindRequest(ApiSchema):
+    """资源权限绑定请求。"""
+
     resource_id: str
     permission_key: str
     account_type: AccountType = AccountType.ADMIN
@@ -96,6 +111,8 @@ class ResourcePermissionBindRequest(ApiSchema):
 
 
 class ResourceButtonCreateRequest(ApiSchema):
+    """创建按钮资源请求（同时携带权限挂载信息）。"""
+
     parent_id: str = Field(min_length=1, max_length=64)
     code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=64)
@@ -108,10 +125,14 @@ class ResourceButtonCreateRequest(ApiSchema):
 
 
 class ResourceButtonUpdateRequest(ResourceButtonCreateRequest):
+    """更新按钮资源请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class SysResourcePermissionRelSchema(ApiSchema):
+    """资源-权限关系响应结构。"""
+
     id: str
     resource_id: str
     permission_key: str
@@ -129,6 +150,8 @@ class SysResourcePermissionRelSchema(ApiSchema):
 
 
 class ResourceButtonSchema(SysResourceSchema):
+    """按钮资源响应结构，附权限挂载信息。"""
+
     permission_rel_id: str | None = None
     permission_key: str | None = None
     data_scope: DataScope | None = None
@@ -137,19 +160,27 @@ class ResourceButtonSchema(SysResourceSchema):
 
 
 class ResourceTreeNode(SysResourceSchema):
+    """资源树节点结构。"""
+
     children: list["ResourceTreeNode"] = Field(default_factory=list)
 
 
 class ResourceTreeQuery(ApiSchema):
+    """资源树查询条件。"""
+
     module_id: str | None = Field(default=None, max_length=64)
     module_client: AccountType | None = None
 
 
 class ResourceModuleSelectorQuery(ApiSchema):
+    """资源模块下拉查询条件。"""
+
     client: AccountType | None = None
 
 
 class ResourceModuleCreateRequest(ApiSchema):
+    """创建资源模块请求。"""
+
     name: str = Field(min_length=1, max_length=64)
     code: str = Field(min_length=1, max_length=64)
     client: AccountType = AccountType.ADMIN
@@ -162,10 +193,14 @@ class ResourceModuleCreateRequest(ApiSchema):
 
 
 class ResourceModuleUpdateRequest(ResourceModuleCreateRequest):
+    """更新资源模块请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class ResourceModuleAdminPageQuery(PageQuery):
+    """资源模块管理端分页查询条件。"""
+
     name: str | None = Field(default=None, max_length=64)
     code: str | None = Field(default=None, max_length=64)
     client: AccountType | None = None
@@ -173,6 +208,8 @@ class ResourceModuleAdminPageQuery(PageQuery):
 
 
 class SysResourceModuleSchema(ApiSchema):
+    """资源模块响应结构。"""
+
     id: str
     name: str
     code: str
@@ -192,6 +229,8 @@ class SysResourceModuleSchema(ApiSchema):
 
 
 class ResourceModuleSelectorOption(ApiSchema):
+    """资源模块下拉选项结构。"""
+
     id: str
     name: str
     code: str

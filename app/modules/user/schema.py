@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+用户模块公共响应模型：管理端与门户端的「我的信息」响应。
+"""
 
 from pydantic import Field
 

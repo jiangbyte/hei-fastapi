@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class AlertEvent:
+    """单条告警事件：规则名、严重级别、摘要与可选详情。"""
+
     rule_name: str
     severity: str  # INFO / WARNING / CRITICAL
     summary: str

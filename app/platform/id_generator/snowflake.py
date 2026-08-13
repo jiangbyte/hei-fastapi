@@ -38,6 +38,7 @@ def _resolve_worker_id() -> int:
 
 
 def _build_instance_id() -> int:
+    """由 datacenter 与 worker 组合出 10 位实例 ID。"""
     datacenter = settings.id_generator.datacenter_id & 0x1F
     worker = _resolve_worker_id()
     instance = (datacenter << 5) | worker
@@ -56,4 +57,5 @@ _generator = SnowflakeGenerator(
 
 
 def generate_snowflake_id() -> str:
+    """生成下一个雪花 ID 并返回字符串形式。"""
     return str(next(_generator))

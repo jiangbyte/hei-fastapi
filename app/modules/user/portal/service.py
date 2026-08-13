@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+门户账户资料服务层：资料初始化、公开主页查询与用户中心维护。
+"""
 
 from datetime import UTC, datetime
 from pathlib import PurePosixPath
@@ -29,8 +32,8 @@ from app.modules.user.portal.schema import (
 from app.platform.db.transaction import transactional
 from app.platform.storage.url import is_external_url, normalize_object_name, resolve_file_url
 
-AVATAR_MAX_SIZE = 2 * 1024 * 1024
-AVATAR_CONTENT_TYPES = {
+AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 头像文件大小上限（2MB）
+AVATAR_CONTENT_TYPES = {  # 允许的头像内容类型及其扩展名
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
@@ -79,6 +82,7 @@ class PortalUserProfileService:
         payload: PortalUserCenterProfileUpdateRequest,
         session: SessionPayload,
     ) -> None:
+        """更新当前门户用户个人资料（保留头像、手机、邮箱等未编辑字段）。"""
         profile = await self.repo.get_by_account_id(session.account_id)
         async with transactional(self.db):
             await self.repo.upsert(
@@ -99,6 +103,7 @@ class PortalUserProfileService:
         content_type: str,
         session: SessionPayload,
     ) -> PortalUserCenterAvatarUpdateResponse:
+        """上传新头像并更新资料，随后清理旧头像文件。"""
         content_type = self._normalize_avatar_content_type(content_type)
         self._ensure_avatar_file(content, content_type)
         profile = await self.repo.get_by_account_id(session.account_id)
@@ -127,6 +132,7 @@ class PortalUserProfileService:
         payload: PortalUserCenterPasswordUpdateRequest,
         session: SessionPayload,
     ) -> None:
+        """校验旧密码/验证码后修改密码，并刷新账户会话。"""
         from app.core.config.enums import AccountType
         from app.modules.auth.password_change import verify_change_password
         from app.modules.iam.account.password_helper import validate_and_record_password
@@ -159,6 +165,7 @@ class PortalUserProfileService:
         payload: PortalUserCenterPhoneUpdateRequest,
         session: SessionPayload,
     ) -> None:
+        """校验密码后更新当前门户用户手机号绑定。"""
         account = await self.account_repo.get_required(session.account_id)
         self._ensure_password(account.password_hash, payload.password)
         profile = await self.repo.get_by_account_id(session.account_id)
@@ -188,6 +195,7 @@ class PortalUserProfileService:
         payload: PortalUserCenterEmailUpdateRequest,
         session: SessionPayload,
     ) -> None:
+        """校验密码后更新当前门户用户邮箱绑定。"""
         account = await self.account_repo.get_required(session.account_id)
         self._ensure_password(account.password_hash, payload.password)
         profile = await self.repo.get_by_account_id(session.account_id)
@@ -213,13 +221,16 @@ class PortalUserProfileService:
             )
 
     def _ensure_password(self, password_hash: str, password: str) -> None:
+        """校验明文密码与哈希是否匹配，失败抛出 AuthenticationError。"""
         if not verify_password(password, password_hash):
             raise AuthenticationError("Invalid account or password")
 
     def _normalize_avatar_content_type(self, content_type: str) -> str:
+        """去除 content-type 中的参数（如 ; charset），并转为小写。"""
         return (content_type or "").split(";")[0].strip().lower()
 
     def _ensure_avatar_file(self, content: bytes, content_type: str) -> None:
+        """校验头像文件非空、大小与类型合法。"""
         if not content:
             raise BusinessError("Avatar file is empty")
         if len(content) > AVATAR_MAX_SIZE:
@@ -228,6 +239,7 @@ class PortalUserProfileService:
             raise BusinessError("Avatar file must be a JPEG, PNG, or WebP image")
 
     def _build_avatar_object_name(self, content_type: str) -> str:
+        """按日期目录 + 随机名生成头像 object_name。"""
         now = datetime.now(UTC)
         extension = AVATAR_CONTENT_TYPES[content_type]
         return f"{now:%Y}/{now:%m}/{now:%d}/{uuid4().hex}{extension}"
@@ -237,6 +249,7 @@ class PortalUserProfileService:
         previous_avatar: str | None,
         current_avatar: str,
     ) -> None:
+        """删除被替换的旧头像文件（跳过空值、同对象与外部 URL）。"""
         previous_object_name = normalize_object_name(previous_avatar)
         current_object_name = normalize_object_name(current_avatar)
         if (

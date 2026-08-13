@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户仓储：负责账户主表、登录标识以及账户直接授权关系的增删改查。
+"""
 
 import secrets
 from datetime import UTC, datetime
@@ -61,18 +64,22 @@ class AccountRepository:
         self.relations = IamRelationRepository(db)
 
     async def get_by_id(self, account_id: str) -> SysAccount | None:
+        """按主键查询账户。"""
         return await self.db.get(SysAccount, account_id)
 
     async def get_required(self, account_id: str) -> SysAccount:
+        """按主键查询账户，不存在时抛出 NotFoundError。"""
         entity = await self.get_by_id(account_id)
         if entity is None:
             raise NotFoundError("Account not found")
         return entity
 
     async def get_account_by_id(self, account_id: str) -> SysAccount | None:
+        """按 ID 查询账户（AccountLookupProtocol 约定入口）。"""
         return await self.get_by_id(account_id)
 
     async def list_accounts_by_ids(self, account_ids: list[str]) -> list[SysAccount]:
+        """按 ID 列表批量查询账户，空列表返回空。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return []
@@ -80,6 +87,7 @@ class AccountRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def get_account_by_account(self, account: str) -> SysAccount | None:
+        """按主账号标识查询账户（仅匹配已绑定的 ACCOUNT 类型标识）。"""
         stmt = (
             select(SysAccount)
             .join(SysAccountIdentity, SysAccountIdentity.account_id == SysAccount.id)
@@ -96,6 +104,7 @@ class AccountRepository:
         identifier: str,
         identity_types: list[AccountIdentityType] | None = None,
     ) -> SysAccount | None:
+        """按登录标识查询账户，多类型命中时按账号/邮箱/手机号优先级取一条。"""
         types = identity_types or [AccountIdentityType.ACCOUNT]
         stmt = (
             select(SysAccount)
@@ -122,6 +131,7 @@ class AccountRepository:
         return (await self.db.execute(stmt)).scalars().first()
 
     async def create(self, payload: AccountCreateRequest, password_hash: str) -> SysAccount:
+        """创建账户主行并重建登录标识；账号已存在时抛冲突错误。"""
         existing = await self.get_account_by_account(payload.account)
         if existing:
             raise ConflictError("Account already exists")
@@ -136,6 +146,7 @@ class AccountRepository:
         return account
 
     async def update(self, payload: AccountUpdateRequest, password_hash: str | None = None) -> None:
+        """更新账户主体与登录标识；账号被其他账户占用时抛冲突错误。"""
         entity = await self.get_required(payload.id)
         existing = await self.get_account_by_account(payload.account)
         if existing and existing.id != payload.id:
@@ -148,6 +159,7 @@ class AccountRepository:
         await self.db.flush()
 
     async def update_password_hash(self, account_id: str, password_hash: str) -> None:
+        """仅更新账户密码哈希。"""
         entity = await self.get_required(account_id)
         entity.password_hash = password_hash
         await self.db.flush()
@@ -157,6 +169,7 @@ class AccountRepository:
         account_id: str,
         payload: AccountCreateRequest | AccountUpdateRequest,
     ) -> None:
+        """全量重建账户登录标识，并在写入前校验标识未被其他账户占用。"""
         identity_specs = [
             (
                 AccountIdentityType.ACCOUNT,
@@ -228,6 +241,7 @@ class AccountRepository:
         self,
         account_ids: list[str],
     ) -> list[SysAccountIdentity]:
+        """按账户 ID 列表批量查询登录标识，主标识优先。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return []
@@ -250,6 +264,7 @@ class AccountRepository:
         verified: bool = True,
         enabled: bool = True,
     ) -> None:
+        """新增或替换单个登录标识；禁用或空标识时仅删除旧记录。"""
         await self.get_required(account_id)
         normalized_identifier = str(identifier or "").strip() if enabled else ""
         await self.db.execute(
@@ -281,6 +296,7 @@ class AccountRepository:
         await self.db.flush()
 
     async def delete_many(self, account_ids: list[str]) -> None:
+        """校验账户存在后彻底删除账户及其关联数据。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
@@ -362,6 +378,7 @@ class AccountRepository:
         return email, phone
 
     async def list_expired_cancelled_account_ids(self, cutoff: datetime) -> list[str]:
+        """列出注销时间与最近登录时间均早于保留截止点的账户 ID。"""
         stmt = select(SysAccount.id).where(
             SysAccount.cancelled_at.is_not(None),
             SysAccount.cancelled_at <= cutoff,
@@ -407,6 +424,7 @@ class AccountRepository:
         )
 
     async def purge_many(self, account_ids: list[str]) -> None:
+        """清理账户侧关联数据并删除账户主行。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
@@ -419,6 +437,7 @@ class AccountRepository:
         account_ids: list[str],
         data_scope_filter: ColumnElement[bool],
     ) -> int:
+        """统计处于当前数据范围内的目标账户数量。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return 0
@@ -434,6 +453,7 @@ class AccountRepository:
         query: AccountAdminPageQuery,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> tuple[list[SysAccount], int]:
+        """按条件分页查询账户，并统计满足条件（含数据范围）的总数。"""
         account_identity = SysAccountIdentity
         stmt: Select[tuple[SysAccount]] = (
             select(SysAccount)
@@ -507,6 +527,7 @@ class AccountRepository:
         return accounts, total
 
     async def assign_account_to_role(self, payload: AccountRoleAssignRequest) -> SysIamRelation:
+        """为账户追加单个角色关系（账户与角色均需存在）。"""
         account = await self.db.get(SysAccount, payload.account_id)
         if not account:
             raise NotFoundError("Account not found")
@@ -525,6 +546,7 @@ class AccountRepository:
         self,
         payload: AccountGroupAssignRequest,
     ) -> SysIamRelation:
+        """为账户追加单个账户组关系（账户与组均需存在）。"""
         account = await self.db.get(SysAccount, payload.account_id)
         if not account:
             raise NotFoundError("Account not found")
@@ -540,6 +562,7 @@ class AccountRepository:
         return relation
 
     async def assign_account_to_dept(self, payload: AccountDeptAssignRequest) -> SysIamRelation:
+        """为账户追加单个部门关系（账户与部门均需存在）。"""
         account = await self.db.get(SysAccount, payload.account_id)
         if not account:
             raise NotFoundError("Account not found")
@@ -556,6 +579,7 @@ class AccountRepository:
         return relation
 
     async def list_roles_by_ids(self, role_ids: list[str]) -> list[SysRole]:
+        """按 ID 列表查询角色，按排序与 ID 倒序返回。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return []
@@ -571,6 +595,7 @@ class AccountRepository:
         account_id: str,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[str]:
+        """列出账户直接绑定的角色 ID，可叠加数据范围过滤。"""
         await self.get_required(account_id)
         stmt = select(SysIamRelation.target_id).where(
             SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
@@ -585,6 +610,7 @@ class AccountRepository:
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
     async def replace_account_roles(self, payload: AccountGrantRoleRequest) -> None:
+        """全量替换账户的角色关系（先删后建，角色需全部存在）。"""
         account = await self.get_required(payload.id)
         role_ids = list(dict.fromkeys(payload.role_ids))
         if role_ids:
@@ -605,6 +631,7 @@ class AccountRepository:
         await self.db.flush()
 
     async def list_groups_by_ids(self, group_ids: list[str]) -> list[SysGroup]:
+        """按 ID 列表查询账户组，按 ID 倒序返回。"""
         unique_ids = list(dict.fromkeys(group_ids))
         if not unique_ids:
             return []
@@ -620,6 +647,7 @@ class AccountRepository:
         account_id: str,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[str]:
+        """列出账户直接绑定的账户组 ID，可叠加数据范围过滤。"""
         await self.get_required(account_id)
         stmt = select(SysIamRelation.target_id).where(
             SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
@@ -634,6 +662,7 @@ class AccountRepository:
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
     async def replace_account_groups(self, payload: AccountGrantGroupRequest) -> None:
+        """全量替换账户的账户组关系（先删后建，组需全部存在）。"""
         account = await self.get_required(payload.id)
         group_ids = list(dict.fromkeys(payload.group_ids))
         if group_ids:
@@ -658,6 +687,7 @@ class AccountRepository:
         account_id: str,
         visible_dept_ids: list[str] | None = None,
     ) -> list[AccountDeptGrantInfo]:
+        """列出账户的部门授权关系，可按可见部门 ID 过滤。"""
         await self.get_required(account_id)
         stmt = (
             select(SysIamRelation)
@@ -678,6 +708,7 @@ class AccountRepository:
         ]
 
     async def replace_account_depts(self, payload: AccountGrantDeptRequest) -> None:
+        """全量替换账户的部门关系，且仅首个主部门标记 is_primary。"""
         account = await self.get_required(payload.id)
         dept_ids = list(dict.fromkeys(item.dept_id for item in payload.grant_info_list))
         if dept_ids:
@@ -706,6 +737,7 @@ class AccountRepository:
         await self.db.flush()
 
     async def get_account_role_ids(self, account_id: str) -> list[str]:
+        """合并账户直接角色与所属账户组的角色，去重返回角色 ID。"""
         account = await self.get_required(account_id)
         account_type = account.account_type
         account_group_rel = aliased(SysIamRelation)
@@ -742,6 +774,7 @@ class AccountRepository:
         return sorted(set(direct + group))
 
     async def get_account_role_codes(self, account_id: str) -> list[str]:
+        """合并账户直接角色与所属账户组的角色，去重返回角色编码。"""
         account = await self.get_required(account_id)
         account_type = account.account_type
         account_group_rel = aliased(SysIamRelation)
@@ -783,6 +816,7 @@ class AccountRepository:
         return sorted(set(direct + group))
 
     async def get_account_group_ids(self, account_id: str) -> list[str]:
+        """列出账户直接绑定的账户组 ID。"""
         stmt = select(SysIamRelation.target_id).where(
             SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
             SysIamRelation.subject_id == account_id,
@@ -792,6 +826,7 @@ class AccountRepository:
         return [str(value) for value in (await self.db.execute(stmt)).scalars().all()]
 
     async def get_account_dept_ids(self, account_id: str) -> list[str]:
+        """列出账户直接绑定的部门 ID。"""
         stmt = select(SysIamRelation.target_id).where(
             SysIamRelation.subject_type == IamRelationSubjectType.ACCOUNT.value,
             SysIamRelation.subject_id == account_id,

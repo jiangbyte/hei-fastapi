@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 账户组模块注册：声明路由与模型。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

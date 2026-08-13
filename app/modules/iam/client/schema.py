@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+客户端模块/资源 Schema：模块与资源的请求、分页查询及响应结构。
+"""
 
 from datetime import datetime
 
@@ -12,6 +15,8 @@ from app.modules.iam.enums import ResourceType
 
 
 class ClientModuleCreateRequest(ApiSchema):
+    """创建客户端模块请求。"""
+
     name: str = Field(min_length=1, max_length=64)
     code: str = Field(min_length=1, max_length=64)
     account_type: AccountType = AccountType.ADMIN
@@ -24,10 +29,14 @@ class ClientModuleCreateRequest(ApiSchema):
 
 
 class ClientModuleUpdateRequest(ClientModuleCreateRequest):
+    """更新客户端模块请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class ClientModuleAdminPageQuery(PageQuery):
+    """客户端模块管理端分页查询条件。"""
+
     name: str | None = Field(default=None, max_length=64)
     code: str | None = Field(default=None, max_length=64)
     account_type: AccountType | None = None
@@ -35,10 +44,14 @@ class ClientModuleAdminPageQuery(PageQuery):
 
 
 class ClientModuleSelectorQuery(ApiSchema):
+    """客户端模块下拉查询条件。"""
+
     account_type: AccountType | None = None
 
 
 class SysClientModuleSchema(ApiSchema):
+    """客户端模块响应结构。"""
+
     id: str
     name: str
     code: str
@@ -58,6 +71,8 @@ class SysClientModuleSchema(ApiSchema):
 
 
 class ClientModuleSelectorOption(ApiSchema):
+    """客户端模块下拉选项结构。"""
+
     id: str
     name: str
     code: str
@@ -68,6 +83,8 @@ class ClientModuleSelectorOption(ApiSchema):
 
 
 class ClientResourceCreateRequest(ApiSchema):
+    """创建客户端资源请求。"""
+
     code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=64)
     resource_type: ResourceType
@@ -90,10 +107,14 @@ class ClientResourceCreateRequest(ApiSchema):
 
 
 class ClientResourceUpdateRequest(ClientResourceCreateRequest):
+    """更新客户端资源请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class ClientResourceAdminPageQuery(PageQuery):
+    """客户端资源管理端分页查询条件。"""
+
     code: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=64)
     resource_type: ResourceType | None = None
@@ -103,11 +124,15 @@ class ClientResourceAdminPageQuery(PageQuery):
 
 
 class ClientResourceTreeQuery(ApiSchema):
+    """客户端资源树查询条件。"""
+
     module_id: str | None = Field(default=None, max_length=64)
     account_type: AccountType | None = None
 
 
 class SysClientResourceSchema(ApiSchema):
+    """客户端资源响应结构。"""
+
     id: str
     parent_id: str | None = None
     code: str
@@ -139,10 +164,14 @@ class SysClientResourceSchema(ApiSchema):
 
 
 class ClientResourceTreeNode(SysClientResourceSchema):
+    """客户端资源树节点结构。"""
+
     children: list["ClientResourceTreeNode"] = Field(default_factory=list)
 
 
 class ClientResourcePermissionBindRequest(ApiSchema):
+    """客户端资源权限绑定请求。"""
+
     resource_id: str
     permission_key: str
     account_type: AccountType = AccountType.ADMIN
@@ -153,6 +182,8 @@ class ClientResourcePermissionBindRequest(ApiSchema):
 
 
 class SysClientResourcePermissionRelSchema(ApiSchema):
+    """客户端资源-权限关系响应结构。"""
+
     id: str
     resource_id: str
     permission_key: str
@@ -170,5 +201,7 @@ class SysClientResourcePermissionRelSchema(ApiSchema):
 
 
 class ClientResourceGrantInfo(ApiSchema):
+    """客户端资源授权项结构。"""
+
     resource_id: str = Field(min_length=1, max_length=64)
     permission_keys: list[str] = Field(default_factory=list)

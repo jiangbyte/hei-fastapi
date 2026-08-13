@@ -82,3 +82,4 @@ SENSITIVE_CONFIG_KEYS: frozenset[str] = frozenset(
         "STORAGE_TENCENT_SECRET_KEY",
     }
 )
+# 需要加密存储的敏感配置键集合（密码、Secret、AK/SK 等）。

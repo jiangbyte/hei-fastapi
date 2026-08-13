@@ -38,6 +38,7 @@ async def send_templated_sms(scene: str, phone: str, variables: dict[str, Any]) 
 
 
 async def _send_aliyun(phone: str, template_code: str, params: dict[str, Any]) -> None:
+    """通过阿里云短信（dysmsapi）发送模板短信。"""
     access_key_id = _require("SMS_ALIYUN_ACCESS_KEY_ID")
     access_key_secret = _require("SMS_ALIYUN_ACCESS_KEY_SECRET")
     sign_name = _require("SMS_ALIYUN_SIGN_NAME")
@@ -61,6 +62,7 @@ async def _send_aliyun(phone: str, template_code: str, params: dict[str, Any]) -
 
 
 async def _send_tencent(phone: str, template_code: str, params: dict[str, Any]) -> None:
+    """通过腾讯云短信（sms）发送模板短信。"""
     secret_id = _require("SMS_TENCENT_SECRET_ID")
     secret_key = _require("SMS_TENCENT_SECRET_KEY")
     sdk_app_id = _require("SMS_TENCENT_SDK_APP_ID")

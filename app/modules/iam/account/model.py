@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户领域模型：账户主表（安全状态与审计信息）与账户登录标识表。
+"""
 
 from datetime import datetime
 

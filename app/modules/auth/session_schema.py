@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+会话管理请求/响应模型：会话分析、分页查询、token 信息与下线请求等模型。
+"""
 
 from datetime import datetime
 
@@ -10,6 +13,8 @@ from app.core.schema.base import ApiSchema
 
 
 class SessionAnalysisResponse(ApiSchema):
+    """在线会话统计概览响应。"""
+
     online_account_count: int
     online_token_count: int
     admin_account_count: int
@@ -19,6 +24,8 @@ class SessionAnalysisResponse(ApiSchema):
 
 
 class SessionPageQuery(PageQuery):
+    """会话分页查询参数。"""
+
     account_type: AccountType | None = None
     account_id: str | None = Field(default=None, max_length=64)
     account: str | None = Field(default=None, max_length=128)
@@ -26,6 +33,8 @@ class SessionPageQuery(PageQuery):
 
 
 class SessionTokenInfo(ApiSchema):
+    """单个在线 token 信息。"""
+
     token: str
     device_label: str | None = None
     client_ip: str | None = None
@@ -36,6 +45,8 @@ class SessionTokenInfo(ApiSchema):
 
 
 class SessionAccountItem(ApiSchema):
+    """账户维度的在线会话聚合项。"""
+
     account_id: str
     account_type: AccountType | str
     account: str
@@ -51,13 +62,19 @@ class SessionAccountItem(ApiSchema):
 
 
 class SessionTokensQuery(ApiSchema):
+    """按账户类型与账户 ID 定位会话。"""
+
     account_type: AccountType
     account_id: str = Field(min_length=1, max_length=64)
 
 
 class SessionExitRequest(ApiSchema):
+    """按账户批量下线请求。"""
+
     targets: list[SessionTokensQuery] = Field(min_length=1)
 
 
 class SessionTokenExitRequest(ApiSchema):
+    """按 token 批量下线请求。"""
+
     tokens: list[str] = Field(min_length=1)

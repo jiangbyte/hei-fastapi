@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+存储配置：定义各存储提供方共用的 StorageConfig 数据类与启动/测试回退配置。
+"""
 
 from __future__ import annotations
 
@@ -14,6 +17,8 @@ DEFAULT_LOCAL_STORAGE_ROOT = ".runtime/storage"
 
 @dataclass(frozen=True, slots=True)
 class StorageConfig:
+    """存储提供方配置：桶、端点、凭据、公开路径与本地根目录等。"""
+
     id: str
     name: str
     provider: StorageProvider

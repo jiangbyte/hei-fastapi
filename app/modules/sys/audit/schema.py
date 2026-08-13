@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+操作审计相关 Schema：响应记录、写入载荷与分页查询参数。
+"""
 
 from datetime import datetime
 
@@ -10,6 +13,8 @@ from app.core.schema.wire import WireBool
 
 
 class OperationAuditRecord(ApiSchema):
+    """操作审计日志响应记录。"""
+
     id: str
     module: str
     resource_type: str | None = None
@@ -29,6 +34,8 @@ class OperationAuditRecord(ApiSchema):
 
 
 class OperationAuditCreate(ApiSchema):
+    """操作审计日志写入载荷。"""
+
     module: str
     resource_type: str | None = None
     resource_id: str | None = None
@@ -46,6 +53,8 @@ class OperationAuditCreate(ApiSchema):
 
 
 class OperationAuditPageQuery(PageQuery):
+    """操作审计后台分页查询参数。"""
+
     module: str | None = Field(default=None, max_length=64)
     action: str | None = Field(default=None, max_length=64)
     account_id: str | None = Field(default=None, max_length=64)

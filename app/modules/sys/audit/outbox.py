@@ -19,6 +19,8 @@ from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class SysOperationAuditOutbox(Base):
+    """审计发件箱表：在审计队列溢出或进程崩溃时暂存事件以恢复。"""
+
     __tablename__ = "sys_operation_audit_outbox"
 
     id: Mapped[str] = mapped_column(
@@ -49,6 +51,7 @@ class SysOperationAuditOutbox(Base):
 
 
 async def enqueue_outbox(event: OperationAuditEvent) -> None:
+    """将审计事件序列化后写入发件箱（PENDING），用于溢出/崩溃恢复。"""
     factory = get_session_factory()
     async with factory() as session:
         session.add(
@@ -64,6 +67,7 @@ async def claim_pending_outbox(
     *,
     limit: int = 50,
 ) -> list[tuple[OperationAuditEvent, Callable[[], Awaitable[None]]]]:
+    """认领一批 PENDING 事件并标记 CLAIMED，返回事件及其完成回调。"""
     factory = get_session_factory()
     claimed: list[tuple[OperationAuditEvent, Callable[[], Awaitable[None]]]] = []
     async with factory() as session:
@@ -87,6 +91,7 @@ async def claim_pending_outbox(
                 data = orjson.loads(row.payload)
                 event = OperationAuditEvent(**data)
             except Exception:
+                # 载荷损坏或结构不匹配：直接标记 DONE 并计入尝试次数，避免反复重试阻塞队列。
                 await session.execute(
                     update(SysOperationAuditOutbox)
                     .where(SysOperationAuditOutbox.id == row.id)
@@ -97,6 +102,7 @@ async def claim_pending_outbox(
             row_id = row.id
 
             async def _mark_done(outbox_id: str = row_id) -> None:
+                """成功处理后删除记录，避免发件箱无界增长。"""
                 async with factory() as done_session:
                     await done_session.execute(
                         delete(SysOperationAuditOutbox).where(

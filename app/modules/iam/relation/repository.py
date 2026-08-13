@@ -1,4 +1,8 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 关系仓储：统一承载成员关系、资源权限挂载与授权规则，
+并提供账户授权的聚合计算（角色、组、部门、资源权限与客户端资源权限）。
+"""
 
 from collections import defaultdict
 from collections.abc import Sequence
@@ -27,6 +31,8 @@ from app.modules.iam.role.model import SysRole
 
 
 class AccountResourceGrantRecord(TypedDict):
+    """账户资源授权记录结构。"""
+
     subject_type: GrantSubjectType | str
     subject_id: str
     resource_id: str
@@ -34,6 +40,8 @@ class AccountResourceGrantRecord(TypedDict):
 
 
 class PermissionGrantRecord(TypedDict):
+    """权限授权记录结构。"""
+
     permission_key: str
     data_scope: DataScope | str
     custom_scope_dept_ids: list[str]
@@ -42,6 +50,8 @@ class PermissionGrantRecord(TypedDict):
 
 
 class AccountAuthorizationRecord(TypedDict):
+    """账户授权聚合结果结构。"""
+
     role_ids: list[str]
     role_codes: list[str]
     group_ids: list[str]
@@ -57,6 +67,7 @@ _PERMISSION_PRIORITY_RESOURCE = 0
 
 
 def account_dept_condition(relation_model=SysIamRelation, account_id_column=None):
+    """构造账户-部门关系的过滤条件，供数据范围关联查询复用。"""
     if account_id_column is None:
         account_id_column = relation_model.subject_id
     return and_(
@@ -68,6 +79,7 @@ def account_dept_condition(relation_model=SysIamRelation, account_id_column=None
 
 
 def _as_account_type(value: AccountType | str) -> str:
+    """将 AccountType 或字符串统一转为字符串。"""
     return value.value if isinstance(value, AccountType) else str(value)
 
 
@@ -84,6 +96,7 @@ class IamRelationRepository:
         relation_type: IamRelationType,
         account_type: str | None = None,
     ) -> None:
+        """删除指定主体在特定关系类型下的关系，可按账户体系过滤。"""
         stmt = delete(SysIamRelation).where(
             SysIamRelation.subject_type == subject_type,
             SysIamRelation.subject_id == subject_id,
@@ -100,6 +113,7 @@ class IamRelationRepository:
         relation_types: Sequence[IamRelationType],
         account_type: str | None = None,
     ) -> None:
+        """批量删除多个主体在多个关系类型下的关系。"""
         if not subject_ids or not relation_types:
             return
         stmt = delete(SysIamRelation).where(
@@ -117,6 +131,7 @@ class IamRelationRepository:
         target_type: str,
         target_ids: Sequence[str],
     ) -> None:
+        """删除目标侧指定类型的关系。"""
         if not target_ids:
             return
         await self.db.execute(
@@ -133,6 +148,7 @@ class IamRelationRepository:
         role_id: str,
         account_type: AccountType | str,
     ) -> SysIamRelation:
+        """构造账户-角色关系对象。"""
         return SysIamRelation(
             subject_type=IamRelationSubjectType.ACCOUNT.value,
             subject_id=account_id,
@@ -148,6 +164,7 @@ class IamRelationRepository:
         group_id: str,
         account_type: AccountType | str,
     ) -> SysIamRelation:
+        """构造账户-账户组关系对象。"""
         return SysIamRelation(
             subject_type=IamRelationSubjectType.ACCOUNT.value,
             subject_id=account_id,
@@ -164,6 +181,7 @@ class IamRelationRepository:
         account_type: AccountType | str,
         is_primary: bool = False,
     ) -> SysIamRelation:
+        """构造账户-部门关系对象。"""
         return SysIamRelation(
             subject_type=IamRelationSubjectType.ACCOUNT.value,
             subject_id=account_id,
@@ -180,6 +198,7 @@ class IamRelationRepository:
         role_id: str,
         account_type: AccountType | str,
     ) -> SysIamRelation:
+        """构造账户组-角色关系对象。"""
         return SysIamRelation(
             subject_type=IamRelationSubjectType.GROUP.value,
             subject_id=group_id,
@@ -197,6 +216,7 @@ class IamRelationRepository:
         account_type: AccountType | str,
         grant_mode: GrantMode = GrantMode.CASCADE,
     ) -> SysIamRelation:
+        """构造主体-资源授权关系对象。"""
         return SysIamRelation(
             subject_type=subject_type.value,
             subject_id=subject_id,
@@ -218,6 +238,7 @@ class IamRelationRepository:
         status: StatusEnum | str = StatusEnum.ENABLED,
         description: str | None = None,
     ) -> SysIamRelation:
+        """构造资源-权限挂载关系对象。"""
         return SysIamRelation(
             subject_type=IamRelationSubjectType.RESOURCE.value,
             subject_id=resource_id,
@@ -240,6 +261,7 @@ class IamRelationRepository:
         account_type: AccountType | str,
         grant_mode: GrantMode = GrantMode.CASCADE,
     ) -> SysIamRelation:
+        """构造主体-客户端资源授权关系对象。"""
         return SysIamRelation(
             subject_type=subject_type.value,
             subject_id=subject_id,
@@ -261,6 +283,7 @@ class IamRelationRepository:
         status: StatusEnum | str = StatusEnum.ENABLED,
         description: str | None = None,
     ) -> SysIamRelation:
+        """构造客户端资源-权限挂载关系对象。"""
         return SysIamRelation(
             subject_type=IamRelationSubjectType.CLIENT_RESOURCE.value,
             subject_id=resource_id,
@@ -279,6 +302,7 @@ class IamRelationRepository:
         self,
         account_id: str,
     ) -> list[AccountResourceGrantRecord]:
+        """聚合账户直接、所属组与角色的资源授权（启用且未过期）。"""
         account = await self.db.get(SysAccount, account_id)
         if account is None:
             return []
@@ -310,16 +334,19 @@ class IamRelationRepository:
         ]
 
     async def get_account_resource_ids(self, account_id: str) -> list[str]:
+        """返回账户可见的资源 ID 列表（去重排序）。"""
         resource_grants = await self.get_account_resource_grants(account_id)
         return sorted({grant["resource_id"] for grant in resource_grants})
 
     async def get_account_authorization(self, account_id: str) -> AccountAuthorizationRecord:
+        """返回单个账户的授权聚合结果。"""
         return (await self.get_accounts_authorization([account_id]))[account_id]
 
     async def get_accounts_authorization(
         self,
         account_ids: list[str],
     ) -> dict[str, AccountAuthorizationRecord]:
+        """批量聚合多个账户的角色、组、部门、资源权限与客户端资源权限。"""
         unique_account_ids = list(dict.fromkeys(account_ids))
         authorizations = {
             account_id: AccountAuthorizationRecord(
@@ -501,6 +528,7 @@ class IamRelationRepository:
         subject_id: str,
         account_type: AccountType | str | None = None,
     ) -> list[dict[str, object]]:
+        """列出主体的资源授权明细（按钮权限归并到父菜单）。"""
         await self._ensure_subject_exists(subject_type.value, subject_id)
         filters = [
             SysIamRelation.subject_type == subject_type.value,
@@ -558,6 +586,7 @@ class IamRelationRepository:
         grant_info_list,
         account_type: AccountType | str,
     ) -> None:
+        """全量替换主体资源授权，权限码自动展开为对应资源并写入级联授权。"""
         account_type = _as_account_type(account_type)
         await self._ensure_subject_exists(subject_type.value, subject_id)
         resource_ids = list(dict.fromkeys(item.resource_id for item in grant_info_list))
@@ -643,6 +672,7 @@ class IamRelationRepository:
         subject_id: str,
         account_type: AccountType | str | None = None,
     ) -> list[dict[str, object]]:
+        """列出主体的客户端资源授权明细。"""
         await self._ensure_subject_exists(subject_type.value, subject_id)
         filters = [
             SysIamRelation.subject_type == subject_type.value,
@@ -700,6 +730,7 @@ class IamRelationRepository:
         grant_info_list,
         account_type: AccountType | str,
     ) -> None:
+        """全量替换主体客户端资源授权。"""
         account_type = _as_account_type(account_type)
         await self._ensure_subject_exists(subject_type.value, subject_id)
         resource_ids = list(dict.fromkeys(item.resource_id for item in grant_info_list))
@@ -781,6 +812,7 @@ class IamRelationRepository:
         await self.db.flush()
 
     async def _get_account_role_and_group_ids(self, account_id: str) -> tuple[list[str], list[str]]:
+        """返回账户的直接角色与直接/间接组角色（含组继承）以及组 ID。"""
         account = await self.db.get(SysAccount, account_id)
         if account is None:
             return [], []
@@ -844,6 +876,7 @@ class IamRelationRepository:
         account_ids_by_role: dict[str, set[str]],
         account_type_map: dict[str, str],
     ) -> dict[str, list[AccountResourceGrantRecord]]:
+        """将账户、组与角色侧的资源授权展开映射到每个账户。"""
         subject_conditions = [
             (SysIamRelation.subject_type == GrantSubjectType.ACCOUNT.value)
             & (SysIamRelation.subject_id.in_(account_ids))
@@ -892,6 +925,7 @@ class IamRelationRepository:
         resource_grants_by_account: dict[str, list[AccountResourceGrantRecord]],
         account_type_map: dict[str, str],
     ) -> dict[str, list[PermissionGrantRecord]]:
+        """将级联资源授权进一步解析为每个账户的权限授权（含数据范围）。"""
         cascade_resource_ids = sorted(
             {
                 grant["resource_id"]
@@ -954,6 +988,7 @@ class IamRelationRepository:
         account_ids_by_role: dict[str, set[str]],
         account_type_map: dict[str, str],
     ) -> dict[str, list[AccountResourceGrantRecord]]:
+        """将账户、组与角色侧的客户端资源授权展开映射到每个账户。"""
         subject_conditions = [
             (SysIamRelation.subject_type == GrantSubjectType.ACCOUNT.value)
             & (SysIamRelation.subject_id.in_(account_ids))
@@ -1002,6 +1037,7 @@ class IamRelationRepository:
         client_resource_grants_by_account: dict[str, list[AccountResourceGrantRecord]],
         account_type_map: dict[str, str],
     ) -> dict[str, set[str]]:
+        """将级联客户端资源授权解析为每个账户的客户端权限码集合。"""
         cascade_resource_ids = sorted(
             {
                 grant["resource_id"]
@@ -1040,11 +1076,13 @@ class IamRelationRepository:
         priority: int,
         record: PermissionGrantRecord,
     ) -> None:
+        """按优先级合并权限授权记录，优先级高（数值大）者覆盖。"""
         current = permission_map.get(record["permission_key"])
         if current is None or priority >= current[0]:
             permission_map[record["permission_key"]] = (priority, record)
 
     async def _ensure_subject_exists(self, subject_type: str, subject_id: str) -> None:
+        """按主体类型校验主体存在，否则抛 NotFoundError。"""
         entity: object | None
         if subject_type == GrantSubjectType.ROLE.value:
             entity = await self.db.get(SysRole, subject_id)

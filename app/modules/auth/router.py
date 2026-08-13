@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+认证路由：登录、注册、验证码、密码密钥、注销与账号注销等 HTTP 端点。
+"""
 
 from typing import Annotated
 
@@ -53,15 +56,18 @@ portal_router = APIRouter()
 
 @admin_router.get("/v1/admin/public/auth-options", response_model=AuthOptionsApiResponse)
 async def admin_auth_options() -> AuthOptionsApiResponse:
+    """返回管理端登录/注册策略选项。"""
     return success(_auth_options_response(AccountType.ADMIN))
 
 
 @portal_router.get("/v1/portal/public/auth-options", response_model=AuthOptionsApiResponse)
 async def portal_auth_options() -> AuthOptionsApiResponse:
+    """返回门户端登录/注册策略选项。"""
     return success(_auth_options_response(AccountType.PORTAL))
 
 
 def _auth_options_response(account_type: AccountType) -> AuthOptionsResponse:
+    """将登录策略转换为对外的 AuthOptions 响应模型。"""
     opts = get_auth_options(account_type)
     return AuthOptionsResponse(
         account_type=opts.account_type,
@@ -83,12 +89,14 @@ def _auth_options_response(account_type: AccountType) -> AuthOptionsResponse:
 async def captcha(
     query: Annotated[CaptchaFormatQuery, Depends()],
 ) -> CaptchaApiResponse:
+    """生成图形验证码。"""
     return success(await create_captcha(query.image_format))
 
 
 @admin_router.get("/v1/admin/password-key", response_model=PasswordKeyApiResponse)
 @portal_router.get("/v1/portal/password-key", response_model=PasswordKeyApiResponse)
 async def password_key() -> PasswordKeyApiResponse:
+    """生成一次性密码传输密钥（RSA 公钥）。"""
     return success(await create_password_key())
 
 
@@ -100,6 +108,7 @@ async def _login(
     db: AsyncSession,
     account_type: AccountType,
 ) -> LoginApiResponse:
+    """统一登录流程：校验验证码、解密密码并签发会话。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     login_mode = (payload.login_mode or "PASSWORD").strip().upper()
     password: str | None = None
@@ -147,6 +156,7 @@ async def admin_login(
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> LoginApiResponse:
+    """管理端登录端点。"""
     return await _login(
         payload=payload,
         request=request,
@@ -163,6 +173,7 @@ async def portal_login(
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> LoginApiResponse:
+    """门户端登录端点。"""
     return await _login(
         payload=payload,
         request=request,
@@ -179,6 +190,7 @@ async def send_login_code(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
+    """发送邮箱/短信登录验证码。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     path = request.url.path
     account_type = AccountType.ADMIN if "/admin/" in path else AccountType.PORTAL
@@ -214,6 +226,7 @@ async def admin_forgot_password(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
+    """管理端忘记密码，发送重置邮件。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     await AuthService(db).forgot_password(
         payload,
@@ -230,6 +243,7 @@ async def admin_reset_password(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
+    """管理端重置密码端点。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     password = await decrypt_password(payload.password_key_id, payload.password)
     await AuthService(db).reset_password(
@@ -247,6 +261,7 @@ async def portal_forgot_password(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
+    """门户端忘记密码，发送重置邮件。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     await AuthService(db).forgot_password(
         payload,
@@ -263,6 +278,7 @@ async def portal_reset_password(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
+    """门户端重置密码端点。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     password = await decrypt_password(payload.password_key_id, payload.password)
     await AuthService(db).reset_password(
@@ -299,6 +315,7 @@ async def logout(
 
 
 def _device_label(user_agent: str | None) -> str | None:
+    """根据 User-Agent 粗略推断设备类型标签。"""
     if not user_agent:
         return None
     value = user_agent.lower()

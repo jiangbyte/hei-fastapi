@@ -14,10 +14,12 @@ from app.platform.http.client import get_http_client
 
 
 def _hmac_sha256(key: bytes, msg: str) -> bytes:
+    """对字符串做 HMAC-SHA256 摘要。"""
     return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
 
 
 def _sha256_hex(content: str) -> str:
+    """对字符串做 SHA256 摘要并返回十六进制文本。"""
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
@@ -32,6 +34,7 @@ async def tencent_api_post(
     secret_key: str,
     payload: dict,
 ) -> dict:
+    """按腾讯云 TC3-HMAC-SHA256 签名规范发起 POST 调用并校验结果。"""
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     timestamp = str(int(datetime.now(UTC).timestamp()))
     date = datetime.fromtimestamp(int(timestamp), tz=UTC).strftime("%Y-%m-%d")

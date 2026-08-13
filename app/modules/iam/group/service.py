@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户组应用服务：账户组 CRUD、成员/角色/资源授权与数据范围可见性校验。
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +49,8 @@ from app.platform.db.transaction import transactional
 
 
 class GroupService:
+    """账户组应用服务。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = GroupRepository(db)
@@ -56,6 +61,7 @@ class GroupService:
         payload: GroupCreateRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """创建账户组，传入 session 时校验所属部门可见性。"""
         if session is not None and payload.owner_dept_id:
             await self._ensure_depts_visible(session, "iam:group:create", [payload.owner_dept_id])
         async with transactional(self.db):
@@ -66,6 +72,7 @@ class GroupService:
         payload: GroupUpdateRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """更新账户组，传入 session 时校验账户组与所属部门可见性。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:update", [payload.id])
             if payload.owner_dept_id:
@@ -78,12 +85,14 @@ class GroupService:
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
+        """删除账户组，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:delete", payload.ids)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery, session: SessionPayload | None = None) -> SysGroupSchema:
+        """查询账户组详情并回显创建人昵称。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:detail", [query.id])
         schema = to_schema(SysGroupSchema, await self.repo.get_required(query.id))
@@ -95,6 +104,7 @@ class GroupService:
         query: GroupAdminPageQuery,
         session: SessionPayload | None = None,
     ) -> PageData[SysGroupSchema]:
+        """分页查询账户组，叠加数据范围过滤。"""
         data_scope_filter = (
             await self._group_scope_filter(session, "iam:group:page")
             if session is not None
@@ -110,6 +120,7 @@ class GroupService:
         payload: GroupRoleAssignRequest,
         session: SessionPayload | None = None,
     ) -> SysGroupRoleRelSchema:
+        """为账户组追加单个角色，传入 session 时校验可见性。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantrole", [payload.group_id])
             await self._ensure_roles_visible(session, "iam:group:grantrole", [payload.role_id])
@@ -121,6 +132,7 @@ class GroupService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> GroupOwnUserResponse:
+        """返回账户组成员（含全部可见账户与已选成员）。"""
         account_filter = (
             await self._account_scope_filter(session, "iam:group:ownuser")
             if session is not None
@@ -141,6 +153,7 @@ class GroupService:
         payload: GroupGrantUserRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户组成员，并刷新受影响账户会话。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantuser", [payload.id])
             await self._ensure_accounts_visible(session, "iam:group:grantuser", payload.account_ids)
@@ -154,6 +167,7 @@ class GroupService:
         query: GroupOwnRoleQuery,
         session: SessionPayload | None = None,
     ) -> GroupOwnRoleResponse:
+        """返回账户组绑定的角色（叠加数据范围过滤）。"""
         role_filter = (
             await self._role_scope_filter(session, "iam:group:ownrole")
             if session is not None
@@ -177,6 +191,7 @@ class GroupService:
         payload: GroupGrantRoleRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户组角色，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantrole", [payload.id])
             await self._ensure_roles_visible(session, "iam:group:grantrole", payload.role_ids)
@@ -190,6 +205,7 @@ class GroupService:
         query: GroupOwnResourceQuery,
         session: SessionPayload | None = None,
     ) -> GroupOwnResourceResponse:
+        """返回账户组拥有的资源授权。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:ownresource", [query.id])
         return GroupOwnResourceResponse(
@@ -212,6 +228,7 @@ class GroupService:
         payload: GroupGrantResourceRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户组资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantresource", [payload.id])
         async with transactional(self.db):
@@ -229,6 +246,7 @@ class GroupService:
         query: GroupOwnClientResourceQuery,
         session: SessionPayload | None = None,
     ) -> GroupOwnClientResourceResponse:
+        """返回账户组拥有的客户端资源授权。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:ownclientresource", [query.id])
         return GroupOwnClientResourceResponse(
@@ -249,6 +267,7 @@ class GroupService:
         payload: GroupGrantClientResourceRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户组客户端资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantclientresource", [payload.id])
         async with transactional(self.db):
@@ -279,9 +298,11 @@ class GroupService:
                 item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:
+        """刷新指定账户的在线会话缓存。"""
         await AccountSessionService(self.db).refresh_accounts_sessions(sorted(set(account_ids)))
 
     async def _group_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造账户组数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -291,6 +312,7 @@ class GroupService:
         )
 
     async def _role_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造角色数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -300,6 +322,7 @@ class GroupService:
         )
 
     async def _account_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造账户数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -314,6 +337,7 @@ class GroupService:
         permission_key: str,
         group_ids: list[str],
     ) -> None:
+        """校验目标账户组均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(group_ids))
         if not unique_ids:
             return
@@ -327,6 +351,7 @@ class GroupService:
         permission_key: str,
         role_ids: list[str],
     ) -> None:
+        """校验目标角色均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
@@ -341,6 +366,7 @@ class GroupService:
         permission_key: str,
         account_ids: list[str],
     ) -> None:
+        """校验目标账户均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
@@ -358,6 +384,7 @@ class GroupService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return

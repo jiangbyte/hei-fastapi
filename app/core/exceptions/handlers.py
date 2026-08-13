@@ -1,4 +1,10 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+全局异常处理器：统一把业务异常、参数校验异常、HTTP 异常与未捕获异常
+转换为平台统一错误响应（ApiErrorResponse），并记录指标与日志。
+
+同时负责定制 OpenAPI 文档中的错误响应 schema。
+"""
 
 import logging
 from collections.abc import Iterable

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+系统字典管理端接口：字典增删改查、分页与树形查询。
+"""
 
 from typing import Annotated
 
@@ -37,6 +40,7 @@ async def create(
     payload: DictCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """新增字典。"""
     await DictService(db).create(payload)
     return success()
 
@@ -53,6 +57,7 @@ async def update(
     payload: DictUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新字典。"""
     await DictService(db).update(payload)
     return success()
 
@@ -69,6 +74,7 @@ async def delete(
     payload: DictIdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量删除字典。"""
     await DictService(db).delete(payload)
     return success()
 
@@ -85,6 +91,7 @@ async def get(
     query: Annotated[DictIdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysDictSchema]:
+    """查询字典详情。"""
     return success(await DictService(db).get(query))
 
 
@@ -100,6 +107,7 @@ async def page(
     query: Annotated[DictAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SysDictSchema]]:
+    """分页查询字典。"""
     return success(await DictService(db).page_admin(query))
 
 
@@ -115,4 +123,5 @@ async def tree(
     query: Annotated[DictTreeQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[SysDictTreeNode]]:
+    """查询字典树。"""
     return success(await DictService(db).list_tree(query))

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+展示图公开端接口：列表查询与交互计数。
+"""
 
 from typing import Annotated
 
@@ -22,6 +25,7 @@ async def list_public_banners(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[BannerPublicListQuery, Depends()],
 ) -> ApiResponse[list[SysBannerSchema]]:
+    """公开端按位置查询可见展示图列表。"""
     return success(await BannerService(db).list_public(query))
 
 
@@ -30,5 +34,6 @@ async def record_banner_interaction(
     payload: IdQuery,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """记录一次展示图交互，用于异步累加交互次数。"""
     await BannerService(db).record_interaction(payload)
     return success()

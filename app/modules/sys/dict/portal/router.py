@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+系统字典公开端接口：树形查询。
+"""
 
 from typing import Annotated
 
@@ -21,4 +24,5 @@ async def tree(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[DictTreeQuery, Depends()],
 ) -> ApiResponse[list[SysDictTreeNode]]:
+    """公开端按分类查询字典树。"""
     return success(await DictService(db).list_tree(query))

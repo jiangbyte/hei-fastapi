@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+认证依赖：解析登录会话、当前账户，并生成账户类型/权限校验依赖。
+"""
 
 from typing import Annotated
 
@@ -37,6 +40,7 @@ async def get_current_account(
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ):
+    """解析并校验当前账户，同时写入账户上下文。"""
     account_id_ctx.set(session.account_id)
     account_type_ctx.set(session.account_type)
     from typing import cast
@@ -72,6 +76,8 @@ def require_account_type(*account_types: AccountType):
 
 
 def require_permission(permission_code: str):
+    """基于权限码生成依赖校验函数。"""
+
     async def dependency(
         session: Annotated[SessionPayload, Depends(get_current_session)],
         account=Depends(get_current_account),

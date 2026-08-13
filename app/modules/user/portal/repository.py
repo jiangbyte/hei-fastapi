@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+门户账户资料仓储层：封装扩展资料的初始化、写入与查询。
+"""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

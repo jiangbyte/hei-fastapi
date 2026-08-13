@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+认证服务：登录签发、登录验证码、注册、密码找回/重置、注销与账号注销等核心业务逻辑。
+"""
 
 import json
 import secrets
@@ -54,6 +57,7 @@ from app.platform.email.sender import send_templated_mail
 from app.platform.observability.metrics import record_login_attempt
 from app.platform.sms.sender import send_templated_sms
 
+# 各账户类型对应的密码重置链接模板配置键。
 _PASSWORD_RESET_URL_KEYS = {
     AccountType.ADMIN: "AUTH_PASSWORD_RESET_URL_ADMIN",
     AccountType.PORTAL: "AUTH_PASSWORD_RESET_URL_PORTAL",
@@ -64,6 +68,7 @@ class AuthService:
     """认证服务，负责登录态签发、账户类型校验与会话数据组装。"""
 
     def __init__(self, db: AsyncSession):
+        """初始化仓储与账户会话服务。"""
         self.db = db
         self.account_repo = AccountRepository(db)
         self.session_service = AccountSessionService(db)
@@ -124,6 +129,7 @@ class AuthService:
         target: str,
         client_ip: str | None = None,
     ) -> None:
+        """按渠道发送登录验证码，未绑定且策略不允许自动创建时不泄露用户是否存在。"""
         channel_u = channel.strip().upper()
         identity = (
             AccountIdentityType.EMAIL if channel_u == "EMAIL" else AccountIdentityType.PHONE
@@ -151,6 +157,7 @@ class AuthService:
             await send_templated_sms("LOGIN_CODE", normalized, variables)
 
     async def _verify_login_otp(self, payload: LoginPayload) -> None:
+        """校验 OTP 登录验证码，成功后一次性消费。"""
         code = (payload.otp_code or "").strip()
         if not code:
             raise AuthenticationError("Invalid or expired OTP code")
@@ -177,6 +184,7 @@ class AuthService:
         await redis.delete(key)
 
     async def _maybe_auto_create(self, payload: LoginPayload) -> SysAccount | None:
+        """当策略允许 AUTO_CREATE 时自动创建账户并返回，否则返回 None。"""
         policy = ensure_identity_allowed(
             payload.account_type,
             payload.identity_type,
@@ -226,6 +234,7 @@ class AuthService:
         return account
 
     async def password_expiry_warning_days(self, account_id: str) -> int | None:
+        """返回密码剩余有效天数（仅在临近过期时），否则返回 None。"""
         warning = settings.password_policy.expiry_warning_days
         expire_days = settings.password_policy.expire_days
         if warning <= 0 or expire_days <= 0:
@@ -239,6 +248,7 @@ class AuthService:
         return None
 
     async def _issue_session(self, account: SysAccount, payload: LoginPayload) -> SessionPayload:
+        """组装会话载荷、写入会话存储并记录审计与指标。"""
         password_expired_ = await is_password_expired(self.db, account.id)
         session_payload = await self.session_service.build_session_payload(
             account,
@@ -281,6 +291,7 @@ class AuthService:
         return session_payload
 
     async def register_portal(self, payload: RegisterRequest) -> RegisterResponse:
+        """执行门户注册：创建账户、门户资料、默认角色/部门并发送通知。"""
         policy = get_register_policy(AccountType.PORTAL)
         if not policy.enabled:
             raise BusinessError("Portal registration is disabled")
@@ -362,6 +373,7 @@ class AuthService:
         return response
 
     async def _assign_register_defaults(self, account_id: str, account_type: AccountType) -> None:
+        """为注册账户分配策略中配置的默认角色与部门。"""
         policy = get_register_policy(account_type)
         if policy.default_role_id:
             await self.account_repo.assign_account_to_role(
@@ -383,6 +395,7 @@ class AuthService:
         client_ip: str | None = None,
         user_agent: str | None = None,
     ) -> None:
+        """处理忘记密码：校验账户后生成重置链接并发送邮件。"""
         email = payload.email.strip().lower()
         account = await self.account_repo.get_account_by_identifier(
             email,
@@ -451,6 +464,7 @@ class AuthService:
         client_ip: str | None = None,
         user_agent: str | None = None,
     ) -> None:
+        """校验重置 token 并更新账户密码，随后清理会话。"""
         key = password_reset_token_key(payload.token)
         redis = self._required_redis("Redis is required for password reset")
         raw = await redis.get(key)
@@ -566,6 +580,7 @@ class AuthService:
         account: SysAccount | None,
         account_type: AccountType,
     ) -> None:
+        """校验账号状态、注销标记与目标账户类型是否允许访问。"""
         if account is None:
             raise AuthenticationError("Invalid account or password")
         if (
@@ -581,12 +596,14 @@ class AuthService:
             raise AuthenticationError("Account is not allowed to access portal account type")
 
     def _required_redis(self, message: str = "Redis is required"):
+        """获取 Redis 客户端，未初始化时抛出统一业务错误。"""
         redis = get_redis()
         if redis is None:
             raise BusinessError(message)
         return redis
 
     def _build_password_reset_link(self, account_type: AccountType, token: str) -> str:
+        """根据账户类型读取配置的模板地址并拼接 token 生成重置链接。"""
         config_key = _PASSWORD_RESET_URL_KEYS.get(account_type)
         if not config_key:
             raise BusinessError(f"Unsupported account type for password reset: {account_type}")
@@ -605,6 +622,7 @@ class AuthService:
         user_agent: str | None,
         account_id: str | None = None,
     ) -> None:
+        """记录密码重置请求的审计日志。"""
         await OperationAuditService(self.db).record(
             module="auth",
             action="forgot_password",

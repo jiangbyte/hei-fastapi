@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+会话管理路由：在线会话分析、分页查询、token 列表与强制下线端点。
+"""
 
 from typing import Annotated
 
@@ -35,6 +38,7 @@ router = APIRouter()
 async def analysis(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SessionAnalysisResponse]:
+    """在线会话统计概览端点。"""
     return success(await SessionAdminService(db).analysis())
 
 
@@ -50,6 +54,7 @@ async def page(
     query: Annotated[SessionPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SessionAccountItem]]:
+    """在线会话分页查询端点。"""
     return success(await SessionAdminService(db).page(query))
 
 
@@ -65,6 +70,7 @@ async def tokens(
     query: Annotated[SessionTokensQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[SessionTokenInfo]]:
+    """查询指定账户的在线 token 列表端点。"""
     return success(await SessionAdminService(db).tokens(query))
 
 
@@ -80,6 +86,7 @@ async def exit_sessions(
     payload: SessionExitRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """按账户批量强制下线端点。"""
     await SessionAdminService(db).exit_sessions(payload.targets)
     return success()
 
@@ -96,5 +103,6 @@ async def exit_tokens(
     payload: SessionTokenExitRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """按 token 批量强制下线端点。"""
     await SessionAdminService(db).exit_tokens(payload.tokens)
     return success()

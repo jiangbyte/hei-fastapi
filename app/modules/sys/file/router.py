@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+文件管理端接口：上传、删除、更新、详情、URL、签名地址与分页。
+"""
 
 from typing import Annotated
 
@@ -40,6 +43,7 @@ async def upload(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     storage_provider: Annotated[StorageProvider | None, Form()] = None,
 ) -> ApiResponse[SysFileSchema]:
+    """上传文件并返回元数据。"""
     content = await file.read(settings.storage.upload_max_bytes + 1)
     return success(
         await FileService(db).upload(
@@ -65,6 +69,7 @@ async def delete(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """批量删除文件。"""
     await FileService(db).delete(payload)
     return success()
 
@@ -81,6 +86,7 @@ async def update(
     payload: FileUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
+    """更新文件信息。"""
     await FileService(db).update(payload)
     return success()
 
@@ -97,6 +103,7 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysFileSchema]:
+    """查询文件元数据详情。"""
     return success(await FileService(db).detail(query))
 
 
@@ -112,6 +119,7 @@ async def list_by_ids(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[SysFileSchema]]:
+    """按 ID 列表批量查询文件元数据。"""
     return success(await FileService(db).list_by_ids(payload))
 
 
@@ -127,6 +135,7 @@ async def download(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> Response:
+    """按 ID 下载文件。"""
     return await FileService(db).download_by_id(query)
 
 
@@ -142,6 +151,7 @@ async def url(
     payload: FileUrlRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[FileUrlResponse]:
+    """获取文件的访问 URL。"""
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
@@ -162,6 +172,7 @@ async def presigned_url(
     payload: FileUrlRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[FileUrlResponse]:
+    """获取文件的签名访问 URL。"""
     return success(
         FileUrlResponse(
             object_name=payload.object_name,
@@ -183,4 +194,5 @@ async def page(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[PageData[SysFileSchema]]:
+    """分页查询文件元数据（按数据权限过滤）。"""
     return success(await FileService(db).page(query, session))

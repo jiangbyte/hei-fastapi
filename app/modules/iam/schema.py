@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 公共 Schema：账户、角色、资源授权与权限注册表等跨子模块复用的响应结构。
+"""
 
 from datetime import datetime
 
@@ -11,6 +14,8 @@ from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
 
 
 class AccountIdentitySchema(ApiSchema):
+    """账户登录标识响应结构。"""
+
     id: str | None = None
     account_id: str | None = None
     identity_type: AccountIdentityType
@@ -25,6 +30,8 @@ class AccountIdentitySchema(ApiSchema):
 
 
 class SysAccountSchema(ApiSchema):
+    """系统账户响应结构，聚合账户主体、登录标识与登录轨迹信息。"""
+
     id: str
     account: str
     account_type: AccountType
@@ -65,6 +72,8 @@ class SysAccountSchema(ApiSchema):
 
 
 class RoleOption(ApiSchema):
+    """角色下拉选项结构。"""
+
     id: str
     code: str
     name: str
@@ -72,6 +81,8 @@ class RoleOption(ApiSchema):
 
 
 class ResourcePermissionOption(ApiSchema):
+    """资源权限挂载项结构。"""
+
     id: str
     permission_key: str
     title: str
@@ -79,6 +90,8 @@ class ResourcePermissionOption(ApiSchema):
 
 
 class ResourceGrantMenuOption(ApiSchema):
+    """资源授权菜单项结构。"""
+
     id: str
     module_id: str
     parent_id: str | None = None
@@ -88,12 +101,16 @@ class ResourceGrantMenuOption(ApiSchema):
 
 
 class ResourceGrantModuleOption(ApiSchema):
+    """资源授权模块分组结构。"""
+
     id: str
     title: str
     menu: list[ResourceGrantMenuOption] = Field(default_factory=list)
 
 
 class PermissionRegistryItem(ApiSchema):
+    """权限注册表条目结构。"""
+
     permission_key: str
     name: str
     method: str | None = None

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+IAM 部门模块注册：声明路由、模型与 data_scope_resolver 服务实现。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec, ServiceRegistration
 

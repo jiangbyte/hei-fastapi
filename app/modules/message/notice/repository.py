@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+消息通知仓储层：封装消息的增删改查、可见性过滤与阅读状态管理。
+"""
 
 from datetime import UTC, datetime
 
@@ -18,6 +21,7 @@ from app.modules.message.notice.schema import (
 
 
 def _visible_to_account(account_type: str, account_id: str | None = None) -> ColumnElement[bool]:
+    """构造「对指定账户可见」的过滤条件（按类型匹配或按 ID 精确匹配）。"""
     type_match = (func.json_array_length(MsgNotice.target_account_types) == 0) | cast(
         MsgNotice.target_account_types, String
     ).contains('"' + account_type + '"')
@@ -43,6 +47,7 @@ def _published_filters(
     account_id: str | None = None,
     kind: str | None = None,
 ) -> list[ColumnElement[bool]]:
+    """构造已发布消息的通用过滤条件（含可见性、公告未过期判断）。"""
     now = datetime.now(UTC)
     filters: list[ColumnElement[bool]] = [
         MsgNotice.status == NoticeStatus.PUBLISHED.value,
@@ -59,31 +64,38 @@ def _published_filters(
 
 
 class MsgNoticeRepository:
+    """消息通知数据仓储，负责 MsgNotice 与阅读记录的持久化查询。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def create(self, payload: MsgNoticeCreateRequest) -> MsgNotice:
+        """创建消息记录。"""
         entity = MsgNotice(**payload.model_dump())
         self.db.add(entity)
         await self.db.flush()
         return entity
 
     async def get_by_id(self, entity_id: str) -> MsgNotice | None:
+        """按主键查询消息，不存在时返回 None。"""
         return await self.db.get(MsgNotice, entity_id)
 
     async def get_required(self, entity_id: str) -> MsgNotice:
+        """按主键查询消息，不存在时抛出 NotFoundError。"""
         entity = await self.get_by_id(entity_id)
         if entity is None:
             raise NotFoundError("MsgNotice not found")
         return entity
 
     async def update(self, payload: MsgNoticeUpdateRequest) -> None:
+        """按载荷字段更新消息（id 除外）。"""
         entity = await self.get_required(payload.id)
         for key, value in payload.model_dump(exclude={"id"}).items():
             setattr(entity, key, value)
         await self.db.flush()
 
     async def delete_many(self, entity_ids: list[str]) -> None:
+        """批量删除消息，并级联清理其阅读记录。"""
         unique_ids = list(dict.fromkeys(entity_ids))
         stmt = select(MsgNotice.id).where(MsgNotice.id.in_(unique_ids))
         existing_ids = set((await self.db.execute(stmt)).scalars().all())
@@ -93,6 +105,7 @@ class MsgNoticeRepository:
         await self.db.execute(delete(MsgNotice).where(MsgNotice.id.in_(unique_ids)))
 
     async def page_admin(self, query: MsgNoticeAdminPageQuery) -> tuple[list[MsgNotice], int]:
+        """管理端分页查询消息，支持标题/状态/类型过滤。"""
         stmt: Select[tuple[MsgNotice]] = select(MsgNotice)
         count_stmt = select(func.count(MsgNotice.id))
         filters = []
@@ -118,6 +131,7 @@ class MsgNoticeRepository:
         *,
         kind: str | None = None,
     ) -> tuple[list[MsgNotice], int, set[str]]:
+        """分页查询对当前账户可见的消息，并返回已读 ID 集合。"""
         published = _published_filters(
             account_type=account_type,
             account_id=account_id,
@@ -145,6 +159,7 @@ class MsgNoticeRepository:
         return items, total, read_id_set
 
     async def count_unread(self, account_type: str, account_id: str) -> int:
+        """统计当前账户可见消息中的未读数量。"""
         published_stmt = select(MsgNotice.id).where(
             *_published_filters(account_type=account_type, account_id=account_id)
         )
@@ -160,6 +175,7 @@ class MsgNoticeRepository:
         return len(published_ids - read_ids)
 
     async def mark_read(self, ids: list[str], account_type: str, account_id: str) -> None:
+        """将指定消息标记为当前账户已读（幂等，跳过已读项）。"""
         unique_ids = list(dict.fromkeys(ids))
         existing_stmt = select(MsgNoticeRead.notice_id).where(
             MsgNoticeRead.notice_id.in_(unique_ids),
@@ -180,6 +196,7 @@ class MsgNoticeRepository:
             await self.db.flush()
 
     async def mark_all_read(self, account_type: str, account_id: str) -> None:
+        """将当前账户全部可见消息标记为已读。"""
         published_stmt = select(MsgNotice.id).where(
             *_published_filters(account_type=account_type, account_id=account_id)
         )
@@ -205,6 +222,7 @@ class MsgNoticeRepository:
             await self.db.flush()
 
     async def increment_view_count(self, entity_id: str) -> None:
+        """公告被查看时自增其查看次数。"""
         await self.db.execute(
             update(MsgNotice)
             .where(

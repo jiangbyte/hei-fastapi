@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户应用服务：账户生命周期、密码策略、授权以及数据范围可见性校验。
+"""
 
 from datetime import UTC, datetime, timedelta
 
@@ -59,12 +62,15 @@ from app.platform.db.transaction import transactional
 
 
 class AccountService:
+    """账户应用服务，编排仓储与资料仓储完成账户及授权的读写。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = AccountRepository(db)
         self.relation_repo = IamRelationRepository(db)
 
     async def create(self, payload: AccountCreateRequest) -> None:
+        """创建账户并同步写入对应端的用户资料。"""
         self._ensure_status_not_cancelled(payload)
         self._ensure_login_contact_payload(payload)
         password = await self._resolve_password(payload.password, payload.password_key_id)
@@ -94,6 +100,7 @@ class AccountService:
         payload: AccountUpdateRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """更新账户与资料；传入 session 时先校验账户可见性。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:update", [payload.id])
         self._ensure_status_not_cancelled(payload)
@@ -120,6 +127,7 @@ class AccountService:
                     raise BusinessError(f"Unsupported account type: {account.account_type}")
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
+        """删除账户，并在事务外清理对应在线会话。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:delete", payload.ids)
         accounts = await self.repo.list_accounts_by_ids(payload.ids)
@@ -133,6 +141,7 @@ class AccountService:
         self,
         retention_days: int | None = None,
     ) -> int:
+        """彻底删除注销超过保留期的账户，并向快照联系方式发送通知。"""
         days = (
             retention_days
             if retention_days is not None
@@ -174,6 +183,7 @@ class AccountService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> SysAccountSchema:
+        """查询账户详情，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:detail", [query.id])
         accounts = [await self.repo.get_required(query.id)]
@@ -184,6 +194,7 @@ class AccountService:
         query: AccountAdminPageQuery,
         session: SessionPayload | None = None,
     ) -> PageData[SysAccountSchema]:
+        """分页查询账户，叠加当前会话的数据范围过滤。"""
         data_scope_filter = (
             await self._account_scope_filter(session, "iam:account:page")
             if session is not None
@@ -198,6 +209,7 @@ class AccountService:
         payload: AccountRoleAssignRequest,
         session: SessionPayload | None = None,
     ) -> SysAccountRoleRelSchema:
+        """为账户追加单个角色，传入 session 时校验账户与角色可见性。"""
         if session is not None:
             await self._ensure_accounts_visible(
                 session,
@@ -216,6 +228,7 @@ class AccountService:
         payload: AccountGroupAssignRequest,
         session: SessionPayload | None = None,
     ) -> SysAccountGroupRelSchema:
+        """为账户追加单个账户组，传入 session 时校验账户与组可见性。"""
         if session is not None:
             await self._ensure_accounts_visible(
                 session,
@@ -234,6 +247,7 @@ class AccountService:
         payload: AccountDeptAssignRequest,
         session: SessionPayload | None = None,
     ) -> SysAccountDeptRelSchema:
+        """为账户追加单个部门，传入 session 时校验账户与部门可见性。"""
         if session is not None:
             await self._ensure_accounts_visible(
                 session,
@@ -252,6 +266,7 @@ class AccountService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> AccountOwnResourceResponse:
+        """返回账户拥有的资源授权（模块树 + 授权明细）。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:ownresource", [query.id])
         account = await self.repo.get_required(query.id)
@@ -276,6 +291,7 @@ class AccountService:
         payload: AccountGrantResourceRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户资源授权，并刷新账户会话。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantresource", [payload.id])
         account = await self.repo.get_required(payload.id)
@@ -293,6 +309,7 @@ class AccountService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> AccountOwnClientResourceResponse:
+        """返回账户拥有的客户端资源授权。"""
         if session is not None:
             await self._ensure_accounts_visible(
                 session, "iam:account:ownclientresource", [query.id]
@@ -317,6 +334,7 @@ class AccountService:
         payload: AccountGrantClientResourceRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户客户端资源授权，并刷新账户会话。"""
         if session is not None:
             await self._ensure_accounts_visible(
                 session, "iam:account:grantclientresource", [payload.id]
@@ -336,6 +354,7 @@ class AccountService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> AccountOwnRoleResponse:
+        """返回账户直接绑定的角色（叠加角色数据范围过滤）。"""
         role_filter = (
             await self._role_scope_filter(session, "iam:account:ownrole")
             if session is not None
@@ -355,6 +374,7 @@ class AccountService:
         payload: AccountGrantRoleRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户角色，并刷新账户会话。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantrole", [payload.id])
             await self._ensure_roles_visible(session, "iam:account:grantrole", payload.role_ids)
@@ -367,6 +387,7 @@ class AccountService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> AccountOwnGroupResponse:
+        """返回账户直接绑定的账户组（叠加组数据范围过滤）。"""
         group_filter = (
             await self._group_scope_filter(session, "iam:account:owngroup")
             if session is not None
@@ -386,6 +407,7 @@ class AccountService:
         payload: AccountGrantGroupRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户账户组，并刷新账户会话。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantgroup", [payload.id])
             await self._ensure_groups_visible(session, "iam:account:grantgroup", payload.group_ids)
@@ -398,6 +420,7 @@ class AccountService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> AccountOwnDeptResponse:
+        """返回账户的部门授权（仅返回当前可见部门）。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:owndept", [query.id])
         visible_dept_ids = (
@@ -415,6 +438,7 @@ class AccountService:
         payload: AccountGrantDeptRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换账户部门，并刷新账户会话。"""
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantdept", [payload.id])
             await self._ensure_depts_visible(
@@ -427,9 +451,11 @@ class AccountService:
         await self._refresh_accounts([payload.id])
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:
+        """刷新指定账户的在线会话缓存。"""
         await AccountSessionService(self.db).refresh_accounts_sessions(sorted(set(account_ids)))
 
     async def _account_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造账户数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -439,6 +465,7 @@ class AccountService:
         )
 
     async def _role_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造角色数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -448,6 +475,7 @@ class AccountService:
         )
 
     async def _group_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造账户组数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -462,6 +490,7 @@ class AccountService:
         permission_key: str,
         account_ids: list[str],
     ) -> None:
+        """校验目标账户均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
@@ -476,6 +505,7 @@ class AccountService:
         permission_key: str,
         role_ids: list[str],
     ) -> None:
+        """校验目标角色均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
@@ -490,6 +520,7 @@ class AccountService:
         permission_key: str,
         group_ids: list[str],
     ) -> None:
+        """校验目标账户组均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(group_ids))
         if not unique_ids:
             return
@@ -504,6 +535,7 @@ class AccountService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
@@ -518,6 +550,7 @@ class AccountService:
         account_id: str,
         payload: AccountCreateRequest | AccountUpdateRequest,
     ) -> AdminProfileUpsertPayload:
+        """从账户请求构造管理端用户资料载荷。"""
         return AdminProfileUpsertPayload(
             account_id=account_id,
             name=payload.name,
@@ -534,6 +567,7 @@ class AccountService:
         account_id: str,
         payload: AccountCreateRequest | AccountUpdateRequest,
     ) -> PortalProfileUpsertPayload:
+        """从账户请求构造门户端用户资料载荷。"""
         return PortalProfileUpsertPayload(
             account_id=account_id,
             name=payload.name,
@@ -548,6 +582,7 @@ class AccountService:
         self,
         payload: AccountCreateRequest | AccountUpdateRequest,
     ) -> None:
+        """禁止通过管理端将账户状态直接设为已注销。"""
         if payload.account_status == AccountStatusEnum.CANCELLED:
             raise BusinessError("注销状态不允许通过管理端设置")
 
@@ -555,6 +590,7 @@ class AccountService:
         self,
         payload: AccountCreateRequest | AccountUpdateRequest,
     ) -> None:
+        """启用邮箱/手机号登录时校验对应联系方式非空。"""
         if (
             payload.email_login_enabled
             and not str(payload.email_identity or payload.email or "").strip()
@@ -567,6 +603,7 @@ class AccountService:
             raise BusinessError("Phone login requires a phone")
 
     async def _resolve_password(self, password: str, password_key_id: str | None) -> str:
+        """按传输密钥解密密码，无密钥时原样返回。"""
         if not password_key_id:
             return password
         return await decrypt_password(password_key_id, password)

@@ -13,6 +13,7 @@ from app.core.config.settings import settings
 
 class DailyFileHandler(logging.Handler):
     def __init__(self, log_dir: str | None = None) -> None:
+        """初始化处理器：解析日志目录、单文件大小上限与进程 PID。"""
         super().__init__()
         self._log_dir = log_dir or settings.observability.log_dir
         self._max_bytes = settings.observability.log_file_max_mb * 1024 * 1024
@@ -55,6 +56,7 @@ class DailyFileHandler(logging.Handler):
         )
 
     def _ensure_dir(self, path: str) -> None:
+        """按需创建日志目录（失败静默，交由写文件阶段报错）。"""
         dirname = os.path.dirname(path)
         if not os.path.exists(dirname):
             try:
@@ -82,6 +84,7 @@ class DailyFileHandler(logging.Handler):
             pass
 
     def _close(self) -> None:
+        """关闭并清空当前文件句柄。"""
         if self._file:
             try:
                 self._file.close()
@@ -90,5 +93,6 @@ class DailyFileHandler(logging.Handler):
             self._file = None
 
     def close(self) -> None:
+        """关闭文件句柄并执行标准 Handler 清理。"""
         self._close()
         super().close()

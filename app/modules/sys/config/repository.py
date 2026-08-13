@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+系统配置仓储层：封装配置的持久化、按分类/键查询与批量保存。
+"""
 
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,23 +21,28 @@ class ConfigRepository:
     """系统配置仓储，负责配置数据持久化和查询。"""
 
     def __init__(self, db: AsyncSession):
+        """绑定数据库会话。"""
         self.db = db
 
     async def create(self, payload: ConfigCreateRequest) -> None:
+        """新增配置并 flush。"""
         entity = SysConfig(**payload.model_dump())
         self.db.add(entity)
         await self.db.flush()
 
     async def get_by_id(self, config_id: str) -> SysConfig | None:
+        """按主键查询配置，不存在返回 None。"""
         return await self.db.get(SysConfig, config_id)
 
     async def get_required(self, config_id: str) -> SysConfig:
+        """按主键查询配置，不存在时抛出 NotFoundError。"""
         entity = await self.get_by_id(config_id)
         if entity is None:
             raise NotFoundError("Config not found")
         return entity
 
     async def update(self, payload: ConfigUpdateRequest) -> None:
+        """按主键更新配置字段（排除 id）。"""
         entity = await self.get_required(payload.id)
         data = payload.model_dump(exclude={"id"})
         for key, value in data.items():
@@ -42,6 +50,7 @@ class ConfigRepository:
         await self.db.flush()
 
     async def delete_many(self, config_ids: list[str]) -> None:
+        """批量删除配置；存在不存在的 ID 时抛出 NotFoundError。"""
         unique_ids = list(dict.fromkeys(config_ids))
         stmt = select(SysConfig.id).where(SysConfig.id.in_(unique_ids))
         existing_ids = set((await self.db.execute(stmt)).scalars().all())
@@ -54,6 +63,7 @@ class ConfigRepository:
         category: str | None = None,
         scope: str | None = None,
     ) -> list[SysConfig]:
+        """按分类与作用域查询配置，按排序码与 ID 排序。"""
         stmt = select(SysConfig).order_by(SysConfig.sort_code.asc(), SysConfig.id.desc())
         if category:
             stmt = stmt.where(SysConfig.category == category)
@@ -62,6 +72,7 @@ class ConfigRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def get_by_key(self, config_key: str) -> SysConfig | None:
+        """按 config_key 查询配置，不存在返回 None。"""
         stmt = select(SysConfig).where(SysConfig.config_key == config_key)
         return (await self.db.execute(stmt)).scalar_one_or_none()
 
@@ -77,6 +88,7 @@ class ConfigRepository:
         }
         for item in items:
             entity = existing.get(item.config_key)
+            # 只更新请求显式携带的字段，未提供的字段保留原值。
             data = item.model_dump(exclude_unset=True)
             if entity is None:
                 self.db.add(
@@ -112,6 +124,7 @@ class ConfigRepository:
         await self.db.flush()
 
     async def page_admin(self, query: ConfigAdminPageQuery) -> tuple[list[SysConfig], int]:
+        """按查询条件后台分页，返回记录列表与总数。"""
         stmt: Select[tuple[SysConfig]] = select(SysConfig)
         count_stmt = select(func.count(SysConfig.id))
         filters = []

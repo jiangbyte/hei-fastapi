@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+登录保护：基于 Redis 统计账户与 IP 的失败次数并触发限流锁定。
+"""
 
 from app.core.config.enums import AccountType
 from app.core.config.settings import settings
@@ -24,6 +27,7 @@ class LoginProtectionService:
         account: str,
         client_ip: str | None,
     ) -> None:
+        """检查账户与 IP 是否处于锁定状态，锁定则抛认证错误。"""
         redis = get_redis()
         if redis is None:
             return
@@ -40,6 +44,7 @@ class LoginProtectionService:
         account: str,
         client_ip: str | None,
     ) -> None:
+        """记录一次失败登录，累计达到阈值后锁定账户与 IP。"""
         redis = get_redis()
         if redis is None:
             return
@@ -74,6 +79,7 @@ class LoginProtectionService:
         account: str,
         client_ip: str | None,
     ) -> None:
+        """登录成功后清空对应账户/IP 的失败计数。"""
         redis = get_redis()
         if redis is None:
             return
@@ -99,6 +105,7 @@ class LoginProtectionService:
         account_type: str,
         scope: str,
     ) -> None:
+        """递增失败计数并在达到阈值时写入锁并记录指标。"""
         count = await self._increment_failure_counter(redis, key, window_seconds)
         if count >= max_failures:
             await redis.setex(lock_key, lock_seconds, "1")
@@ -106,6 +113,7 @@ class LoginProtectionService:
             record_login_lock(account_type, scope)
 
     async def _increment_failure_counter(self, redis, key: str, window_seconds: int) -> int:
+        """递增失败计数器；兼容带 incr 与普通 get/set 的 Redis 客户端。"""
         if hasattr(redis, "incr"):
             count = await redis.incr(key)
             if count == 1:
@@ -117,7 +125,9 @@ class LoginProtectionService:
         return count
 
     def _normalize_account(self, account: str) -> str:
+        """规范化账户标识：去空白并转小写。"""
         return account.strip().lower()
 
 
+# 模块级单例，供认证服务共享登录限流状态。
 login_protection_service = LoginProtectionService()

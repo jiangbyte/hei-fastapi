@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+消息通知模块装配：注册管理端与门户端的通知路由及数据模型。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

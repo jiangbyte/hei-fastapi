@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+操作审计日志模型：记录每次敏感操作的前后数据与请求上下文。
+"""
 
 from datetime import datetime
 
@@ -10,6 +13,8 @@ from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class SysOperationAuditLog(Base):
+    """操作审计日志表：持久化 IAM 与资源操作的审计轨迹。"""
+
     __tablename__ = "sys_operation_audit_log"
     __table_args__ = (
         Index("idx_sys_operation_audit_created_at", "created_at"),

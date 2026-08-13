@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+职位管理 HTTP 路由：职位 CRUD 与分页查询。
+"""
 
 from typing import Annotated
 

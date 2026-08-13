@@ -1,6 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from app.platform.module import BeatScheduleSpec, ModuleSpec, RouteSpec
+文件模块声明：注册管理端/公开端/公共路由、模型与清理任务。
+"""
+
+from app.platform.module import ModuleSpec, RouteSpec
 
 module = ModuleSpec(
     name="sys.file",
@@ -21,11 +24,4 @@ module = ModuleSpec(
     ),
     models=("app.modules.sys.file.model",),
     tasks=("app.modules.sys.file.tasks",),
-    beat_schedules=(
-        BeatScheduleSpec(
-            name="sys-file-cleanup-local-orphans",
-            task="sys.file.cleanup_local_orphans",
-            schedule=3600.0,
-        ),
-    ),
 )

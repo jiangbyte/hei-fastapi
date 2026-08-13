@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+部门 Schema：部门创建/更新/分页查询及树节点结构。
+"""
 
 from datetime import datetime
 
@@ -11,6 +14,8 @@ from app.core.schema.wire import WireBool, WireInt
 
 
 class DeptCreateRequest(ApiSchema):
+    """创建部门请求。"""
+
     name: str
     category: str
     parent_id: str | None = None
@@ -23,10 +28,14 @@ class DeptCreateRequest(ApiSchema):
 
 
 class DeptUpdateRequest(DeptCreateRequest):
+    """更新部门请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class DeptAdminPageQuery(PageQuery):
+    """部门管理端分页查询条件。"""
+
     name: str | None = Field(default=None, max_length=64)
     category: str | None = Field(default=None, max_length=64)
     parent_id: str | None = Field(default=None, max_length=64)
@@ -34,6 +43,8 @@ class DeptAdminPageQuery(PageQuery):
 
 
 class SysDeptSchema(ApiSchema):
+    """部门响应结构，含负责人与父级名称回显。"""
+
     id: str
     parent_id: str | None = None
     parent_name: str | None = None
@@ -56,6 +67,8 @@ class SysDeptSchema(ApiSchema):
 
 
 class DeptTreeNode(ApiSchema):
+    """部门树节点结构。"""
+
     id: str
     name: str
     category: str

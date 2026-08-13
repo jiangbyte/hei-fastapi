@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+全局 HTTP 客户端：基于 httpx.AsyncClient，提供连接池复用与可选的出站指标采集。
+
+在应用生命周期内复用同一客户端，避免频繁建连带来的开销。
+"""
 
 from typing import Any
 
@@ -7,6 +12,7 @@ import httpx
 from app.core.config.settings import settings
 from app.platform.observability.metrics import track_http_client_request
 
+# 进程级全局 HTTP 客户端，未初始化时为 None。
 http_client: httpx.AsyncClient | None = None
 
 

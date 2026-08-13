@@ -2,7 +2,10 @@
 
 由 HEI 代码生成器生成。
 Author: jiangbyte
+
+反馈服务层：提交、处理、查询反馈，并补充附件与提交者资料信息。
 """
+
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,12 +31,15 @@ from app.platform.storage.url import normalize_object_name, resolve_file_url
 
 
 class MsgFeedbackService:
+    """反馈业务服务，编排仓储与附件/资料 enrichment。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = MsgFeedbackRepository(db)
         self.file_repo = FileRepository(db)
 
     async def submit(self, payload: MsgFeedbackCreateRequest, session: SessionPayload) -> None:
+        """提交反馈：先规范化附件名，再落库创建记录。"""
         attach_object_names = await self._normalize_attach_object_names(payload.attach_object_names)
         async with transactional(self.db):
             await self.repo.create(
@@ -44,6 +50,7 @@ class MsgFeedbackService:
             )
 
     async def update(self, payload: MsgFeedbackUpdateRequest, session: SessionPayload) -> None:
+        """处理反馈：更新状态，并在回复时记录回复人与时间。"""
         async with transactional(self.db):
             entity = await self.repo.get_required(payload.id)
             entity.status = payload.status
@@ -54,15 +61,18 @@ class MsgFeedbackService:
             await self.db.flush()
 
     async def delete(self, payload: IdsRequest) -> None:
+        """批量删除反馈。"""
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery) -> MsgFeedbackSchema:
+        """管理端查询反馈详情，并补充附件与提交者资料。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(MsgFeedbackSchema, entity)
         return await self._enrich_profiles(schema)
 
     async def detail_my(self, query: IdQuery, session: SessionPayload) -> MsgFeedbackSchema:
+        """查询「我的反馈」详情，非本人反馈按不存在处理。"""
         entity = await self.repo.get_required(query.id)
         if (
             str(entity.submitter_account_type) != str(session.account_type)
@@ -73,6 +83,7 @@ class MsgFeedbackService:
         return await self._enrich_attachments(schema)
 
     async def page_admin(self, query: MsgFeedbackAdminPageQuery) -> PageData[MsgFeedbackSchema]:
+        """管理端分页查询反馈，并批量补充提交者资料。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(MsgFeedbackSchema, items)
         return build_page(query, total, await self._batch_enrich_profiles(schemas))
@@ -82,6 +93,7 @@ class MsgFeedbackService:
         query: MyFeedbackPageQuery,
         session: SessionPayload,
     ) -> PageData[MsgFeedbackSchema]:
+        """分页查询「我的反馈」，并补充附件信息。"""
         items, total = await self.repo.page_my(
             query,
             str(session.account_type),
@@ -91,6 +103,7 @@ class MsgFeedbackService:
         return build_page(query, total, await self._enrich_attachments_many(schemas))
 
     async def _normalize_attach_object_names(self, values: list[str]) -> list[str]:
+        """规范化附件名并校验其对应文件真实存在。"""
         normalized: list[str] = []
         for value in values:
             object_name = normalize_object_name(value)
@@ -108,12 +121,14 @@ class MsgFeedbackService:
         return unique
 
     async def _enrich_attachments(self, schema: MsgFeedbackSchema) -> MsgFeedbackSchema:
+        """为单条反馈补充附件明细。"""
         schemas = await self._enrich_attachments_many([schema])
         return schemas[0]
 
     async def _enrich_attachments_many(
         self, schemas: list[MsgFeedbackSchema]
     ) -> list[MsgFeedbackSchema]:
+        """批量补充反馈附件明细（按 object_name 关联文件元数据）。"""
         all_names: list[str] = []
         for schema in schemas:
             names = [
@@ -154,6 +169,7 @@ class MsgFeedbackService:
         return schemas
 
     async def _enrich_profiles(self, schema: MsgFeedbackSchema) -> MsgFeedbackSchema:
+        """为单条反馈补充审计人姓名与提交者头像昵称。"""
         await self._enrich_attachments(schema)
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         if schema.submitter_account_id:
@@ -170,6 +186,7 @@ class MsgFeedbackService:
     async def _batch_enrich_profiles(
         self, schemas: list[MsgFeedbackSchema]
     ) -> list[MsgFeedbackSchema]:
+        """批量补充反馈的审计人姓名与提交者头像昵称。"""
         await self._enrich_attachments_many(schemas)
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
 

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+内部健康检查模块装配：注册存活/就绪探针路由。
+"""
 
 from app.platform.module import ModuleSpec, RouteSpec
 

@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def register_services(module_specs: list[ModuleSpec]) -> None:
+    """按模块清单注册服务实现到 ServiceRegistry。"""
     for spec in module_specs:
         if not spec.services:
             continue

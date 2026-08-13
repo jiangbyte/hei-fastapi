@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+Redis 客户端：基于 redis-py 的异步连接池，提供初始化、获取与关闭的全局单例。
+
+连接参数对齐 Redisson 的 keepalive 意图，尽力配置 TCP keepalive 选项。
+"""
 
 import logging
 import socket
@@ -9,6 +14,7 @@ from app.core.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+# 进程级全局 Redis 客户端；未初始化时为 None。
 redis_client: Redis | None = None
 
 
@@ -25,6 +31,7 @@ def _keepalive_options() -> dict[int, int]:
 
 
 async def init_redis() -> None:
+    """初始化 Redis 客户端并 ping 验证连接，幂等。"""
     global redis_client
     if redis_client is not None:
         return
@@ -43,10 +50,12 @@ async def init_redis() -> None:
 
 
 def get_redis() -> Redis | None:
+    """返回全局 Redis 客户端，未初始化时返回 None。"""
     return redis_client
 
 
 async def close_redis() -> None:
+    """关闭并清空全局 Redis 客户端，幂等。"""
     global redis_client
     if redis_client is not None:
         await redis_client.aclose()

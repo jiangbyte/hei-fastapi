@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+应用工厂：组装中间件、异常处理、可观测性与路由，创建 FastAPI 应用。
+"""
 
 import logging
 
@@ -33,6 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_app() -> FastAPI:
+    """创建并配置 FastAPI 应用，组装中间件、路由与生命周期。"""
     setup_logging()
 
     # 延迟导入：确保 setup_logging() 先配置好，模块发现的日志才能正常输出

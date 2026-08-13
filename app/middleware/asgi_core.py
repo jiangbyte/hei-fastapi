@@ -35,10 +35,13 @@ logger = structlog.get_logger("access")
 
 
 class TraceMiddleware:
+    """Trace 中间件：注入 request_id / trace_id 等追踪上下文，并在响应头回写 x-request-id。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """为 HTTP 请求建立追踪上下文并透传响应头。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -92,10 +95,13 @@ class TraceMiddleware:
 
 
 class AuthContextMiddleware:
+    """认证上下文中间件：初始化账户与状态相关的 ContextVar，并在请求结束后重置。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """初始化账户/状态上下文并在结束后重置。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
@@ -113,10 +119,13 @@ class AuthContextMiddleware:
 
 
 class AccessLogMiddleware:
+    """访问日志中间件：记录 HTTP 状态码、耗时并上报指标。"""
+
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """包裹下游应用，记录状态码、耗时并上报指标。"""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return

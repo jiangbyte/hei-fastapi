@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+职位 Schema：职位创建/更新/分页查询及响应结构。
+"""
 
 from datetime import datetime
 
@@ -11,6 +14,8 @@ from app.core.schema.wire import WireBool, WireInt
 
 
 class PositionCreateRequest(ApiSchema):
+    """创建职位请求。"""
+
     name: str = Field(min_length=1, max_length=64)
     category: str = Field(min_length=1, max_length=32)
     owner_dept_id: str | None = Field(default=None, max_length=64)
@@ -22,16 +27,22 @@ class PositionCreateRequest(ApiSchema):
 
 
 class PositionUpdateRequest(PositionCreateRequest):
+    """更新职位请求。"""
+
     id: str = Field(min_length=1, max_length=64)
 
 
 class PositionAdminPageQuery(PageQuery):
+    """职位管理端分页查询条件。"""
+
     name: str | None = Field(default=None, max_length=64)
     category: str | None = Field(default=None, max_length=32)
     status: str | None = Field(default=None, max_length=32)
 
 
 class SysPositionSchema(ApiSchema):
+    """职位响应结构。"""
+
     id: str
     name: str
     category: str

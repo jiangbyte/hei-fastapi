@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+标准分页查询参数与响应体，统一页码、总量与每页大小计算。
+"""
 
 from math import ceil
 from typing import Generic, TypeVar
@@ -12,11 +15,14 @@ T = TypeVar("T")
 
 
 class PageQuery(ApiSchema):
+    """分页查询参数：current 从 1 开始，size 上限 100。"""
+
     current: WireInt = Field(default=1, ge=1)
     size: WireInt = Field(default=20, ge=1, le=100)
 
     @property
     def offset(self) -> int:
+        """数据库查询偏移量（0 基）。"""
         return (int(self.current) - 1) * int(self.size)
 
 

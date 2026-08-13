@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+操作审计队列：在内存队列中异步消费审计事件，队列溢出时溢出到 DB outbox 或 Redis。
+
+审计事件经事件总线分发，各模块订阅处理；同时提供停机排空与持久化兜底。
+"""
 
 from __future__ import annotations
 
@@ -13,11 +18,14 @@ from app.platform.events import emit
 
 logger = logging.getLogger(__name__)
 
+# 队列溢出且 DB outbox 不可用时的 Redis 兜底列表键。
 _REDIS_SPILL_KEY = "audit:operation:spill"
 
 
 @dataclass(frozen=True, slots=True)
 class OperationAuditEvent:
+    """操作审计事件载荷：请求资源、动作、来源账户与网络信息。"""
+
     resource_type: str
     action: str
     method: str
@@ -31,6 +39,8 @@ class OperationAuditEvent:
 
 
 class OperationAuditQueue:
+    """基于 asyncio.Queue 的审计事件消费者，含持久化溢出与停机排空。"""
+
     def __init__(self) -> None:
         self._queue: asyncio.Queue[OperationAuditEvent] | None = None
         self._worker: asyncio.Task[None] | None = None
@@ -38,6 +48,7 @@ class OperationAuditQueue:
         self._lock = asyncio.Lock()
 
     async def start(self) -> None:
+        """幂等启动队列：创建写入 worker 与溢出回填 worker。"""
         async with self._lock:
             if self._worker and not self._worker.done():
                 return
@@ -48,6 +59,7 @@ class OperationAuditQueue:
             )
 
     async def stop(self) -> None:
+        """停止队列：先取消溢出回填，再限时排空队列并取消写入 worker。"""
         async with self._lock:
             queue = self._queue
             worker = self._worker
@@ -79,6 +91,7 @@ class OperationAuditQueue:
             pass
 
     def enqueue(self, event: OperationAuditEvent) -> bool:
+        """入队事件；队列未启动或已满时返回 False 并尝试溢出。"""
         queue = self._queue
         if queue is None:
             logger.debug("Operation audit queue is not started; dropping event")
@@ -111,6 +124,7 @@ class OperationAuditQueue:
             logger.warning("Failed to spill audit event to Redis", exc_info=True)
 
     async def _drain_spill(self) -> None:
+        """周期性地把 DB outbox 与 Redis 溢出事件回填到内存队列。"""
         from app.platform.cache.redis import get_redis
 
         while True:
@@ -140,6 +154,7 @@ class OperationAuditQueue:
                 logger.debug("Audit spill drain error", exc_info=True)
 
     async def _run(self) -> None:
+        """队列写入循环：逐条消费并持久化，完成后标记 task_done。"""
         queue = self._queue
         if queue is None:
             return
@@ -159,6 +174,7 @@ async def _record_operation_audit(event: OperationAuditEvent) -> None:
 
 
 async def _write_outbox(event: OperationAuditEvent) -> bool:
+    """尝试写入 DB outbox；失败时返回 False 交由 Redis 兜底。"""
     try:
         from app.modules.sys.audit.outbox import enqueue_outbox
 
@@ -170,6 +186,7 @@ async def _write_outbox(event: OperationAuditEvent) -> bool:
 
 
 async def _drain_outbox_into(queue: asyncio.Queue[OperationAuditEvent]) -> None:
+    """认领待处理的 outbox 事件并重新入队，成功后标记完成。"""
     try:
         from app.modules.sys.audit.outbox import claim_pending_outbox
 
@@ -185,12 +202,15 @@ async def _drain_outbox_into(queue: asyncio.Queue[OperationAuditEvent]) -> None:
         logger.debug("Audit outbox drain error", exc_info=True)
 
 
+# 进程级全局审计队列单例。
 operation_audit_queue = OperationAuditQueue()
 
 
 async def start_operation_audit_queue() -> None:
+    """启动全局操作审计队列。"""
     await operation_audit_queue.start()
 
 
 async def stop_operation_audit_queue() -> None:
+    """停止全局操作审计队列。"""
     await operation_audit_queue.stop()

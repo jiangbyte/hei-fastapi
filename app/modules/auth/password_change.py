@@ -24,6 +24,7 @@ from app.platform.sms.sender import send_templated_sms
 
 
 def change_verify_method() -> str:
+    """读取配置的改密验证方式（默认 OLD_PASSWORD）。"""
     return (config_reader.get("PASSWORD_CHANGE_VERIFY_METHOD") or "OLD_PASSWORD").strip().upper()
 
 
@@ -33,6 +34,7 @@ async def send_change_password_code(
     account: SysAccount,
     account_type: AccountType,
 ) -> None:
+    """按配置的验证方式发送邮箱/短信验证码。"""
     method = change_verify_method()
     if method not in {"EMAIL_CODE", "PHONE_CODE"}:
         raise BusinessError("Current password change method does not use verification code")
@@ -76,6 +78,7 @@ async def verify_change_password(
     old_password: str | None,
     otp_code: str | None,
 ) -> None:
+    """根据配置的验证方式校验旧密码或验证码。"""
     method = change_verify_method()
     if method == "OLD_PASSWORD":
         if not old_password or not verify_password(old_password, account.password_hash):

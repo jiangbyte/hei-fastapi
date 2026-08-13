@@ -18,6 +18,7 @@ def _add_service_context(
     _method_name: str,
     event_dict: dict[str, Any],
 ) -> dict[str, Any]:
+    """为日志事件补充服务名、版本与环境的默认字段。"""
     obs = settings.observability
     event_dict.setdefault("service", obs.service_name)
     event_dict.setdefault("service_version", obs.service_version)
@@ -30,6 +31,7 @@ def _drop_empty_values(
     _method_name: str,
     event_dict: dict[str, Any],
 ) -> dict[str, Any]:
+    """过滤掉值为 None、空串或占位 ``-`` 的字段。"""
     return {
         key: value
         for key, value in event_dict.items()
@@ -38,6 +40,7 @@ def _drop_empty_values(
 
 
 def _shared_processors() -> list[Processor]:
+    """返回 structlog 共用的处理器链。"""
     return [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,

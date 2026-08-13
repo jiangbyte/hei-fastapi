@@ -1,8 +1,14 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+配置加密：对敏感配置值（密码、AK/SK 等）做 Fernet/Vault 加密，读回时解密。
+
+非敏感键原样透传，解密失败时按非破坏性策略原样返回明文。
+"""
 
 from app.platform.config.keys import SENSITIVE_CONFIG_KEYS
 from app.platform.secrets.backend import decrypt_plaintext, encrypt_plaintext
 
+# 存储配置中需要加密的敏感列（访问密钥与私钥）。
 _storage_sensitive_columns = {
     "access_key",
     "secret_key",
@@ -10,16 +16,19 @@ _storage_sensitive_columns = {
 
 
 def is_sensitive(config_key: str) -> bool:
+    """判断配置键是否属于敏感键集合。"""
     return config_key in SENSITIVE_CONFIG_KEYS
 
 
 def encrypt_config_value(config_key: str, value: str | None) -> str | None:
+    """对敏感键的配置值加密，非敏感或空值原样返回。"""
     if not value or not is_sensitive(config_key):
         return value
     return encrypt_plaintext(value)
 
 
 def decrypt_config_value(config_key: str, value: str | None) -> str | None:
+    """对配置值解密；解密失败时原样返回以兼容明文旧数据。"""
     if not value:
         return value
     decrypted = decrypt_plaintext(value)
@@ -28,6 +37,7 @@ def decrypt_config_value(config_key: str, value: str | None) -> str | None:
 
 
 def is_storage_sensitive(column_name: str) -> bool:
+    """判断存储列名是否为敏感列。"""
     return column_name in _storage_sensitive_columns
 
 
@@ -39,6 +49,7 @@ def encrypt_storage_value(column_name: str, value: str | None) -> str | None:
 
 
 def decrypt_storage_value(column_name: str, value: str | None) -> str | None:
+    """解密存储敏感列；非敏感列或解密失败时原样返回。"""
     if not value:
         return value
     if not is_storage_sensitive(column_name):

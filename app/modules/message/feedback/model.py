@@ -2,7 +2,10 @@
 
 由 HEI 代码生成器生成。
 Author: jiangbyte
+
+反馈数据模型：定义用户反馈记录（MsgFeedback）对应的 msg_feedback 表结构。
 """
+
 from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, String, Text
@@ -14,6 +17,8 @@ from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class MsgFeedback(Base, TimestampMixin):
+    """用户反馈记录，对应 msg_feedback 表。"""
+
     __tablename__ = "msg_feedback"
 
     id: Mapped[str] = mapped_column(

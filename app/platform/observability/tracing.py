@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+链路追踪：基于 OpenTelemetry 初始化 FastAPI/httpx/SQLAlchemy 插桩并导出 OTLP。
+
+同时提供追踪上下文同步（trace_id/span_id 写入 ContextVar）与优雅关闭。
+"""
 
 import logging
 
@@ -6,14 +11,17 @@ from app.core.config.settings import settings
 from app.deps.context import span_id_ctx, trace_id_ctx
 
 logger = logging.getLogger(__name__)
+# 追踪初始化幂等标记。
 _tracing_initialized = False
 
 
 def tracing_enabled() -> bool:
+    """判断链路追踪是否开启。"""
     return settings.observability.enabled and settings.observability.tracing_enabled
 
 
 def init_tracing(app=None, engine=None) -> None:
+    """初始化 OpenTelemetry 追踪：配置采样、导出器与各组件插桩，幂等。"""
     global _tracing_initialized
     if _tracing_initialized or not tracing_enabled():
         return
@@ -61,6 +69,7 @@ def init_tracing(app=None, engine=None) -> None:
 
 
 def shutdown_tracing() -> None:
+    """关闭追踪，刷新并停止当前 TracerProvider。"""
     try:
         from opentelemetry import trace
     except ModuleNotFoundError:
@@ -72,6 +81,7 @@ def shutdown_tracing() -> None:
 
 
 def sync_trace_context() -> None:
+    """把当前 span 的 trace_id/span_id 同步到请求上下文变量。"""
     try:
         from opentelemetry import trace
     except ModuleNotFoundError:

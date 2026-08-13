@@ -11,7 +11,7 @@
 
 面向中后台与通用业务的全栈脚手架：FastAPI 异步后端 + Vue 3 管理端 + React 门户 + uni-app 管理端。
 
-业务模块通过 `ModuleSpec` 插件式装配；内置 IAM/RBAC、系统配置、文件存储、消息、代码生成、Celery 任务与 Alembic 迁移。
+业务模块通过 `ModuleSpec` 插件式装配；内置 IAM/RBAC、系统配置、文件存储、消息、代码生成、SnailJob 定时任务与 Alembic 迁移。
 
 > 个人开发，有 bug 欢迎提：jiangbytebiz@163.com
 
@@ -30,7 +30,7 @@ web/
   portal/            React 19 门户（Ant Design）
   admin-uniapp/      uni-app 管理端（H5 / 小程序）
 docker-compose.yml   后端 + 可选 admin / portal profile
-entrypoint.sh        all | api | worker | beat | migrate
+entrypoint.sh        all | api | worker | migrate
 ```
 
 ---
@@ -41,7 +41,7 @@ entrypoint.sh        all | api | worker | beat | migrate
 |---|---|
 | 后端 | FastAPI / SQLAlchemy 2 Async / Pydantic v2 / Gunicorn / Uvicorn |
 | 数据 | PostgreSQL / Redis；可选 MySQL、SQLite extras |
-| 任务 | Celery + celery-redbeat（Redis broker） |
+| 任务 | SnailJob（外部 Server + snail-job-python 执行器） |
 | 存储 | Local / MinIO / RustFS / S3 / OSS（`sys_config` 维护） |
 | 管理端 | Vue 3 / Naive UI / Vite / TypeScript / UnoCSS |
 | 门户端 | React 19 / Ant Design 6 / Vite / TypeScript / UnoCSS |
@@ -117,7 +117,7 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -e ".[dev,postgres]"
 
 cp .env.example .env
-# 配置 DB__URL、REDIS__URL、CELERY__BROKER_URL
+# 配置 DB__URL、REDIS__URL、SNAIL_JOB__*
 # 生产还需 APP__CONFIG_CRYPTO_KEY
 
 python scripts/db/migrate.py
@@ -126,7 +126,20 @@ python scripts/db/migrate.py
 
 - API：`http://127.0.0.1:8000`
 - 文档：`http://127.0.0.1:8000/docs`
-- 其它角色：`./entrypoint.sh api|worker|beat|migrate`
+- 其它角色：`./entrypoint.sh api|worker|migrate`
+
+### SnailJob 执行器（外部 Server）
+
+本仓库只跑 Python 执行器；调度中心需自行部署。在 Server 控制台创建组（与 `SNAIL_JOB__GROUP_NAME` / token / namespace 一致），并为下列执行器建定时任务（执行器类型 **Python**、任务类型 **集群**）：
+
+| 执行器名 | 建议周期 | 说明 |
+|---|---|---|
+| `sysFileCleanupLocalOrphans` | 3600s | 清理本地存储孤儿文件 |
+| `accountPurgeCancelledAccounts` | 86400s | 清理过期注销账户 |
+| `bannerFlushInteractions` | 300s | Banner 交互增量刷库 |
+| `auditAnalysisCycle` | 300s（或按 `AUDIT_ALERT` 配置） | 审计告警分析 |
+
+启动 worker 后，控制台应能看到 `py-xxxxxxx` 客户端上线。审计分析周期请在 SnailJob 控制台调整（不再支持配置热更新改 beat）。
 
 ### 3. 管理端
 
@@ -158,7 +171,7 @@ cd web/admin-uniapp && pnpm install && pnpm dev:h5
 
 | 位置 | 内容 |
 |---|---|
-| `.env` | 监听、DB、Redis、Celery、CORS、加密 key 等 |
+| `.env` | 监听、DB、Redis、SnailJob、CORS、加密 key 等 |
 | `sys_config` | 运行态业务配置：`AUTH_*` / `MAIL_*` / `SMS_*` / `STORAGE_*` 等 |
 
 配置变更后当前进程立即重载，其它实例经 Redis 订阅刷新。

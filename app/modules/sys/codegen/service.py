@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+代码生成服务层：方案维护、数据库内省、字段同步与预览下载。
+"""
 
 from io import BytesIO
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -31,17 +34,22 @@ from app.platform.db.transaction import transactional
 
 
 class CodegenService:
+    """代码生成服务，编排方案校验、字段同步与文件渲染。"""
+
     def __init__(self, db: AsyncSession):
+        """绑定会话并初始化仓储。"""
         self.db = db
         self.repo = CodegenRepository(db)
 
     async def create(self, payload: CodegenPlanCreateRequest) -> None:
+        """校验表结构后创建方案并同步反射字段。"""
         await self._validate_plan_tables(payload)
         async with transactional(self.db):
             plan = await self.repo.create(payload)
             await self._sync_reflected_fields(plan)
 
     async def update(self, payload: CodegenPlanUpdateRequest) -> None:
+        """校验表结构后更新方案并重新同步反射字段。"""
         await self._validate_plan_tables(payload)
         async with transactional(self.db):
             await self.repo.update(payload)
@@ -49,40 +57,49 @@ class CodegenService:
             await self._sync_reflected_fields(plan)
 
     async def delete(self, payload: IdsRequest) -> None:
+        """事务内批量删除方案。"""
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery) -> SysCodegenPlanSchema:
+        """查询方案详情。"""
         return to_schema(SysCodegenPlanSchema, await self.repo.get_required(query.id))
 
     async def page_admin(self, query: CodegenPlanPageQuery) -> PageData[SysCodegenPlanSchema]:
+        """分页查询方案。"""
         items, total = await self.repo.page_admin(query)
         return build_page(query, total, to_schema_list(SysCodegenPlanSchema, items))
 
     async def tables(self) -> list[DatabaseTableSchema]:
+        """列出可生成的数据库表。"""
         return [DatabaseTableSchema(**item) for item in await self.repo.list_database_tables()]
 
     async def table_columns(self, query: CodegenTableColumnsQuery) -> list[DatabaseColumnSchema]:
+        """查询指定表的列元数据。"""
         return [
             DatabaseColumnSchema(**_column_schema_data(item))
             for item in await self.repo.list_database_columns(query.table_name)
         ]
 
     async def fields(self, query: CodegenFieldsQuery) -> list[SysCodegenFieldSchema]:
+        """查询方案的字段配置。"""
         return to_schema_list(
             SysCodegenFieldSchema, await self.repo.list_fields(query.plan_id, query.table_role)
         )
 
     async def update_fields_batch(self, payload: CodegenFieldsUpdateBatchRequest) -> None:
+        """事务内整体替换方案的字段配置。"""
         async with transactional(self.db):
             await self.repo.replace_fields(payload.plan_id, payload.fields)
 
     async def parent_resources(
         self, query: CodegenParentResourcesQuery
     ) -> list[CodegenParentResourceOption]:
+        """查询可作为父资源的资源选项树。"""
         return _build_resource_options(await self.repo.list_resource_options(query.module_id))
 
     async def preview(self, query: IdQuery) -> CodegenPreviewSchema:
+        """渲染方案的文件预览，主表无字段时先反射同步。"""
         plan = await self.repo.get_required(query.id)
         main_fields = await self.repo.list_fields(plan.id, "MAIN")
         sub_fields = await self.repo.list_fields(plan.id, "SUB")
@@ -93,6 +110,7 @@ class CodegenService:
         return CodegenPreviewSchema(files=render_files(plan, main_fields, sub_fields))
 
     async def download(self, query: IdQuery) -> tuple[bytes, str]:
+        """将预览文件打包为 zip 返回内容与文件名。"""
         preview = await self.preview(query)
         buffer = BytesIO()
         with ZipFile(buffer, "w", ZIP_DEFLATED) as zip_file:
@@ -103,6 +121,7 @@ class CodegenService:
     async def _validate_plan_tables(
         self, payload: CodegenPlanCreateRequest | CodegenPlanUpdateRequest
     ) -> None:
+        """校验方案引用的主表/子表与主键/外键字段确实存在。"""
         main_columns = await self.repo.list_database_columns(payload.main_table)
         main_column_names = {column["column_name"] for column in main_columns}
         if payload.main_pk not in main_column_names:
@@ -123,6 +142,7 @@ class CodegenService:
                 raise ConflictError("Sub foreign key field does not exist")
 
     async def _sync_reflected_fields(self, plan: SysCodegenPlan) -> None:
+        """反射主表（及子表）列并合并写入字段配置。"""
         main_columns = await self.repo.list_database_columns(plan.main_table)
         await self.repo.upsert_reflected_fields(
             plan.id,
@@ -139,6 +159,7 @@ class CodegenService:
 
 
 def _column_schema_data(column: dict) -> dict:
+    """从内省列元数据提取响应所需字段。"""
     return {
         "column_name": column["column_name"],
         "column_comment": column.get("column_comment"),
@@ -152,6 +173,7 @@ def _column_schema_data(column: dict) -> dict:
 
 
 def _default_field(column: dict, table_role: str) -> CodegenFieldUpdateItem:
+    """根据内省列构造默认字段配置。"""
     column_name = column["column_name"]
     is_pk = bool(column["is_primary_key"])
     is_audit = column_name in {"created_at", "created_by", "updated_at", "updated_by"}
@@ -182,6 +204,7 @@ def _default_field(column: dict, table_role: str) -> CodegenFieldUpdateItem:
 
 
 def _default_widget(column_name: str, python_type: str) -> str:
+    """按列名与类型推断默认表单控件。"""
     if column_name == "status":
         return "dict"
     if python_type in {"int", "float"}:
@@ -194,6 +217,7 @@ def _default_widget(column_name: str, python_type: str) -> str:
 
 
 def _default_query_operator(column_name: str, python_type: str) -> str | None:
+    """按列名与类型推断默认查询方式。"""
     if column_name == "status" or python_type in {"int", "bool"}:
         return "EQ"
     if column_name in {"name", "title", "code", "category", "type"}:
@@ -202,6 +226,7 @@ def _default_query_operator(column_name: str, python_type: str) -> str | None:
 
 
 def _build_resource_options(resources) -> list[CodegenParentResourceOption]:
+    """将资源列表构建为父子树形选项。"""
     node_map = {
         item.id: CodegenParentResourceOption(
             id=item.id,

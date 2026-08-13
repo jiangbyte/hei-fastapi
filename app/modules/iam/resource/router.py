@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+资源管理 HTTP 路由：资源树、资源模块、按钮与资源权限相关接口。
+"""
 
 from typing import Annotated
 

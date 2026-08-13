@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+datetime 处理辅助：统一内部 UTC 表示与 ISO 8601 线型输出。
+"""
 
 from datetime import UTC, datetime
 from typing import Any, get_args, get_origin

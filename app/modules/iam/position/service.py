@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+职位应用服务：职位 CRUD、数据范围可见性校验与名称回显。
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +24,8 @@ from app.platform.db.transaction import transactional
 
 
 class PositionService:
+    """职位应用服务。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = PositionRepository(db)
@@ -28,6 +33,7 @@ class PositionService:
     async def create(
         self, payload: PositionCreateRequest, session: SessionPayload | None = None
     ) -> None:
+        """创建职位，传入 session 时校验所属部门可见性。"""
         if session is not None and payload.owner_dept_id:
             await self._ensure_depts_visible(
                 session, "iam:position:create", [payload.owner_dept_id]
@@ -38,6 +44,7 @@ class PositionService:
     async def update(
         self, payload: PositionUpdateRequest, session: SessionPayload | None = None
     ) -> None:
+        """更新职位，传入 session 时校验职位与所属部门可见性。"""
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:update", [payload.id])
             if payload.owner_dept_id:
@@ -48,6 +55,7 @@ class PositionService:
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
+        """删除职位，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:delete", payload.ids)
         async with transactional(self.db):
@@ -56,6 +64,7 @@ class PositionService:
     async def detail(
         self, query: IdQuery, session: SessionPayload | None = None
     ) -> SysPositionSchema:
+        """查询职位详情并回显创建人昵称。"""
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:detail", [query.id])
         schema = to_schema(SysPositionSchema, await self.repo.get_required(query.id))
@@ -67,6 +76,7 @@ class PositionService:
         query: PositionAdminPageQuery,
         session: SessionPayload | None = None,
     ) -> PageData[SysPositionSchema]:
+        """分页查询职位，叠加数据范围过滤。"""
         data_scope_filter = (
             await self._position_scope_filter(session, "iam:position:page")
             if session is not None
@@ -95,6 +105,7 @@ class PositionService:
                 item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
 
     async def _position_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造职位数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -109,6 +120,7 @@ class PositionService:
         permission_key: str,
         position_ids: list[str],
     ) -> None:
+        """校验目标职位均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(position_ids))
         if not unique_ids:
             return
@@ -124,6 +136,7 @@ class PositionService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return

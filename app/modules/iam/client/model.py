@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+客户端资源领域模型：客户端模块与客户端资源树节点。
+"""
 
 from sqlalchemy import JSON, Boolean, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column

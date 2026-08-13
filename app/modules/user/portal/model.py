@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+门户账户资料数据模型：定义扩展资料表 portal_user_profile。
+"""
 
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+客户端模块/资源仓储：负责客户端模块与客户端资源树的增删改查及权限挂载。
+"""
 
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,10 +38,13 @@ from app.modules.iam.schema import (
 
 
 class ClientModuleRepository:
+    """客户端模块仓储。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def create(self, payload: ClientModuleCreateRequest) -> SysClientModule:
+        """创建客户端模块，编码已存在时抛冲突错误。"""
         await self._ensure_code_unique(payload.code)
         entity = SysClientModule(**payload.model_dump())
         self.db.add(entity)
@@ -46,15 +52,18 @@ class ClientModuleRepository:
         return entity
 
     async def get_by_id(self, module_id: str) -> SysClientModule | None:
+        """按主键查询客户端模块。"""
         return await self.db.get(SysClientModule, module_id)
 
     async def get_required(self, module_id: str) -> SysClientModule:
+        """按主键查询客户端模块，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(module_id)
         if entity is None:
             raise NotFoundError("Client module not found")
         return entity
 
     async def update(self, payload: ClientModuleUpdateRequest) -> None:
+        """更新客户端模块，编码被其他模块占用时抛冲突错误。"""
         entity = await self.get_required(payload.id)
         await self._ensure_code_unique(payload.code, payload.id)
         for key, value in payload.model_dump(exclude={"id"}).items():
@@ -62,6 +71,7 @@ class ClientModuleRepository:
         await self.db.flush()
 
     async def delete_many(self, module_ids: list[str]) -> None:
+        """删除客户端模块，存在下属资源时拒绝删除。"""
         unique_ids = list(dict.fromkeys(module_ids))
         if not unique_ids:
             return
@@ -93,6 +103,7 @@ class ClientModuleRepository:
         self,
         query: ClientModuleAdminPageQuery,
     ) -> tuple[list[SysClientModule], int]:
+        """按条件分页查询客户端模块并统计总数。"""
         stmt: Select[tuple[SysClientModule]] = select(SysClientModule)
         count_stmt = select(func.count(SysClientModule.id))
         filters = []
@@ -120,6 +131,7 @@ class ClientModuleRepository:
         self,
         account_type: AccountType | None = None,
     ) -> list[SysClientModule]:
+        """列出启用的客户端模块，可按账户体系过滤。"""
         stmt = (
             select(SysClientModule)
             .where(SysClientModule.status == StatusEnum.ENABLED.value)
@@ -130,6 +142,7 @@ class ClientModuleRepository:
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def _ensure_code_unique(self, code: str, module_id: str | None = None) -> None:
+        """校验模块编码唯一，重复时抛冲突错误。"""
         stmt = select(SysClientModule.id).where(SysClientModule.code == code)
         if module_id is not None:
             stmt = stmt.where(SysClientModule.id != module_id)
@@ -138,11 +151,14 @@ class ClientModuleRepository:
 
 
 class ClientResourceRepository:
+    """客户端资源树仓储，负责资源节点 CRUD 与权限挂载。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.relations = IamRelationRepository(db)
 
     async def create(self, payload: ClientResourceCreateRequest) -> SysClientResource:
+        """创建客户端资源节点，先校验模块、父级与编码合法性。"""
         await self._ensure_payload_valid(payload)
         entity = SysClientResource(**payload.model_dump())
         self.db.add(entity)
@@ -150,15 +166,18 @@ class ClientResourceRepository:
         return entity
 
     async def get_by_id(self, resource_id: str) -> SysClientResource | None:
+        """按主键查询客户端资源。"""
         return await self.db.get(SysClientResource, resource_id)
 
     async def get_required(self, resource_id: str) -> SysClientResource:
+        """按主键查询客户端资源，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(resource_id)
         if entity is None:
             raise NotFoundError("Client resource not found")
         return entity
 
     async def update(self, payload: ClientResourceUpdateRequest) -> None:
+        """更新客户端资源，校验层级与编码合法性。"""
         entity = await self.get_required(payload.id)
         await ensure_not_self_or_descendant(
             self.db,
@@ -173,6 +192,7 @@ class ClientResourceRepository:
         await self.db.flush()
 
     async def delete_many(self, resource_ids: list[str]) -> None:
+        """删除客户端资源，存在子节点时拒绝删除。"""
         unique_ids = list(dict.fromkeys(resource_ids))
         if not unique_ids:
             return
@@ -199,6 +219,7 @@ class ClientResourceRepository:
         self,
         query: ClientResourceAdminPageQuery,
     ) -> tuple[list[SysClientResource], int]:
+        """按条件分页查询客户端资源并统计总数。"""
         stmt: Select[tuple[SysClientResource]] = select(SysClientResource)
         count_stmt = select(func.count(SysClientResource.id))
         filters = []
@@ -231,6 +252,7 @@ class ClientResourceRepository:
         module_id: str | None = None,
         account_type: AccountType | None = None,
     ) -> list[SysClientResource]:
+        """列出启用的客户端资源，可按模块或账户体系过滤。"""
         stmt = (
             select(SysClientResource)
             .where(SysClientResource.status == StatusEnum.ENABLED.value)
@@ -270,6 +292,7 @@ class ClientResourceRepository:
         self,
         payload: ClientResourcePermissionBindRequest,
     ) -> SysIamRelation:
+        """替换客户端资源的权限挂载并返回新关系。"""
         if not await self.db.get(SysClientResource, payload.resource_id):
             raise NotFoundError("Client resource not found")
         await self.relations.delete_subject_relations(
@@ -295,6 +318,7 @@ class ClientResourceRepository:
         self,
         account_type: AccountType | None = None,
     ) -> list[SysIamRelation]:
+        """列出启用中的客户端资源权限关系，可按账户体系过滤。"""
         stmt = (
             select(SysIamRelation)
             .where(
@@ -313,6 +337,7 @@ class ClientResourceRepository:
         self,
         account_type: AccountType | None = None,
     ) -> list[ResourceGrantModuleOption]:
+        """组装授权页所需的客户端资源模块树（模块-菜单-按钮/权限）。"""
         resources = await self.list_resources(account_type=account_type)
         permissions = await self.list_client_resource_permissions(account_type=account_type)
         modules = await ClientModuleRepository(self.db).list_enabled(account_type=account_type)
@@ -386,6 +411,7 @@ class ClientResourceRepository:
         payload: ClientResourceCreateRequest | ClientResourceUpdateRequest,
         resource_id: str | None = None,
     ) -> None:
+        """校验模块存在、编码唯一及父级关系合法。"""
         if payload.module_id and not await self.db.get(SysClientModule, payload.module_id):
             raise ConflictError("Client module does not exist")
         await self._ensure_code_unique(payload.code, payload.module_id, resource_id)
@@ -405,6 +431,7 @@ class ClientResourceRepository:
         module_id: str | None,
         resource_id: str | None = None,
     ) -> None:
+        """校验资源编码在模块内唯一，重复时抛冲突错误。"""
         stmt = select(SysClientResource.id).where(
             SysClientResource.code == code,
             SysClientResource.module_id == module_id,

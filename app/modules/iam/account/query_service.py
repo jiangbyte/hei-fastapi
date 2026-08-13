@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户读侧组装服务：将账户主表、登录标识与用户中心资料组装为统一响应 Schema。
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +23,7 @@ class AccountQueryService:
         self.repo = AccountRepository(db)
 
     async def build_account_schemas(self, accounts: list) -> list[SysAccountSchema]:
+        """将账户 ORM 列表批量组装为 SysAccountSchema，避免逐条 N+1 查询。"""
         account_ids = [account.id for account in accounts]
         identities = await self.repo.list_identities_by_account_ids(account_ids)
         admin_profiles = await AdminUserProfileRepository(self.db).list_by_account_ids(account_ids)
@@ -35,6 +39,7 @@ class AccountQueryService:
         items: list[SysAccountSchema] = []
         for account in accounts:
             account_identities = identity_map.get(account.id, [])
+            # 优先取主账号标识，回退到任意账号标识，保证 account 字段非空。
             primary_identity = next(
                 (
                     item
@@ -114,6 +119,7 @@ class AccountQueryService:
 
 
 def _identity_login_enabled(identity) -> bool:
+    """判断登录标识是否已启用：存在、有标识、已验证且处于绑定状态。"""
     return bool(
         identity
         and identity.identifier

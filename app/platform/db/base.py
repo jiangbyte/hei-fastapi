@@ -1,8 +1,14 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+ORM 基类与元数据：声明统一的 SQLAlchemy 命名约定，并在末尾挂载审计字段注入钩子。
+
+所有模型通过继承 Base 获得一致的约束/索引命名，便于迁移与排查。
+"""
 
 from sqlalchemy import MetaData
 from sqlalchemy.orm import DeclarativeBase
 
+# 统一约束/索引命名约定，避免自动生成名称不一致。
 metadata = MetaData(
     naming_convention={
         "ix": "ix_%(column_0_label)s",
@@ -15,6 +21,8 @@ metadata = MetaData(
 
 
 class Base(DeclarativeBase):
+    """所有 ORM 模型的声明式基类。"""
+
     metadata = metadata
 
 

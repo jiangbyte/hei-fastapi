@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+跨模块通用小 DTO。
+"""
 
 from app.core.schema.base import ApiSchema
 

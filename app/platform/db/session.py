@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+数据库会话：创建异步引擎与会话工厂，并提供获取与关闭的全局单例。
+
+连接池参数对 SQLite 跳过，可观测性开启时对引擎注入链路追踪。
+"""
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -10,11 +15,13 @@ from sqlalchemy.ext.asyncio import (
 from app.core.config.settings import settings
 from app.platform.observability.tracing import init_tracing
 
+# 进程级全局异步引擎与会话工厂。
 engine: AsyncEngine | None = None
 async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 def init_engine() -> None:
+    """创建异步引擎与会话工厂，幂等。"""
     global engine, async_session_factory
     if engine is not None:
         return
@@ -32,6 +39,7 @@ def init_engine() -> None:
 
 
 def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """返回会话工厂，未初始化时先初始化引擎。"""
     if async_session_factory is None:
         init_engine()
     if async_session_factory is None:
@@ -40,6 +48,7 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
 
 
 async def close_engine() -> None:
+    """释放引擎并清空会话工厂，幂等。"""
     global engine, async_session_factory
     if engine is not None:
         await engine.dispose()

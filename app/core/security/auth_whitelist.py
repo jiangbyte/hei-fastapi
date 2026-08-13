@@ -89,10 +89,12 @@ def get_auth_whitelist_patterns() -> tuple[str, ...]:
 
 
 def clear_auth_whitelist_cache() -> None:
+    """清除白名单缓存（配置热更新后调用）。"""
     get_auth_whitelist_patterns.cache_clear()
 
 
 def is_auth_whitelisted(path: str) -> bool:
+    """判断请求路径是否命中鉴权白名单（支持 fnmatch 通配）。"""
     normalized = path.rstrip("/") or "/"
     candidates = {path, normalized}
     if path != normalized:

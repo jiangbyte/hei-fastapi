@@ -11,14 +11,17 @@ from app.deps.context import client_ip_ctx, user_agent_ctx
 
 
 def request_user_agent(request: Request) -> str | None:
+    """优先取上下文中的 UA，否则回退到请求头。"""
     return user_agent_ctx.get() or request.headers.get("user-agent")
 
 
 def request_client_ip(request: Request) -> str | None:
+    """优先取上下文中的客户端 IP，否则重新解析。"""
     return client_ip_ctx.get() or get_client_ip(request)
 
 
 def device_label_from_user_agent(user_agent: str | None) -> str | None:
+    """根据 UA 关键字粗略识别设备类型：Mobile / Tablet / Desktop。"""
     if not user_agent:
         return None
     value = user_agent.lower()

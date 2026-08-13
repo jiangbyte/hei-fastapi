@@ -38,6 +38,7 @@ _HAS_LETTER = re.compile(r"[A-Za-z]")
 
 
 def _custom_weak_words() -> set[str]:
+    """读取 ``PASSWORD_CUSTOM_WEAK_WORDS`` 配置的自定义弱密码集合。"""
     raw = config_reader.get("PASSWORD_CUSTOM_WEAK_WORDS") or ""
     return {part.strip().lower() for part in raw.split(",") if part.strip()}
 
@@ -53,6 +54,7 @@ def _require_classes(
     require_digit: bool,
     require_special: bool,
 ) -> None:
+    """按独立开关校验字符类别要求，缺一类即抛业务错误。"""
     if require_upper and not has_upper:
         raise BusinessError("密码必须包含至少一个大写字母")
     if require_lower and not has_lower:
@@ -64,6 +66,7 @@ def _require_classes(
 
 
 def _check_complexity(password: str, complexity: str, policy) -> None:
+    """按 complexity 枚举执行对应的字符类别组合校验。"""
     key = (complexity or "").strip().upper()
     has_upper = bool(_HAS_UPPER.search(password))
     has_lower = bool(_HAS_LOWER.search(password))
@@ -130,6 +133,7 @@ def _check_complexity(password: str, complexity: str, policy) -> None:
 
 
 def _check_max_consecutive(password: str, max_consecutive: int) -> None:
+    """校验连续相同字符不超过配置上限。"""
     if max_consecutive <= 0 or len(password) <= max_consecutive:
         return
     run = 1
@@ -143,6 +147,7 @@ def _check_max_consecutive(password: str, max_consecutive: int) -> None:
 
 
 def _is_in_builtin_or_custom(password: str) -> bool:
+    """判断密码是否命中内置或自定义弱密码集合。"""
     lowered = password.lower()
     if lowered in _COMMON_PASSWORDS:
         return True

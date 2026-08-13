@@ -17,6 +17,7 @@ from app.modules.user.portal.repository import PortalUserProfileRepository
 
 
 def as_account_type(account_type: AccountType | str) -> AccountType:
+    """将账户类型归一化为 AccountType 枚举，非法值抛 BusinessError。"""
     if isinstance(account_type, AccountType):
         return account_type
     try:
@@ -26,6 +27,7 @@ def as_account_type(account_type: AccountType | str) -> AccountType:
 
 
 def pick_profile_repo(db: AsyncSession, account_type: AccountType | str):
+    """按账户类型返回对应的资料仓储实例。"""
     account_type = as_account_type(account_type)
     match account_type:
         case AccountType.ADMIN:
@@ -37,6 +39,7 @@ def pick_profile_repo(db: AsyncSession, account_type: AccountType | str):
 
 
 def pick_profile_model(account_type: AccountType | str):
+    """按账户类型返回对应的资料模型类。"""
     account_type = as_account_type(account_type)
     match account_type:
         case AccountType.ADMIN:
@@ -50,6 +53,7 @@ def pick_profile_model(account_type: AccountType | str):
 async def get_profile(
     db: AsyncSession, account_type: AccountType | str, account_id: str
 ) -> object | None:
+    """按账户类型与 ID 查询资料记录，不存在时返回 None。"""
     repo = pick_profile_repo(db, account_type)
     return await repo.get_by_account_id(account_id)
 
@@ -59,6 +63,7 @@ async def get_profiles_batch(
     account_type: AccountType | str,
     account_ids: list[str],
 ) -> dict[str, object]:
+    """批量查询资料记录，返回以 account_id 为键的字典。"""
     if not account_ids:
         return {}
     repo = pick_profile_repo(db, account_type)
@@ -67,6 +72,7 @@ async def get_profiles_batch(
 
 
 def _profile_display_name(profile: object) -> str | None:
+    """提取资料展示名（优先姓名，其次昵称）。"""
     name = getattr(profile, "name", None) or getattr(profile, "nickname", None)
     return str(name) if name else None
 
@@ -121,5 +127,6 @@ async def enrich_audit_name(
     *,
     account_type: AccountType | str | None = None,
 ) -> Any:
+    """为单条 schema 补充 created_name / updated_name。"""
     await enrich_audit_names(db, [schema], account_type=account_type)
     return schema

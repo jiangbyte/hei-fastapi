@@ -1,4 +1,9 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+根日志初始化：为 API 与 worker 进程统一配置 stdlib/structlog 日志。
+
+按可观测性配置决定是否输出到控制台与按日轮转文件，并抑制框架访问日志。
+"""
 
 from __future__ import annotations
 
@@ -9,6 +14,7 @@ from app.core.config.settings import settings
 from app.platform.observability.logging import build_log_formatter
 
 _CONFIGURED = False
+# 框架访问日志与应用的 structlog 访问日志重复，统一禁用。
 _NOISY_LOGGERS = (
     "uvicorn.access",
     "gunicorn.access",

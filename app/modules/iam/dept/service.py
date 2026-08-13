@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+部门应用服务：部门 CRUD、数据范围可见性校验与名称回显。
+"""
 
 from collections.abc import Mapping, Sequence
 
@@ -24,6 +27,8 @@ from app.platform.db.transaction import transactional
 
 
 class DeptService:
+    """部门应用服务。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = DeptRepository(db)
@@ -31,6 +36,7 @@ class DeptService:
     async def create(
         self, payload: DeptCreateRequest, session: SessionPayload | None = None
     ) -> None:
+        """创建部门，传入 session 时校验父级部门可见性。"""
         if session is not None and payload.parent_id:
             await self._ensure_dept_ids_visible(session, "iam:dept:create", [payload.parent_id])
         async with transactional(self.db):
@@ -39,6 +45,7 @@ class DeptService:
     async def update(
         self, payload: DeptUpdateRequest, session: SessionPayload | None = None
     ) -> None:
+        """更新部门，传入 session 时校验目标及父级可见性。"""
         if session is not None:
             await self._ensure_dept_records_visible(session, "iam:dept:update", [payload.id])
             if payload.parent_id:
@@ -49,12 +56,14 @@ class DeptService:
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
+        """删除部门，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_dept_records_visible(session, "iam:dept:delete", payload.ids)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery, session: SessionPayload | None = None) -> SysDeptSchema:
+        """查询部门详情并回显名称。"""
         if session is not None:
             await self._ensure_dept_records_visible(session, "iam:dept:detail", [query.id])
         result = to_schema(SysDeptSchema, await self.repo.get_required(query.id))
@@ -66,6 +75,7 @@ class DeptService:
         query: DeptAdminPageQuery,
         session: SessionPayload | None = None,
     ) -> PageData[SysDeptSchema]:
+        """分页查询部门，叠加数据范围过滤。"""
         data_scope_filter = (
             await self._dept_scope_filter(session, "iam:dept:page") if session is not None else None
         )
@@ -75,6 +85,7 @@ class DeptService:
         return build_page(query, total, dtos)
 
     async def list_dept_tree(self, session: SessionPayload | None = None) -> list[DeptTreeNode]:
+        """返回部门树，并批量回显负责人名称。"""
         data_scope_filter = (
             await self._dept_scope_filter(session, "iam:dept:list") if session is not None else None
         )
@@ -151,6 +162,7 @@ class DeptService:
                     dto.parent_name = dept_map[dto.parent_id]
 
     async def _dept_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造部门数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -165,6 +177,7 @@ class DeptService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """校验目标部门均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
@@ -178,6 +191,7 @@ class DeptService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """按解析出的可见部门 ID 校验目标部门可见性。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
@@ -192,6 +206,7 @@ class DeptService:
 def _build_dept_tree_nodes(
     items: Sequence[DeptTreeRecord | DeptTreeNode | Mapping[str, object]],
 ) -> list[DeptTreeNode]:
+    """将树记录递归转换为 DeptTreeNode 响应结构。"""
     nodes: list[DeptTreeNode] = []
     for item in items:
         raw_item: Mapping[str, object] = (

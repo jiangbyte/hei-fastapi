@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+账户类型访问控制：校验当前账户类型是否在允许范围内。
+"""
 
 from collections.abc import Iterable
 

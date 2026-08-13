@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+角色应用服务：角色 CRUD、内置角色保护、授权与数据范围可见性校验。
+"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +43,8 @@ from app.platform.db.transaction import transactional
 
 
 class RoleService:
+    """角色应用服务。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = RoleRepository(db)
@@ -49,6 +54,7 @@ class RoleService:
         payload: RoleCreateRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """创建角色，传入 session 时校验所属部门可见性。"""
         if session is not None and payload.owner_dept_id:
             await self._ensure_depts_visible(session, "iam:role:create", [payload.owner_dept_id])
         async with transactional(self.db):
@@ -59,6 +65,7 @@ class RoleService:
         payload: RoleUpdateRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """更新角色，传入 session 时校验可见性并保护内置角色。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:update", [payload.id])
             if payload.owner_dept_id:
@@ -73,6 +80,7 @@ class RoleService:
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
+        """删除角色，传入 session 时校验可见性并阻止删除内置角色。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:delete", payload.ids)
         await self._ensure_roles_deletable(payload.ids)
@@ -80,6 +88,7 @@ class RoleService:
             await self.repo.delete_many(payload.ids)
 
     async def detail(self, query: IdQuery, session: SessionPayload | None = None) -> SysRoleSchema:
+        """查询角色详情并回显部门名称与创建人昵称。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:detail", [query.id])
         schema = to_schema(SysRoleSchema, await self.repo.get_required(query.id))
@@ -91,6 +100,7 @@ class RoleService:
         query: RoleAdminPageQuery,
         session: SessionPayload | None = None,
     ) -> PageData[SysRoleSchema]:
+        """分页查询角色，叠加数据范围过滤。"""
         data_scope_filter = (
             await self._role_scope_filter(session, "iam:role:page") if session is not None else None
         )
@@ -104,6 +114,7 @@ class RoleService:
         query: RoleOwnResourceQuery,
         session: SessionPayload | None = None,
     ) -> RoleOwnResourceResponse:
+        """返回角色拥有的资源授权。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:ownresource", [query.id])
         return RoleOwnResourceResponse(
@@ -122,6 +133,7 @@ class RoleService:
         payload: RoleGrantResourceRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换角色资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:grantresource", [payload.id])
         async with transactional(self.db):
@@ -134,6 +146,7 @@ class RoleService:
         query: RoleOwnClientResourceQuery,
         session: SessionPayload | None = None,
     ) -> RoleOwnClientResourceResponse:
+        """返回角色拥有的客户端资源授权。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:ownclientresource", [query.id])
         grants = await IamRelationRepository(self.db).list_subject_client_resource_grants(
@@ -152,6 +165,7 @@ class RoleService:
         payload: RoleGrantClientResourceRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换角色客户端资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:grantclientresource", [payload.id])
         async with transactional(self.db):
@@ -169,6 +183,7 @@ class RoleService:
         query: IdQuery,
         session: SessionPayload | None = None,
     ) -> RoleOwnUserResponse:
+        """返回拥有该角色的用户（含全部可见账户与已选成员）。"""
         account_filter = (
             await self._account_scope_filter(session, "iam:role:ownuser")
             if session is not None
@@ -189,6 +204,7 @@ class RoleService:
         payload: RoleGrantUserRequest,
         session: SessionPayload | None = None,
     ) -> None:
+        """全量替换角色成员，并刷新受影响账户会话。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:grantuser", [payload.id])
             await self._ensure_accounts_visible(session, "iam:role:grantuser", payload.account_ids)
@@ -220,9 +236,11 @@ class RoleService:
                     d.updated_name = getattr(profiles[d.updated_by], "nickname", None)
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:
+        """刷新指定账户的在线会话缓存。"""
         await AccountSessionService(self.db).refresh_accounts_sessions(sorted(set(account_ids)))
 
     def _is_protected_role(self, role: SysRole) -> bool:
+        """判断角色是否为内置或超级管理员角色。"""
         return bool(role.is_builtin) or role.code == SUPER_ADMIN_ROLE_CODE
 
     def _ensure_protected_role_mutable(
@@ -230,6 +248,7 @@ class RoleService:
         existing: SysRole,
         payload: RoleUpdateRequest,
     ) -> None:
+        """阻止修改内置/超级管理员角色的编码与内置标记。"""
         if not self._is_protected_role(existing):
             return
         if payload.code != existing.code:
@@ -238,6 +257,7 @@ class RoleService:
             raise BusinessError("Cannot change is_builtin of builtin or SUPER_ADMIN role")
 
     async def _ensure_roles_deletable(self, role_ids: list[str]) -> None:
+        """阻止删除内置或超级管理员角色。"""
         unique_ids = list(dict.fromkeys(role_ids))
         for role_id in unique_ids:
             role = await self.repo.get_required(role_id)
@@ -245,6 +265,7 @@ class RoleService:
                 raise BusinessError("Cannot delete builtin or SUPER_ADMIN role")
 
     async def _role_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造角色数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -254,6 +275,7 @@ class RoleService:
         )
 
     async def _account_scope_filter(self, session: SessionPayload, permission_key: str):
+        """构造账户数据范围过滤条件。"""
         return await build_data_scope_filter(
             self.db,
             session,
@@ -268,6 +290,7 @@ class RoleService:
         permission_key: str,
         role_ids: list[str],
     ) -> None:
+        """校验目标角色均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
@@ -281,6 +304,7 @@ class RoleService:
         permission_key: str,
         account_ids: list[str],
     ) -> None:
+        """校验目标账户均在当前数据范围内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
@@ -298,6 +322,7 @@ class RoleService:
         permission_key: str,
         dept_ids: list[str],
     ) -> None:
+        """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return

@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+角色管理 HTTP 路由：角色 CRUD 与用户/资源授权接口。
+"""
 
 from typing import Annotated
 

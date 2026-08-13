@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+操作审计后台接口：分页查询与详情查询，仅管理员可访问。
+"""
 
 from typing import Annotated
 
@@ -29,6 +32,7 @@ async def page(
     query: Annotated[OperationAuditPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[OperationAuditRecord]]:
+    """后台分页查询操作审计日志。"""
     return success(await OperationAuditService(db).page_admin(query))
 
 
@@ -44,4 +48,5 @@ async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[OperationAuditRecord]:
+    """按主键查询单条操作审计日志详情。"""
     return success(await OperationAuditService(db).detail(query))

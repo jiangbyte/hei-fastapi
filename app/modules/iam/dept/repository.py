@@ -1,4 +1,7 @@
-""" Author: Charlie """
+""" Author: Charlie
+
+部门仓储：负责部门的增删改查、数据范围统计与树组装。
+"""
 
 from datetime import UTC, datetime
 from typing import TypedDict
@@ -19,6 +22,8 @@ from app.modules.iam.reference_guard import (
 
 
 class DeptTreeRecord(TypedDict):
+    """部门树节点记录结构。"""
+
     id: str
     name: str
     category: str
@@ -33,25 +38,31 @@ class DeptTreeRecord(TypedDict):
 
 
 class DeptRepository:
+    """部门仓储。"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def create(self, payload: DeptCreateRequest) -> None:
+        """创建部门，父级不存在时抛冲突错误。"""
         await ensure_parent_exists(self.db, SysDept, payload.parent_id, "Dept")
         dept = SysDept(**payload.model_dump())
         self.db.add(dept)
         await self.db.flush()
 
     async def get_by_id(self, dept_id: str) -> SysDept | None:
+        """按主键查询部门。"""
         return await self.db.get(SysDept, dept_id)
 
     async def get_required(self, dept_id: str) -> SysDept:
+        """按主键查询部门，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(dept_id)
         if entity is None:
             raise NotFoundError("Dept not found")
         return entity
 
     async def update(self, payload: DeptUpdateRequest) -> None:
+        """更新部门，校验父级存在及层级合法性。"""
         entity = await self.get_required(payload.id)
         await ensure_parent_exists(self.db, SysDept, payload.parent_id, "Dept")
         await ensure_not_self_or_descendant(self.db, SysDept, payload.id, payload.parent_id, "Dept")
@@ -62,6 +73,7 @@ class DeptRepository:
         await self.db.flush()
 
     async def delete_many(self, dept_ids: list[str]) -> None:
+        """删除部门，存在引用时抛冲突错误。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
@@ -77,6 +89,7 @@ class DeptRepository:
         dept_ids: list[str],
         data_scope_filter: ColumnElement[bool],
     ) -> int:
+        """统计处于当前数据范围内的目标部门数量。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return 0
@@ -88,6 +101,7 @@ class DeptRepository:
         query: DeptAdminPageQuery,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> tuple[list[SysDept], int]:
+        """按条件分页查询部门并统计总数。"""
         stmt: Select[tuple[SysDept]] = select(SysDept)
         count_stmt = select(func.count(SysDept.id))
         filters = []
@@ -117,12 +131,14 @@ class DeptRepository:
         self,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[SysDept]:
+        """列出部门，可按数据范围过滤。"""
         stmt = select(SysDept).order_by(SysDept.sort.asc(), SysDept.id.asc())
         if data_scope_filter is not None:
             stmt = stmt.where(data_scope_filter)
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def list_by_ids(self, dept_ids: list[str]) -> list[SysDept]:
+        """按 ID 列表批量查询部门。"""
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return []
@@ -133,6 +149,7 @@ class DeptRepository:
         self,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[DeptTreeRecord]:
+        """将部门列表组装为树结构（按 parent_id 挂载）。"""
         depts = await self.list_depts(data_scope_filter)
         node_map: dict[str, DeptTreeRecord] = {
             dept.id: {
