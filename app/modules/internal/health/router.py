@@ -31,15 +31,15 @@ async def live() -> LiveHealthResponse:
 @router.get("/v1/internal/health/ready", response_model=ReadyHealthResponse)
 async def ready(response: Response) -> ReadyHealthResponse:
     """就绪探针，聚合数据库、Redis、消息队列和存储配置的可用性检查。"""
-    snail_configured = bool(settings.snail_job.server_host)
+    snail_enabled = bool(settings.snail_job.enabled)
     checks = ReadyChecksResponse(
         database=HealthCheckItem(enabled=True, ok=False, detail=None),
         redis=HealthCheckItem(enabled=True, ok=False, detail=None),
         config_sync=HealthCheckItem(enabled=False, ok=False, detail=None),
-        # API 进程不依赖 SnailJob Server 才可服务；配置齐全即视为 ok，探活写入 detail。
+        # API 不依赖 SnailJob Server 才可服务；enabled 时配置齐全即 ok，探活写入 detail。
         snail_job=HealthCheckItem(
-            enabled=snail_configured,
-            ok=snail_configured,
+            enabled=snail_enabled,
+            ok=snail_enabled,
             detail=None,
         ),
         storage=HealthCheckItem(enabled=True, ok=False, detail=None),
@@ -70,10 +70,12 @@ async def ready(response: Response) -> ReadyHealthResponse:
         else sync_state.last_error or "listener not running"
     )
     if not checks.snail_job.enabled:
-        checks.snail_job.detail = "snailjob server host not configured"
+        checks.snail_job.detail = "snailjob disabled"
+        checks.snail_job.ok = True
     else:
         reachable, probe_detail = probe_snailjob_server()
         checks.snail_job.detail = probe_detail if reachable else f"configured; {probe_detail}"
+        checks.snail_job.ok = True
     try:
         storage = get_storage()
         checks.storage.ok = True

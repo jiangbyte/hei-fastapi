@@ -9,7 +9,7 @@ import logging
 import time
 from pathlib import Path
 
-from snailjob import ExecuteResult, ExecutorManager, JobArgs, job
+from snailjob import ExecuteResult, ExecutorManager, JobArgs, SnailLog, job
 from sqlalchemy import select
 
 from app.core.config.enums import StorageProvider
@@ -27,9 +27,14 @@ def cleanup_local_orphans(_args: JobArgs) -> ExecuteResult:
     """删除早于 min_age 且无对应 sys_file 行的本地文件。"""
     try:
         result = worker_async_runner.run(_cleanup(min_age_seconds=3600, limit=200))
+        SnailLog.REMOTE.info(
+            f"sysFileCleanupLocalOrphans scanned={result['scanned']} "
+            f"deleted={result['deleted']} skipped={result['skipped']}"
+        )
         return ExecuteResult.success(result)
     except Exception as exc:
         logger.exception("Local orphan cleanup failed")
+        SnailLog.REMOTE.error(str(exc))
         return ExecuteResult.failure(str(exc))
 
 

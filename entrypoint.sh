@@ -3,7 +3,18 @@ set -eu
 
 ROLE="${1:-${HEI_PROCESS_ROLE:-${APP__PROCESS_ROLE:-all}}}"
 
+snail_job_enabled() {
+    case "${SNAIL_JOB__ENABLED:-true}" in
+        1|true|TRUE|yes|YES|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 start_worker() {
+    if ! snail_job_enabled; then
+        echo "SnailJob disabled (SNAIL_JOB__ENABLED=false); worker will not start" >&2
+        exit 0
+    fi
     exec python -m app.worker.main
 }
 

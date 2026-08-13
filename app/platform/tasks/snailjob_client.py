@@ -75,6 +75,10 @@ def run_executor() -> None:
     from app.core.logger.setup import setup_logging
     from app.platform.tasks.async_runner import worker_async_runner
 
+    if not settings.snail_job.enabled:
+        logger.warning("SnailJob disabled (SNAIL_JOB__ENABLED=false); executor exiting")
+        return
+
     setup_logging()
     apply_snailjob_settings()
     worker_async_runner.run(startup_worker_infra())
@@ -83,7 +87,8 @@ def run_executor() -> None:
     import app.worker.tasks  # noqa: F401
 
     logger.info(
-        "SnailJob executor starting group=%s server=%s:%s client=%s:%s",
+        "SnailJob executor starting ns=%s group=%s server=%s:%s client=%s:%s",
+        settings.snail_job.namespace,
         settings.snail_job.group_name,
         settings.snail_job.server_host,
         settings.snail_job.server_port,

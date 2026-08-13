@@ -8,13 +8,15 @@ x-backend-env: &backend-env
   APP__TRUSTED_PROXY_IPS: ${DOCKER_TRUSTED_PROXY_IPS:-["172.16.0.0/12","127.0.0.1"]}
   DB__URL: ${DB__URL:?DB__URL is required}
   REDIS__URL: ${REDIS__URL:?REDIS__URL is required}
-  SNAIL_JOB__SERVER_HOST: ${SNAIL_JOB__SERVER_HOST:-127.0.0.1}
+  # SnailJob: Server must reach HOST_IP:HOST_PORT (publish 17889 when worker runs in container).
+  SNAIL_JOB__ENABLED: ${SNAIL_JOB__ENABLED:-true}
+  SNAIL_JOB__SERVER_HOST: ${SNAIL_JOB__SERVER_HOST:-host.docker.internal}
   SNAIL_JOB__SERVER_PORT: ${SNAIL_JOB__SERVER_PORT:-17888}
-  SNAIL_JOB__HOST_IP: ${SNAIL_JOB__HOST_IP:-}
+  SNAIL_JOB__HOST_IP: ${SNAIL_JOB__HOST_IP:-host.docker.internal}
   SNAIL_JOB__HOST_PORT: ${SNAIL_JOB__HOST_PORT:-17889}
-  SNAIL_JOB__NAMESPACE: ${SNAIL_JOB__NAMESPACE:-764d604ec6fc45f68cd92514c40e9e1a}
-  SNAIL_JOB__GROUP_NAME: ${SNAIL_JOB__GROUP_NAME:-hei_fastapi_group}
-  SNAIL_JOB__TOKEN: ${SNAIL_JOB__TOKEN:-SJ_Wyz3dmsdbDOkDujOTSSoBjGQP1BMsVnj}
+  SNAIL_JOB__NAMESPACE: ${SNAIL_JOB__NAMESPACE:-a8c3e5f17b924d6e9f0a1b2c3d4e5f60}
+  SNAIL_JOB__GROUP_NAME: ${SNAIL_JOB__GROUP_NAME:-hei_fastapi_admin}
+  SNAIL_JOB__TOKEN: ${SNAIL_JOB__TOKEN:-SJ_heiFastapiAdminToken1234567890ab}
   SNAIL_JOB__LABELS: ${SNAIL_JOB__LABELS:-env:docker,app:hei-fastapi}
   CORS__ALLOW_ORIGINS: ${CORS__ALLOW_ORIGINS:-["http://localhost:8081","http://127.0.0.1:8081"]}
   AUTH__SESSION_IDLE_TIMEOUT_SECONDS: ${AUTH__SESSION_IDLE_TIMEOUT_SECONDS:-1800}
@@ -32,6 +34,9 @@ services:
     command: ["all"]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+      - "${SNAIL_JOB_CLIENT_PORT:-17889}:17889"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - backend_storage:/app/storage
     healthcheck:

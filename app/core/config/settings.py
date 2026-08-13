@@ -159,13 +159,15 @@ class SnailJobSettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
+    enabled: bool = True
     server_host: str = "127.0.0.1"
     server_port: int = 17888
     host_ip: str = "127.0.0.1"
     host_port: int = 17889
-    namespace: str = "764d604ec6fc45f68cd92514c40e9e1a"
-    group_name: str = "hei_fastapi_group"
-    token: str = "SJ_Wyz3dmsdbDOkDujOTSSoBjGQP1BMsVnj"
+    # 独立于 hei-boot（Default / hei_boot_admin），同 Server 靠 namespace+group 隔离。
+    namespace: str = "a8c3e5f17b924d6e9f0a1b2c3d4e5f60"
+    group_name: str = "hei_fastapi_admin"
+    token: str = "SJ_heiFastapiAdminToken1234567890ab"
     labels: str = "env:dev,app:hei-fastapi"
 
 

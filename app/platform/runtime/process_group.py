@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-进程组管理：在同一进程中拉起 API 与 SnailJob worker 两个子进程并统一协调生命周期。
+进程组管理：在同一进程中拉起 API 与（可选）SnailJob worker 子进程并统一协调生命周期。
 
 监听 SIGINT/SIGTERM，任一子进程退出或收到信号时优雅终止其余进程。
 """
@@ -16,6 +16,19 @@ import sys
 def _env(name: str, default: str) -> str:
     """读取环境变量，缺失时返回默认值。"""
     return os.environ.get(name, default)
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    """把环境变量解析为布尔，缺失时返回默认值。"""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _snail_job_enabled() -> bool:
+    """是否启动 SnailJob 执行器子进程。"""
+    return _env_bool("SNAIL_JOB__ENABLED", True)
 
 
 def _worker_command() -> list[str]:
@@ -49,10 +62,12 @@ async def _terminate(processes: dict[str, asyncio.subprocess.Process]) -> None:
 
 async def run_all() -> int:
     """启动并监管全部子进程，返回进程退出码。"""
-    commands = {
-        "worker": _worker_command(),
-        "api": _api_command(),
-    }
+    commands = {"api": _api_command()}
+    if _snail_job_enabled():
+        commands["worker"] = _worker_command()
+    else:
+        print("SnailJob disabled (SNAIL_JOB__ENABLED=false); starting API only", file=sys.stderr)
+
     processes: dict[str, asyncio.subprocess.Process] = {}
     try:
         for name, command in commands.items():
