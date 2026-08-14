@@ -8,9 +8,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.platform.config.reader import config_reader
-from app.platform.email.sender import is_mail_configured, send_templated_mail
-from app.platform.sms.sender import send_templated_sms
+from app.core.config.reader import config_reader
+from app.core.email.sender import is_mail_configured, send_templated_mail
+from app.core.sms.sender import send_templated_sms
 
 logger = logging.getLogger(__name__)
 

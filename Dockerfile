@@ -17,9 +17,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APP__HOST=0.0.0.0 \
     APP__PORT=8000 \
     APP__DEBUG=false \
-    APP__PROCESS_ROLE=all \
-    APP__WORKERS=0 \
-    APP__WORKER_MAX=4 \
     DB__POOL_SIZE=5 \
     DB__MAX_OVERFLOW=5 \
     DB__POOL_PRE_PING=true \
@@ -43,7 +40,6 @@ COPY app ./app
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY scripts/db ./scripts/db
-COPY scripts/seed ./scripts/seed
 COPY gunicorn.conf.py ./
 COPY entrypoint.sh ./
 
@@ -56,4 +52,4 @@ VOLUME ["/app/storage", "/app/.runtime"]
 EXPOSE 8000
 
 ENTRYPOINT ["tini", "-g", "--", "/app/entrypoint.sh"]
-CMD ["all"]
+CMD ["api"]

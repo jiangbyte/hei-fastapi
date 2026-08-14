@@ -1,6 +1,6 @@
 """ Author: Charlie """
 
-from app.platform.id_generator.snowflake import generate_snowflake_id
+from app.core.id_generator.snowflake import generate_snowflake_id
 
 
 def test_generate_snowflake_id_returns_unique_strings():

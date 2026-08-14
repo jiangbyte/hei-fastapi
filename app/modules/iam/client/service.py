@@ -6,6 +6,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.permission_registry import ensure_registered_permission_key
@@ -29,26 +30,7 @@ from app.modules.iam.client.schema import (
     SysClientResourceSchema,
 )
 from app.modules.iam.schema import ResourceGrantModuleOption
-from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
-
-
-async def _resolve_creator_names(db: AsyncSession, items: list) -> None:
-    """批量回显 created_by / updated_by 对应的昵称，避免逐条查询。"""
-    account_ids: set[str] = set()
-    for item in items:
-        if item.created_by:
-            account_ids.add(item.created_by)
-        if item.updated_by:
-            account_ids.add(item.updated_by)
-    if not account_ids:
-        return
-    profiles = await get_profiles_batch(db, AccountType.ADMIN, list(account_ids))
-    for item in items:
-        if item.created_by and item.created_by in profiles:
-            item.created_name = getattr(profiles[item.created_by], "nickname", None)
-        if item.updated_by and item.updated_by in profiles:
-            item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
+from app.modules.user.utils.profile import enrich_audit_names
 
 
 class ClientModuleService:
@@ -76,7 +58,7 @@ class ClientModuleService:
     async def detail(self, query: IdQuery) -> SysClientModuleSchema:
         """查询客户端模块详情并回显创建人/更新人昵称。"""
         schema = to_schema(SysClientModuleSchema, await self.repo.get_required(query.id))
-        await _resolve_creator_names(self.db, [schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -86,7 +68,7 @@ class ClientModuleService:
         """分页查询客户端模块。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysClientModuleSchema, items)
-        await _resolve_creator_names(self.db, schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def selector(
@@ -127,7 +109,7 @@ class ClientResourceService:
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysClientResourceSchema, entity)
         await self._fill_module_meta([schema])
-        await _resolve_creator_names(self.db, [schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -138,7 +120,7 @@ class ClientResourceService:
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysClientResourceSchema, items)
         await self._fill_module_meta(schemas)
-        await _resolve_creator_names(self.db, schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def list_tree(

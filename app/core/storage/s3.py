@@ -1,0 +1,91 @@
+""" Author: Charlie
+
+S3 兼容存储：基于 boto3 的通用引擎，以及 MinIO/RustFS 的差异化子类。
+"""
+
+from dataclasses import replace
+from urllib.parse import urljoin
+
+import boto3
+from botocore.client import Config
+
+from app.core.storage.config import StorageConfig
+from app.core.storage.url import quote_object_name
+
+
+class S3CompatibleStorage:
+    """S3 兼容存储基类，通过 boto3 访问对象。"""
+
+    def __init__(self, config: StorageConfig, *, force_path_style: bool = False) -> None:
+        self.config = config
+        self.bucket = config.bucket
+        endpoint = config.endpoint.rstrip("/")
+        scheme = "https" if config.use_ssl else "http"
+        if endpoint.startswith("http://") or endpoint.startswith("https://"):
+            endpoint_url = endpoint
+        else:
+            endpoint_url = f"{scheme}://{endpoint}"
+        config_kwargs = {"signature_version": "s3v4"}
+        if force_path_style:
+            config_kwargs["s3"] = {"addressing_style": "path"}
+        client_config = Config(**config_kwargs)
+        self.client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=config.access_key,
+            aws_secret_access_key=config.secret_key,
+            region_name=config.region,
+            config=client_config,
+        )
+
+    def upload_bytes(
+        self,
+        object_name: str,
+        content: bytes,
+        content_type: str = "application/octet-stream",
+    ) -> str:
+        """上传字节内容并返回对象公开 URL。"""
+        self.client.put_object(
+            Bucket=self.bucket,
+            Key=object_name,
+            Body=content,
+            ContentType=content_type,
+        )
+        return self.get_object_url(object_name)
+
+    def delete_object(self, object_name: str) -> None:
+        """删除对象。"""
+        self.client.delete_object(Bucket=self.bucket, Key=object_name)
+
+    def get_object_url(self, object_name: str) -> str:
+        """有 base_url 时拼接公开地址，否则生成签名 URL。"""
+        if self.config.base_url:
+            return urljoin(self.config.base_url.rstrip("/") + "/", quote_object_name(object_name))
+        return self.get_presigned_url(object_name)
+
+    def get_presigned_url(self, object_name: str) -> str:
+        """生成 GET 签名 URL。"""
+        return str(
+            self.client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self.bucket, "Key": object_name},
+                ExpiresIn=self.config.presign_expire_seconds,
+            )
+            )
+
+
+class MinioStorage(S3CompatibleStorage):
+    """MinIO 存储引擎，强制 path-style 寻址。"""
+
+    def __init__(self, config: StorageConfig) -> None:
+        super().__init__(config, force_path_style=True)
+
+
+class RustFSStorage(S3CompatibleStorage):
+    """RustFS：S3 兼容，默认 path-style；region 缺省 us-east-1。"""
+
+    def __init__(self, config: StorageConfig) -> None:
+        region = (config.region or "").strip() or "us-east-1"
+        if region != config.region:
+            config = replace(config, region=region)
+        super().__init__(config, force_path_style=True)

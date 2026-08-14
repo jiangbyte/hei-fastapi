@@ -9,9 +9,9 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from app.core.config.reader import config_reader
 from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
-from app.platform.config.reader import config_reader
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -181,7 +181,7 @@ async def is_weak_password(db: AsyncSession, password: str) -> bool:
         return True
     from sqlalchemy import select
 
-    from app.platform.db.models.sys_weak_password import SysWeakPassword
+    from app.core.db.models.sys_weak_password import SysWeakPassword
 
     stmt = select(SysWeakPassword.id).where(SysWeakPassword.password == password).limit(1)
     return (await db.execute(stmt)).scalar_one_or_none() is not None

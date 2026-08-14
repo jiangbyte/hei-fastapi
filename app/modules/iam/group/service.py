@@ -6,6 +6,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -44,8 +45,7 @@ from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
+from app.modules.user.utils.profile import enrich_audit_names
 
 
 class GroupService:
@@ -96,7 +96,7 @@ class GroupService:
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:detail", [query.id])
         schema = to_schema(SysGroupSchema, await self.repo.get_required(query.id))
-        await self._resolve_creator_names([schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -112,7 +112,7 @@ class GroupService:
         )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         schemas = to_schema_list(SysGroupSchema, items)
-        await self._resolve_creator_names(schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def assign_group_role(
@@ -279,23 +279,6 @@ class GroupService:
                 account_type=payload.account_type,
             )
         await self._refresh_accounts(account_ids)
-
-    async def _resolve_creator_names(self, items: list[SysGroupSchema]) -> None:
-        """批量查询 created_by / updated_by 对应的昵称。"""
-        account_ids: set[str] = set()
-        for item in items:
-            if item.created_by:
-                account_ids.add(item.created_by)
-            if item.updated_by:
-                account_ids.add(item.updated_by)
-        if not account_ids:
-            return
-        profiles = await get_profiles_batch(self.db, AccountType.ADMIN, list(account_ids))
-        for item in items:
-            if item.created_by and item.created_by in profiles:
-                item.created_name = getattr(profiles[item.created_by], "nickname", None)
-            if item.updated_by and item.updated_by in profiles:
-                item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:
         """刷新指定账户的在线会话缓存。"""

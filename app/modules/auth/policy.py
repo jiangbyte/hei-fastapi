@@ -8,10 +8,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.core.config.enums import AccountType, account_config_key
+from app.core.config.reader import config_reader
 from app.core.config.settings import settings
 from app.core.exceptions.business import AuthenticationError, BusinessError
 from app.modules.iam.enums import AccountIdentityType
-from app.platform.config.reader import config_reader
 
 
 @dataclass(frozen=True, slots=True)

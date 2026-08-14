@@ -3,12 +3,10 @@
 from pathlib import Path
 
 import pytest
-from pydantic_settings import BaseSettings
 
 from app.core.config.enums import StorageProvider
-from app.platform.module import config_loader
-from app.platform.storage import manager as storage_manager
-from app.platform.storage.config import StorageConfig
+from app.core.storage import manager as storage_manager
+from app.core.storage.config import StorageConfig
 
 
 @pytest.fixture(autouse=True)
@@ -89,29 +87,13 @@ def test_explicit_unknown_storage_config_id_does_not_fallback(monkeypatch):
         storage_manager.resolve_storage_config("missing-storage")
 
 
-def test_module_config_db_overrides_are_type_coerced(monkeypatch):
-    class DemoSettings(BaseSettings):
-        enabled: bool = True
-        max_count: int = 1
-        timeout_seconds: float = 1.0
-        names: list[str] = []
+def test_config_value_type_coerced():
+    from app.core.config.coerce import coerce_config_value
 
-    instance = DemoSettings()
-    monkeypatch.setattr(
-        config_loader.config_reader,
-        "raw_items",
-        lambda: {
-            "demo.enabled": "false",
-            "demo.max_count": "42",
-            "demo.timeout_seconds": "2.5",
-            "demo.names": '["a", "b"]',
-            "other.enabled": "true",
-        },
-    )
-
-    config_loader._apply_db_overrides(instance, "demo")
-
-    assert instance.enabled is False
-    assert instance.max_count == 42
-    assert instance.timeout_seconds == 2.5
-    assert instance.names == ["a", "b"]
+    assert coerce_config_value("false", bool) is False
+    assert coerce_config_value("42", int) == 42
+    assert coerce_config_value("2.5", float) == 2.5
+    assert coerce_config_value('["a", "b"]', list[str]) == ["a", "b"]
+    assert coerce_config_value("not-an-int", int) is None
+    assert coerce_config_value("true", bool | None) is True
+    assert coerce_config_value(None, int) is None

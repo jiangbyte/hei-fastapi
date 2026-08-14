@@ -1,6 +1,7 @@
 """ Author: Charlie """
 
 import base64
+import io
 
 import pytest
 from cryptography.hazmat.primitives import hashes, serialization
@@ -32,7 +33,15 @@ async def test_captcha_returns_base64_and_is_single_use(monkeypatch):
 
 async def test_captcha_can_return_png_for_mini_program(monkeypatch):
     monkeypatch.setattr("app.core.security.transport.secrets.choice", lambda alphabet: "A")
-    monkeypatch.setattr("app.core.security.transport.secrets.randbelow", lambda maximum: 0)
+
+    class FakeImageCaptcha:
+        def __init__(self, width: int, height: int) -> None:
+            pass
+
+        def generate(self, value: str):
+            return io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"fakepng")
+
+    monkeypatch.setattr("app.core.security.transport.ImageCaptcha", FakeImageCaptcha)
 
     captcha = await create_captcha("png")
 

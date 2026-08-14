@@ -165,20 +165,39 @@ async def ensure_not_self_or_descendant(
 
 async def list_descendant_ids(db: AsyncSession, model, entity_id: str) -> set[str]:
     """从全表父子关系构建邻接表，广度优先收集实体全部后代 ID。"""
+    return (await list_descendant_ids_many(db, model, [entity_id])).get(entity_id, set())
+
+
+async def list_descendant_ids_many(
+    db: AsyncSession,
+    model,
+    entity_ids: Iterable[str],
+) -> dict[str, set[str]]:
+    """一次加载父子关系，批量计算多个实体的全部后代 ID 集合。
+
+    替代逐实体全表加载（原实现每调用一次就 SELECT 全表一次），
+    多目标删除/校验场景下将 N 次全表扫描降为 1 次。
+    """
+    root_ids = unique_ids(entity_ids)
+    if not root_ids:
+        return {}
     rows = (await db.execute(select(model.id, model.parent_id))).all()
     children_by_parent: dict[str, list[str]] = {}
     for current_id, parent_id in rows:
         if parent_id:
             children_by_parent.setdefault(str(parent_id), []).append(str(current_id))
 
-    result: set[str] = set()
-    stack = list(children_by_parent.get(entity_id, []))
-    while stack:
-        current_id = stack.pop()
-        if current_id in result:
-            continue
-        result.add(current_id)
-        stack.extend(children_by_parent.get(current_id, []))
+    result: dict[str, set[str]] = {}
+    for root_id in root_ids:
+        descendants: set[str] = set()
+        stack = list(children_by_parent.get(root_id, []))
+        while stack:
+            current_id = stack.pop()
+            if current_id in descendants:
+                continue
+            descendants.add(current_id)
+            stack.extend(children_by_parent.get(current_id, []))
+        result[root_id] = descendants
     return result
 
 

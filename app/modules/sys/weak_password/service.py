@@ -5,6 +5,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.modules.sys.weak_password.repository import WeakPasswordRepository
@@ -15,7 +16,6 @@ from app.modules.sys.weak_password.schema import (
     WeakPasswordListQuery,
     WeakPasswordUpdateRequest,
 )
-from app.platform.db.transaction import transactional
 
 
 class WeakPasswordService:

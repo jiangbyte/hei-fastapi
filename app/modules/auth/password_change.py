@@ -9,18 +9,18 @@ import secrets
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache.keys import change_password_otp_key
+from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType
+from app.core.config.reader import config_reader
 from app.core.config.settings import settings
+from app.core.email.sender import send_templated_mail
 from app.core.exceptions.business import BusinessError
 from app.core.security.password import verify_password
+from app.core.sms.sender import send_templated_sms
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityType
-from app.platform.cache.keys import change_password_otp_key
-from app.platform.cache.redis import get_redis
-from app.platform.config.reader import config_reader
-from app.platform.email.sender import send_templated_mail
-from app.platform.sms.sender import send_templated_sms
 
 
 def change_verify_method() -> str:

@@ -4,7 +4,7 @@ Secrets backend 冒烟测试。
 """
 from cryptography.fernet import Fernet
 
-from app.platform.secrets.backend import FernetEnvBackend, clear_secrets_backend_cache
+from app.core.secrets.backend import FernetEnvBackend, clear_secrets_backend_cache
 
 
 def test_fernet_env_roundtrip():

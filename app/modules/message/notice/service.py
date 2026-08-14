@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -26,7 +27,6 @@ from app.modules.message.notice.schema import (
     PinNoticeRequest,
 )
 from app.modules.user.utils.profile import enrich_audit_name, enrich_audit_names
-from app.platform.db.transaction import transactional
 
 
 class MsgNoticeService:
@@ -78,26 +78,19 @@ class MsgNoticeService:
         return build_page(query, total, schemas)
 
     async def publish(self, payload: IdsRequest, session: SessionPayload) -> None:
-        """发布消息，记录发布时间与发送者。"""
+        """发布消息，记录发布时间与发送者（批量单条 UPDATE）。"""
         async with transactional(self.db):
-            now = datetime.now(UTC)
-            for entity_id in payload.ids:
-                entity = await self.repo.get_required(entity_id)
-                entity.status = NoticeStatus.PUBLISHED.value
-                entity.publish_at = now
-                entity.sender_account_type = str(session.account_type)
-                entity.sender_account_id = session.account_id
-            await self.db.flush()
+            await self.repo.publish_many(
+                payload.ids,
+                now=datetime.now(UTC),
+                sender_account_type=str(session.account_type),
+                sender_account_id=session.account_id,
+            )
 
     async def revoke(self, payload: IdsRequest) -> None:
-        """撤回消息，记录撤回时间。"""
+        """撤回消息，记录撤回时间（批量单条 UPDATE）。"""
         async with transactional(self.db):
-            now = datetime.now(UTC)
-            for entity_id in payload.ids:
-                entity = await self.repo.get_required(entity_id)
-                entity.status = NoticeStatus.REVOKED.value
-                entity.revoked_at = now
-            await self.db.flush()
+            await self.repo.revoke_many(payload.ids, now=datetime.now(UTC))
 
     async def pin(self, payload: PinNoticeRequest) -> None:
         """置顶/取消置顶公告（仅公告支持置顶）。"""

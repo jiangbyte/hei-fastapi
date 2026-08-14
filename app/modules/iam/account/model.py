@@ -9,10 +9,10 @@ from sqlalchemy import Boolean, DateTime, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.enums import AccountStatusEnum
+from app.core.db.base import Base
+from app.core.db.mixins import TimestampMixin
+from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.iam.enums import AccountIdentityBindStatus
-from app.platform.db.base import Base
-from app.platform.db.mixins import TimestampMixin
-from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class SysAccount(Base, TimestampMixin):

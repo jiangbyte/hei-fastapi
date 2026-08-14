@@ -8,6 +8,7 @@ from app.core.config.enums import AccountType
 from app.core.config.settings import settings
 from app.core.schema.datetime import format_utc_iso8601
 from app.core.security.session import SessionPayload
+from app.core.storage.url import quote_object_name
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.schema import FileUploadRequest, ObjectNameQuery
 from app.modules.sys.file.service import FileService
@@ -15,7 +16,6 @@ from app.modules.user.admin.model import AdminUserProfile
 from app.modules.user.admin.service import AdminUserProfileService
 from app.modules.user.portal.model import PortalUserProfile
 from app.modules.user.portal.service import PortalUserProfileService
-from app.platform.storage.url import quote_object_name
 
 
 def _assert_path_file_url(

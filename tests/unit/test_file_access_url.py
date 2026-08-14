@@ -3,7 +3,7 @@
 路径风格公开文件 URL。
 """
 
-from app.platform.storage.url import (
+from app.core.storage.url import (
     build_file_access_url,
     normalize_object_name,
     resolve_file_url,

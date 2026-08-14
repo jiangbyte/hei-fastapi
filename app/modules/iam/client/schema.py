@@ -198,10 +198,3 @@ class SysClientResourcePermissionRelSchema(ApiSchema):
     updated_at: datetime
     updated_by: str | None = None
     updated_name: str | None = None
-
-
-class ClientResourceGrantInfo(ApiSchema):
-    """客户端资源授权项结构。"""
-
-    resource_id: str = Field(min_length=1, max_length=64)
-    permission_keys: list[str] = Field(default_factory=list)

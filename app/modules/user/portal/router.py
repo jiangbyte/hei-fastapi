@@ -12,6 +12,7 @@ from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse, success
 from app.core.security.session import SessionPayload
 from app.core.security.transport import decrypt_passwords
+from app.core.storage.url import resolve_file_url
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.iam.account.repository import AccountRepository
@@ -28,7 +29,6 @@ from app.modules.user.portal.schema import (
 )
 from app.modules.user.portal.service import AVATAR_MAX_SIZE, PortalUserProfileService
 from app.modules.user.schema import PortalMeResponse
-from app.platform.storage.url import resolve_file_url
 
 router = APIRouter()
 

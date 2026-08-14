@@ -2,21 +2,18 @@
 
 告警分发器 — 通过邮件 / 消息推送 / 自定义 Webhook 发送告警，含冷却。
 """
-import base64
-import hashlib
-import hmac
 import json
 import logging
-import time
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
 from app.core.config.settings import settings
+from app.core.email.sender import send_mail
+from app.core.id_generator.snowflake import generate_snowflake_id
+from app.core.security.signature import sign_feishu
 from app.modules.sys.audit.alert_model import SysAlertLog
 from app.modules.sys.audit.analyzer import AlertEvent
-from app.platform.email.sender import send_mail
-from app.platform.id_generator.snowflake import generate_snowflake_id
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +104,7 @@ class AlertDispatcher:
         if not settings.audit_alert.notify_push:
             return
         try:
-            from app.platform.push.sender import send_push
+            from app.core.push.sender import send_push
 
             title = f"[{event.severity}] 审计告警"
             content = f"{event.summary}\n规则: {event.rule_name}"
@@ -130,13 +127,7 @@ class AlertDispatcher:
         }
 
         if secret:
-            timestamp = str(int(time.time()))
-            string_to_sign = f"{timestamp}\n{secret}"
-            hmac_code = hmac.new(
-                string_to_sign.encode("utf-8"),
-                digestmod=hashlib.sha256,
-            ).digest()
-            sign = base64.b64encode(hmac_code).decode("utf-8")
+            timestamp, sign = sign_feishu(secret)
             payload["timestamp"] = timestamp
             payload["sign"] = sign
 
@@ -164,13 +155,7 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
         }
 
         if webhook_secret:
-            ts = str(int(time.time()))
-            string_to_sign = f"{ts}\n{webhook_secret}"
-            hmac_code = hmac.new(
-                string_to_sign.encode("utf-8"),
-                digestmod=hashlib.sha256,
-            ).digest()
-            sign = base64.b64encode(hmac_code).decode("utf-8")
+            ts, sign = sign_feishu(webhook_secret)
             payload["timestamp"] = ts
             payload["sign"] = sign
 
@@ -188,7 +173,7 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
 async def send_test_push() -> str:
     """通过默认消息推送引擎发送测试消息。成功返回空串。"""
     try:
-        from app.platform.push.sender import send_push
+        from app.core.push.sender import send_push
 
         await send_push(
             "审计告警测试",

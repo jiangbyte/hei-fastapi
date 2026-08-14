@@ -8,10 +8,14 @@ from datetime import UTC, datetime
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache.keys import banner_interaction_delta_key
+from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
+from app.core.storage.url import resolve_file_url
 from app.modules.sys.banner.repository import BannerRepository
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -20,11 +24,7 @@ from app.modules.sys.banner.schema import (
     BannerUpdateRequest,
     SysBannerSchema,
 )
-from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.cache.keys import banner_interaction_delta_key
-from app.platform.cache.redis import get_redis
-from app.platform.db.transaction import transactional
-from app.platform.storage.url import resolve_file_url
+from app.modules.user.utils.profile import enrich_audit_names
 
 
 class BannerService:
@@ -55,7 +55,7 @@ class BannerService:
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysBannerSchema, entity)
         _resolve_image_urls([schema])
-        await _resolve_nicknames(self.db, [schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: BannerAdminPageQuery) -> PageData[SysBannerSchema]:
@@ -63,7 +63,7 @@ class BannerService:
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysBannerSchema, entities)
         _resolve_image_urls(schemas)
-        await _resolve_nicknames(self.db, schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def list_visible(
@@ -113,25 +113,6 @@ def _resolve_image_urls(items: list[SysBannerSchema]) -> None:
     """image 保持 object_name；image_url 给前端展示。"""
     for item in items:
         item.image_url = resolve_file_url(item.image) or item.image
-
-
-async def _resolve_nicknames(db, items: list) -> list:
-    """批量填充创建/更新人昵称到响应模型。"""
-    creator_ids = list({i.created_by for i in items if i.created_by})
-    updater_ids = list({i.updated_by for i in items if i.updated_by})
-    all_ids = list(dict.fromkeys(creator_ids + updater_ids))
-    if not all_ids:
-        return items
-
-    profiles = await get_profiles_batch(db, AccountType.ADMIN, all_ids)
-    nickname_map = {aid: p.nickname for aid, p in profiles.items()}
-
-    for item in items:
-        if item.created_by and item.created_by in nickname_map:
-            item.created_name = nickname_map[item.created_by]
-        if item.updated_by and item.updated_by in nickname_map:
-            item.updated_name = nickname_map[item.updated_by]
-    return items
 
 
 async def _read_positive_deltas(redis: Redis, key: str) -> dict[str, int]:

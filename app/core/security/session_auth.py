@@ -11,9 +11,9 @@ from starlette.requests import Request
 from app.core.config.settings import settings
 from app.core.exceptions.business import AuthenticationError
 from app.core.network.client_ip import get_client_ip
+from app.core.observability.context import account_id_ctx, account_type_ctx
 from app.core.security.session import SessionPayload, session_store
 from app.core.security.session_token import extract_session_token
-from app.deps.context import account_id_ctx, account_type_ctx
 
 _STATE_SESSION = "hei_session"
 _STATE_TOKEN = "hei_session_token"
@@ -66,7 +66,7 @@ def _bind_context(session: SessionPayload) -> None:
     """把账户信息绑定到上下文与日志上下文。"""
     account_id_ctx.set(session.account_id)
     account_type_ctx.set(session.account_type)
-    from app.platform.observability.context import bind_request_log_context
+    from app.core.observability.context import bind_request_log_context
 
     bind_request_log_context(
         account_id=session.account_id,

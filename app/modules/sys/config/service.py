@@ -5,6 +5,9 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.crypto import decrypt_config_value, encrypt_config_value, is_sensitive
+from app.core.config.sync import reload_and_publish
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -17,9 +20,6 @@ from app.modules.sys.config.schema import (
     ConfigUpdateRequest,
     SysConfigSchema,
 )
-from app.platform.config.crypto import decrypt_config_value, encrypt_config_value, is_sensitive
-from app.platform.config.sync import reload_and_publish
-from app.platform.db.transaction import transactional
 
 
 class ConfigService:
@@ -55,9 +55,7 @@ class ConfigService:
         """拒绝删除内置配置，删除后重新加载发布。"""
         async with transactional(self.db):
             unique_ids = list(dict.fromkeys(payload.ids))
-            entities = []
-            for config_id in unique_ids:
-                entities.append(await self.repo.get_required(config_id))
+            entities = await self.repo.list_by_ids(unique_ids)
             builtin = [e.config_key for e in entities if e.is_builtin]
             if builtin:
                 raise BusinessError(f"内置配置不可删除: {', '.join(builtin)}")

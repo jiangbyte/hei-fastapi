@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 
 from app.core.config.settings import settings
-from app.platform.observability.logging import build_log_formatter
+from app.core.observability.logging import build_log_formatter
 
 _CONFIGURED = False
 # 框架访问日志与应用的 structlog 访问日志重复，统一禁用。

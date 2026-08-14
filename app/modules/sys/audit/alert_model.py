@@ -7,8 +7,8 @@ from datetime import datetime
 from sqlalchemy import JSON, DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.platform.db.base import Base
-from app.platform.id_generator.snowflake import generate_snowflake_id
+from app.core.db.base import Base
+from app.core.id_generator.snowflake import generate_snowflake_id
 
 
 class SysAlertLog(Base):

@@ -8,7 +8,9 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountStatusEnum, AccountType
+from app.core.config.reader import config_reader
 from app.core.config.settings import settings
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema
@@ -57,8 +59,6 @@ from app.modules.user.admin.repository import AdminUserProfileRepository
 from app.modules.user.admin.schema import AdminProfileUpsertPayload
 from app.modules.user.portal.repository import PortalUserProfileRepository
 from app.modules.user.portal.schema import PortalProfileUpsertPayload
-from app.platform.config.reader import config_reader
-from app.platform.db.transaction import transactional
 
 
 class AccountService:

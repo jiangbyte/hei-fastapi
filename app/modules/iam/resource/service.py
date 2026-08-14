@@ -6,6 +6,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, ConflictError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -40,26 +41,7 @@ from app.modules.iam.resource.schema import (
     SysResourceSchema,
 )
 from app.modules.iam.schema import PermissionRegistryItem, ResourceGrantModuleOption
-from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
-
-
-async def _resolve_creator_names(db: AsyncSession, items: list) -> None:
-    """批量查询 created_by / updated_by 对应的昵称。"""
-    account_ids: set[str] = set()
-    for item in items:
-        if item.created_by:
-            account_ids.add(item.created_by)
-        if item.updated_by:
-            account_ids.add(item.updated_by)
-    if not account_ids:
-        return
-    profiles = await get_profiles_batch(db, AccountType.ADMIN, list(account_ids))
-    for item in items:
-        if item.created_by and item.created_by in profiles:
-            item.created_name = getattr(profiles[item.created_by], "nickname", None)
-        if item.updated_by and item.updated_by in profiles:
-            item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
+from app.modules.user.utils.profile import enrich_audit_names
 
 
 class ResourceService:
@@ -240,7 +222,7 @@ class ResourceService:
             module_name, module_client = module_meta_map.get(schema.module_id or "", ("", None))
             schema.module_id_name = module_name
             schema.module_client = module_client
-        await _resolve_creator_names(self.db, schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return schemas
 
     async def _build_button_schemas(
@@ -397,7 +379,7 @@ class ResourceModuleService:
     async def detail(self, query: IdQuery) -> SysResourceModuleSchema:
         """查询资源模块详情并回显创建人昵称。"""
         schema = to_schema(SysResourceModuleSchema, await self.repo.get_required(query.id))
-        await _resolve_creator_names(self.db, [schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -407,7 +389,7 @@ class ResourceModuleService:
         """分页查询资源模块。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysResourceModuleSchema, items)
-        await _resolve_creator_names(self.db, schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def selector(

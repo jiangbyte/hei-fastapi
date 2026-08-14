@@ -6,8 +6,6 @@ import pytest
 
 from app.core.config.enums import AccountType
 from app.modules.auth.policy import get_auth_options, get_login_policy
-from app.platform.cloud.aliyun_rpc import sign_rpc_params
-from app.platform.cloud.tencent_api import _sha256_hex
 
 
 def test_login_policy_defaults(monkeypatch):
@@ -31,18 +29,20 @@ def test_login_policy_defaults(monkeypatch):
     assert opts.password_change_verify_method == "OLD_PASSWORD"
 
 
-def test_aliyun_rpc_signature_stable():
-    sig = sign_rpc_params({"Action": "SendSms", "Version": "2017-05-25"}, "secret")
-    assert isinstance(sig, str) and len(sig) > 10
+def test_cloud_sdk_adapters_importable():
+    """官方云 SDK 适配器模块可导入（不再有手写签名函数）。"""
+    from app.core.cloud.aliyun import send_aliyun_mail, send_aliyun_sms
+    from app.core.cloud.tencent import send_tencent_mail, send_tencent_sms
 
-
-def test_tencent_sha256_helper():
-    assert len(_sha256_hex("abc")) == 64
+    assert callable(send_aliyun_sms)
+    assert callable(send_aliyun_mail)
+    assert callable(send_tencent_sms)
+    assert callable(send_tencent_mail)
 
 
 @pytest.mark.asyncio
 async def test_send_mail_local_uses_ssl_flags(monkeypatch):
-    from app.platform.email import sender as email_sender
+    from app.core.email import sender as email_sender
 
     calls = {}
 
@@ -78,7 +78,7 @@ async def test_send_mail_local_uses_ssl_flags(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_send_sms_aliyun_calls_rpc(monkeypatch):
-    from app.platform.sms import sender as sms_sender
+    from app.core.sms import sender as sms_sender
 
     monkeypatch.setattr(
         sms_sender.config_reader,
@@ -90,7 +90,10 @@ async def test_send_sms_aliyun_calls_rpc(monkeypatch):
             "SMS_ALIYUN_SIGN_NAME": "sign",
         }.get(key, default),
     )
-    rpc = AsyncMock(return_value={"Code": "OK"})
-    monkeypatch.setattr(sms_sender, "aliyun_rpc_get", rpc)
+    send = AsyncMock()
+    monkeypatch.setattr(sms_sender, "send_aliyun_sms", send)
     await sms_sender.send_sms("13800138000", "SMS_1", {"code": "123456"})
-    assert rpc.await_count == 1
+    assert send.await_count == 1
+    kwargs = send.await_args.kwargs
+    assert kwargs["sign_name"] == "sign"
+    assert kwargs["template_param"] == {"code": "123456"}

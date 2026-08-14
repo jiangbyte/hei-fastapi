@@ -1,6 +1,6 @@
 """ Author: Charlie """
 
-from app.platform.module.paths import (
+from app.core.paths import (
     DEFAULT_FILES_PUBLIC_PATH,
     api_version_glob_prefix,
 )

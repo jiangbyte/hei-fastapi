@@ -6,8 +6,8 @@
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.platform.db.base import Base
-from app.platform.db.mixins import TimestampMixin
+from app.core.db.base import Base
+from app.core.db.mixins import TimestampMixin
 
 
 class AdminUserProfile(Base, TimestampMixin):

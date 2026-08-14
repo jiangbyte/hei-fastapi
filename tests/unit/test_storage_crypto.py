@@ -5,9 +5,9 @@
 import pytest
 from cryptography.fernet import Fernet
 
+from app.core.config import crypto as crypto_mod
 from app.core.config.settings import settings
-from app.platform.config import crypto as crypto_mod
-from app.platform.secrets.backend import clear_secrets_backend_cache
+from app.core.secrets.backend import clear_secrets_backend_cache
 
 
 @pytest.fixture()

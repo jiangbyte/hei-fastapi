@@ -14,7 +14,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.enums import StorageProvider
-from app.platform.module.paths import DEFAULT_FILES_PUBLIC_PATH
+from app.core.paths import DEFAULT_FILES_PUBLIC_PATH
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -28,9 +28,6 @@ class AppSettings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     debug: bool = True
-    workers: int = 1
-    worker_max: int = 4
-    process_role: str = "all"
     config_crypto_key: str = ""
     timezone: str = "Asia/Shanghai"
     trusted_proxy_ips: list[str] = []

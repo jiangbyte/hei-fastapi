@@ -6,15 +6,16 @@
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.batch import chunked
+from app.core.db.models.sys_config import SysConfig
 from app.core.exceptions.business import NotFoundError
+from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.sys.config.schema import (
     ConfigAdminPageQuery,
     ConfigBatchItem,
     ConfigCreateRequest,
     ConfigUpdateRequest,
 )
-from app.platform.db.models.sys_config import SysConfig
-from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class ConfigRepository:
@@ -40,6 +41,24 @@ class ConfigRepository:
         if entity is None:
             raise NotFoundError("Config not found")
         return entity
+
+    async def list_by_ids(self, config_ids: list[str]) -> list[SysConfig]:
+        """按主键分批查询，保持输入顺序；存在缺失 ID 时抛 NotFoundError。"""
+        unique_ids = list(dict.fromkeys(config_ids))
+        if not unique_ids:
+            return []
+        entities_by_id: dict[str, SysConfig] = {}
+        for batch in chunked(unique_ids):
+            rows = (
+                (await self.db.execute(select(SysConfig).where(SysConfig.id.in_(batch))))
+                .scalars()
+                .all()
+            )
+            for entity in rows:
+                entities_by_id[entity.id] = entity
+        if len(entities_by_id) != len(unique_ids):
+            raise NotFoundError("Config not found")
+        return [entities_by_id[config_id] for config_id in unique_ids]
 
     async def update(self, payload: ConfigUpdateRequest) -> None:
         """按主键更新配置字段（排除 id）。"""

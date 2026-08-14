@@ -3,7 +3,7 @@
 import asyncio
 import json
 
-from app.platform.config import sync as config_sync
+from app.core.config import sync as config_sync
 
 
 async def test_publish_config_changed_uses_redis_channel(fake_redis):

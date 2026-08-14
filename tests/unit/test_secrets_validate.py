@@ -6,8 +6,8 @@ import pytest
 from cryptography.fernet import Fernet
 
 from app.core.config.settings import settings
-from app.platform.secrets.backend import clear_secrets_backend_cache
-from app.platform.secrets.validate import validate_secrets_config
+from app.core.secrets.backend import clear_secrets_backend_cache
+from app.core.secrets.validate import validate_secrets_config
 
 
 def test_validate_allows_fernet_in_debug(monkeypatch):

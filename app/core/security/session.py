@@ -13,10 +13,10 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import TypedDict
 
+from app.core.cache.keys import login_account_tokens_key, login_token_key, login_tokens_key
+from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType, DataScope
 from app.core.config.settings import settings
-from app.platform.cache.keys import login_account_tokens_key, login_token_key, login_tokens_key
-from app.platform.cache.redis import get_redis
 
 logger = logging.getLogger(__name__)
 

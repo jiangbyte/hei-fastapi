@@ -33,13 +33,3 @@ def mask_identifier(value: str | None) -> str | None:
     if re.fullmatch(r"1\d{10}", value):
         return mask_phone(value)
     return value
-
-
-def mask_ip(ip: str | None) -> str | None:
-    """IPv4 末段脱敏：192.168.1.*"""
-    if not ip:
-        return ip
-    parts = ip.rsplit(".", 1)
-    if len(parts) == 2:
-        return parts[0] + ".*"
-    return ip

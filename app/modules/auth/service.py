@@ -11,12 +11,19 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache.keys import login_otp_key, password_reset_token_key
+from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountStatusEnum, AccountType
+from app.core.config.reader import config_reader
 from app.core.config.settings import settings
+from app.core.db.transaction import transactional
+from app.core.email.sender import send_templated_mail
 from app.core.exceptions.business import AuthenticationError, BusinessError
+from app.core.observability.metrics import record_login_attempt
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload, session_store
 from app.core.security.token import generate_token
+from app.core.sms.sender import send_templated_sms
 from app.modules.auth.policy import (
     ensure_identity_allowed,
     get_register_policy,
@@ -49,13 +56,6 @@ from app.modules.iam.enums import AccountIdentityType
 from app.modules.sys.audit.service import OperationAuditService
 from app.modules.user.portal.repository import PortalUserProfileRepository
 from app.modules.user.portal.schema import PortalProfileUpsertPayload
-from app.platform.cache.keys import login_otp_key, password_reset_token_key
-from app.platform.cache.redis import get_redis
-from app.platform.config.reader import config_reader
-from app.platform.db.transaction import transactional
-from app.platform.email.sender import send_templated_mail
-from app.platform.observability.metrics import record_login_attempt
-from app.platform.sms.sender import send_templated_sms
 
 # 各账户类型对应的密码重置链接模板配置键。
 _PASSWORD_RESET_URL_KEYS = {

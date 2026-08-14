@@ -14,9 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.config.enums import DataScope
+from app.core.interfaces import resolve
+from app.core.interfaces.data_scope_resolver import DataScopeResolverProtocol
 from app.core.security.session import PermissionGrantPayload, SessionPayload
-from app.platform.interfaces import resolve
-from app.platform.interfaces.data_scope_resolver import DataScopeResolverProtocol
 
 
 @dataclass(frozen=True, slots=True)

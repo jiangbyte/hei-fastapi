@@ -7,6 +7,10 @@ from typing import Any
 from fastapi import APIRouter, Depends, FastAPI
 from sqlalchemy import select
 
+from app.core.cache.keys import (
+    permission_resource_cache_key,
+    permission_resource_method_cache_key,
+)
 from app.core.exceptions.business import BusinessError
 from app.core.security.permission_registry import (
     ACCOUNT_TYPE_META_ATTR,
@@ -20,10 +24,6 @@ from app.modules.iam.enums import ResourceType
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.resource.schema import ResourceCreateRequest, ResourcePermissionBindRequest
 from app.modules.iam.resource.service import ResourceService
-from app.platform.cache.keys import (
-    permission_resource_cache_key,
-    permission_resource_method_cache_key,
-)
 from tests.conftest import FakeRedis
 
 

@@ -6,7 +6,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.exceptions.business import AuthorizationError, BusinessError
+from app.core.db.batch import chunked
+from app.core.db.transaction import transactional
+from app.core.exceptions.business import AuthorizationError, BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
@@ -39,7 +41,6 @@ from app.modules.iam.role.schema import (
     SysRoleSchema,
 )
 from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
 
 
 class RoleService:
@@ -257,10 +258,16 @@ class RoleService:
             raise BusinessError("Cannot change is_builtin of builtin or SUPER_ADMIN role")
 
     async def _ensure_roles_deletable(self, role_ids: list[str]) -> None:
-        """阻止删除内置或超级管理员角色。"""
+        """阻止删除内置或超级管理员角色（分批 IN 查询，避免逐条查询）。"""
         unique_ids = list(dict.fromkeys(role_ids))
-        for role_id in unique_ids:
-            role = await self.repo.get_required(role_id)
+        if not unique_ids:
+            return
+        roles: list[SysRole] = []
+        for batch in chunked(unique_ids):
+            roles.extend(await self.repo.list_by_ids(batch))
+        if len(roles) != len(unique_ids):
+            raise NotFoundError("Role not found")
+        for role in roles:
             if self._is_protected_role(role):
                 raise BusinessError("Cannot delete builtin or SUPER_ADMIN role")
 

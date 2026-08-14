@@ -1,14 +1,14 @@
 """ Author: Charlie """
 
 from app.core.config.enums import StorageProvider
-from app.platform.storage.config import StorageConfig
-from app.platform.storage.engines import (
+from app.core.storage.config import StorageConfig
+from app.core.storage.engines import (
     FILE_ENGINE_TO_PROVIDER,
     PROVIDER_TO_KEY_PREFIX,
     engine_to_provider,
 )
-from app.platform.storage.manager import _build_storage
-from app.platform.storage.s3 import RustFSStorage
+from app.core.storage.manager import _build_storage
+from app.core.storage.s3 import RustFSStorage
 
 
 def test_rustfs_engine_mapping():

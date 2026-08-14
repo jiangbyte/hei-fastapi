@@ -9,14 +9,14 @@ from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, Text, Un
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.enums import DataScope, StatusEnum
+from app.core.db.base import Base
+from app.core.db.mixins import TimestampMixin
+from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.iam.enums import (
     GrantMode,
     IamRelationSubjectType,
     IamRelationTargetType,
 )
-from app.platform.db.base import Base
-from app.platform.db.mixins import TimestampMixin
-from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 class SysIamRelation(Base, TimestampMixin):

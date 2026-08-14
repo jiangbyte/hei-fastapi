@@ -11,7 +11,7 @@
 
 面向中后台与通用业务的全栈脚手架：FastAPI 异步后端 + Vue 3 管理端 + React 门户 + uni-app 管理端。
 
-账户体系为 **ADMIN** / **PORTAL**。业务模块通过 `ModuleSpec` 插件式装配；内置 IAM/RBAC、系统配置、文件存储、消息、代码生成、SnailJob 定时任务、Alembic 迁移与可选可观测性。
+账户体系为 **ADMIN** / **PORTAL**。业务模块通过 `app/routers.py` 显式装配（对齐 hei-boot "explicit deps, no bundle"）；内置 IAM/RBAC、系统配置、文件存储、消息、代码生成、SnailJob 定时任务、Alembic 迁移与可选可观测性。
 
 > 个人开发，有 bug 欢迎提：jiangbytebiz@163.com
 
@@ -36,26 +36,34 @@
 
 ## 仓库结构
 
+单一发行包（`app`），uv 管理依赖（`uv.lock` / `uv sync`）。基础设施与业务同包分层，模块内自含、无插件式装配。
+
 ```text
-app/
-  core/              配置、安全、schema、统一响应
+app/                 应用包（业务聚合，模块内自含）
+  core/              平台基础设施（由原 app.core + app.platform 合并）
+    config/          静态 settings + DB 驱动的运行期动态配置
+    security/        会话、权限注册、脱敏、数据范围
+    db/ cache/ storage/  数据库、缓存、对象存储
+    tasks/           任务与 SnailJob 客户端
+    observability/   日志、指标、追踪
+    cloud/ email/ sms/ push/ secrets/  云渠道与通知
   deps/              依赖注入
   middleware/        ASGI 中间件（鉴权、审计、限流、安全头、追踪）
   modules/           业务模块（auth / iam / sys / message / user / dashboard / internal / biz）
-  platform/          平台能力（db / cache / storage / module / tasks / observability / secrets）
-  worker/            SnailJob Python 执行器入口
+  routers.py         显式路由装配（对齐 hei-boot "explicit deps, no bundle"）
+  db_models.py       ORM 模型注册清单（供 Alembic）
 migrations/          Alembic 迁移（只管表结构）
 scripts/db/          迁移与业务数据导入导出
-script/docker/       本地 SnailJob Server 编排
+scripts/docker/      本地 SnailJob Server 编排（compose + psql 初始化/种子脚本）
 tests/               后端测试
 web/
   admin/             Vue 3 管理端（Naive UI）
   portal/            React 19 门户（Ant Design）
   admin-uniapp/      uni-app 管理端（H5 / 小程序）
 docker-compose.yml   后端 + 可选 admin / portal profile
-entrypoint.sh        all | api | worker | migrate
+entrypoint.sh        api | migrate | seed（默认 api）
 dev.sh               启动本机已有的 postgres / redis / minio / rustfs 容器
-shutdown.sh          停止本机 entrypoint 拉起的 gunicorn / worker
+shutdown.sh          停止本机 entrypoint 拉起的 gunicorn
 ```
 
 ---
@@ -109,10 +117,10 @@ Swagger 默认关闭。本地需要文档时在 `.env` 设 `SWAGGER__ENABLED=tru
 
 ### 2. 后端
 
+依赖管理使用 [uv](https://docs.astral.sh/uv/)（普通 pip 虚拟环境，非 conda）：
+
 ```bash
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -e ".[dev,postgres]"
+uv sync --extra dev --extra postgres    # 创建 .venv 并安装依赖（含 uv.lock 锁定版本）
 
 cp .env.example .env
 # 配置 DB__URL、REDIS__URL、SNAIL_JOB__*
@@ -126,14 +134,14 @@ python scripts/db/import_data.py   # 导入 scripts/db/seed/data.sql（含 super
 
 - API：`http://127.0.0.1:8000`
 - 文档：先开 `SWAGGER__ENABLED=true`，再访问 `http://127.0.0.1:8000/docs`
-- 其它角色：`./entrypoint.sh api|worker|migrate`
+- 维护命令：`./entrypoint.sh migrate` / `./entrypoint.sh seed`
 - 停止本机进程：`./shutdown.sh`
 
 种子账号：导入 `data.sql` 后管理端账号为 `superadmin`（口令以导出当时为准）。
 
-### SnailJob 执行器（外部 Server）
+### SnailJob（外部 Server，应用内嵌执行器）
 
-本仓库跑 **Python 执行器**（`./entrypoint.sh worker` 或 `all`）；调度中心为独立 SnailJob Server。与 hei-boot 共用同一 Server 时靠 **独立 namespace + group** 隔离：
+调度中心为**独立的 SnailJob Server**；应用在 lifespan 启动时**内嵌**一个后台线程执行器（单进程模型，无需独立 worker 进程），配置 `SNAIL_JOB__*` 即接入。与 hei-boot 共用同一 Server 时靠 **独立 namespace + group** 隔离：
 
 | 项 | 默认值 |
 |---|---|
@@ -148,14 +156,11 @@ python scripts/db/import_data.py   # 导入 scripts/db/seed/data.sql（含 super
 
 ```bash
 # 1) Postgres 上建库 snail_job（角色示例 admin/123456）
-# 2) 迁移 schema + 本仓种子（greenfield）
-./script/docker/snailjob-flyway.sh
-
-# 若 snail_job 已由 hei-boot Flyway 迁过，勿重跑 flyway；只补本仓种子：
-# ./script/docker/seed_fastapi_only.sh
+# 2) 初始化：schema（若缺）+ 本仓种子，纯 psql、无 Flyway
+./scripts/docker/snailjob-init.sh
 
 # 3) 启动 Server（控制台 9189，RPC 17888）
-docker compose -f script/docker/docker-compose.snailjob.yml up -d
+docker compose -f scripts/docker/docker-compose.snailjob.yml up -d
 ```
 
 控制台：`http://127.0.0.1:9189/snail-job`（种子后 admin / 123456）。切换到 namespace `hei-fastapi`，可见组 `hei_fastapi_admin` 与下列任务。
@@ -168,9 +173,9 @@ docker compose -f script/docker/docker-compose.snailjob.yml up -d
 | `auditAnalysisCycle` | `0 */5 * * * ?` | 审计告警分析（受 `AUDIT_ALERT` 开关影响） |
 | `sysFileCleanupLocalOrphans` | `0 0 * * * ?` | 清理本地存储孤儿文件 |
 
-`SNAIL_JOB__ENABLED=false` 时 `all` 只起 API、不起 worker。Docker 中请把 `SNAIL_JOB__HOST_IP` 设为 Server 可达地址，并发布客户端端口 `17889`。
+`SNAIL_JOB__ENABLED=false` 时应用内不启动执行器线程。Docker 中请把 `SNAIL_JOB__HOST_IP` 设为 Server 可达地址，并发布客户端端口 `17889`。
 
-启动 worker 后控制台应看到 `py-xxxxxxx` 客户端上线。更多说明见 [script/docker/README.md](script/docker/README.md)。
+应用启动后控制台应看到 `py-xxxxxxx` 客户端上线。更多说明见 [scripts/docker/README.md](scripts/docker/README.md)。
 
 ### 3. 管理端
 
@@ -221,24 +226,17 @@ OBSERVABILITY__OTLP_ENABLED=true
 OBSERVABILITY__OTLP_ENDPOINT=http://127.0.0.1:4318
 ```
 
-模块开关：
-
-```bash
-HEI_MODULE_PACKAGES=your_company.modules
-HEI_DISABLED_MODULES=biz.cg_test_activity
-HEI_ENABLED_MODULES=some.module
-```
-
-禁用模块的模型仍参与 Alembic metadata，可正常迁表。`app/modules/biz/cg_test_*` 为代码生成示例模块，可用 `HEI_DISABLED_MODULES` 关掉路由。
+`app/modules/biz/cg_test_*` 为代码生成示例模块（生成产物保留在生产包中）。
 
 ---
 
 ## 新增业务模块
 
-1. 在 `app/modules/...` 增加 `model` / `schema` / `repository` / `service` / `router` / `module.py`
-2. 配置 `ModuleSpec` 与 `RouteSpec`，路径含 `/v1/admin|portal/...`
-3. `python scripts/db/makemigration.py "..."` → `python scripts/db/migrate.py`
-4. Admin 使用动态路由时，在 DB 写入资源并授权即可
+1. 在 `app/modules/...` 增加 `model` / `schema` / `repository` / `service` / `router`
+2. 在 `app/routers.py` 显式挂载新路由（`/api` 前缀 + OpenAPI tags）
+3. 在 `app/db_models.py` 追加模型模块导入（供 Alembic 元数据）
+4. `python scripts/db/makemigration.py "..."` → `python scripts/db/migrate.py`
+5. Admin 使用动态路由时，在 DB 写入资源并授权即可
 
 也可用管理端 **代码生成** 产出上述文件并写回工作区。业务代码放在模块内，避免改动 `app/factory.py`、`app/lifespan.py`。
 
@@ -293,7 +291,7 @@ pnpm dev && pnpm build && pnpm lint
 
 - [scripts/README.md](scripts/README.md)
 - [migrations/README.md](migrations/README.md)
-- [script/docker/README.md](script/docker/README.md)
+- [scripts/docker/README.md](scripts/docker/README.md)
 - [web/admin/README.md](web/admin/README.md)
 - [web/portal/README.md](web/portal/README.md)
 - [web/admin-uniapp/README.md](web/admin-uniapp/README.md)

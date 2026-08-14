@@ -3,18 +3,18 @@
 登录保护：基于 Redis 统计账户与 IP 的失败次数并触发限流锁定。
 """
 
-from app.core.config.enums import AccountType
-from app.core.config.settings import settings
-from app.core.exceptions.business import AuthenticationError
-from app.modules.auth.policy import get_login_policy
-from app.platform.cache.keys import (
+from app.core.cache.keys import (
     login_failure_account_key,
     login_failure_ip_key,
     login_lock_account_key,
     login_lock_ip_key,
 )
-from app.platform.cache.redis import get_redis
-from app.platform.observability.metrics import record_login_lock
+from app.core.cache.redis import get_redis
+from app.core.config.enums import AccountType
+from app.core.config.settings import settings
+from app.core.exceptions.business import AuthenticationError
+from app.core.observability.metrics import record_login_lock
+from app.modules.auth.policy import get_login_policy
 
 
 class LoginProtectionService:

@@ -6,18 +6,18 @@
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
+from app.core.cache.redis import get_redis
 from app.core.config.settings import settings
+from app.core.config.sync import get_config_sync_state
+from app.core.db.session import get_session_factory
 from app.core.schema.health import (
     HealthCheckItem,
     LiveHealthResponse,
     ReadyChecksResponse,
     ReadyHealthResponse,
 )
-from app.platform.cache.redis import get_redis
-from app.platform.config.sync import get_config_sync_state
-from app.platform.db.session import get_session_factory
-from app.platform.storage.manager import get_storage
-from app.platform.tasks.snailjob_client import probe_snailjob_server
+from app.core.storage.manager import get_storage
+from app.core.tasks.snailjob_client import probe_snailjob_server
 
 router = APIRouter()
 

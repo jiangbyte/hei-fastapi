@@ -12,10 +12,10 @@ import orjson
 from sqlalchemy import DateTime, Integer, String, Text, delete, func, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.platform.audit.queue import OperationAuditEvent
-from app.platform.db.base import Base
-from app.platform.db.session import get_session_factory
-from app.platform.id_generator.snowflake import generate_snowflake_id
+from app.core.audit.queue import OperationAuditEvent
+from app.core.db.base import Base
+from app.core.db.session import get_session_factory
+from app.core.id_generator.snowflake import generate_snowflake_id
 
 
 class SysOperationAuditOutbox(Base):

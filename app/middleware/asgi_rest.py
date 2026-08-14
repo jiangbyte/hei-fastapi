@@ -12,17 +12,17 @@ import uuid
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.audit.queue import OperationAuditEvent, operation_audit_queue
+from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType, account_type_url_segment
 from app.core.exceptions.business import AuthenticationError
 from app.core.network.client_ip import get_client_ip
+from app.core.observability.context import account_id_ctx, account_type_ctx, client_ip_ctx
+from app.core.paths import API_ROOT_PREFIX
 from app.core.response.errors import asgi_error_response
 from app.core.security.auth_whitelist import is_auth_whitelisted
 from app.core.security.session_auth import get_request_session, resolve_request_session
 from app.core.security.session_token import extract_session_token
-from app.deps.context import account_id_ctx, account_type_ctx, client_ip_ctx
-from app.platform.audit.queue import OperationAuditEvent, operation_audit_queue
-from app.platform.cache.redis import get_redis
-from app.platform.module.paths import API_ROOT_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -293,7 +293,7 @@ class OperationAuditMiddleware:
                 audit_info = _match_audit_target(request)
                 if audit_info is not None:
                     resource_type, action = audit_info
-                    from app.deps.context import (
+                    from app.core.observability.context import (
                         request_id_ctx,
                         user_agent_ctx,
                     )

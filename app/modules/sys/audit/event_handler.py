@@ -4,9 +4,9 @@
 """
 import logging
 
-from app.platform.audit.queue import OperationAuditEvent
-from app.platform.db.session import get_session_factory
-from app.platform.events import subscribe
+from app.core.audit.queue import OperationAuditEvent
+from app.core.db.session import get_session_factory
+from app.core.events import subscribe
 
 logger = logging.getLogger(__name__)
 

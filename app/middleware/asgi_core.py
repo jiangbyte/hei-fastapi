@@ -14,9 +14,11 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.network.client_ip import get_client_ip
-from app.deps.context import (
+from app.core.observability.context import (
     account_id_ctx,
     account_type_ctx,
+    bind_request_log_context,
+    clear_request_log_context,
     client_ip_ctx,
     duration_ms_ctx,
     request_id_ctx,
@@ -27,9 +29,8 @@ from app.deps.context import (
     trace_id_ctx,
     user_agent_ctx,
 )
-from app.platform.observability.context import bind_request_log_context, clear_request_log_context
-from app.platform.observability.metrics import track_http_request
-from app.platform.observability.tracing import sync_trace_context
+from app.core.observability.metrics import track_http_request
+from app.core.observability.tracing import sync_trace_context
 
 logger = structlog.get_logger("access")
 

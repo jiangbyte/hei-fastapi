@@ -9,10 +9,12 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthenticationError, BusinessError
 from app.core.schema.common_schema import IdNameResponse
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload
+from app.core.storage.url import is_external_url, normalize_object_name, resolve_file_url
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.dept.repository import DeptRepository
@@ -31,8 +33,6 @@ from app.modules.user.admin.schema import (
     AdminUserCenterPhoneUpdateRequest,
     AdminUserCenterProfileUpdateRequest,
 )
-from app.platform.db.transaction import transactional
-from app.platform.storage.url import is_external_url, normalize_object_name, resolve_file_url
 
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 头像文件大小上限（2MB）
 AVATAR_CONTENT_TYPES = {  # 允许的头像内容类型及其扩展名

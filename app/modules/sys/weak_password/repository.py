@@ -6,6 +6,7 @@
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.models.sys_weak_password import SysWeakPassword
 from app.core.exceptions.business import ConflictError, NotFoundError
 from app.modules.sys.weak_password.schema import (
     WeakPasswordAdminPageQuery,
@@ -13,7 +14,6 @@ from app.modules.sys.weak_password.schema import (
     WeakPasswordListQuery,
     WeakPasswordUpdateRequest,
 )
-from app.platform.db.models.sys_weak_password import SysWeakPassword
 
 
 class WeakPasswordRepository:

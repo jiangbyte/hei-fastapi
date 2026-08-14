@@ -6,9 +6,9 @@ from sqlalchemy import Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.config.enums import StatusEnum, SysBizCategory
-from app.platform.db.base import Base
-from app.platform.db.mixins import TimestampMixin
-from app.platform.id_generator.snowflake import generate_snowflake_id
+from app.core.db.base import Base
+from app.core.db.mixins import TimestampMixin
+from app.core.id_generator.snowflake import generate_snowflake_id
 
 
 class SysDict(Base, TimestampMixin):

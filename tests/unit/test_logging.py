@@ -8,7 +8,7 @@ import structlog
 
 from app.core.config.settings import settings
 from app.core.logger.setup import setup_logging
-from app.platform.observability.context import bind_request_log_context, clear_request_log_context
+from app.core.observability.context import bind_request_log_context, clear_request_log_context
 
 
 def _configure_json_logging(monkeypatch) -> io.StringIO:

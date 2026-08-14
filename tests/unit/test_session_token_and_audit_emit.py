@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from starlette.requests import Request
 
+from app.core.audit.queue import OperationAuditEvent, _record_operation_audit
 from app.core.security.session_token import extract_session_token
-from app.platform.audit.queue import OperationAuditEvent, _record_operation_audit
 
 
 def _request(
@@ -87,6 +87,6 @@ async def test_record_operation_audit_awaits_emit():
         user_agent="test",
     )
     mock_emit = AsyncMock()
-    with patch("app.platform.audit.queue.emit", mock_emit):
+    with patch("app.core.audit.queue.emit", mock_emit):
         await _record_operation_audit(event)
     mock_emit.assert_awaited_once_with("on_audit_event", event=event)

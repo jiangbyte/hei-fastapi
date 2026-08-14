@@ -12,6 +12,8 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache.keys import captcha_key
+from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.config.settings import settings
 from app.core.security.password import hash_password
@@ -20,8 +22,6 @@ from app.deps.db import get_db_session
 from app.factory import create_app
 from app.modules.iam.account.model import SysAccount, SysAccountIdentity
 from app.modules.iam.enums import AccountIdentityType
-from app.platform.cache.keys import captcha_key
-from app.platform.cache.redis import get_redis
 
 
 def _encrypt_password(public_key_b64: str, password: str) -> str:

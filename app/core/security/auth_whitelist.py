@@ -14,7 +14,7 @@ from app.core.config.enums import (
     account_types_with_auth_routes,
 )
 from app.core.config.settings import settings
-from app.platform.module.paths import api_version_glob_prefix
+from app.core.paths import api_version_glob_prefix
 
 logger = logging.getLogger(__name__)
 

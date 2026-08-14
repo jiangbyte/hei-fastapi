@@ -12,11 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
+from app.core.id_generator.snowflake import generate_snowflake_id
 from app.core.security.password import hash_password, verify_password
 from app.core.security.password_policy import is_weak_password, validate_password_strength
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.password_history import SysAccountPasswordHistory
-from app.platform.id_generator.snowflake import generate_snowflake_id
 
 
 def _parse_dt(value) -> datetime | None:

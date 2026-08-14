@@ -15,7 +15,6 @@ from app.modules.message.feedback.model import MsgFeedback
 from app.modules.message.feedback.schema import (
     MsgFeedbackAdminPageQuery,
     MsgFeedbackCreateRequest,
-    MsgFeedbackUpdateRequest,
     MyFeedbackPageQuery,
 )
 
@@ -61,14 +60,6 @@ class MsgFeedbackRepository:
         if entity is None:
             raise NotFoundError("MsgFeedback not found")
         return entity
-
-    async def update_status(self, payload: MsgFeedbackUpdateRequest) -> None:
-        """更新反馈状态，并在提供回复时写入回复内容。"""
-        entity = await self.get_required(payload.id)
-        entity.status = payload.status
-        if payload.reply is not None:
-            entity.reply = payload.reply
-        await self.db.flush()
 
     async def delete_many(self, entity_ids: list[str]) -> None:
         """批量删除反馈，存在不存在的 ID 时整体拒绝删除。"""

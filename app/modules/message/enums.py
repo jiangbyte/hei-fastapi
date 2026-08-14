@@ -13,32 +13,12 @@ class NoticeKind(StrEnum):
     ANNOUNCEMENT = "ANNOUNCEMENT"  # 公告
 
 
-class NotificationCategory(StrEnum):
-    """通知分类。"""
-
-    ORDER = "ORDER"  # 订单
-    APPROVAL = "APPROVAL"  # 审批
-    SYSTEM = "SYSTEM"  # 系统
-    SECURITY = "SECURITY"  # 安全
-    BIZ = "BIZ"  # 业务
-
-
 class NoticeStatus(StrEnum):
     """消息状态。"""
 
     DRAFT = "DRAFT"  # 草稿
     PUBLISHED = "PUBLISHED"  # 已发布
     REVOKED = "REVOKED"  # 已撤回
-
-
-class NotificationSeverity(StrEnum):
-    """通知等级。"""
-
-    INFO = "INFO"  # 提示
-    SUCCESS = "SUCCESS"  # 成功
-    WARNING = "WARNING"  # 警告
-    ERROR = "ERROR"  # 错误
-    URGENT = "URGENT"  # 紧急
 
 
 class TargetScope(StrEnum):

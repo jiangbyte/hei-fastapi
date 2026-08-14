@@ -15,11 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StorageProvider
 from app.core.config.settings import settings
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError, NotFoundError
+from app.core.observability.metrics import record_file_upload_rejected
 from app.core.response.pagination import PageData, PageQuery, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter
 from app.core.security.session import SessionPayload
+from app.core.storage.config import StorageConfig
+from app.core.storage.local import LocalStorage
+from app.core.storage.manager import get_storage, resolve_storage_config
+from app.core.storage.url import is_external_url, normalize_object_name
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.repository import FileRepository
 from app.modules.sys.file.schema import (
@@ -30,13 +36,7 @@ from app.modules.sys.file.schema import (
     ObjectNameQuery,
     SysFileSchema,
 )
-from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
-from app.platform.observability.metrics import record_file_upload_rejected
-from app.platform.storage.config import StorageConfig
-from app.platform.storage.local import LocalStorage
-from app.platform.storage.manager import get_storage, resolve_storage_config
-from app.platform.storage.url import is_external_url, normalize_object_name
+from app.modules.user.utils.profile import enrich_audit_names
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ class FileService:
         schema = self._with_resolved_url(
             to_schema(SysFileSchema, await self.repo.get_required(query.id))
         )
-        await self._resolve_creator_names([schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def list_by_ids(self, payload: IdsRequest) -> list[SysFileSchema]:
@@ -232,7 +232,7 @@ class FileService:
         schemas = [
             self._with_resolved_url(schema) for schema in to_schema_list(SysFileSchema, items)
         ]
-        await self._resolve_creator_names(schemas)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(page_query, total, schemas)
 
     def _with_resolved_url(self, schema: SysFileSchema) -> SysFileSchema:
@@ -241,23 +241,6 @@ class FileService:
         resolved_url = self._get_storage(storage_config).get_object_url(schema.object_name)
         schema.url = str(resolved_url) or schema.url
         return schema
-
-    async def _resolve_creator_names(self, items: list[SysFileSchema]) -> None:
-        """批量查询 created_by / updated_by 对应的昵称，写入 created_name / updated_name。"""
-        account_ids: set[str] = set()
-        for item in items:
-            if item.created_by:
-                account_ids.add(item.created_by)
-            if item.updated_by:
-                account_ids.add(item.updated_by)
-        if not account_ids:
-            return
-        profiles = await get_profiles_batch(self.db, AccountType.ADMIN, list(account_ids))
-        for item in items:
-            if item.created_by and item.created_by in profiles:
-                item.created_name = getattr(profiles[item.created_by], "nickname", None)
-            if item.updated_by and item.updated_by in profiles:
-                item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
 
     def _resolve_upload_storage_config(self, payload: FileUploadRequest) -> StorageConfig:
         """根据上传请求解析目标存储配置。"""

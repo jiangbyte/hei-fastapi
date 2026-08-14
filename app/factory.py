@@ -8,11 +8,14 @@ import logging
 from fastapi import FastAPI
 
 from app.core.config.settings import settings
+from app.core.db.session import engine
 from app.core.exceptions.handlers import (
     customize_openapi_error_responses,
+    register_auth_root_callable,
     register_exception_handlers,
 )
 from app.core.logger.setup import setup_logging
+from app.core.observability.manager import setup_observability
 from app.core.schema.health import RootHealthResponse
 from app.lifespan import lifespan
 from app.middleware.asgi_core import (
@@ -27,10 +30,6 @@ from app.middleware.asgi_rest import (
     SecurityHeadersMiddleware,
 )
 from app.middleware.cors import add_cors
-from app.platform.db.session import engine
-from app.platform.module import load_module_specs
-from app.platform.module.services import register_services
-from app.platform.observability.manager import setup_observability
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +39,32 @@ def create_app() -> FastAPI:
     setup_logging()
 
     # 延迟导入：确保 setup_logging() 先配置好，模块发现的日志才能正常输出
-    from app.platform.module import get_api_router
+    from app.routers import get_api_router
 
     api_router = get_api_router()
 
-    # 部分测试客户端与嵌入场景不会触发 ASGI lifespan。
-    # 构造时也注册服务接口；启动阶段会再次注册。
-    register_services(load_module_specs())
+    # 平台层回调装配：OpenAPI 认证路由识别与审计 outbox（避免平台依赖业务包）。
+    from app.core.audit.queue import register_outbox_handlers
+    from app.deps import auth as auth_deps
+    from app.modules.sys.audit.outbox import claim_pending_outbox, enqueue_outbox
+
+    for root in (
+        auth_deps.get_current_session,
+        auth_deps.get_current_account,
+        auth_deps.get_optional_session,
+    ):
+        register_auth_root_callable(root)
+    register_outbox_handlers(enqueue_outbox, claim_pending_outbox)
+
+    # 服务注册与事件订阅（原模块清单 services / event_handlers 声明的显式化）。
+    from app.core.interfaces import register as register_interface
+    from app.modules.iam.account.lookup import account_lookup
+    from app.modules.iam.dept.resolver import resolver as dept_data_scope_resolver
+    from app.modules.sys.audit.event_handler import register as register_audit_event_handler
+
+    register_interface("account_lookup", account_lookup)
+    register_interface("data_scope_resolver", dept_data_scope_resolver)
+    register_audit_event_handler()
 
     app = FastAPI(
         title=settings.app.name,

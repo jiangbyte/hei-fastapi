@@ -26,7 +26,7 @@ from app.modules.iam.enums import (
 )
 from app.modules.iam.reference_guard import (
     ensure_not_self_or_descendant,
-    list_descendant_ids,
+    list_descendant_ids_many,
 )
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
@@ -207,10 +207,9 @@ class ClientResourceRepository:
         )
         if len(existing) != len(unique_ids):
             raise NotFoundError("Client resource not found")
-        for resource_id in unique_ids:
-            descendants = await list_descendant_ids(self.db, SysClientResource, resource_id)
-            if descendants:
-                raise ConflictError("Client resource has children")
+        descendants_map = await list_descendant_ids_many(self.db, SysClientResource, unique_ids)
+        if any(descendants_map.values()):
+            raise ConflictError("Client resource has children")
         await self.db.execute(
             delete(SysClientResource).where(SysClientResource.id.in_(unique_ids))
         )

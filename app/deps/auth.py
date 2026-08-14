@@ -10,15 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.exceptions.business import AuthenticationError, AuthorizationError
+from app.core.interfaces import resolve
+from app.core.interfaces.account_lookup import AccountLookupProtocol
+from app.core.observability.context import account_id_ctx, account_type_ctx
 from app.core.security.account_type import assert_account_type_allowed
 from app.core.security.permission import PermissionChecker
 from app.core.security.permission_registry import ACCOUNT_TYPE_META_ATTR, PERMISSION_META_ATTR
 from app.core.security.session import SessionPayload
 from app.core.security.session_auth import resolve_request_session
-from app.deps.context import account_id_ctx, account_type_ctx
 from app.deps.db import get_db_session
-from app.platform.interfaces import resolve
-from app.platform.interfaces.account_lookup import AccountLookupProtocol
 
 
 async def get_current_session(request: Request) -> SessionPayload:

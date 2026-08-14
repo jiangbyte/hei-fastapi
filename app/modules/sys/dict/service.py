@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import to_schema, to_schema_list
 from app.modules.sys.dict.repository import DictRepository, DictTreeRecord
@@ -21,8 +22,7 @@ from app.modules.sys.dict.schema import (
     SysDictSchema,
     SysDictTreeNode,
 )
-from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
+from app.modules.user.utils.profile import enrich_audit_names
 
 
 class DictService:
@@ -51,14 +51,14 @@ class DictService:
     async def get(self, query: DictIdQuery) -> SysDictSchema:
         """查询字典详情并填充父级名称与昵称。"""
         schema = await self._to_schema_with_parent_name(await self.repo.get_required(query.id))
-        await self._resolve_creator_names([schema])
+        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: DictAdminPageQuery) -> PageData[SysDictSchema]:
         """分页查询字典并填充父级名称与昵称。"""
         items, total = await self.repo.page_admin(query)
         records = await self._attach_parent_names(to_schema_list(SysDictSchema, items))
-        await self._resolve_creator_names(records)
+        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)
 
     async def list_tree(self, query: DictTreeQuery) -> list[SysDictTreeNode]:
@@ -77,23 +77,6 @@ class DictService:
         for item in items:
             item.parent_id_name = parent_name_map.get(item.parent_id or "")
         return items
-
-    async def _resolve_creator_names(self, items: list[SysDictSchema]) -> None:
-        """批量查询 created_by / updated_by 对应的昵称，写入 created_name / updated_name。"""
-        account_ids: set[str] = set()
-        for item in items:
-            if item.created_by:
-                account_ids.add(item.created_by)
-            if item.updated_by:
-                account_ids.add(item.updated_by)
-        if not account_ids:
-            return
-        profiles = await get_profiles_batch(self.db, AccountType.ADMIN, list(account_ids))
-        for item in items:
-            if item.created_by and item.created_by in profiles:
-                item.created_name = getattr(profiles[item.created_by], "nickname", None)
-            if item.updated_by and item.updated_by in profiles:
-                item.updated_name = getattr(profiles[item.updated_by], "nickname", None)
 
 
 def _build_tree_nodes(

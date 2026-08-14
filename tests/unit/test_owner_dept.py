@@ -4,12 +4,12 @@ owner_dept_id 接线冒烟测试。
 """
 from pathlib import Path
 
+from app.core.db.mixins import OwnerDeptMixin
 from app.core.security.data_scope import default_owner_dept_id
 from app.modules.biz.cg_test_activity.model import CgTestActivity
 from app.modules.biz.cg_test_catalog.model import CgTestCatalog
 from app.modules.biz.cg_test_knowledge_category.model import CgTestKnowledgeCategory
 from app.modules.biz.cg_test_order.model import CgTestOrder
-from app.platform.db.mixins import OwnerDeptMixin
 
 ROOT = Path(__file__).resolve().parents[2]
 

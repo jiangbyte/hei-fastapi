@@ -8,12 +8,10 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+# 显式导入全部 ORM 模型，确保 Alembic 元数据完整（模型清单见 app/db_models.py）。
+import app.db_models  # noqa: F401
 from app.core.config.settings import settings
-from app.platform.db.base import Base
-from app.platform.module import load_declared_models, load_module_specs
-
-# 包含已禁用模块，使 Alembic 元数据完整而无需启用路由。
-load_declared_models(load_module_specs(include_disabled=True))
+from app.core.db.base import Base
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.db.url)

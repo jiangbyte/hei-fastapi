@@ -7,10 +7,10 @@ import logging
 
 from snailjob import ExecuteResult, ExecutorManager, JobArgs, SnailLog, job
 
+from app.core.cache.redis import init_redis
+from app.core.db.session import get_session_factory, init_engine
+from app.core.tasks.async_runner import worker_async_runner
 from app.modules.iam.account.service import AccountService
-from app.platform.cache.redis import init_redis
-from app.platform.db.session import get_session_factory, init_engine
-from app.platform.tasks.async_runner import worker_async_runner
 
 logger = logging.getLogger(__name__)
 

@@ -13,9 +13,9 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.sys.codegen.model import SysCodegenField, SysCodegenPlan
 from app.modules.sys.codegen.schema import CodegenPreviewFile
-from app.platform.id_generator.snowflake import generate_snowflake_id
 
 AUDIT_COLUMNS = {"created_at", "created_by", "updated_at", "updated_by"}
 TEMPLATE_DIR = Path(__file__).resolve().parent / "template_files"
@@ -114,7 +114,6 @@ def render_files(
         (f"{ctx.backend_dir}/repository.py", "python", "repository.py.j2"),
         (f"{ctx.backend_dir}/service.py", "python", "service.py.j2"),
         (f"{ctx.backend_dir}/router.py", "python", "router.py.j2"),
-        (f"{ctx.backend_dir}/module.py", "python", "module.py.j2"),
         (ctx.api_file, "typescript", "api.ts.j2"),
         ("web/admin/src/api/index.ts.append", "typescript", "api_index_export.ts.j2"),
         (ctx.view_path, "vue", "index.vue.j2"),

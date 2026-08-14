@@ -7,6 +7,7 @@ Author: Charlie
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import (
     IdQuery,
@@ -29,7 +30,6 @@ from app.modules.biz.cg_test_catalog.schema import (
     CgTestCatalogUpdateRequest,
 )
 from app.modules.user.utils.profile import enrich_audit_names
-from app.platform.db.transaction import transactional
 
 
 class CgTestCatalogService:

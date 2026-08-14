@@ -15,12 +15,12 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
-from app.core.config.enums import AccountType, account_type_url_segment
-from app.platform.cache.keys import (
+from app.core.cache.keys import (
     permission_resource_cache_key,
     permission_resource_method_cache_key,
 )
-from app.platform.cache.redis import get_redis
+from app.core.cache.redis import get_redis
+from app.core.config.enums import AccountType, account_type_url_segment
 
 logger = logging.getLogger(__name__)
 

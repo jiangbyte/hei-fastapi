@@ -11,10 +11,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config.settings import settings
+from app.core.db.base import Base
+from app.core.db.session import close_engine
 from app.deps.db import get_db_session
 from app.factory import create_app
-from app.platform.db.base import Base
-from app.platform.db.session import close_engine
 
 
 class FakeRedis:
@@ -199,7 +199,7 @@ class FakePubSub:
 
 @pytest.fixture(autouse=True)
 def fake_redis(monkeypatch) -> FakeRedis:
-    from app.platform.cache import redis as redis_module
+    from app.core.cache import redis as redis_module
 
     fake = FakeRedis()
     monkeypatch.setattr(redis_module, "redis_client", fake)

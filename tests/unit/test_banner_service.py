@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import event, select
 
+from app.core.cache.keys import banner_interaction_delta_key
 from app.core.config.enums import StatusEnum
 from app.core.schema.base import IdQuery
 from app.modules.sys.banner.model import SysBanner
@@ -12,7 +13,6 @@ from app.modules.sys.banner.schema import (
     BannerPublicListQuery,
 )
 from app.modules.sys.banner.service import BannerService, flush_interaction_deltas
-from app.platform.cache.keys import banner_interaction_delta_key
 from tests.conftest import FakeRedis
 
 

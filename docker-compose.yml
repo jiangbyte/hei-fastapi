@@ -8,7 +8,7 @@ x-backend-env: &backend-env
   APP__TRUSTED_PROXY_IPS: ${DOCKER_TRUSTED_PROXY_IPS:-["172.16.0.0/12","127.0.0.1"]}
   DB__URL: ${DB__URL:?DB__URL is required}
   REDIS__URL: ${REDIS__URL:?REDIS__URL is required}
-  # SnailJob: Server must reach HOST_IP:HOST_PORT (publish 17889 when worker runs in container).
+  # SnailJob: Server must reach HOST_IP:HOST_PORT (publish 17889; executor runs embedded in the app).
   SNAIL_JOB__ENABLED: ${SNAIL_JOB__ENABLED:-true}
   SNAIL_JOB__SERVER_HOST: ${SNAIL_JOB__SERVER_HOST:-host.docker.internal}
   SNAIL_JOB__SERVER_PORT: ${SNAIL_JOB__SERVER_PORT:-17888}
@@ -31,7 +31,7 @@ services:
       context: .
     environment:
       <<: *backend-env
-    command: ["all"]
+    command: ["api"]
     ports:
       - "${BACKEND_PORT:-8000}:8000"
       - "${SNAIL_JOB_CLIENT_PORT:-17889}:17889"

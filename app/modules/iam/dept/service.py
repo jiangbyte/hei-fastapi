@@ -8,6 +8,7 @@ from collections.abc import Mapping, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
+from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -23,7 +24,6 @@ from app.modules.iam.dept.schema import (
     SysDeptSchema,
 )
 from app.modules.user.utils.profile import get_profiles_batch
-from app.platform.db.transaction import transactional
 
 
 class DeptService:

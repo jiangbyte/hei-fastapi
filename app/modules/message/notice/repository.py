@@ -9,6 +9,7 @@ from sqlalchemy import Select, String, and_, cast, delete, func, or_, select, up
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ColumnElement
 
+from app.core.db.batch import chunked
 from app.core.exceptions.business import NotFoundError
 from app.modules.message.enums import NoticeKind, NoticeStatus, TargetScope
 from app.modules.message.notice.model import MsgNotice, MsgNoticeRead
@@ -103,6 +104,69 @@ class MsgNoticeRepository:
             raise NotFoundError("MsgNotice not found")
         await self.db.execute(delete(MsgNoticeRead).where(MsgNoticeRead.notice_id.in_(unique_ids)))
         await self.db.execute(delete(MsgNotice).where(MsgNotice.id.in_(unique_ids)))
+
+    async def publish_many(
+        self,
+        entity_ids: list[str],
+        *,
+        now: datetime,
+        sender_account_type: str,
+        sender_account_id: str,
+    ) -> None:
+        """批量发布消息：分批校验 ID 均存在，再逐批单条 UPDATE 落库。
+
+        替代逐条 SELECT+UPDATE 的循环，避免 N+1；IN 分批规避变量上限。
+        """
+        unique_ids = list(dict.fromkeys(entity_ids))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            existing_ids = set(
+                (
+                    await self.db.execute(
+                        select(MsgNotice.id).where(MsgNotice.id.in_(batch))
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if len(existing_ids) != len(batch):
+                raise NotFoundError("MsgNotice not found")
+            await self.db.execute(
+                update(MsgNotice)
+                .where(MsgNotice.id.in_(batch))
+                .values(
+                    status=NoticeStatus.PUBLISHED.value,
+                    publish_at=now,
+                    sender_account_type=sender_account_type,
+                    sender_account_id=sender_account_id,
+                )
+            )
+        await self.db.flush()
+
+    async def revoke_many(self, entity_ids: list[str], *, now: datetime) -> None:
+        """批量撤回消息：分批校验 ID 均存在，再逐批单条 UPDATE 落库。"""
+        unique_ids = list(dict.fromkeys(entity_ids))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            existing_ids = set(
+                (
+                    await self.db.execute(
+                        select(MsgNotice.id).where(MsgNotice.id.in_(batch))
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if len(existing_ids) != len(batch):
+                raise NotFoundError("MsgNotice not found")
+            await self.db.execute(
+                update(MsgNotice)
+                .where(MsgNotice.id.in_(batch))
+                .values(status=NoticeStatus.REVOKED.value, revoked_at=now)
+            )
+        await self.db.flush()
 
     async def page_admin(self, query: MsgNoticeAdminPageQuery) -> tuple[list[MsgNotice], int]:
         """管理端分页查询消息，支持标题/状态/类型过滤。"""

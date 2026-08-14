@@ -7,7 +7,7 @@
 """
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -18,17 +18,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config.settings import settings
 from app.core.exceptions.base import AppError
+from app.core.observability.metrics import record_app_exception, record_validation_error
 from app.core.response.errors import api_error_response
 from app.core.response.schema import ApiErrorResponse
 from app.core.security.permission_registry import ACCOUNT_TYPE_META_ATTR, PERMISSION_META_ATTR
-from app.deps import auth as auth_deps
-from app.platform.observability.metrics import record_app_exception, record_validation_error
 
-_AUTH_ROOT_CALLABLES = {
-    auth_deps.get_current_session,
-    auth_deps.get_current_account,
-    auth_deps.get_optional_session,
-}
+# 认证根依赖回调集合：由应用侧装配时注册（core 不依赖业务包）。
+_AUTH_ROOT_CALLABLES: set[Callable[..., object]] = set()
+
+
+def register_auth_root_callable(callable_: Callable[..., object]) -> None:
+    """注册"已认证会话"根依赖，用于 OpenAPI 文档识别需要认证的路由。"""
+    _AUTH_ROOT_CALLABLES.add(callable_)
 
 
 def _route_requires_auth(route: APIRoute) -> bool:
