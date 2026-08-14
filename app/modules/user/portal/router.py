@@ -28,7 +28,7 @@ from app.modules.user.portal.schema import (
     PortalUserCenterProfileUpdateRequest,
 )
 from app.modules.user.portal.service import AVATAR_MAX_SIZE, PortalUserProfileService
-from app.modules.user.schema import PortalMeResponse
+from app.modules.user.schema import BindTargetRequest, PortalMeResponse
 
 router = APIRouter()
 
@@ -54,6 +54,13 @@ async def get_me(
     phone_identity = next((item for item in identities if item.identity_type == "PHONE"), None)
     profile = await PortalUserProfileService(db).get_profile(session.account_id)
     avatar = resolve_file_url(profile.avatar if profile else None)
+    from app.modules.auth.service import AuthService
+    from app.modules.iam.account.password_helper import is_password_expired
+
+    account_entity = await account_repo.get_required(session.account_id)
+    force_bind_email, force_bind_phone = await AuthService(db)._force_bind_flags(
+        account_entity, AccountType.PORTAL
+    )
     return success(
         PortalMeResponse(
             account_id=session.account_id,
@@ -66,6 +73,9 @@ async def get_me(
             dept_ids=session.dept_ids,
             group_ids=session.group_ids,
             permission_keys=session.permission_keys,
+            password_expired=await is_password_expired(db, session.account_id),
+            force_bind_email=force_bind_email,
+            force_bind_phone=force_bind_phone,
             profile=PortalProfileResponse(
                 account_id=session.account_id,
                 name=profile.name if profile else None,
@@ -117,6 +127,50 @@ async def upload_user_center_avatar(
             session=session,
         )
     )
+
+
+@router.post(
+    "/v1/portal/user-center/phone/send-code",
+    dependencies=[Depends(require_account_type(AccountType.PORTAL))],
+    response_model=ApiResponse[None],
+)
+async def send_user_center_phone_code(
+    payload: BindTargetRequest,
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """向待绑定手机号发送验证码。"""
+    from app.modules.auth.service import AuthService
+
+    await AuthService(db).send_bind_code(
+        account_type=AccountType.PORTAL,
+        channel="PHONE",
+        target=payload.target,
+        account_id=session.account_id,
+    )
+    return success()
+
+
+@router.post(
+    "/v1/portal/user-center/email/send-code",
+    dependencies=[Depends(require_account_type(AccountType.PORTAL))],
+    response_model=ApiResponse[None],
+)
+async def send_user_center_email_code(
+    payload: BindTargetRequest,
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """向待绑定邮箱发送验证码。"""
+    from app.modules.auth.service import AuthService
+
+    await AuthService(db).send_bind_code(
+        account_type=AccountType.PORTAL,
+        channel="EMAIL",
+        target=payload.target,
+        account_id=session.account_id,
+    )
+    return success()
 
 
 @router.post(

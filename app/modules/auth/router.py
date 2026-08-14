@@ -47,6 +47,7 @@ from app.modules.auth.schema import (
     RegisterRequest,
     ResetPasswordRequest,
     SendLoginCodeRequest,
+    SendRegisterCodeRequest,
 )
 from app.modules.auth.service import AuthService
 
@@ -68,6 +69,8 @@ async def portal_auth_options() -> AuthOptionsApiResponse:
 
 def _auth_options_response(account_type: AccountType) -> AuthOptionsResponse:
     """将登录策略转换为对外的 AuthOptions 响应模型。"""
+    from app.modules.auth.oauth.schema import OauthProviderOptionSchema
+
     opts = get_auth_options(account_type)
     return AuthOptionsResponse(
         account_type=opts.account_type,
@@ -78,9 +81,17 @@ def _auth_options_response(account_type: AccountType) -> AuthOptionsResponse:
         register_enabled=opts.register_enabled,
         register_require_phone=opts.register_require_phone,
         register_require_email=opts.register_require_email,
+        register_allow_account=opts.register_allow_account,
+        register_allow_email=opts.register_allow_email,
+        register_allow_phone=opts.register_allow_phone,
+        force_bind_email=opts.force_bind_email,
+        force_bind_phone=opts.force_bind_phone,
         password_change_verify_method=opts.password_change_verify_method,
         copyright_text=opts.copyright_text,
         copyright_url=opts.copyright_url,
+        oauth_providers=[
+            OauthProviderOptionSchema(**item) for item in opts.oauth_providers
+        ],
     )
 
 
@@ -138,6 +149,12 @@ async def _login(
         remember_me=payload.remember_me,
     )
     warning = await service.password_expiry_warning_days(session.account_id)
+    from app.modules.iam.account.repository import AccountRepository
+
+    account = await AccountRepository(db).get_required(session.account_id)
+    force_bind_email, force_bind_phone = await service._force_bind_flags(
+        account, account_type
+    )
     return success(
         LoginResponse(
             token=session.token,
@@ -145,6 +162,8 @@ async def _login(
             account_type=AccountType(str(session.account_type)),
             password_expired=session.password_expired,
             password_expiry_warning_days=warning,
+            force_bind_email=force_bind_email,
+            force_bind_phone=force_bind_phone,
         )
     )
 
@@ -203,12 +222,26 @@ async def send_login_code(
     return success()
 
 
+@portal_router.post("/v1/portal/register/send-code")
+async def portal_register_send_code(
+    payload: SendRegisterCodeRequest,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+):
+    """发送门户注册通道（邮箱/手机）验证码。"""
+    await verify_captcha(payload.captcha_id, payload.captcha_value)
+    await AuthService(db).send_register_code(
+        channel=payload.channel,
+        target=payload.target,
+    )
+    return success()
+
+
 @portal_router.post("/v1/portal/register", response_model=RegisterApiResponse)
 async def portal_register(
     payload: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> RegisterApiResponse:
-    """门户端注册入口，创建门户账户主体和门户资料。"""
+    """门户端注册入口（ACCOUNT / EMAIL / PHONE 通道）。"""
     if not get_register_policy(AccountType.PORTAL).enabled:
         raise BusinessError("Portal registration is disabled")
     await verify_captcha(payload.captcha_id, payload.captcha_value)

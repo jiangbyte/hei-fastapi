@@ -256,6 +256,18 @@ class AccountRepository:
         )
         return list((await self.db.execute(stmt)).scalars().all())
 
+    async def has_identity(
+        self,
+        account_id: str,
+        identity_type: AccountIdentityType,
+    ) -> bool:
+        """判断账户是否已绑定指定类型且启用中的登录标识。"""
+        stmt = select(SysAccountIdentity.id).where(
+            SysAccountIdentity.account_id == account_id,
+            SysAccountIdentity.identity_type == identity_type.value,
+        )
+        return (await self.db.execute(stmt)).first() is not None
+
     async def upsert_account_identity(
         self,
         account_id: str,

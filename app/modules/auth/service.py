@@ -11,7 +11,12 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.cache.keys import login_otp_key, password_reset_token_key
+from app.core.cache.keys import (
+    bind_otp_key,
+    login_otp_key,
+    password_reset_token_key,
+    register_otp_key,
+)
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.config.reader import config_reader
@@ -34,6 +39,7 @@ from app.modules.auth.schema import (
     CancelAccountRequest,
     ForgotPasswordRequest,
     LoginPayload,
+    LoginResponse,
     RegisterRequest,
     RegisterResponse,
     ResetPasswordRequest,
@@ -183,6 +189,129 @@ class AuthService:
             raise AuthenticationError("Invalid or expired OTP code")
         await redis.delete(key)
 
+    async def send_bind_code(
+        self,
+        *,
+        account_type: AccountType,
+        channel: str,
+        target: str,
+        account_id: str,
+    ) -> None:
+        """向待绑定邮箱/手机发送验证码，目标已被其他账号占用时拒绝。"""
+        channel_u = channel.strip().upper()
+        if channel_u not in {"EMAIL", "PHONE"}:
+            raise BusinessError("Unsupported bind channel")
+        identity_type = (
+            AccountIdentityType.EMAIL
+            if channel_u == "EMAIL"
+            else AccountIdentityType.PHONE
+        )
+        normalized = (
+            target.strip().lower() if channel_u == "EMAIL" else target.strip()
+        )
+        if not normalized:
+            raise BusinessError("Target is required")
+        other = await self.account_repo.get_account_by_identifier(
+            normalized, [identity_type]
+        )
+        if other is not None and other.id != account_id:
+            raise BusinessError(
+                "邮箱已被使用" if channel_u == "EMAIL" else "手机号已被使用"
+            )
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        redis = self._required_redis("Redis is required for bind verification")
+        ttl = settings.auth.password_reset_token_ttl_seconds
+        await redis.setex(
+            bind_otp_key(account_type.value, channel_u, account_id),
+            ttl,
+            code,
+        )
+        variables = {
+            "app_name": settings.app.name,
+            "code": code,
+            "expire_minutes": max(1, ttl // 60),
+        }
+        if channel_u == "EMAIL":
+            await send_templated_mail("BIND_EMAIL_CODE", normalized, variables)
+        else:
+            await send_templated_sms("BIND_PHONE_CODE", normalized, variables)
+
+    async def consume_bind_code(
+        self,
+        *,
+        account_type: AccountType,
+        channel: str,
+        account_id: str,
+        target: str,
+        code: str | None,
+    ) -> None:
+        """校验并一次性消费绑定验证码（未提供或无效时抛错）。"""
+        code_value = (code or "").strip()
+        if not code_value:
+            raise BusinessError("验证码不能为空")
+        channel_u = channel.strip().upper()
+        redis = self._required_redis("Redis is required for bind verification")
+        key = bind_otp_key(account_type.value, channel_u, account_id)
+        raw = await redis.get(key)
+        stored = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        if not stored or stored != code_value:
+            raise BusinessError("验证码无效或已过期")
+        await redis.delete(key)
+
+    async def send_register_code(self, *, channel: str, target: str) -> None:
+        """发送门户注册通道（邮箱/手机）验证码。"""
+        channel_u = channel.strip().upper()
+        if channel_u not in {"EMAIL", "PHONE"}:
+            raise BusinessError("Unsupported register channel")
+        identity_type = (
+            AccountIdentityType.EMAIL
+            if channel_u == "EMAIL"
+            else AccountIdentityType.PHONE
+        )
+        normalized = (
+            target.strip().lower() if channel_u == "EMAIL" else target.strip()
+        )
+        if not normalized:
+            raise BusinessError("Target is required")
+        if await self.account_repo.get_account_by_identifier(
+            normalized, [identity_type]
+        ) is not None:
+            raise BusinessError(
+                "邮箱已被使用" if channel_u == "EMAIL" else "手机号已被使用"
+            )
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        redis = self._required_redis("Redis is required for register verification")
+        ttl = settings.auth.password_reset_token_ttl_seconds
+        await redis.setex(register_otp_key(channel_u, normalized), ttl, code)
+        variables = {
+            "app_name": settings.app.name,
+            "code": code,
+            "expire_minutes": max(1, ttl // 60),
+        }
+        if channel_u == "EMAIL":
+            await send_templated_mail("REGISTER_CODE", normalized, variables)
+        else:
+            await send_templated_sms("REGISTER_CODE", normalized, variables)
+
+    async def consume_register_code(
+        self, *, channel: str, target: str, code: str | None
+    ) -> None:
+        """校验并一次性消费注册通道验证码。"""
+        code_value = (code or "").strip()
+        if not code_value:
+            raise BusinessError("验证码不能为空")
+        channel_u = channel.strip().upper()
+        normalized = (
+            target.strip().lower() if channel_u == "EMAIL" else target.strip()
+        )
+        redis = self._required_redis("Redis is required for register verification")
+        key = register_otp_key(channel_u, normalized)
+        raw = await redis.get(key)
+        stored = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+        if not stored or stored != code_value:
+            raise BusinessError("验证码无效或已过期")
+        await redis.delete(key)
+
     async def _maybe_auto_create(self, payload: LoginPayload) -> SysAccount | None:
         """当策略允许 AUTO_CREATE 时自动创建账户并返回，否则返回 None。"""
         policy = ensure_identity_allowed(
@@ -290,21 +419,128 @@ class AuthService:
         )
         return session_payload
 
+    async def issue_oauth_session(
+        self,
+        account: SysAccount,
+        account_type: AccountType,
+        *,
+        login_label: str | None = None,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+        device_label: str | None = None,
+    ) -> LoginResponse:
+        """为 OAuth 登录签发会话并返回登录结果（含强制绑定标记）。"""
+        password_expired_ = await is_password_expired(self.db, account.id)
+        session_payload = await self.session_service.build_session_payload(
+            account,
+            generate_token(),
+            remember_me=True,
+            password_expired=password_expired_,
+            client_ip=client_ip,
+            user_agent=user_agent,
+            device_label=device_label,
+        )
+        await session_store.set(
+            session_payload, ttl_seconds=settings.auth.token_ttl_seconds
+        )
+        await session_store.prune_excess_sessions(
+            account_type=str(session_payload.account_type),
+            account_id=session_payload.account_id,
+            max_sessions=settings.auth.max_concurrent_sessions,
+        )
+        record_login_attempt(account_type.value, "success")
+        await OperationAuditService(self.db).record(
+            module="auth",
+            action="oauth_login",
+            resource_type="account",
+            resource_id=account.id,
+            summary=f"{account_type.value} oauth login succeeded",
+            success=True,
+            account_id=account.id,
+            account_type=account.account_type,
+            ip=client_ip,
+            user_agent=user_agent,
+        )
+        force_bind_email, force_bind_phone = await self._force_bind_flags(
+            account, account_type
+        )
+        return LoginResponse(
+            token=session_payload.token,
+            account_id=account.id,
+            account_type=account_type,
+            password_expired=password_expired_,
+            password_expiry_warning_days=await self.password_expiry_warning_days(
+                account.id
+            ),
+            force_bind_email=force_bind_email,
+            force_bind_phone=force_bind_phone,
+        )
+
+    async def _force_bind_flags(
+        self, account: SysAccount, account_type: AccountType
+    ) -> tuple[bool, bool]:
+        """按 AUTH_FORCE_BIND_{TYPE}_{EMAIL|PHONE} 配置与账号已绑定身份计算强制绑定标记。"""
+        type_name = account_type.value
+        force_email = config_reader.get_bool(
+            f"AUTH_FORCE_BIND_{type_name}_EMAIL", False
+        ) and not await self.account_repo.has_identity(account.id, AccountIdentityType.EMAIL)
+        force_phone = config_reader.get_bool(
+            f"AUTH_FORCE_BIND_{type_name}_PHONE", False
+        ) and not await self.account_repo.has_identity(account.id, AccountIdentityType.PHONE)
+        return bool(force_email), bool(force_phone)
+
     async def register_portal(self, payload: RegisterRequest) -> RegisterResponse:
-        """执行门户注册：创建账户、门户资料、默认角色/部门并发送通知。"""
+        """执行门户注册（ACCOUNT/EMAIL/PHONE 通道）：创建账户、资料、默认角色/部门。"""
         policy = get_register_policy(AccountType.PORTAL)
         if not policy.enabled:
             raise BusinessError("Portal registration is disabled")
-        email = (payload.email or "").strip().lower() or None
-        phone = (payload.phone or "").strip() or None
-        if policy.require_email and not email:
-            raise BusinessError("Email is required for registration")
-        if policy.require_phone and not phone:
-            raise BusinessError("Phone is required for registration")
+        channel = (payload.register_channel or "ACCOUNT").strip().upper()
+        email: str | None = None
+        phone: str | None = None
+        account_name: str | None = None
+        if channel == "ACCOUNT":
+            if not config_reader.get_bool("AUTH_REGISTER_PORTAL_ALLOW_ACCOUNT", True):
+                raise BusinessError("用户名注册已关闭")
+            account_name = (payload.account or "").strip()
+            if not account_name:
+                raise BusinessError("用户名不能为空")
+            if await self.account_repo.get_account_by_identifier(
+                account_name, [AccountIdentityType.ACCOUNT]
+            ) is not None:
+                raise BusinessError("账号已存在")
+            if policy.require_email or policy.require_phone:
+                raise BusinessError("当前注册策略要求邮箱/手机号注册")
+        elif channel == "EMAIL":
+            if not config_reader.get_bool("AUTH_REGISTER_PORTAL_ALLOW_EMAIL", True):
+                raise BusinessError("邮箱注册已关闭")
+            email = (payload.email or "").strip().lower() or None
+            if not email or "@" not in email:
+                raise BusinessError("邮箱格式不正确")
+            await self.consume_register_code(channel="EMAIL", target=email, code=payload.otp_code)
+            if await self.account_repo.get_account_by_identifier(
+                email, [AccountIdentityType.EMAIL]
+            ) is not None:
+                raise BusinessError("邮箱已被使用")
+            account_name = await self._allocate_account_from_contact(email.split("@", 1)[0])
+        elif channel == "PHONE":
+            if not config_reader.get_bool("AUTH_REGISTER_PORTAL_ALLOW_PHONE", False):
+                raise BusinessError("手机注册已关闭")
+            phone = (payload.phone or "").strip() or None
+            if not phone:
+                raise BusinessError("手机号不能为空")
+            await self.consume_register_code(channel="PHONE", target=phone, code=payload.otp_code)
+            if await self.account_repo.get_account_by_identifier(
+                phone, [AccountIdentityType.PHONE]
+            ) is not None:
+                raise BusinessError("手机号已被使用")
+            account_name = await self._allocate_account_from_contact(f"user{phone[-6:]}")
+        else:
+            raise BusinessError("不支持的注册通道")
+        assert account_name
         nickname = (payload.nickname or "").strip() or f"user-{uuid4().hex[:8]}"
         async with transactional(self.db):
             account_payload = AccountCreateRequest(
-                account=payload.account,
+                account=account_name,
                 password=payload.password,
                 account_type=AccountType.PORTAL,
                 account_status=AccountStatusEnum.ENABLED,
@@ -328,7 +564,7 @@ class AuthService:
                 changed_by=account.id,
                 change_reason="register",
                 account=account,
-                account_name=payload.account,
+                account_name=account_name,
                 email=email,
                 phone=phone,
             )
@@ -351,13 +587,13 @@ class AuthService:
                 await send_templated_mail(
                     "REGISTER_SUCCESS",
                     email,
-                    {"app_name": settings.app.name, "account": payload.account},
+                    {"app_name": settings.app.name, "account": account_name},
                 )
             except BusinessError:
                 pass
         response = RegisterResponse(
             account_id=account.id,
-            account=payload.account,
+            account=account_name,
             account_type=AccountType.PORTAL,
         )
         await OperationAuditService(self.db).record(
@@ -371,6 +607,20 @@ class AuthService:
             account_type=AccountType.PORTAL.value,
         )
         return response
+
+    async def _allocate_account_from_contact(self, base: str) -> str:
+        """由邮箱/手机号派生唯一账号名（保留字母数字，冲突追加序号）。"""
+        sanitized = "".join(ch for ch in base if ch.isalnum()).lower()[:16]
+        if not sanitized:
+            sanitized = f"user{uuid4().hex[:6]}"
+        candidate = sanitized
+        index = 0
+        while await self.account_repo.get_account_by_identifier(
+            candidate, [AccountIdentityType.ACCOUNT]
+        ) is not None:
+            index += 1
+            candidate = f"{sanitized}{index}"
+        return candidate
 
     async def _assign_register_defaults(self, account_id: str, account_type: AccountType) -> None:
         """为注册账户分配策略中配置的默认角色与部门。"""

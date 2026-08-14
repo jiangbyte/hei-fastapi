@@ -80,6 +80,7 @@ class PortalUserCenterPhoneUpdateRequest(PasswordKeyMixin):
     password: str = Field(min_length=1, max_length=512)
     phone: str | None = Field(default=None, max_length=32)
     phone_login_enabled: WireBool = False
+    otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
 
 
 class PortalUserCenterEmailUpdateRequest(PasswordKeyMixin):
@@ -88,6 +89,7 @@ class PortalUserCenterEmailUpdateRequest(PasswordKeyMixin):
     password: str = Field(min_length=1, max_length=512)
     email: str | None = Field(default=None, max_length=128)
     email_login_enabled: WireBool = False
+    otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
 
 
 class PortalUserCenterAvatarUpdateResponse(ApiSchema):

@@ -9,6 +9,7 @@ from app.core.db.models import sys_config as sys_config_model  # noqa: F401
 from app.core.db.models import sys_weak_password as sys_weak_password_model  # noqa: F401
 
 # 业务模块模型（按模块名排序）。
+from app.modules.auth.oauth import model as oauth_binding_model  # noqa: F401
 from app.modules.biz.cg_test_activity import model as cg_test_activity_model  # noqa: F401
 from app.modules.biz.cg_test_catalog import model as cg_test_catalog_model  # noqa: F401
 from app.modules.biz.cg_test_knowledge_category import (

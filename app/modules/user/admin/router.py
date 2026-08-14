@@ -27,7 +27,7 @@ from app.modules.user.admin.schema import (
     AdminUserCenterProfileUpdateRequest,
 )
 from app.modules.user.admin.service import AVATAR_MAX_SIZE, AdminUserProfileService
-from app.modules.user.schema import AdminMeResponse
+from app.modules.user.schema import AdminMeResponse, BindTargetRequest
 
 router = APIRouter()
 
@@ -54,6 +54,12 @@ async def get_me(
         session.dept_ids,
         session.group_ids,
     )
+    from app.modules.auth.service import AuthService
+    from app.modules.iam.account.password_helper import is_password_expired
+
+    force_bind_email, force_bind_phone = await AuthService(db)._force_bind_flags(
+        account_entity, AccountType.ADMIN
+    )
     return success(
         AdminMeResponse(
             account_id=session.account_id,
@@ -69,6 +75,9 @@ async def get_me(
             dept_id_names=dept_id_names,
             group_id_names=group_id_names,
             permission_keys=session.permission_keys,
+            password_expired=await is_password_expired(db, session.account_id),
+            force_bind_email=force_bind_email,
+            force_bind_phone=force_bind_phone,
             profile=AdminProfileResponse(
                 account_id=session.account_id,
                 name=account.name,
@@ -167,6 +176,50 @@ async def update_user_center_password(
             }
         ),
         session,
+    )
+    return success()
+
+
+@router.post(
+    "/v1/admin/user-center/phone/send-code",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[None],
+)
+async def send_user_center_phone_code(
+    payload: BindTargetRequest,
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """向待绑定手机号发送验证码。"""
+    from app.modules.auth.service import AuthService
+
+    await AuthService(db).send_bind_code(
+        account_type=AccountType.ADMIN,
+        channel="PHONE",
+        target=payload.target,
+        account_id=session.account_id,
+    )
+    return success()
+
+
+@router.post(
+    "/v1/admin/user-center/email/send-code",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[None],
+)
+async def send_user_center_email_code(
+    payload: BindTargetRequest,
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """向待绑定邮箱发送验证码。"""
+    from app.modules.auth.service import AuthService
+
+    await AuthService(db).send_bind_code(
+        account_type=AccountType.ADMIN,
+        channel="EMAIL",
+        target=payload.target,
+        account_id=session.account_id,
     )
     return success()
 

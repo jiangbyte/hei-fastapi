@@ -41,7 +41,7 @@ class RegisterTypePolicy:
 
 @dataclass(frozen=True, slots=True)
 class AuthOptions:
-    """对外暴露的认证选项：登录/注册策略与版权信息。"""
+    """对外暴露的认证选项：登录/注册策略、三方登录入口与版权信息。"""
 
     account_type: AccountType
     allow_account: bool
@@ -51,9 +51,15 @@ class AuthOptions:
     register_enabled: bool
     register_require_phone: bool
     register_require_email: bool
+    register_allow_account: bool
+    register_allow_email: bool
+    register_allow_phone: bool
+    force_bind_email: bool
+    force_bind_phone: bool
     password_change_verify_method: str
     copyright_text: str
     copyright_url: str
+    oauth_providers: list[dict]
 
 
 def get_login_policy(account_type: AccountType) -> LoginTypePolicy:
@@ -128,6 +134,7 @@ def get_auth_options(account_type: AccountType) -> AuthOptions:
     """汇总登录与注册策略为对外认证选项。"""
     login = get_login_policy(account_type)
     register = get_register_policy(account_type)
+    type_name = account_type.value
     return AuthOptions(
         account_type=account_type,
         allow_account=True,
@@ -137,12 +144,49 @@ def get_auth_options(account_type: AccountType) -> AuthOptions:
         register_enabled=register.enabled,
         register_require_phone=register.require_phone,
         register_require_email=register.require_email,
+        register_allow_account=config_reader.get_bool(
+            f"AUTH_REGISTER_{type_name}_ALLOW_ACCOUNT", True
+        ),
+        register_allow_email=config_reader.get_bool(
+            f"AUTH_REGISTER_{type_name}_ALLOW_EMAIL", True
+        ),
+        register_allow_phone=config_reader.get_bool(
+            f"AUTH_REGISTER_{type_name}_ALLOW_PHONE", False
+        ),
+        force_bind_email=config_reader.get_bool(
+            f"AUTH_FORCE_BIND_{type_name}_EMAIL", False
+        ),
+        force_bind_phone=config_reader.get_bool(
+            f"AUTH_FORCE_BIND_{type_name}_PHONE", False
+        ),
         password_change_verify_method=(
             config_reader.get("PASSWORD_CHANGE_VERIFY_METHOD") or "OLD_PASSWORD"
         ).strip().upper(),
         copyright_text=(config_reader.get("COPYRIGHT_TEXT") or "").strip(),
         copyright_url=(config_reader.get("COPYRIGHT_URL") or "").strip(),
+        oauth_providers=_oauth_provider_options(account_type),
     )
+
+
+def _oauth_provider_options(account_type: AccountType) -> list[dict]:
+    """读取三方登录提供商开关，构造 auth-options 下发的入口列表。"""
+    from app.modules.auth.oauth.provider import OauthProvider
+
+    options: list[dict] = []
+    for provider in OauthProvider:
+        if account_type == AccountType.ADMIN and provider == OauthProvider.WECHAT_MP:
+            continue
+        options.append(
+            {
+                "provider": provider.value,
+                "label": provider.label,
+                "enabled": config_reader.get_bool(
+                    f"AUTH_OAUTH_{account_type.value}_{provider.value}_ENABLED", False
+                ),
+                "web_oauth": provider.web_oauth,
+            }
+        )
+    return options
 
 
 def ensure_identity_allowed(

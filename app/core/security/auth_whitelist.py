@@ -35,10 +35,19 @@ def _builtin_client_auth_paths() -> tuple[str, ...]:
                 f"{base}/forgot-password",
                 f"{base}/reset-password",
                 f"{base}/public/auth-options",
+                f"{base}/oauth/exchange",
+                f"{base}/oauth/*/authorize",
+                f"{base}/oauth/*/callback",
             )
         )
         if account_type == AccountType.PORTAL:
-            paths.append(f"{base}/register")
+            paths.extend(
+                (
+                    f"{base}/register",
+                    f"{base}/register/send-code",
+                    f"{base}/oauth/wechat-mp/login",
+                )
+            )
     return tuple(paths)
 
 

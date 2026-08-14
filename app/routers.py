@@ -12,6 +12,8 @@ from functools import cache
 from fastapi import APIRouter
 
 from app.core.paths import API_ROOT_PREFIX
+from app.modules.auth.oauth.router import admin_router as oauth_admin_router
+from app.modules.auth.oauth.router import portal_router as oauth_portal_router
 from app.modules.auth.router import admin_router as auth_admin_router
 from app.modules.auth.router import portal_router as auth_portal_router
 from app.modules.auth.session_admin_router import router as auth_session_admin_router
@@ -53,6 +55,8 @@ _ROUTERS: list[tuple[str, APIRouter]] = [
     ("admin", auth_admin_router),
     ("portal", auth_portal_router),
     ("admin", auth_session_admin_router),
+    ("admin", oauth_admin_router),
+    ("portal", oauth_portal_router),
     ("admin", cg_test_activity_router),
     ("admin", cg_test_catalog_router),
     ("admin", cg_test_knowledge_router),

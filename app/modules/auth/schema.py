@@ -12,6 +12,7 @@ from app.core.response.schema import ApiResponse
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool
 from app.core.security.transport import CaptchaMixin, PasswordKeyMixin
+from app.modules.auth.oauth.schema import OauthProviderOptionSchema
 from app.modules.iam.enums import AccountIdentityType
 
 
@@ -69,6 +70,8 @@ class LoginResponse(ApiSchema):
     account_type: AccountType | None = None
     password_expired: WireBool = False
     password_expiry_warning_days: int | None = None
+    force_bind_email: WireBool = False
+    force_bind_phone: WireBool = False
 
 
 class SendLoginCodeRequest(CaptchaMixin):
@@ -89,20 +92,37 @@ class AuthOptionsResponse(ApiSchema):
     register_enabled: WireBool = False
     register_require_phone: WireBool = False
     register_require_email: WireBool = False
+    register_allow_account: WireBool = True
+    register_allow_email: WireBool = True
+    register_allow_phone: WireBool = False
+    force_bind_email: WireBool = False
+    force_bind_phone: WireBool = False
     password_change_verify_method: str = "OLD_PASSWORD"
     copyright_text: str = ""
     copyright_url: str = ""
+    oauth_providers: list[OauthProviderOptionSchema] = Field(default_factory=list)
 
 
 class RegisterRequest(CaptchaMixin, PasswordKeyMixin):
-    """门户注册请求。"""
+    """门户注册请求：ACCOUNT / EMAIL / PHONE 通道，邮箱/手机通道需 OTP。"""
 
-    account: str = Field(min_length=3, max_length=64)
+    register_channel: Literal["ACCOUNT", "EMAIL", "PHONE"] = "ACCOUNT"
+    account: str | None = Field(default=None, min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=512)
     name: str | None = Field(default=None, max_length=64)
     nickname: str | None = Field(default=None, max_length=64)
     email: str | None = Field(default=None, max_length=128)
     phone: str | None = Field(default=None, max_length=32)
+    otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
+
+
+class SendRegisterCodeRequest(ApiSchema):
+    """发送门户注册通道验证码请求。"""
+
+    target: str = Field(min_length=3, max_length=128)
+    channel: Literal["EMAIL", "PHONE"]
+    captcha_id: str = Field(min_length=1, max_length=64)
+    captcha_value: str = Field(min_length=1, max_length=64)
 
 
 class ForgotPasswordRequest(CaptchaMixin):

@@ -12,6 +12,12 @@ from app.modules.user.admin.schema import AdminProfileResponse
 from app.modules.user.portal.schema import PortalProfileResponse
 
 
+class BindTargetRequest(ApiSchema):
+    """发送绑定验证码的目标地址（邮箱或手机号）。"""
+
+    target: str = Field(min_length=3, max_length=128)
+
+
 class AdminMeResponse(ApiSchema):
     """管理端当前登录账户信息响应模型。"""
 
@@ -28,6 +34,9 @@ class AdminMeResponse(ApiSchema):
     dept_id_names: list[IdNameResponse] = Field(default_factory=list)
     group_id_names: list[IdNameResponse] = Field(default_factory=list)
     permission_keys: list[str]
+    password_expired: bool = False
+    force_bind_email: bool = False
+    force_bind_phone: bool = False
     profile: AdminProfileResponse
 
 
@@ -47,4 +56,7 @@ class PortalMeResponse(ApiSchema):
     dept_id_names: list[IdNameResponse] = Field(default_factory=list)
     group_id_names: list[IdNameResponse] = Field(default_factory=list)
     permission_keys: list[str] = Field(default_factory=list)
+    password_expired: bool = False
+    force_bind_email: bool = False
+    force_bind_phone: bool = False
     profile: PortalProfileResponse

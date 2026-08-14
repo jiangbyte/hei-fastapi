@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthenticationError, BusinessError
 from app.core.schema.common_schema import IdNameResponse
@@ -183,11 +184,16 @@ class AdminUserProfileService:
         payload: AdminUserCenterPhoneUpdateRequest,
         session: SessionPayload,
     ) -> None:
-        """校验密码后更新当前账户手机号绑定。"""
+        """校验密码（绑定/换绑时另需 OTP）后更新当前账户手机号绑定。"""
         account = await self.account_repo.get_required(session.account_id)
         self._ensure_password(account.password_hash, payload.password)
+        phone_value = str(payload.phone or "").strip()
+        if phone_value:
+            await self._consume_bind_code(
+                AccountType.ADMIN, "PHONE", session.account_id, phone_value, payload.otp_code
+            )
         profile = await self.repo.get_by_account_id(session.account_id)
-        if payload.phone_login_enabled and not str(payload.phone or "").strip():
+        if payload.phone_login_enabled and not phone_value:
             raise BusinessError("Phone login requires a phone")
         async with transactional(self.db):
             await self.account_repo.upsert_account_identity(
@@ -214,11 +220,16 @@ class AdminUserProfileService:
         payload: AdminUserCenterEmailUpdateRequest,
         session: SessionPayload,
     ) -> None:
-        """校验密码后更新当前账户邮箱绑定。"""
+        """校验密码（绑定/换绑时另需 OTP）后更新当前账户邮箱绑定。"""
         account = await self.account_repo.get_required(session.account_id)
         self._ensure_password(account.password_hash, payload.password)
+        email_value = str(payload.email or "").strip()
+        if email_value:
+            await self._consume_bind_code(
+                AccountType.ADMIN, "EMAIL", session.account_id, email_value, payload.otp_code
+            )
         profile = await self.repo.get_by_account_id(session.account_id)
-        if payload.email_login_enabled and not str(payload.email or "").strip():
+        if payload.email_login_enabled and not email_value:
             raise BusinessError("Email login requires an email")
         async with transactional(self.db):
             await self.account_repo.upsert_account_identity(
@@ -239,6 +250,25 @@ class AdminUserProfileService:
                     remark=profile.remark if profile else None,
                 )
             )
+
+    async def _consume_bind_code(
+        self,
+        account_type: AccountType,
+        channel: str,
+        account_id: str,
+        target: str,
+        otp_code: str | None,
+    ) -> None:
+        """校验绑定验证码（一次性消费）。"""
+        from app.modules.auth.service import AuthService
+
+        await AuthService(self.db).consume_bind_code(
+            account_type=account_type,
+            channel=channel,
+            account_id=account_id,
+            target=target,
+            code=otp_code,
+        )
 
     def _ensure_password(self, password_hash: str, password: str) -> None:
         """校验明文密码与哈希是否匹配，失败抛出 AuthenticationError。"""

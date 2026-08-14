@@ -56,6 +56,16 @@ def change_password_otp_key(account_type: str, channel: str, account_id: str) ->
     return f"password:change:otp:{account_type}:{channel}:{account_id}"
 
 
+def bind_otp_key(account_type: str, channel: str, account_id: str) -> str:
+    """绑定/换绑邮箱或手机号的一次性验证码（OTP）键。"""
+    return f"user:bind:otp:{account_type}:{channel}:{account_id}"
+
+
+def register_otp_key(channel: str, target: str) -> str:
+    """门户注册通道（邮箱/手机）的一次性验证码（OTP）键。"""
+    return f"user:register:otp:{channel}:{target}"
+
+
 def captcha_key(captcha_id: str) -> str:
     """图形验证码键。"""
     return f"captcha:{captcha_id}"
