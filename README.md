@@ -30,15 +30,13 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 **组织与权限（`app/modules/iam`）**
 
 - 账号、角色、部门、用户组、岗位管理
-- 菜单资源、资源模块、客户端资源多层授权（RBAC）
-- 权限码三段式规范（`module:resource:action`，段内不含 `-` / `_`）
+- 菜单资源、资源模块、客户端资源多层授权（RBAC），权限码三段式规范
 - 在线会话查询与强制下线
 
 **系统管理（`app/modules/sys`）**
 
-- 数据字典（分类限定 `SYS` / `BIZ`）、系统配置（`sys_config`，敏感配置 Fernet 加密存储）、Banner
-- 文件存储（Local / MinIO / RustFS / 阿里云 OSS / 腾讯云 COS），公共文件路由代理直出（浏览器无需直连对象存储）
-- 弱口令清单、密码策略、操作审计、代码生成（权限前缀渲染时清洗 `-` / `_`）
+- 数据字典、系统配置（`sys_config`，敏感配置加密存储）、Banner、文件存储（Local / MinIO / RustFS / 阿里云 OSS / 腾讯云 COS）
+- 弱口令清单、密码策略、操作审计、代码生成
 - 公告 / 通知、意见反馈（管理端 + 门户双端）
 
 **运营与调度**
@@ -92,7 +90,7 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 # 创建数据库
 createdb -U postgres -h 127.0.0.1 hei_fastapi
 
-# 迁移表结构
+# 迁移表结构（数据库表结构由人工维护，应用启动不执行迁移）
 python scripts/db/migrate.py
 
 # 导入业务种子数据
@@ -112,10 +110,15 @@ pip install -r requirements-dev.txt
 
 cp .env.example .env
 # 按需配置 DB__URL / REDIS__URL / SNAIL_JOB__*；生产还需 APP__CONFIG_CRYPTO_KEY
-# 本地看 Swagger：SWAGGER__ENABLED=true
 
 ./entrypoint.sh                          # 启动 API
 ```
+
+> Windows 本地开发（gunicorn 依赖 `fcntl`，仅 Linux / 容器可用）：
+>
+> ```bash
+> python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+> ```
 
 启动后可访问：
 
@@ -125,14 +128,6 @@ cp .env.example .env
 | http://127.0.0.1:8000/docs | Swagger 接口文档（需 `SWAGGER__ENABLED=true`） |
 | http://127.0.0.1:8000/api/v1/internal/health/live | 存活探针 |
 | http://127.0.0.1:8000/api/v1/internal/health/ready | 就绪探针（DB / Redis / 配置同步 / 存储等） |
-
-数据库表结构由人工维护（应用启动不执行迁移）：需要时在维护机直接运行 `python scripts/db/migrate.py` / `python scripts/db/import_data.py`；停止本机进程：`./shutdown.sh`。
-
-> Windows 本地开发（gunicorn 依赖 `fcntl`，仅 Linux/容器可用）：
->
-> ```bash
-> python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-> ```
 
 ### 3. 启动前端
 
@@ -289,7 +284,7 @@ docker build -t hei-fastapi-portal web/portal
 
 ### 运行后端
 
-> 数据库表结构由人工维护：应用启动不会执行迁移。需要变更 schema 时，在维护机直接运行 `python scripts/db/migrate.py`（或由 DBA 执行迁移 SQL），再启动/重启应用。
+> 数据库表结构由人工维护：应用启动不会执行迁移。需要变更 schema 时，在维护机直接运行 `python scripts/db/migrate.py`（或由 DBA 执行迁移 SQL），再启动 / 重启应用。
 
 ```bash
 # 启动 API（8000 为 HTTP）
@@ -361,16 +356,6 @@ python -m pytest
 # 在对应 web/* 目录
 pnpm dev && pnpm build && pnpm lint
 ```
-
-## 变更记录
-
-### v1.0.0-beta
-
-- 统一项目版本为 1.0.0-beta；依赖管理改用 pip（`requirements*.txt`），容器部署改为独立 Dockerfile（不使用 docker compose）
-- 权限码三段式规范化：`sys:weak-password:*` → `sys:weakpassword:*`；代码生成权限前缀渲染时剥离 `-` / `_`
-- 字典分类限定 `SYS` / `BIZ` 枚举，OAUTH 字典种子对齐 hei-boot
-- 公共文件路由改为代理直出（对齐 hei-boot），头像 / 附件无需浏览器直连对象存储；文件删除逻辑对齐（存储删除失败不阻断元数据清理，缺失 / 外部地址静默）
-- SnailJob 执行器配置生效修复（环境变量预映射 + Windows 日志编码）；数据库表结构人工维护，应用启动不自动迁移
 
 ## 许可证
 
