@@ -1,0 +1,9 @@
+# 开发/测试依赖
+-r requirements.txt
+aiosqlite>=0.21.0
+bandit>=1.8.0
+mypy>=1.16.0
+pip-audit>=2.8.0
+pytest>=8.4.0
+pytest-asyncio>=1.0.0
+ruff>=0.12.0

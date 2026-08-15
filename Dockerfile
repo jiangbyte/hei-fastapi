@@ -39,10 +39,10 @@ ENV PIP_INDEX_URL=${PIP_INDEX_URL} \
 
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
+COPY requirements.txt ./
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    python -c 'import os, subprocess, sys, tomllib; data = tomllib.load(open("pyproject.toml", "rb")); deps = data["project"]["dependencies"] + data["project"]["optional-dependencies"]["postgres"]; subprocess.check_call([sys.executable, "-m", "pip", "install", "--index-url", os.environ["PIP_INDEX_URL"], "--prefer-binary", *deps])'
+    python -m pip install --no-cache-dir --index-url "${PIP_INDEX_URL}" --prefer-binary -r requirements.txt
 
 COPY app ./app
 COPY alembic.ini ./

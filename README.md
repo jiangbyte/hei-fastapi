@@ -53,7 +53,7 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 | 安全 | RSA 密码加密传输、Fernet（`APP__CONFIG_CRYPTO_KEY`）或 Vault KV v2、登录锁定 / 限流、数据脱敏 |
 | 任务 | SnailJob（外部 Server + `snail-job-python` 执行器，单进程内嵌） |
 | 观测 / 运维 | structlog；可选 Prometheus `/metrics`、OpenTelemetry / OTLP；存活 / 就绪探针 |
-| 其他 | uv 依赖管理（`uv.lock` / `uv sync`）、Gunicorn + Uvicorn |
+| 其他 | pip 依赖管理（`requirements*.txt`）、Gunicorn + Uvicorn |
 
 | 前端 | 技术 |
 | :--- | :--- |
@@ -77,7 +77,7 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 
 ### 环境要求
 
-- Python 3.11+ 与 [uv](https://docs.astral.sh/uv/)（依赖管理）
+- Python 3.11+ 与 pip（推荐 conda 环境，如 `conda activate normal`）
 - PostgreSQL、Redis
 - Node.js 22+ 与 pnpm 9+（前端）
 
@@ -104,7 +104,8 @@ python scripts/db/import_data.py
 - Redis：`redis://127.0.0.1:6379/0`
 
 ```bash
-uv sync --extra dev --extra postgres    # 创建 .venv 并安装依赖（含 uv.lock 锁定版本）
+# 安装依赖（conda 环境示例：conda activate normal）
+pip install -r requirements-dev.txt
 
 cp .env.example .env
 # 按需配置 DB__URL / REDIS__URL / SNAIL_JOB__*；生产还需 APP__CONFIG_CRYPTO_KEY
@@ -123,6 +124,12 @@ cp .env.example .env
 | http://127.0.0.1:8000/api/v1/internal/health/ready | 就绪探针（DB / Redis / 配置同步 / 存储等） |
 
 数据库表结构由人工维护（应用启动不执行迁移）：需要时在维护机直接运行 `python scripts/db/migrate.py` / `python scripts/db/import_data.py`；停止本机进程：`./shutdown.sh`。
+
+> Windows 本地开发（gunicorn 依赖 `fcntl`，仅 Linux/容器可用）：
+>
+> ```bash
+> python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+> ```
 
 ### 3. 启动前端
 
