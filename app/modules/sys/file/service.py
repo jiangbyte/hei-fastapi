@@ -110,35 +110,55 @@ class FileService:
             await self.repo.update(payload)
 
     async def delete(self, payload: IdsRequest) -> None:
-        """按文件 ID 批量删除对象存储文件和文件元数据。"""
+        """按文件 ID 批量删除对象存储文件和文件元数据（对齐 hei-boot）。
+
+        存储删除失败不阻断元数据清理（残留/存储不可达时仍删除库记录），仅记录告警。
+        """
         unique_ids = list(dict.fromkeys(payload.ids))
         entities = await self.repo.list_by_ids(unique_ids)
-        if len(entities) != len(unique_ids):
-            raise NotFoundError("File not found")
+        if not entities:
+            return
         async with transactional(self.db):
             # 对象存储删除为外部 I/O，并发执行避免逐文件串行等待。
-            await asyncio.gather(
-                *(
-                    asyncio.to_thread(
+            for entity in entities:
+                try:
+                    await asyncio.to_thread(
                         self._get_storage(self._resolve_entity_storage_config(entity)).delete_object,
                         entity.object_name,
                     )
-                    for entity in entities
-                )
-            )
-            await self.repo.delete_many(unique_ids)
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to delete storage object, skip (id=%s, object=%s, provider=%s): %s",
+                        entity.id,
+                        entity.object_name,
+                        entity.storage_provider,
+                        exc,
+                    )
+            await self.repo.delete_many([entity.id for entity in entities])
 
     async def delete_by_object_name(self, object_name: str) -> None:
-        """按对象存储路径删除文件和元数据，供业务表引用清理使用。"""
+        """按对象存储路径删除文件和元数据（对齐 hei-boot）。
+
+        未找到或外部 URL 静默返回；存储删除失败仅告警，不阻断元数据清理。
+        """
         normalized = normalize_object_name(object_name)
         if not normalized or is_external_url(normalized):
-            raise NotFoundError("File not found")
+            return
         entity = await self.repo.get_by_object_name(normalized)
         if entity is None:
-            raise NotFoundError("File not found")
+            return
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         async with transactional(self.db):
-            await asyncio.to_thread(storage.delete_object, normalized)
+            try:
+                await asyncio.to_thread(storage.delete_object, normalized)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to delete storage object, skip (id=%s, object=%s, provider=%s): %s",
+                    entity.id,
+                    entity.object_name,
+                    entity.storage_provider,
+                    exc,
+                )
             await self.repo.delete(entity)
 
     async def detail(self, query: IdQuery) -> SysFileSchema:
