@@ -86,7 +86,7 @@ class {{ main.entity_name }}Service:
             data_scope_filter = await build_data_scope_filter(
                 self.db,
                 session,
-                "{{ plan.permission_prefix }}:page",
+                "{{ permission_prefix }}:page",
                 owner_column={{ main.entity_name }}.created_by,
                 dept_column=getattr({{ main.entity_name }}, "owner_dept_id", None),
             )
@@ -121,7 +121,7 @@ class {{ main.entity_name }}Service:
             data_scope_filter = await build_data_scope_filter(
                 self.db,
                 session,
-                "{{ plan.permission_prefix }}:list",
+                "{{ permission_prefix }}:list",
                 owner_column={{ main.entity_name }}.created_by,
                 dept_column=getattr({{ main.entity_name }}, "owner_dept_id", None),
             )

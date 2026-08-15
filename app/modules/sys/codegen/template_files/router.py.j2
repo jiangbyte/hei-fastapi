@@ -53,7 +53,7 @@ router = APIRouter()
     "{{ api_base }}/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:create")),
+        Depends(require_permission("{{ permission_prefix }}:create")),
     ],
     response_model=ApiResponse[None],
 )
@@ -70,7 +70,7 @@ async def create(
     "{{ api_base }}/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:update")),
+        Depends(require_permission("{{ permission_prefix }}:update")),
     ],
     response_model=ApiResponse[None],
 )
@@ -86,7 +86,7 @@ async def update(
     "{{ api_base }}/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:delete")),
+        Depends(require_permission("{{ permission_prefix }}:delete")),
     ],
     response_model=ApiResponse[None],
 )
@@ -102,7 +102,7 @@ async def delete(
     "{{ api_base }}/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:detail")),
+        Depends(require_permission("{{ permission_prefix }}:detail")),
     ],
     response_model=ApiResponse[{{ main.entity_name }}Schema],
 )
@@ -117,7 +117,7 @@ async def detail(
     "{{ api_base }}/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:page")),
+        Depends(require_permission("{{ permission_prefix }}:page")),
     ],
     response_model=ApiResponse[PageData[{{ main.entity_name }}Schema]],
 )
@@ -134,7 +134,7 @@ async def page(
     "{{ api_base }}/tree",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:list")),
+        Depends(require_permission("{{ permission_prefix }}:list")),
     ],
     response_model=ApiResponse[list[{{ main.entity_name }}TreeNode]],
 )
@@ -152,7 +152,7 @@ async def tree(
     "{{ api_base }}/children/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:create")),
+        Depends(require_permission("{{ permission_prefix }}:create")),
     ],
     response_model=ApiResponse[None],
 )
@@ -168,7 +168,7 @@ async def create_child(
     "{{ api_base }}/children/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:update")),
+        Depends(require_permission("{{ permission_prefix }}:update")),
     ],
     response_model=ApiResponse[None],
 )
@@ -184,7 +184,7 @@ async def update_child(
     "{{ api_base }}/children/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:delete")),
+        Depends(require_permission("{{ permission_prefix }}:delete")),
     ],
     response_model=ApiResponse[None],
 )
@@ -200,7 +200,7 @@ async def delete_child(
     "{{ api_base }}/children/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:detail")),
+        Depends(require_permission("{{ permission_prefix }}:detail")),
     ],
     response_model=ApiResponse[{{ sub.entity_name }}Schema],
 )
@@ -215,7 +215,7 @@ async def child_detail(
     "{{ api_base }}/children/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("{{ plan.permission_prefix }}:page")),
+        Depends(require_permission("{{ permission_prefix }}:page")),
     ],
     response_model=ApiResponse[PageData[{{ sub.entity_name }}Schema]],
 )

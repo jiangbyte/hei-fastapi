@@ -9,7 +9,7 @@ INSERT INTO sys_resource (id, parent_id, code, name, resource_type, module_id, p
 VALUES (
   '{{ menu_permission.menu_id }}',
   NULLIF({{ plan.parent_resource_id | sql }}, ''),
-  '{{ plan.permission_prefix.replace(":", "_") }}',
+  '{{ permission_prefix.replace(":", "_") }}',
   '{{ plan.menu_name }}',
   'MENU',
   NULLIF({{ plan.resource_module_id | sql }}, ''),
@@ -32,7 +32,7 @@ INSERT INTO sys_resource (id, parent_id, code, name, resource_type, module_id, s
 VALUES (
   '{{ action.resource_id }}',
   '{{ menu_permission.menu_id }}',
-  '{{ plan.permission_prefix.replace(":", "_") }}_{{ action.key }}',
+  '{{ permission_prefix.replace(":", "_") }}_{{ action.key }}',
   '{{ action.label }}{{ plan.main_business_name }}',
   'BUTTON',
   NULLIF({{ plan.resource_module_id | sql }}, ''),
@@ -53,7 +53,7 @@ VALUES (
   'RESOURCE_PERMISSION',
   'PERMISSION',
   '',
-  '{{ plan.permission_prefix }}:{{ action.key }}',
+  '{{ permission_prefix }}:{{ action.key }}',
   'CASCADE',
   'ALL',
   '[]',

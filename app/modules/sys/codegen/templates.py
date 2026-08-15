@@ -18,6 +18,15 @@ from app.modules.sys.codegen.model import SysCodegenField, SysCodegenPlan
 from app.modules.sys.codegen.schema import CodegenPreviewFile
 
 AUDIT_COLUMNS = {"created_at", "created_by", "updated_at", "updated_by"}
+
+
+def permission_prefix_key(prefix: str) -> str:
+    """生成合法权限前缀：三段式权限码（module:resource:action）段内不允许 - / _。
+
+    代码生成的 require_permission / hasPermission / sys_iam_relation.target_key
+    一律使用该函数清洗后的前缀，避免用户输入带 - / _ 的前缀产生非法权限码。
+    """
+    return sub(r"[-_]", "", prefix or "")
 TEMPLATE_DIR = Path(__file__).resolve().parent / "template_files"
 MENU_PERMISSION_ACTIONS = (
     ("page", "分页", 10),
@@ -197,6 +206,7 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
             has_tree_parent_form=has_tree_parent_form,
             has_sub=has_sub,
             needs_list_permission=has_tree,
+            permission_prefix=permission_prefix_key(ctx.plan.permission_prefix),
             menu_permission=menu_permission_context(has_tree)
             if template_name == "menu_permission.sql.j2"
             else None,

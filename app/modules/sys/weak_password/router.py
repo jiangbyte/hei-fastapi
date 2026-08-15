@@ -30,7 +30,7 @@ router = APIRouter()
     "/v1/admin/sys/weak-password/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:weak-password:create")),
+        Depends(require_permission("sys:weakpassword:create")),
     ],
     response_model=ApiResponse[None],
 )
@@ -47,7 +47,7 @@ async def create(
     "/v1/admin/sys/weak-password/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:weak-password:update")),
+        Depends(require_permission("sys:weakpassword:update")),
     ],
     response_model=ApiResponse[None],
 )
@@ -64,7 +64,7 @@ async def update(
     "/v1/admin/sys/weak-password/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:weak-password:delete")),
+        Depends(require_permission("sys:weakpassword:delete")),
     ],
     response_model=ApiResponse[None],
 )
@@ -81,7 +81,7 @@ async def delete(
     "/v1/admin/sys/weak-password/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:weak-password:detail")),
+        Depends(require_permission("sys:weakpassword:detail")),
     ],
     response_model=ApiResponse[SysWeakPasswordSchema],
 )
@@ -99,7 +99,7 @@ async def detail(
     "/v1/admin/sys/weak-password/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:weak-password:page")),
+        Depends(require_permission("sys:weakpassword:page")),
     ],
     response_model=ApiResponse[PageData[SysWeakPasswordSchema]],
 )
@@ -116,7 +116,7 @@ async def page(
     "/v1/admin/sys/weak-password/list",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:weak-password:list")),
+        Depends(require_permission("sys:weakpassword:list")),
     ],
     response_model=ApiResponse[list[SysWeakPasswordSchema]],
 )
