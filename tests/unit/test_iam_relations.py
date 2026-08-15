@@ -8,7 +8,6 @@ from app.core.config.enums import (
 )
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.schema import AccountRoleAssignRequest
-from app.modules.iam.account.service import AccountService
 from app.modules.iam.enums import (
     IamRelationTargetType,
     IamRelationType,
@@ -73,7 +72,9 @@ async def test_assign_account_role_success(db_session):
     db_session.add(account)
     await db_session.flush()
     await db_session.commit()
-    relation = await AccountService(db_session).assign_account_role(
+    from app.modules.iam.account.repository import AccountRepository
+
+    relation = await AccountRepository(db_session).assign_account_to_role(
         AccountRoleAssignRequest(account_id=account.id, role_id=role_id)
     )
     await db_session.commit()
@@ -82,12 +83,12 @@ async def test_assign_account_role_success(db_session):
 
 
 async def test_bind_resource_permission_success(db_session, monkeypatch):
-    async def fake_ensure_registered_permission(permission_key: str) -> None:
+    async def fake_ensure_registered_permission_key(permission_key: str) -> None:
         assert permission_key == "iam:account:create"
 
     monkeypatch.setattr(
-        "app.modules.iam.resource.service.ensure_registered_permission",
-        fake_ensure_registered_permission,
+        "app.modules.iam.resource.service.ensure_registered_permission_key",
+        fake_ensure_registered_permission_key,
     )
 
     resource_id = await _create_resource(
@@ -119,7 +120,9 @@ async def test_assign_group_role_success(db_session):
             scope_type=RoleScopeType.PLATFORM.value,
         ),
     )
-    relation = await GroupService(db_session).assign_group_role(
+    from app.modules.iam.group.repository import GroupRepository
+
+    relation = await GroupRepository(db_session).assign_group_to_role(
         GroupRoleAssignRequest(
             group_id=group_id,
             role_id=role_id,

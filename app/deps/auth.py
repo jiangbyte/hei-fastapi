@@ -10,8 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.exceptions.business import AuthenticationError, AuthorizationError
-from app.core.interfaces import resolve
-from app.core.interfaces.account_lookup import AccountLookupProtocol
 from app.core.observability.context import account_id_ctx, account_type_ctx
 from app.core.security.account_type import assert_account_type_allowed
 from app.core.security.permission import PermissionChecker
@@ -43,11 +41,9 @@ async def get_current_account(
     """解析并校验当前账户，同时写入账户上下文。"""
     account_id_ctx.set(session.account_id)
     account_type_ctx.set(session.account_type)
-    from typing import cast
+    from app.modules.iam.account.repository import AccountRepository
 
-    account = await cast(AccountLookupProtocol, resolve("account_lookup")).get_active_account_by_id(
-        db, session.account_id
-    )
+    account = await AccountRepository(db).get_account_by_id(session.account_id)
     if (
         not account
         or account.cancelled_at is not None

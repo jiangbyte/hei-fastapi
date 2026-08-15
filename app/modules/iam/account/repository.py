@@ -75,7 +75,7 @@ class AccountRepository:
         return entity
 
     async def get_account_by_id(self, account_id: str) -> SysAccount | None:
-        """按 ID 查询账户（AccountLookupProtocol 约定入口）。"""
+        """按 ID 查询账户。"""
         return await self.get_by_id(account_id)
 
     async def list_accounts_by_ids(self, account_ids: list[str]) -> list[SysAccount]:

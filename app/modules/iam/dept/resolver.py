@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-实现 DataScopeResolverProtocol — 部门树的部门及子部门 ID 查询。
+部门数据范围解析器 — 展开部门及全部子部门 ID。
 """
 from collections import defaultdict
 from collections.abc import Iterable

@@ -489,6 +489,32 @@ class AuthService:
         ) and not await self.account_repo.has_identity(account.id, AccountIdentityType.PHONE)
         return bool(force_email), bool(force_phone)
 
+    async def refresh_session(
+        self, token: str, account_type: AccountType
+    ) -> LoginResponse:
+        """刷新当前会话（滑动 TTL）并返回最新登录结果，会话失效时抛错。"""
+        session = await session_store.get(token)
+        if session is None:
+            raise AuthenticationError("Session expired or invalid")
+        if str(session.account_type) != account_type.value:
+            raise BusinessError("账号类型不匹配")
+        await session_store.touch(token)
+        account = await self.account_repo.get_required(session.account_id)
+        force_bind_email, force_bind_phone = await self._force_bind_flags(
+            account, account_type
+        )
+        return LoginResponse(
+            token=session.token,
+            account_id=session.account_id,
+            account_type=account_type,
+            password_expired=session.password_expired,
+            password_expiry_warning_days=await self.password_expiry_warning_days(
+                session.account_id
+            ),
+            force_bind_email=force_bind_email,
+            force_bind_phone=force_bind_phone,
+        )
+
     async def register_portal(self, payload: RegisterRequest) -> RegisterResponse:
         """执行门户注册（ACCOUNT/EMAIL/PHONE 通道）：创建账户、资料、默认角色/部门。"""
         policy = get_register_policy(AccountType.PORTAL)
@@ -609,18 +635,15 @@ class AuthService:
         return response
 
     async def _allocate_account_from_contact(self, base: str) -> str:
-        """由邮箱/手机号派生唯一账号名（保留字母数字，冲突追加序号）。"""
+        """由邮箱/手机号派生唯一账号名（保留字母数字，注入熵降低碰撞）。"""
         sanitized = "".join(ch for ch in base if ch.isalnum()).lower()[:16]
-        if not sanitized:
-            sanitized = f"user{uuid4().hex[:6]}"
-        candidate = sanitized
-        index = 0
-        while await self.account_repo.get_account_by_identifier(
+        candidate = sanitized or f"user{uuid4().hex[:6]}"
+        if await self.account_repo.get_account_by_identifier(
             candidate, [AccountIdentityType.ACCOUNT]
-        ) is not None:
-            index += 1
-            candidate = f"{sanitized}{index}"
-        return candidate
+        ) is None:
+            return candidate
+        # 极低概率碰撞：追加短熵后直接返回（一次查询收尾，避免逐序号循环）。
+        return f"{candidate[:12]}{uuid4().hex[:6]}"
 
     async def _assign_register_defaults(self, account_id: str, account_type: AccountType) -> None:
         """为注册账户分配策略中配置的默认角色与部门。"""

@@ -116,9 +116,16 @@ class FileService:
         if len(entities) != len(unique_ids):
             raise NotFoundError("File not found")
         async with transactional(self.db):
-            for entity in entities:
-                storage = self._get_storage(self._resolve_entity_storage_config(entity))
-                await asyncio.to_thread(storage.delete_object, entity.object_name)
+            # 对象存储删除为外部 I/O，并发执行避免逐文件串行等待。
+            await asyncio.gather(
+                *(
+                    asyncio.to_thread(
+                        self._get_storage(self._resolve_entity_storage_config(entity)).delete_object,
+                        entity.object_name,
+                    )
+                    for entity in entities
+                )
+            )
             await self.repo.delete_many(unique_ids)
 
     async def delete_by_object_name(self, object_name: str) -> None:

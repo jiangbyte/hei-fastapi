@@ -35,7 +35,7 @@ portal_router = APIRouter()
 
 
 @admin_router.get(
-    "/v1/admin/message/feedbacks/page",
+    "/v1/admin/sys/feedbacks/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:feedback:page")),
@@ -51,7 +51,7 @@ async def page(
 
 
 @admin_router.get(
-    "/v1/admin/message/feedbacks/detail",
+    "/v1/admin/sys/feedbacks/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:feedback:detail")),
@@ -67,7 +67,7 @@ async def detail(
 
 
 @admin_router.post(
-    "/v1/admin/message/feedbacks/update",
+    "/v1/admin/sys/feedbacks/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:feedback:update")),
@@ -85,7 +85,7 @@ async def update(
 
 
 @admin_router.post(
-    "/v1/admin/message/feedbacks/delete",
+    "/v1/admin/sys/feedbacks/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:feedback:delete")),
@@ -105,7 +105,7 @@ async def delete(
 
 
 @admin_router.post(
-    "/v1/admin/message/feedbacks/submit",
+    "/v1/admin/sys/feedbacks/submit",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[None],
 )
@@ -120,7 +120,7 @@ async def admin_submit(
 
 
 @admin_router.get(
-    "/v1/admin/message/feedbacks/my-page",
+    "/v1/admin/sys/feedbacks/my-page",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[PageData[MsgFeedbackSchema]],
 )
@@ -134,7 +134,7 @@ async def admin_my_page(
 
 
 @admin_router.get(
-    "/v1/admin/message/feedbacks/my-detail",
+    "/v1/admin/sys/feedbacks/my-detail",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[MsgFeedbackSchema],
 )
@@ -148,7 +148,7 @@ async def admin_my_detail(
 
 
 @portal_router.post(
-    "/v1/portal/message/feedbacks/submit",
+    "/v1/portal/sys/feedbacks/submit",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -163,7 +163,7 @@ async def submit(
 
 
 @portal_router.get(
-    "/v1/portal/message/feedbacks/my-page",
+    "/v1/portal/sys/feedbacks/my-page",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[PageData[MsgFeedbackSchema]],
 )
@@ -177,7 +177,7 @@ async def my_page(
 
 
 @portal_router.get(
-    "/v1/portal/message/feedbacks/my-detail",
+    "/v1/portal/sys/feedbacks/my-detail",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[MsgFeedbackSchema],
 )

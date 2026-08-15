@@ -50,17 +50,3 @@ async def emit(event_name: str, **kwargs: Any) -> None:
         except Exception:
             logger.exception("Error in event handler %s for event %s", handler, event_name)
 
-
-def emit_sync(event_name: str, **kwargs: Any) -> None:
-    """同步发布事件；协程处理器不会被等待，仅告警。"""
-    for handler in _signal(event_name).receivers_for(None):
-        try:
-            result = handler(**kwargs)
-            if inspect.iscoroutine(result):
-                logger.warning(
-                    "Sync emit %s called async handler %s; result not awaited",
-                    event_name,
-                    handler,
-                )
-        except Exception:
-            logger.exception("Error in event handler %s for event %s", handler, event_name)

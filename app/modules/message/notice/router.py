@@ -36,7 +36,7 @@ portal_router = APIRouter()
 
 
 @portal_router.get(
-    "/v1/portal/message/notices/list",
+    "/v1/portal/sys/notices/list",
     response_model=ApiResponse[PageData[MsgNoticeSchema]],
 )
 async def portal_notice_list(
@@ -49,7 +49,7 @@ async def portal_notice_list(
 
 
 @admin_router.post(
-    "/v1/admin/message/notices/create",
+    "/v1/admin/sys/notices/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:create")),
@@ -66,7 +66,7 @@ async def create(
 
 
 @admin_router.post(
-    "/v1/admin/message/notices/update",
+    "/v1/admin/sys/notices/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:update")),
@@ -83,7 +83,7 @@ async def update(
 
 
 @admin_router.post(
-    "/v1/admin/message/notices/delete",
+    "/v1/admin/sys/notices/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:delete")),
@@ -100,7 +100,7 @@ async def delete(
 
 
 @admin_router.get(
-    "/v1/admin/message/notices/detail",
+    "/v1/admin/sys/notices/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:detail")),
@@ -116,7 +116,7 @@ async def detail(
 
 
 @admin_router.get(
-    "/v1/admin/message/notices/page",
+    "/v1/admin/sys/notices/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:page")),
@@ -132,7 +132,7 @@ async def page(
 
 
 @admin_router.post(
-    "/v1/admin/message/notices/publish",
+    "/v1/admin/sys/notices/publish",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:publish")),
@@ -150,7 +150,7 @@ async def publish(
 
 
 @admin_router.post(
-    "/v1/admin/message/notices/revoke",
+    "/v1/admin/sys/notices/revoke",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:revoke")),
@@ -167,7 +167,7 @@ async def revoke(
 
 
 @admin_router.post(
-    "/v1/admin/message/notices/pin",
+    "/v1/admin/sys/notices/pin",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("message:notice:pin")),
@@ -186,7 +186,7 @@ async def pin(
 def register_current_user_routes(router: APIRouter, account_type: AccountType) -> None:
     """为指定账户类型动态注册「我的消息」相关路由。"""
     # 与静态装饰器相同：字面量 /v1/ + 账户类型段（勿另造版本常量）。
-    base = f"/v1/{account_type_url_segment(account_type)}/message/notices"
+    base = f"/v1/{account_type_url_segment(account_type)}/sys/notices"
     deps = [Depends(require_account_type(account_type))]
 
     @router.get(

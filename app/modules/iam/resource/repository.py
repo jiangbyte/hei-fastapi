@@ -312,15 +312,32 @@ class ResourceRepository:
 
     async def delete_button(self, button_id: str) -> None:
         """删除按钮资源及其权限挂载，非按钮资源时抛冲突错误。"""
-        button = await self.get_required(button_id)
-        if button.resource_type != ResourceType.BUTTON.value:
+        await self.delete_buttons([button_id])
+
+    async def delete_buttons(self, button_ids: list[str]) -> None:
+        """批量删除按钮资源及其权限挂载（单次校验 + 单条批量 DELETE）。
+
+        替代逐按钮 4 条 SQL 的循环，避免 N+1。
+        """
+        unique_ids = list(dict.fromkeys(button_ids))
+        if not unique_ids:
+            return
+        non_button = (
+            await self.db.execute(
+                select(SysResource.id).where(
+                    SysResource.id.in_(unique_ids),
+                    SysResource.resource_type != ResourceType.BUTTON.value,
+                )
+            )
+        ).first()
+        if non_button is not None:
             raise ConflictError("Resource is not a button")
-        await self.relations.delete_subject_relations(
+        await self.relations.delete_subject_relations_many(
             IamRelationSubjectType.RESOURCE.value,
-            button_id,
-            IamRelationType.RESOURCE_PERMISSION,
+            unique_ids,
+            [IamRelationType.RESOURCE_PERMISSION],
         )
-        await self.delete_many([button_id])
+        await self.delete_many(unique_ids)
 
     async def list_resource_permissions(
         self,

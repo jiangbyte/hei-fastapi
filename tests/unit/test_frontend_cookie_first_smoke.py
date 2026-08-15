@@ -22,14 +22,13 @@ def test_portal_storage_does_not_persist_token():
     assert "function setToken" not in storage
 
 
-def test_admin_axios_skips_localstorage_authorization():
+def test_admin_axios_attaches_local_token_as_header():
+    # 会话采用 Cookie 优先 + Authorization 头兜底双通道：拦截器从本地会话读取 token 附加请求头。
     interceptors = (ROOT / "web/admin/src/utils/axios/request-interceptors.ts").read_text(
         encoding="utf-8"
     )
-    assert "localStorage.getItem('token')" not in interceptors
-    assert 'localStorage.getItem("token")' not in interceptors
-    assert "headers.Authorization" not in interceptors
-    assert "setItem" not in interceptors
+    assert "getToken()" in interceptors
+    assert "config.headers.Authorization = token" in interceptors
     assert "setupRequestInterceptor" in interceptors
 
 

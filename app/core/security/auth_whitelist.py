@@ -61,7 +61,7 @@ def _builtin_portal_public_paths() -> tuple[str, ...]:
         f"{base}/sys/banners/interaction",
         f"{base}/sys/dicts/tree",
         f"{base}/sys/resources/current",
-        f"{base}/message/notices/list",
+        f"{base}/sys/notices/list",
     )
 
 

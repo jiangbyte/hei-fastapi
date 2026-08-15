@@ -202,6 +202,27 @@ async def portal_login(
     )
 
 
+@admin_router.post(
+    "/v1/admin/auth/refresh",
+    response_model=LoginApiResponse,
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+)
+@portal_router.post(
+    "/v1/portal/auth/refresh",
+    response_model=LoginApiResponse,
+    dependencies=[Depends(require_account_type(AccountType.PORTAL))],
+)
+async def auth_refresh(
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> LoginApiResponse:
+    """刷新当前会话（滑动 TTL）并返回最新登录信息。"""
+    account_type = (
+        AccountType.ADMIN if session.account_type == AccountType.ADMIN else AccountType.PORTAL
+    )
+    return success(await AuthService(db).refresh_session(session.token, account_type))
+
+
 @admin_router.post("/v1/admin/send-login-code")
 @portal_router.post("/v1/portal/send-login-code")
 async def send_login_code(

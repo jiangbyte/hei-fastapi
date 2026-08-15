@@ -3,16 +3,12 @@
 from sqlalchemy import select
 
 from app.core.config.enums import AccountType, DataScope
-from app.core.interfaces import register
 from app.core.security.data_scope import build_data_scope_filter, list_dept_and_child_ids
 from app.core.security.session import SessionPayload
 from app.modules.iam.dept.model import SysDept
-from app.modules.iam.dept.resolver import resolver as dept_data_scope_resolver
 from app.modules.iam.enums import IamRelationType
 from app.modules.iam.relation.model import SysIamRelation
 from tests.iam_relation_helpers import account_dept
-
-register("data_scope_resolver", dept_data_scope_resolver)
 
 
 async def test_data_scope_defaults_to_self(db_session):

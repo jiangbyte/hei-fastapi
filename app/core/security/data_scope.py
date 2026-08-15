@@ -14,8 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.config.enums import DataScope
-from app.core.interfaces import resolve
-from app.core.interfaces.data_scope_resolver import DataScopeResolverProtocol
 from app.core.security.session import PermissionGrantPayload, SessionPayload
 
 
@@ -109,11 +107,10 @@ async def build_data_scope_filter(
 
 
 async def list_dept_and_child_ids(db: AsyncSession, dept_ids: Iterable[str]) -> list[str]:
-    """通过部门解析器展开部门及所有子部门 ID。"""
-    from typing import cast
+    """展开部门及所有子部门 ID（延迟导入避免 core→module 循环依赖）。"""
+    from app.modules.iam.dept.resolver import resolver as dept_resolver
 
-    resolver = cast(DataScopeResolverProtocol, resolve("data_scope_resolver"))
-    return await resolver.list_dept_and_child_ids(db, dept_ids)
+    return await dept_resolver.list_dept_and_child_ids(db, dept_ids)
 
 
 def _in_or_false(column, values: Iterable[str]) -> ColumnElement[bool]:

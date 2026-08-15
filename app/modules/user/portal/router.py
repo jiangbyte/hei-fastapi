@@ -94,7 +94,7 @@ async def get_me(
 
 
 @router.post(
-    "/v1/portal/user-center/profile/update",
+    "/v1/portal/profile/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -109,7 +109,7 @@ async def update_user_center_profile(
 
 
 @router.post(
-    "/v1/portal/user-center/avatar/upload",
+    "/v1/portal/profile/avatar/upload",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[PortalUserCenterAvatarUpdateResponse],
 )
@@ -130,7 +130,7 @@ async def upload_user_center_avatar(
 
 
 @router.post(
-    "/v1/portal/user-center/phone/send-code",
+    "/v1/portal/profile/phone/send-code",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -152,7 +152,7 @@ async def send_user_center_phone_code(
 
 
 @router.post(
-    "/v1/portal/user-center/email/send-code",
+    "/v1/portal/profile/email/send-code",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -174,7 +174,7 @@ async def send_user_center_email_code(
 
 
 @router.post(
-    "/v1/portal/user-center/password/send-code",
+    "/v1/portal/profile/password/send-code",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -194,7 +194,7 @@ async def send_user_center_password_code(
 
 
 @router.post(
-    "/v1/portal/user-center/password/update",
+    "/v1/portal/profile/password/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -222,7 +222,7 @@ async def update_user_center_password(
 
 
 @router.post(
-    "/v1/portal/user-center/phone/update",
+    "/v1/portal/profile/phone/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )
@@ -241,7 +241,7 @@ async def update_user_center_phone(
 
 
 @router.post(
-    "/v1/portal/user-center/email/update",
+    "/v1/portal/profile/email/update",
     dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[None],
 )

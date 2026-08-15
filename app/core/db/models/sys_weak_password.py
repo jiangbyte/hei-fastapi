@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-弱密码库表模型 — ORM 定义在 platform 层供密码策略查询。
+弱密码库表模型 — 供密码策略查询。
 """
 from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column

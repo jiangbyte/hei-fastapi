@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-弱密码库管理端接口：弱密码的增删改查与列表。
+弱密码库管理端接口：弱密码的增删改查与列表（无业务层，直接走仓储）。
 """
 
 from typing import Annotated
@@ -9,11 +9,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
-from app.core.response.pagination import PageData
+from app.core.response.pagination import PageData, build_page
 from app.core.response.schema import ApiResponse, success
-from app.core.schema.base import IdQuery, IdsRequest
+from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
+from app.modules.sys.weak_password.repository import WeakPasswordRepository
 from app.modules.sys.weak_password.schema import (
     SysWeakPasswordSchema,
     WeakPasswordAdminPageQuery,
@@ -21,7 +22,6 @@ from app.modules.sys.weak_password.schema import (
     WeakPasswordListQuery,
     WeakPasswordUpdateRequest,
 )
-from app.modules.sys.weak_password.service import WeakPasswordService
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ async def create(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """新增弱密码。"""
-    await WeakPasswordService(db).create(payload)
+    await WeakPasswordRepository(db).create(payload)
     return success()
 
 
@@ -56,7 +56,7 @@ async def update(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """更新弱密码。"""
-    await WeakPasswordService(db).update(payload)
+    await WeakPasswordRepository(db).update(payload)
     return success()
 
 
@@ -73,7 +73,7 @@ async def delete(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """批量删除弱密码。"""
-    await WeakPasswordService(db).delete(payload)
+    await WeakPasswordRepository(db).delete_many(payload.ids)
     return success()
 
 
@@ -90,7 +90,9 @@ async def detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[SysWeakPasswordSchema]:
     """查询弱密码详情。"""
-    return success(await WeakPasswordService(db).detail(query))
+    return success(
+        to_schema(SysWeakPasswordSchema, await WeakPasswordRepository(db).get_required(query.id))
+    )
 
 
 @router.get(
@@ -106,7 +108,8 @@ async def page(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PageData[SysWeakPasswordSchema]]:
     """分页查询弱密码。"""
-    return success(await WeakPasswordService(db).page_admin(query))
+    items, total = await WeakPasswordRepository(db).page_admin(query)
+    return success(build_page(query, total, to_schema_list(SysWeakPasswordSchema, items)))
 
 
 @router.get(
@@ -122,4 +125,5 @@ async def list_all(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[list[SysWeakPasswordSchema]]:
     """列出全部弱密码。"""
-    return success(await WeakPasswordService(db).list_all(query))
+    items = await WeakPasswordRepository(db).list_all(query)
+    return success(to_schema_list(SysWeakPasswordSchema, items))

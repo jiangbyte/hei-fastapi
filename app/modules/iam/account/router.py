@@ -18,23 +18,17 @@ from app.deps.db import get_db_session
 from app.modules.iam.account.schema import (
     AccountAdminPageQuery,
     AccountCreateRequest,
-    AccountDeptAssignRequest,
     AccountGrantClientResourceRequest,
     AccountGrantDeptRequest,
     AccountGrantGroupRequest,
     AccountGrantResourceRequest,
     AccountGrantRoleRequest,
-    AccountGroupAssignRequest,
     AccountOwnClientResourceResponse,
     AccountOwnDeptResponse,
     AccountOwnGroupResponse,
     AccountOwnResourceResponse,
     AccountOwnRoleResponse,
-    AccountRoleAssignRequest,
     AccountUpdateRequest,
-    SysAccountDeptRelSchema,
-    SysAccountGroupRelSchema,
-    SysAccountRoleRelSchema,
     SysAccountSchema,
 )
 from app.modules.iam.account.service import AccountService
@@ -122,54 +116,6 @@ async def page(
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[PageData[SysAccountSchema]]:
     return success(await AccountService(db).page_admin(query, session))
-
-
-@router.post(
-    "/v1/admin/account-roles",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("iam:account:grantrole")),
-    ],
-    response_model=ApiResponse[SysAccountRoleRelSchema],
-)
-async def assign_account_role(
-    payload: AccountRoleAssignRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[SysAccountRoleRelSchema]:
-    return success(await AccountService(db).assign_account_role(payload, session))
-
-
-@router.post(
-    "/v1/admin/account-groups",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("iam:account:grantgroup")),
-    ],
-    response_model=ApiResponse[SysAccountGroupRelSchema],
-)
-async def assign_account_group(
-    payload: AccountGroupAssignRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[SysAccountGroupRelSchema]:
-    return success(await AccountService(db).assign_account_group(payload, session))
-
-
-@router.post(
-    "/v1/admin/account-depts",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("iam:account:grantdept")),
-    ],
-    response_model=ApiResponse[SysAccountDeptRelSchema],
-)
-async def assign_account_dept(
-    payload: AccountDeptAssignRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[SysAccountDeptRelSchema]:
-    return success(await AccountService(db).assign_account_dept(payload, session))
 
 
 @router.get(

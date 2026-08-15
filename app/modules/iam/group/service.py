@@ -35,9 +35,7 @@ from app.modules.iam.group.schema import (
     GroupOwnRoleResponse,
     GroupOwnUserResponse,
     GroupResourceGrantInfo,
-    GroupRoleAssignRequest,
     GroupUpdateRequest,
-    SysGroupRoleRelSchema,
     SysGroupSchema,
 )
 from app.modules.iam.relation.model import SysIamRelation
@@ -114,18 +112,6 @@ class GroupService:
         schemas = to_schema_list(SysGroupSchema, items)
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
-
-    async def assign_group_role(
-        self,
-        payload: GroupRoleAssignRequest,
-        session: SessionPayload | None = None,
-    ) -> SysGroupRoleRelSchema:
-        """为账户组追加单个角色，传入 session 时校验可见性。"""
-        if session is not None:
-            await self._ensure_groups_visible(session, "iam:group:grantrole", [payload.group_id])
-            await self._ensure_roles_visible(session, "iam:group:grantrole", [payload.role_id])
-        async with transactional(self.db):
-            return to_schema(SysGroupRoleRelSchema, await self.repo.assign_group_to_role(payload))
 
     async def own_user(
         self,

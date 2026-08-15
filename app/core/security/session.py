@@ -152,18 +152,35 @@ class SessionStore:
         ]
 
     async def list_sessions_by_tokens(self, tokens: list[str]) -> list[SessionPayload]:
-        """批量读取 token 会话，顺手清理全局索引里的过期 token。"""
+        """批量读取 token 会话（MGET），顺手清理全局索引里的过期 token。"""
         unique_tokens = list(dict.fromkeys(tokens))
+        if not unique_tokens:
+            return []
+        redis = self._get_required_redis()
+        raw_values = await self._get_many(
+            redis, [login_token_key(token) for token in unique_tokens]
+        )
         sessions: list[SessionPayload] = []
         stale_tokens: list[str] = []
-        for token in unique_tokens:
-            session = await self.get(token)
-            if session:
-                sessions.append(session)
+        for token, raw in zip(unique_tokens, raw_values, strict=False):
+            if raw is None:
+                stale_tokens.append(token)
+                continue
+            raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+            try:
+                data = json.loads(raw_text)
+            except (ValueError, TypeError):
+                stale_tokens.append(token)
+                continue
+            data.setdefault("client_resource_ids", [])
+            data.setdefault("client_permission_keys", [])
+            session = SessionPayload(**data)
+            checked = await self._check_idle_timeout(redis, session)
+            if checked is not None:
+                sessions.append(checked)
             else:
                 stale_tokens.append(token)
         if stale_tokens:
-            redis = self._get_required_redis()
             await redis.srem(login_tokens_key(), *stale_tokens)
         return sessions
 

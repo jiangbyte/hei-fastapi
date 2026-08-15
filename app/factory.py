@@ -56,14 +56,9 @@ def create_app() -> FastAPI:
         register_auth_root_callable(root)
     register_outbox_handlers(enqueue_outbox, claim_pending_outbox)
 
-    # 服务注册与事件订阅（原模块清单 services / event_handlers 声明的显式化）。
-    from app.core.interfaces import register as register_interface
-    from app.modules.iam.account.lookup import account_lookup
-    from app.modules.iam.dept.resolver import resolver as dept_data_scope_resolver
+    # 事件订阅。
     from app.modules.sys.audit.event_handler import register as register_audit_event_handler
 
-    register_interface("account_lookup", account_lookup)
-    register_interface("data_scope_resolver", dept_data_scope_resolver)
     register_audit_event_handler()
 
     app = FastAPI(

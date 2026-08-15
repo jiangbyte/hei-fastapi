@@ -13,7 +13,7 @@ from app.core.config.settings import settings
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, BusinessError
 from app.core.response.pagination import PageData, build_page
-from app.core.schema.base import IdQuery, IdsRequest, to_schema
+from app.core.schema.base import IdQuery, IdsRequest
 from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
 from app.core.security.password import hash_password
 from app.core.security.session import SessionPayload
@@ -26,24 +26,18 @@ from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.account.schema import (
     AccountAdminPageQuery,
     AccountCreateRequest,
-    AccountDeptAssignRequest,
     AccountGrantClientResourceRequest,
     AccountGrantDeptRequest,
     AccountGrantGroupRequest,
     AccountGrantResourceRequest,
     AccountGrantRoleRequest,
-    AccountGroupAssignRequest,
     AccountOwnClientResourceResponse,
     AccountOwnDeptResponse,
     AccountOwnGroupResponse,
     AccountOwnResourceResponse,
     AccountOwnRoleResponse,
     AccountResourceGrantInfo,
-    AccountRoleAssignRequest,
     AccountUpdateRequest,
-    SysAccountDeptRelSchema,
-    SysAccountGroupRelSchema,
-    SysAccountRoleRelSchema,
     SysAccountSchema,
 )
 from app.modules.iam.client.service import ClientResourceService
@@ -203,63 +197,6 @@ class AccountService:
         accounts, total = await self.repo.page_admin(query, data_scope_filter)
         items = await AccountQueryService(self.db).build_account_schemas(accounts)
         return build_page(query, total, items)
-
-    async def assign_account_role(
-        self,
-        payload: AccountRoleAssignRequest,
-        session: SessionPayload | None = None,
-    ) -> SysAccountRoleRelSchema:
-        """为账户追加单个角色，传入 session 时校验账户与角色可见性。"""
-        if session is not None:
-            await self._ensure_accounts_visible(
-                session,
-                "iam:account:grantrole",
-                [payload.account_id],
-            )
-            await self._ensure_roles_visible(session, "iam:account:grantrole", [payload.role_id])
-        async with transactional(self.db):
-            return to_schema(
-                SysAccountRoleRelSchema,
-                await self.repo.assign_account_to_role(payload),
-            )
-
-    async def assign_account_group(
-        self,
-        payload: AccountGroupAssignRequest,
-        session: SessionPayload | None = None,
-    ) -> SysAccountGroupRelSchema:
-        """为账户追加单个账户组，传入 session 时校验账户与组可见性。"""
-        if session is not None:
-            await self._ensure_accounts_visible(
-                session,
-                "iam:account:grantgroup",
-                [payload.account_id],
-            )
-            await self._ensure_groups_visible(session, "iam:account:grantgroup", [payload.group_id])
-        async with transactional(self.db):
-            return to_schema(
-                SysAccountGroupRelSchema,
-                await self.repo.assign_account_to_group(payload),
-            )
-
-    async def assign_account_dept(
-        self,
-        payload: AccountDeptAssignRequest,
-        session: SessionPayload | None = None,
-    ) -> SysAccountDeptRelSchema:
-        """为账户追加单个部门，传入 session 时校验账户与部门可见性。"""
-        if session is not None:
-            await self._ensure_accounts_visible(
-                session,
-                "iam:account:grantdept",
-                [payload.account_id],
-            )
-            await self._ensure_depts_visible(session, "iam:account:grantdept", [payload.dept_id])
-        async with transactional(self.db):
-            return to_schema(
-                SysAccountDeptRelSchema,
-                await self.repo.assign_account_to_dept(payload),
-            )
 
     async def own_resource(
         self,

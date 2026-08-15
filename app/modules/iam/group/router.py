@@ -29,9 +29,7 @@ from app.modules.iam.group.schema import (
     GroupOwnRoleQuery,
     GroupOwnRoleResponse,
     GroupOwnUserResponse,
-    GroupRoleAssignRequest,
     GroupUpdateRequest,
-    SysGroupRoleRelSchema,
     SysGroupSchema,
 )
 from app.modules.iam.group.service import GroupService
@@ -120,22 +118,6 @@ async def page(
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[PageData[SysGroupSchema]]:
     return success(await GroupService(db).page_admin(query, session))
-
-
-@router.post(
-    "/v1/admin/group-roles",
-    dependencies=[
-        Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("iam:group:grantrole")),
-    ],
-    response_model=ApiResponse[SysGroupRoleRelSchema],
-)
-async def assign_group_role(
-    payload: GroupRoleAssignRequest,
-    db: Annotated[AsyncSession, Depends(get_db_session)],
-    session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[SysGroupRoleRelSchema]:
-    return success(await GroupService(db).assign_group_role(payload, session))
 
 
 @router.get(

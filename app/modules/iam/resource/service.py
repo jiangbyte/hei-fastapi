@@ -137,10 +137,9 @@ class ResourceService:
             return (await self._build_button_schemas([await self.repo.get_required(payload.id)]))[0]
 
     async def delete_button(self, payload: IdsRequest) -> None:
-        """批量删除按钮资源。"""
+        """批量删除按钮资源（单次批量 DELETE，避免逐条 N+1）。"""
         async with transactional(self.db):
-            for button_id in dict.fromkeys(payload.ids):
-                await self.repo.delete_button(button_id)
+            await self.repo.delete_buttons(payload.ids)
 
     async def list_resource_tree(
         self,
