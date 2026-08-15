@@ -11,16 +11,57 @@ from __future__ import annotations
 import logging
 import os
 import socket
+import sys
 import threading
 
 # snailjob 包在导入时即按默认 log/snailjob.log 初始化文件日志；
 # 必须先设置环境变量，让默认配置也使用统一日志目录，避免生成独立的 log/ 目录。
 os.environ.setdefault("SNAIL_LOG_LOCAL_FILENAME", "logs/snailjob.log")
 
+# Windows 控制台默认 cp1252 编码，snailjob 库的日志含中文会触发 UnicodeEncodeError；
+# 在导入库之前把标准流切到 UTF-8（errors=replace 兜底），避免刷屏与日志丢失。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, OSError, ValueError):
+        pass
+
+# 先加载应用设置（该模块不导入 snailjob）。
+from app.core.config.settings import settings  # noqa: E402
+
+# 关键：snail-job-python 的 __init__ 链在“首次导入”时就会让 log/main/rpc/grpc 各自
+# 捕获全局 settings 单例（默认是库的 demo 值），之后调用 configure_settings() 也更新不了
+# 这些已捕获的引用——网络层会一直用 demo 的 namespace/group/token 去认证。
+# 因此必须在首次导入 snailjob 之前，把应用配置映射为库读取的环境变量（SNAIL_*）。
+_sj = settings.snail_job
+os.environ["SNAIL_SERVER_HOST"] = str(_sj.server_host)
+os.environ["SNAIL_SERVER_PORT"] = str(_sj.server_port)
+os.environ["SNAIL_HOST_IP"] = str(_sj.host_ip or "127.0.0.1")
+os.environ["SNAIL_HOST_PORT"] = str(_sj.host_port)
+os.environ["SNAIL_NAMESPACE"] = _sj.namespace
+os.environ["SNAIL_GROUP_NAME"] = _sj.group_name
+os.environ["SNAIL_TOKEN"] = _sj.token
+os.environ["SNAIL_LABELS"] = _sj.labels
+
 from snailjob.config import configure_settings  # noqa: E402
 from snailjob.main import client_main  # noqa: E402
 
-from app.core.config.settings import settings
+
+def _fix_snailjob_log_encoding() -> None:
+    """库的本地文件日志未指定 encoding，Windows 下按 cp1252 写中文会 UnicodeEncodeError。
+
+    TimedRotatingFileHandler 的流在导入时已打开，这里就地把它切到 UTF-8（errors=replace）。
+    """
+    for _name in ("SnailJob Local Logger", "SnailJob Remote Logger"):
+        _logger = logging.getLogger(_name)
+        for _handler in list(_logger.handlers):
+            try:
+                _handler.stream.reconfigure(encoding="utf-8", errors="replace")
+            except (AttributeError, OSError, ValueError):
+                pass
+
+
+_fix_snailjob_log_encoding()
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +70,7 @@ _executor_thread: threading.Thread | None = None
 
 
 def apply_snailjob_settings() -> None:
-    """把应用 Settings 写入 snail-job-python 全局配置。"""
+    """把应用 Settings 写入 snail-job-python 全局配置（与环境变量预映射保持同步）。"""
     sj = settings.snail_job
     configure_settings(
         snail_server_host=sj.server_host,
