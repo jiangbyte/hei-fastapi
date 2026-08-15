@@ -2,240 +2,271 @@
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.116%2B-009688?logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2%20Async-D71F00?logo=sqlalchemy&logoColor=white)
 ![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?logo=redis&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supported-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Supported-DC382D?logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
-面向中后台与通用业务的全栈脚手架：FastAPI 异步后端 + Vue 3 管理端 + React 门户 + uni-app 管理端。
+HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应用同时提供管理端（Admin）与门户（Portal）两套 API**，配合同仓维护的三个前端工程，覆盖账号认证、组织权限（RBAC）、系统管理、消息反馈与运营工作台等常用能力，开箱即用、可按需裁剪。功能与 [hei-boot](https://github.com/jiangbyte/hei-boot)（Spring Boot）保持 API 契约对齐。
 
-账户体系为 **ADMIN** / **PORTAL**。业务模块通过 `app/routers.py` 显式装配（对齐 hei-boot "explicit deps, no bundle"）；内置 IAM/RBAC、系统配置、文件存储、消息、代码生成、SnailJob 定时任务、Alembic 迁移与可选可观测性。
+- **后端**：Python 3.11+ · FastAPI · SQLAlchemy 2 Async · Pydantic v2 · PostgreSQL · Redis · Gunicorn + Uvicorn · SnailJob
+- **前端**：`web/admin`（Vue 3 / Naive UI）· `web/portal`（React / Ant Design）· `web/admin-uniapp`（uni-app）
+- **数据约定**：对外 JSON 字段标量（含 boolean / 数字）统一按字符串收发
 
-> 个人开发，有 bug 欢迎提：jiangbytebiz@163.com
+## 功能特性
 
-## 姊妹项目
+**认证与账号（`app/modules/auth`）**
 
-| 项目 | 说明 | 协议 |
-| :--- | :--- | :--- |
-| [**hei-boot**](https://github.com/jiangbyte/hei-boot) | Spring Boot 工程化脚手架 | Apache License 2.0 |
-| [**hei-gin**](https://github.com/jiangbyte/hei-gin) | Go 轻量级后端框架 | MIT |
-| [**hei-fastapi**](https://github.com/jiangbyte/hei-fastapi) | FastAPI 原型项目（早期阶段，仅供参考） | MIT |
+- 双端登录：ADMIN / PORTAL 两套独立账号体系与会话（Web 使用 HttpOnly Cookie，uni-app 使用 Authorization）
+- 账号 / 邮箱 / 手机号多种身份登录，密码登录（RSA 加密传输）与验证码登录（OTP）
+- 图形验证码（SVG / PNG）、登录失败锁定与限流防护
+- 忘记 / 重置密码、门户注册（ACCOUNT / EMAIL / PHONE 通道）
+- 三方登录：GitHub、Gitee、QQ、微信开放平台、微信小程序；管理员可绑定 / 解绑
 
----
+**组织与权限（`app/modules/iam`）**
 
-## 仓库结构
+- 账号、角色、部门、用户组、岗位管理
+- 菜单资源、资源模块、客户端资源多层授权（RBAC）
+- 在线会话查询与强制下线
 
-单一发行包（`app`），uv 管理依赖（`uv.lock` / `uv sync`）。基础设施与业务同包分层，模块内自含、无插件式装配。
+**系统管理（`app/modules/sys`）**
 
-```text
-app/                 应用包（业务聚合，模块内自含）
-  core/              平台基础设施（由原 app.core + app.platform 合并）
-    config/          静态 settings + DB 驱动的运行期动态配置
-    security/        会话、权限注册、脱敏、数据范围
-    db/ cache/ storage/  数据库、缓存、对象存储
-    tasks/           任务与 SnailJob 客户端
-    observability/   日志、指标、追踪
-    cloud/ email/ sms/ push/ secrets/  云渠道与通知
-  deps/              依赖注入
-  middleware/        ASGI 中间件（鉴权、审计、限流、安全头、追踪）
-  modules/           业务模块（auth / iam / sys / message / user / dashboard / internal / biz）
-  routers.py         显式路由装配（对齐 hei-boot "explicit deps, no bundle"）
-  db_models.py       ORM 模型注册清单（供 Alembic）
-migrations/          Alembic 迁移（只管表结构）
-scripts/db/          迁移与业务数据导入导出
-scripts/docker/      本地 SnailJob Server 编排（compose + psql 初始化/种子脚本）
-tests/               后端测试
-web/
-  admin/             Vue 3 管理端（Naive UI）
-  portal/            React 19 门户（Ant Design）
-  admin-uniapp/      uni-app 管理端（H5 / 小程序）
-docker-compose.yml   后端 + 可选 admin / portal profile
-entrypoint.sh        api | migrate | seed（默认 api）
-dev.sh               启动本机已有的 postgres / redis / minio / rustfs 容器
-shutdown.sh          停止本机 entrypoint 拉起的 gunicorn
-```
+- 数据字典、系统配置（`sys_config`，敏感配置加密存储）、Banner、文件存储（Local / MinIO / RustFS / 阿里云 OSS / 腾讯云 COS）
+- 弱口令清单、密码策略、操作审计、代码生成
+- 公告 / 通知、意见反馈（管理端 + 门户双端）
 
----
+**运营与调度**
+
+- 运营工作台（`app/modules/dashboard`）：账号、会话、审计、文件等核心指标概览与 7 日趋势
+- SnailJob 定时任务：注销账号清理、Banner 定时上下架、审计量级告警、本地文件清理
 
 ## 技术栈
 
-| 类别 | 技术 |
-|---|---|
-| 后端 | FastAPI / SQLAlchemy 2 Async / Pydantic v2 / Gunicorn + Uvicorn |
-| 数据 | PostgreSQL（推荐）/ Redis；可选 MySQL、SQLite extras |
-| 任务 | SnailJob（外部 Server + `snail-job-python` 执行器） |
-| 存储 | Local / MinIO / RustFS / 阿里云 OSS / 腾讯云 COS（`sys_config` 维护） |
-| 密钥 | Fernet（`APP__CONFIG_CRYPTO_KEY`）或 Vault KV v2 |
-| 可观测性 | structlog；可选 Prometheus `/metrics`、OpenTelemetry / OTLP |
-| 管理端 | Vue 3 / Naive UI / Vite / TypeScript / Pinia / UnoCSS |
-| 门户端 | React 19 / Ant Design 6 / Vite / TypeScript / Zustand / UnoCSS |
-| 移动端 | uni-app 3 / Vue 3 / Pinia / uview-pro |
+| 分类 | 选型 |
+| :--- | :--- |
+| 语言 / 框架 | Python 3.11+、FastAPI 0.116+、Pydantic v2、SQLAlchemy 2 Async（asyncpg / aiosqlite） |
+| 数据 | PostgreSQL（推荐），可选 MySQL / SQLite extras；Alembic 迁移管理表结构 |
+| 缓存 / 会话 | Redis（会话、验证码、操作审计 Redis Stream）、HttpOnly Cookie + Header 双通道会话 |
+| 安全 | RSA 密码加密传输、Fernet（`APP__CONFIG_CRYPTO_KEY`）或 Vault KV v2、登录锁定 / 限流、数据脱敏 |
+| 任务 | SnailJob（外部 Server + `snail-job-python` 执行器，单进程内嵌） |
+| 观测 / 运维 | structlog；可选 Prometheus `/metrics`、OpenTelemetry / OTLP；存活 / 就绪探针 |
+| 其他 | uv 依赖管理（`uv.lock` / `uv sync`）、Gunicorn + Uvicorn |
 
----
+| 前端 | 技术 |
+| :--- | :--- |
+| `web/admin` | Vue 3.5、Naive UI 2、Pinia、Vue Router、Vite 8、TypeScript |
+| `web/portal` | React 19、Ant Design 6、zustand、Vite 8、TypeScript |
+| `web/admin-uniapp` | uni-app 3（H5 / 小程序） |
 
-## 功能概览
+## 架构
 
-- **权限**：账号、角色、部门、用户组、岗位、资源菜单、客户端模块/资源、数据范围
-- **会话**：Web 使用 HttpOnly Cookie；uni-app 使用本地 Authorization token；在线会话可强制下线
-- **系统**：字典、配置（`sys_config`）、文件、Banner、弱口令、密码策略、操作审计 / 登录日志、代码生成
-- **消息**：通知、公告、反馈；邮件 / 短信 / 推送走运行态配置
-- **前端**：Admin 动态菜单与 Dashboard；Portal 登录/注册、公告、反馈、个人中心、账号注销；uni-app 管理端能力
-- **运维**：存活/就绪探针；配置变更当前进程立即重载，其它实例经 Redis 订阅刷新
+后端只有**一个可运行应用** `app`（FastAPI），按请求前缀区分管理端与门户两套接口，双账号体系会话相互隔离；业务能力按模块划分，由 `app/routers.py` 显式装配（对齐 hei-boot "explicit deps, no bundle"）。
 
-API 全局前缀 `/api`，完整路径写在路由装饰器上（如 `/v1/admin/...`、`/v1/portal/...`）。
-
-HTTP JSON：**标量均为字符串**（含 `code`、分页字段、业务 bool/int）。
-
-健康检查：
-
-| 路径 | 说明 |
-|---|---|
-| `GET /` | 进程存活（`{"status":"ok"}`） |
-| `GET /api/v1/internal/health/live` | 存活探针 |
-| `GET /api/v1/internal/health/ready` | 就绪探针（DB / Redis / 配置同步 / 存储等） |
-
-Swagger 默认关闭。本地需要文档时在 `.env` 设 `SWAGGER__ENABLED=true`，然后访问 `http://127.0.0.1:8000/docs`。
-
----
+| 分层 | 说明 |
+| :--- | :--- |
+| `app/core` | 平台基础设施：config / security / db / cache / storage / tasks / observability / cloud / email / sms / push / secrets |
+| `app/deps` / `middleware` | 依赖注入与 ASGI 中间件（鉴权、审计、限流、安全头、追踪） |
+| `app/modules` | 业务模块：auth / iam / sys / profile / dashboard / internal / biz（代码生成样板） |
+| `migrations` | Alembic 迁移（只管表结构，业务种子见 `scripts/db/seed`） |
+| `web/*` | 独立前端工程（无共享依赖层） |
 
 ## 快速开始
 
-### 1. 基础设施
+### 环境要求
 
-准备 PostgreSQL 与 Redis（可用 `./dev.sh` 启动本机已有的 `dev-postgres` / `dev-redis` / `dev-minio` / `dev-rustfs` 容器）。
+- Python 3.11+ 与 [uv](https://docs.astral.sh/uv/)（依赖管理）
+- PostgreSQL、Redis
+- Node.js 22+ 与 pnpm 9+（前端）
 
-### 2. 后端
+### 1. 初始化数据库
 
-依赖管理使用 [uv](https://docs.astral.sh/uv/)（普通 pip 虚拟环境，非 conda）：
+表结构由 Alembic 迁移管理，业务种子数据以 `scripts/db/seed/data.sql` 为权威来源（含 `superadmin` 账号、菜单、权限、字典、配置）。
+
+```bash
+# 创建数据库
+createdb -U postgres -h 127.0.0.1 hei_fastapi
+
+# 迁移表结构
+python scripts/db/migrate.py
+
+# 导入业务种子数据
+python scripts/db/import_data.py
+```
+
+### 2. 启动后端
+
+开发默认配置见 `.env.example`：
+
+- 数据库：`postgresql+asyncpg://postgres:123456@127.0.0.1:5432/hei_fastapi`
+- Redis：`redis://127.0.0.1:6379/0`
 
 ```bash
 uv sync --extra dev --extra postgres    # 创建 .venv 并安装依赖（含 uv.lock 锁定版本）
 
 cp .env.example .env
-# 配置 DB__URL、REDIS__URL、SNAIL_JOB__*
-# 生产还需 APP__CONFIG_CRYPTO_KEY（Fernet，同时用于配置加解密、存储 AK/SK、文件 URL 签名）
+# 按需配置 DB__URL / REDIS__URL / SNAIL_JOB__*；生产还需 APP__CONFIG_CRYPTO_KEY
 # 本地看 Swagger：SWAGGER__ENABLED=true
 
-python scripts/db/migrate.py
-python scripts/db/import_data.py   # 导入 scripts/db/seed/data.sql（含 superadmin 等业务数据）
-./entrypoint.sh
+./entrypoint.sh                          # api（默认）/ migrate / seed
 ```
 
-- API：`http://127.0.0.1:8000`
-- 文档：先开 `SWAGGER__ENABLED=true`，再访问 `http://127.0.0.1:8000/docs`
-- 维护命令：`./entrypoint.sh migrate` / `./entrypoint.sh seed`
-- 停止本机进程：`./shutdown.sh`
+启动后可访问：
 
-种子账号：导入 `data.sql` 后管理端账号为 `superadmin`（口令以导出当时为准）。
+| 地址 | 说明 |
+| :--- | :--- |
+| http://127.0.0.1:8000 | Admin / Portal API |
+| http://127.0.0.1:8000/docs | Swagger 接口文档（需 `SWAGGER__ENABLED=true`） |
+| http://127.0.0.1:8000/api/v1/internal/health/live | 存活探针 |
+| http://127.0.0.1:8000/api/v1/internal/health/ready | 就绪探针（DB / Redis / 配置同步 / 存储等） |
 
-### SnailJob（外部 Server，应用内嵌执行器）
+维护命令：`./entrypoint.sh migrate` / `./entrypoint.sh seed`；停止本机进程：`./shutdown.sh`。
 
-调度中心为**独立的 SnailJob Server**；应用在 lifespan 启动时**内嵌**一个后台线程执行器（单进程模型，无需独立 worker 进程），配置 `SNAIL_JOB__*` 即接入。与 hei-boot 共用同一 Server 时靠 **独立 namespace + group** 隔离：
-
-| 项 | 默认值 |
-|---|---|
-| namespace name | `hei-fastapi` |
-| namespace unique_id | `a8c3e5f17b924d6e9f0a1b2c3d4e5f60` |
-| group | `hei_fastapi_admin` |
-| token | `SJ_heiFastapiAdminToken1234567890ab` |
-
-（hei-boot 使用 Default / `hei_boot_admin`，互不冲突。）
-
-#### 本地 Server
+### 3. 启动前端
 
 ```bash
-# 1) Postgres 上建库 snail_job（角色示例 admin/123456）
-# 2) 初始化：schema（若缺）+ 本仓种子，纯 psql、无 Flyway
-./scripts/docker/snailjob-init.sh
-
-# 3) 启动 Server（控制台 9189，RPC 17888）
-docker compose -f scripts/docker/docker-compose.snailjob.yml up -d
+cd web/admin && pnpm install && pnpm dev    # http://127.0.0.1:5173
+cd web/portal && pnpm install && pnpm dev   # http://127.0.0.1:5174
 ```
 
-控制台：`http://127.0.0.1:9189/snail-job`（种子后 admin / 123456）。切换到 namespace `hei-fastapi`，可见组 `hei_fastapi_admin` 与下列任务。
+前端开发模式通过 Vite 将 `/api` 代理到后端 `http://127.0.0.1:8000`。
 
-| 执行器名 | Cron（种子） | 说明 |
-|---|---|---|
-| `accountPurgeCancelledAccounts` | `0 0 3 * * ?` | 清理过期注销账户（args 可传保留天数，默认 `15`） |
-| `bannerFlushInteractions` | `0 */5 * * * ?` | Banner 交互增量刷库 |
-| `bannerStatusJob` | `0 */5 * * * ?` | 按 start_at/end_at 同步 ENABLED/DISABLED |
-| `auditAnalysisCycle` | `0 */5 * * * ?` | 审计告警分析（受 `AUDIT_ALERT` 开关影响） |
-| `sysFileCleanupLocalOrphans` | `0 0 * * * ?` | 清理本地存储孤儿文件 |
+### 默认账号
 
-`SNAIL_JOB__ENABLED=false` 时应用内不启动执行器线程。Docker 中请把 `SNAIL_JOB__HOST_IP` 设为 Server 可达地址，并发布客户端端口 `17889`。
+| 端 | 地址 | 账号 | 密码 |
+| :--- | :--- | :--- | :--- |
+| Admin | http://localhost:5173 | `superadmin` | `123456` |
+| Portal | http://localhost:5174 | `user` | `123456` |
 
-应用启动后控制台应看到 `py-xxxxxxx` 客户端上线。更多说明见 [scripts/docker/README.md](scripts/docker/README.md)。
+> 口令以 `data.sql` 导出当时为准。登录需要图形验证码（验证码明文小写 SHA-256 存入 Redis，TTL 5 分钟）。**生产环境首次启动后请立即修改默认密码。**
 
-### 3. 管理端
+## 界面预览
 
-```bash
-cd web/admin && pnpm install && pnpm dev
+### 门户 Portal
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/portal-login.png" alt="门户登录" /></td>
+    <td width="50%"><img src="docs/images/portal-home.png" alt="门户首页" /></td>
+  </tr>
+  <tr>
+    <td align="center">登录</td>
+    <td align="center">首页</td>
+  </tr>
+</table>
+
+### 管理端 Admin · 登录 / 工作台
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-login.png" alt="管理端登录" /></td>
+    <td width="50%"><img src="docs/images/admin-dashboard.png" alt="运营工作台" /></td>
+  </tr>
+  <tr>
+    <td align="center">登录</td>
+    <td align="center">运营工作台</td>
+  </tr>
+</table>
+
+### 管理端 Admin · 组织权限
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-iam-account.png" alt="账号管理" /></td>
+    <td width="50%"><img src="docs/images/admin-iam-role.png" alt="角色管理" /></td>
+  </tr>
+  <tr>
+    <td align="center">账号管理</td>
+    <td align="center">角色管理</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-iam-resource.png" alt="资源授权" /></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td align="center">资源授权</td>
+    <td></td>
+  </tr>
+</table>
+
+### 管理端 Admin · 系统运维
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-sys-config.png" alt="系统配置" /></td>
+    <td width="50%"><img src="docs/images/admin-sys-dict.png" alt="字典管理" /></td>
+  </tr>
+  <tr>
+    <td align="center">系统配置</td>
+    <td align="center">字典管理</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-sys-audit.png" alt="操作审计" /></td>
+    <td width="50%"><img src="docs/images/admin-sys-codegen.png" alt="代码生成" /></td>
+  </tr>
+  <tr>
+    <td align="center">操作审计</td>
+    <td align="center">代码生成</td>
+  </tr>
+</table>
+
+## 项目结构
+
+```text
+hei-fastapi
+├── app                          # 应用包（FastAPI 单进程内嵌 SnailJob 执行器）
+│   ├── core                     # 平台基础设施（config / security / db / cache / storage / tasks / observability / cloud / email / sms / push / secrets）
+│   ├── deps                     # 依赖注入
+│   ├── middleware               # ASGI 中间件（鉴权、审计、限流、安全头、追踪）
+│   ├── modules                  # 业务模块（auth / iam / sys / profile / dashboard / internal / biz 样板）
+│   ├── routers.py               # 显式路由装配（/api 前缀 + OpenAPI tags）
+│   └── db_models.py             # ORM 模型注册清单（供 Alembic）
+├── migrations                   # Alembic 迁移
+├── scripts
+│   ├── db/                      # 迁移与数据导入导出（seed/data.sql 权威业务种子）
+│   └── docker/                  # 本地 SnailJob Server 编排
+├── tests                        # 后端测试（pytest）
+├── web                          # 前端（admin / portal / admin-uniapp）
+├── docs                         # 文档与界面截图
+├── docker-compose.yml           # 后端 + 可选 admin / portal profile
+├── entrypoint.sh                # api | migrate | seed（默认 api）
+└── dev.sh / shutdown.sh         # 本机开发辅助
 ```
 
-`http://127.0.0.1:5173` · [说明](web/admin/README.md)
+## 主要 API
 
-### 4. 门户端
+| 前缀 | 用途 |
+| :--- | :--- |
+| `/api/v1/admin/**` | 管理端接口 |
+| `/api/v1/portal/**` | 门户接口 |
+| `/api/v1/files/**` | 公开文件读取（可配置） |
+| `/api/v1/internal/**` | 健康探针 / 集群内部接口（勿对公网暴露） |
+| `/docs`、`/openapi.json` | Swagger 接口文档（默认关闭） |
 
-```bash
-cd web/portal && pnpm install && pnpm dev
-```
+常用接口：`/api/v1/{admin|portal}/login`、`/captcha`、`/oauth/**`、`/sys/**`（账号、角色、字典、配置、公告、反馈等）、`/profile/**`、`/dashboard/overview`。
 
-`http://127.0.0.1:5174` · [说明](web/portal/README.md)
+## 配置说明
 
-### 5. uni-app 管理端
+运行配置分为两层：**环境变量**（`.env`，双下划线分组如 `DB__URL`）与 **`sys_config` 表**（运行态业务配置）。
 
-```bash
-cd web/admin-uniapp && pnpm install && pnpm dev:h5
-```
+| 配置项 | 说明 | 默认（dev） |
+| :--- | :--- | :--- |
+| `DB__URL` | PostgreSQL 连接（asyncpg） | `postgresql+asyncpg://postgres:123456@127.0.0.1:5432/hei_fastapi` |
+| `REDIS__URL` | Redis 连接（会话、验证码、审计） | `redis://127.0.0.1:6379/0` |
+| `APP__CONFIG_CRYPTO_KEY` | 敏感配置加密密钥（Fernet），无默认值 | 空 |
+| `APP__HOST` / `APP__PORT` | 监听地址 / 端口 | `127.0.0.1` / `8000` |
+| `SWAGGER__ENABLED` | 是否开启 `/docs` | `false` |
+| `SNAIL_JOB__*` | SnailJob Server 连接与执行器配置 | — |
+| `SECRETS__BACKEND` | 密钥后端（`fernet` / `vault`） | `fernet` |
+| `OBSERVABILITY__*` | 可观测性总开关与 Prometheus / OTLP 配置 | 关 |
 
-`.env` 中 `VITE_PORT=5174`，与门户默认端口相同；同时开发时请改其一。后端 CORS 默认包含 `5173` / `5174` / `5163`。
+`sys_config` 运行态配置：`AUTH_*` / `PASSWORD_*` / `MAIL_*` / `SMS_*` / `PUSH_*` / `AUDIT_ALERT_*` / `STORAGE_*` / `COPYRIGHT_*`。配置变更后当前进程立即重载，其它实例经 Redis 订阅刷新。
 
-[说明](web/admin-uniapp/README.md)
+## 生产部署
 
----
-
-## 配置
-
-| 位置 | 内容 |
-|---|---|
-| `.env` | 监听、DB、Redis、SnailJob、CORS、加密 key、Swagger、密钥后端、可观测性 |
-| `sys_config` | 运行态业务配置：`AUTH_*` / `PASSWORD_*` / `MAIL_*` / `SMS_*` / `PUSH_*` / `AUDIT_ALERT_*` / `STORAGE_*` / `COPYRIGHT_*` |
-
-配置变更后当前进程立即重载，其它实例经 Redis 订阅刷新。
-
-常用环境变量：
-
-```bash
-SWAGGER__ENABLED=true                 # 打开 /docs /redoc /openapi.json
-SECRETS__BACKEND=fernet               # 或 vault
-OBSERVABILITY__ENABLED=true           # 总开关
-OBSERVABILITY__METRICS_ENABLED=true   # Prometheus /metrics
-OBSERVABILITY__TRACING_ENABLED=true
-OBSERVABILITY__OTLP_ENABLED=true
-OBSERVABILITY__OTLP_ENDPOINT=http://127.0.0.1:4318
-```
-
-`app/modules/biz/cg_test_*` 为代码生成示例模块（生成产物保留在生产包中）。
-
----
-
-## 新增业务模块
-
-1. 在 `app/modules/...` 增加 `model` / `schema` / `repository` / `service` / `router`
-2. 在 `app/routers.py` 显式挂载新路由（`/api` 前缀 + OpenAPI tags）
-3. 在 `app/db_models.py` 追加模型模块导入（供 Alembic 元数据）
-4. `python scripts/db/makemigration.py "..."` → `python scripts/db/migrate.py`
-5. Admin 使用动态路由时，在 DB 写入资源并授权即可
-
-也可用管理端 **代码生成** 产出上述文件并写回工作区。业务代码放在模块内，避免改动 `app/factory.py`、`app/lifespan.py`。
-
----
-
-## Docker
-
-`docker-compose.yml` 要求 `.env` 中已设置 `APP__CONFIG_CRYPTO_KEY`、`DB__URL`、`REDIS__URL`。
+### 构建镜像
 
 ```bash
 docker compose run --rm hei migrate
@@ -245,34 +276,51 @@ docker compose up -d --build
 docker compose --profile admin --profile portal up -d --build
 ```
 
+前端镜像由各自 Dockerfile 构建（nginx 托管静态资源，`/api` 反向代理到后端，`BACKEND_URL` 可配）。
+
 | 服务 | 默认端口 |
-|---|---|
+| :--- | :--- |
 | 后端 | `8000`（`BACKEND_PORT`） |
 | SnailJob 客户端 | `17889`（`SNAIL_JOB_CLIENT_PORT`） |
 | Admin | `8081`（`ADMIN_PORT`） |
 | Portal | `8082`（`PORTAL_PORT`） |
 
-健康检查打 `http://127.0.0.1:8000/api/v1/internal/health/live`。
+### 生产必填环境变量
+
+| 变量 | 说明 |
+| :--- | :--- |
+| `DB__URL` | 主库连接（asyncpg） |
+| `REDIS__URL` | Redis 连接（会话与 Redis Stream 审计） |
+| `APP__CONFIG_CRYPTO_KEY` | 敏感配置 Fernet 密钥（无默认值，首次上线必须设置） |
+
+可选：`SNAIL_JOB__*`、`SECRETS__BACKEND=vault`、`OBSERVABILITY__*`、`SWAGGER__ENABLED` 等。
+
+### 上线检查清单
+
+- 轮换 `superadmin` 默认密码与 `APP__CONFIG_CRYPTO_KEY`
+- 关闭 Swagger / 文档公网暴露（默认已关闭）
+- 仅在可信反向代理后开启 `APP__TRUSTED_PROXY_IPS`
+- SnailJob 使用独立 namespace / group 隔离；Docker 中设置 `SNAIL_JOB__HOST_IP` 为 Server 可达地址
+
+## 二次开发
+
+1. 在 `app/modules/...` 增加 `model` / `schema` / `repository` / `service` / `router`
+2. 在 `app/routers.py` 显式挂载新路由（`/api` 前缀 + OpenAPI tags）
+3. 在 `app/db_models.py` 追加模型模块导入（供 Alembic 元数据）
+4. `python scripts/db/makemigration.py "..."` → `python scripts/db/migrate.py`
+5. Admin 使用动态路由时，在 DB 写入资源并授权即可
+
+也可用管理端 **代码生成** 产出上述文件并写回工作区（样板 `app/modules/biz/cg_test_*`）。业务代码放在模块内，避免改动 `app/factory.py`、`app/lifespan.py`。
+
+## 代码贡献
+
+欢迎 Issue 与 PR。提交前请确认：
+
+- Controller 入参与出参符合标量字符串线格式约定（`snake_case`）
+- 遵守模块边界：`app/core` / `app/modules` / `web/*`
+- 后端通过 ruff 与 pytest；文档随行为同步
 
 ```bash
-docker build -t hei-fastapi-admin web/admin
-docker run -d -e BACKEND_URL="http://host.docker.internal:8000" -p 8081:81 hei-fastapi-admin
-
-docker build -t hei-fastapi-portal web/portal
-docker run -d -e BACKEND_URL="http://host.docker.internal:8000" -p 8082:80 hei-fastapi-portal
-```
-
----
-
-## 常用命令
-
-```bash
-python scripts/db/makemigration.py "describe schema change"
-python scripts/db/check_migration.py
-python scripts/db/migrate.py
-python scripts/db/export_data.py
-python scripts/db/import_data.py
-
 python -m ruff check app tests
 python -m pytest
 
@@ -280,15 +328,6 @@ python -m pytest
 pnpm dev && pnpm build && pnpm lint
 ```
 
-- [scripts/README.md](scripts/README.md)
-- [migrations/README.md](migrations/README.md)
-- [scripts/docker/README.md](scripts/docker/README.md)
-- [web/admin/README.md](web/admin/README.md)
-- [web/portal/README.md](web/portal/README.md)
-- [web/admin-uniapp/README.md](web/admin-uniapp/README.md)
+## 许可证
 
----
-
-## License
-
-MIT · [LICENSE](LICENSE)
+本项目使用 [MIT License](LICENSE) 开源协议。
