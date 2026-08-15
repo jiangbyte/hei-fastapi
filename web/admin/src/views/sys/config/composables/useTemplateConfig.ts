@@ -31,6 +31,7 @@ export const SMS_SCENE_LABELS: Record<string, string> = {
 /** 后端当前会发送的邮件场景（可编辑；标注「已接线」）。 */
 export const MAIL_WIRED_SCENES = new Set([
   'REGISTER_SUCCESS',
+  'REGISTER_CODE',
   'LOGIN_CODE',
   'CHANGE_PASSWORD_CODE',
   'RESET_PASSWORD_CODE',
@@ -41,6 +42,7 @@ export const MAIL_WIRED_SCENES = new Set([
 
 /** 后端当前会发送的短信场景。 */
 export const SMS_WIRED_SCENES = new Set([
+  'REGISTER_CODE',
   'LOGIN_CODE',
   'CHANGE_PASSWORD_CODE',
   'BIND_PHONE_CODE',

@@ -47,10 +47,11 @@ class AuditAnalyzer:
         return events
 
     async def _check_brute_force(self, db, threshold: int) -> list[AlertEvent]:
-        """同 IP 1 分钟内多次失败登录。"""
+        """同 IP 分析窗口内多次失败登录。"""
         from app.modules.sys.audit.model import SysOperationAuditLog
 
-        since = datetime.now(UTC) - timedelta(seconds=60)
+        window_seconds = max(60, settings.audit_alert.analysis_interval_seconds)
+        since = datetime.now(UTC) - timedelta(seconds=window_seconds)
         stmt = (
             select(
                 SysOperationAuditLog.ip,

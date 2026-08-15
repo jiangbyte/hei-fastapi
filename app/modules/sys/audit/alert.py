@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
+from app.core.config.reader import config_reader
 from app.core.config.settings import settings
 from app.core.email.sender import send_mail
 from app.core.id_generator.snowflake import generate_snowflake_id
@@ -65,7 +66,12 @@ class AlertDispatcher:
         """汇总当前启用的通知渠道，用于记录到告警历史。"""
         cfg = settings.audit_alert
         parts = []
-        if cfg.notify_email and settings.mail.host and settings.mail.from_email:
+        if (
+            cfg.notify_email
+            and settings.mail.host
+            and settings.mail.from_email
+            and (config_reader.get("AUDIT_ALERT_NOTIFY_EMAIL_TO") or "").strip()
+        ):
             parts.append("email")
         if cfg.notify_push:
             parts.append("push")
@@ -80,10 +86,14 @@ class AlertDispatcher:
         await self._send_webhook(event)
 
     async def _send_email(self, event: AlertEvent) -> None:
-        """邮件发送（静默失败不阻塞流程）。"""
+        """邮件发送（静默失败不阻塞流程），收件人取 AUDIT_ALERT_NOTIFY_EMAIL_TO。"""
         if not settings.audit_alert.notify_email:
             return
         if not settings.mail.host or not settings.mail.from_email:
+            return
+        to_email = (config_reader.get("AUDIT_ALERT_NOTIFY_EMAIL_TO") or "").strip()
+        if not to_email:
+            # 未配置告警收件人则跳过，避免发给发件人自身。
             return
         try:
             subject = f"[{event.severity}] 审计告警: {event.summary}"
@@ -95,7 +105,7 @@ class AlertDispatcher:
             )
             if event.details:
                 body += f"\n详情: {json.dumps(event.details, ensure_ascii=False)}"
-            await send_mail(settings.mail.from_email, subject, body)
+            await send_mail(to_email, subject, body)
         except Exception:
             logger.exception("Failed to send alert email for %s", event.rule_name)
 
