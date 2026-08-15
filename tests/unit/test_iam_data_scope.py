@@ -13,7 +13,7 @@ from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.account.schema import AccountAdminPageQuery
 from app.modules.iam.account.service import AccountService
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
-from app.modules.user.admin.model import AdminUserProfile
+from app.modules.user.admin.model import ProfileUserAdmin
 from tests.iam_relation_helpers import account_dept
 
 
@@ -43,7 +43,7 @@ async def _admin_account(
         )
     )
     db_session.add(
-        AdminUserProfile(account_id=account_id, name=account_name, created_at=now, updated_at=now)
+        ProfileUserAdmin(account_id=account_id, name=account_name, created_at=now, updated_at=now)
     )
     db_session.add(account_dept(account_id, dept_id, created_at=now, updated_at=now))
     await db_session.flush()

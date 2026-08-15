@@ -20,9 +20,8 @@ from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityType
 from app.modules.sys.file.schema import FileUploadRequest
 from app.modules.sys.file.service import FileService
-from app.modules.user.portal.repository import PortalUserProfileRepository
+from app.modules.user.portal.repository import ProfileUserPortalRepository
 from app.modules.user.portal.schema import (
-    PortalProfileUpsertPayload,
     PortalPublicProfileResponse,
     PortalPublicSpaceQuery,
     PortalUserCenterAvatarUpdateResponse,
@@ -30,6 +29,7 @@ from app.modules.user.portal.schema import (
     PortalUserCenterPasswordUpdateRequest,
     PortalUserCenterPhoneUpdateRequest,
     PortalUserCenterProfileUpdateRequest,
+    ProfileUserPortalUpsertPayload,
 )
 
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 头像文件大小上限（2MB）
@@ -40,19 +40,19 @@ AVATAR_CONTENT_TYPES = {  # 允许的头像内容类型及其扩展名
 }
 
 
-class PortalUserProfileService:
+class ProfileUserPortalService:
     """门户账户资料服务，负责资料初始化和显式查询。"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.repo = PortalUserProfileRepository(db)
+        self.repo = ProfileUserPortalRepository(db)
         self.account_repo = AccountRepository(db)
 
     async def create_default_profile(self, account_id: str):
         """为门户账户创建默认资料记录，避免把关联维护下放给数据库。"""
         return await self.repo.create_default(account_id)
 
-    async def upsert_profile(self, payload: PortalProfileUpsertPayload):
+    async def upsert_profile(self, payload: ProfileUserPortalUpsertPayload):
         """创建或更新门户资料。"""
         return await self.repo.upsert(payload)
 
@@ -86,7 +86,7 @@ class PortalUserProfileService:
         profile = await self.repo.get_by_account_id(session.account_id)
         async with transactional(self.db):
             await self.repo.upsert(
-                PortalProfileUpsertPayload(
+                ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
                     name=payload.name,
                     nickname=payload.nickname,
@@ -184,7 +184,7 @@ class PortalUserProfileService:
                 enabled=payload.phone_login_enabled,
             )
             await self.repo.upsert(
-                PortalProfileUpsertPayload(
+                ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
                     name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
@@ -219,7 +219,7 @@ class PortalUserProfileService:
                 enabled=payload.email_login_enabled,
             )
             await self.repo.upsert(
-                PortalProfileUpsertPayload(
+                ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
                     name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,

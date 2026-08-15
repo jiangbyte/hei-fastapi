@@ -11,8 +11,8 @@ from app.core.storage.url import resolve_file_url
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityBindStatus
 from app.modules.iam.schema import AccountIdentitySchema, SysAccountSchema
-from app.modules.user.admin.repository import AdminUserProfileRepository
-from app.modules.user.portal.repository import PortalUserProfileRepository
+from app.modules.user.admin.repository import ProfileUserAdminRepository
+from app.modules.user.portal.repository import ProfileUserPortalRepository
 
 
 class AccountQueryService:
@@ -26,8 +26,8 @@ class AccountQueryService:
         """将账户 ORM 列表批量组装为 SysAccountSchema，避免逐条 N+1 查询。"""
         account_ids = [account.id for account in accounts]
         identities = await self.repo.list_identities_by_account_ids(account_ids)
-        admin_profiles = await AdminUserProfileRepository(self.db).list_by_account_ids(account_ids)
-        portal_profiles = await PortalUserProfileRepository(self.db).list_by_account_ids(
+        admin_profiles = await ProfileUserAdminRepository(self.db).list_by_account_ids(account_ids)
+        portal_profiles = await ProfileUserPortalRepository(self.db).list_by_account_ids(
             account_ids
         )
         identity_map: dict[str, list] = {}

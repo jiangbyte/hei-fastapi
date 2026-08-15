@@ -60,8 +60,8 @@ from app.modules.iam.account.schema import (
 )
 from app.modules.iam.enums import AccountIdentityType
 from app.modules.sys.audit.service import OperationAuditService
-from app.modules.user.portal.repository import PortalUserProfileRepository
-from app.modules.user.portal.schema import PortalProfileUpsertPayload
+from app.modules.user.portal.repository import ProfileUserPortalRepository
+from app.modules.user.portal.schema import ProfileUserPortalUpsertPayload
 
 # 各账户类型对应的密码重置链接模板配置键。
 _PASSWORD_RESET_URL_KEYS = {
@@ -346,8 +346,8 @@ class AuthService:
                 password_hash=hash_password(default_password),
             )
             if payload.account_type == AccountType.PORTAL:
-                await PortalUserProfileRepository(self.db).upsert(
-                    PortalProfileUpsertPayload(
+                await ProfileUserPortalRepository(self.db).upsert(
+                    ProfileUserPortalUpsertPayload(
                         account_id=account.id,
                         name=None,
                         nickname=account_name,
@@ -594,8 +594,8 @@ class AuthService:
                 email=email,
                 phone=phone,
             )
-            await PortalUserProfileRepository(self.db).upsert(
-                PortalProfileUpsertPayload(
+            await ProfileUserPortalRepository(self.db).upsert(
+                ProfileUserPortalUpsertPayload(
                     account_id=account.id,
                     name=payload.name,
                     nickname=nickname,

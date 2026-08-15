@@ -18,15 +18,15 @@ from app.deps.db import get_db_session
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.user.admin.schema import (
-    AdminProfileResponse,
     AdminUserCenterAvatarUpdateResponse,
     AdminUserCenterEmailUpdateRequest,
     AdminUserCenterOrgInfoResponse,
     AdminUserCenterPasswordUpdateRequest,
     AdminUserCenterPhoneUpdateRequest,
     AdminUserCenterProfileUpdateRequest,
+    ProfileUserAdminResponse,
 )
-from app.modules.user.admin.service import AVATAR_MAX_SIZE, AdminUserProfileService
+from app.modules.user.admin.service import AVATAR_MAX_SIZE, ProfileUserAdminService
 from app.modules.user.schema import AdminMeResponse, BindTargetRequest
 
 router = APIRouter()
@@ -49,7 +49,7 @@ async def get_me(
         role_id_names,
         dept_id_names,
         group_id_names,
-    ) = await AdminUserProfileService(db).get_id_name_groups(
+    ) = await ProfileUserAdminService(db).get_id_name_groups(
         session.role_ids,
         session.dept_ids,
         session.group_ids,
@@ -78,7 +78,7 @@ async def get_me(
             password_expired=await is_password_expired(db, session.account_id),
             force_bind_email=force_bind_email,
             force_bind_phone=force_bind_phone,
-            profile=AdminProfileResponse(
+            profile=ProfileUserAdminResponse(
                 account_id=session.account_id,
                 name=account.name,
                 nickname=account.nickname,
@@ -107,7 +107,7 @@ async def update_user_center_profile(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """更新当前管理端账户个人资料。"""
-    await AdminUserProfileService(db).update_current_profile(payload, session)
+    await ProfileUserAdminService(db).update_current_profile(payload, session)
     return success()
 
 
@@ -124,7 +124,7 @@ async def upload_user_center_avatar(
     """上传并更新当前管理端账户头像。"""
     content = await file.read(AVATAR_MAX_SIZE + 1)
     return success(
-        await AdminUserProfileService(db).update_current_avatar(
+        await ProfileUserAdminService(db).update_current_avatar(
             content=content,
             content_type=file.content_type or "",
             session=session,
@@ -168,7 +168,7 @@ async def update_user_center_password(
         payload.old_password,
         payload.new_password,
     )
-    await AdminUserProfileService(db).update_current_password(
+    await ProfileUserAdminService(db).update_current_password(
         payload.model_copy(
             update={
                 "old_password": old_password,
@@ -236,7 +236,7 @@ async def update_user_center_phone(
 ) -> ApiResponse[None]:
     """更新当前管理端账户手机号绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
-    await AdminUserProfileService(db).update_current_phone(
+    await ProfileUserAdminService(db).update_current_phone(
         payload.model_copy(update={"password": password or ""}),
         session,
     )
@@ -255,7 +255,7 @@ async def update_user_center_email(
 ) -> ApiResponse[None]:
     """更新当前管理端账户邮箱绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
-    await AdminUserProfileService(db).update_current_email(
+    await ProfileUserAdminService(db).update_current_email(
         payload.model_copy(update={"password": password or ""}),
         session,
     )
@@ -272,4 +272,4 @@ async def get_user_center_org_info(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[AdminUserCenterOrgInfoResponse]:
     """查询当前管理端账户的角色/部门/群组组织信息。"""
-    return success(await AdminUserProfileService(db).get_org_info(session))
+    return success(await ProfileUserAdminService(db).get_org_info(session))

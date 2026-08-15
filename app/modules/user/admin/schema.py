@@ -14,7 +14,7 @@ from app.core.security.transport import PasswordKeyMixin
 from app.modules.auth.schema import OptionalStr
 
 
-class AdminProfileResponse(ApiSchema):
+class ProfileUserAdminResponse(ApiSchema):
     """管理端账户扩展资料响应模型。"""
 
     account_id: str
@@ -31,7 +31,7 @@ class AdminProfileResponse(ApiSchema):
     updated_at: datetime | None = Field(default=None, examples=["2026-06-17T12:00:00Z"])
 
 
-class AdminProfileUpsertPayload(ApiSchema):
+class ProfileUserAdminUpsertPayload(ApiSchema):
     """管理端账户资料写入载荷。"""
 
     account_id: str

@@ -4,7 +4,7 @@ from app.core.config.enums import AccountType
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.account.schema import AccountCreateRequest
 from app.modules.iam.account.service import AccountService
-from app.modules.user.admin.service import AdminUserProfileService
+from app.modules.user.admin.service import ProfileUserAdminService
 
 
 async def test_create_admin_account_creates_profile(db_session):
@@ -25,5 +25,5 @@ async def test_create_admin_account_creates_profile(db_session):
     account = await AccountRepository(db_session).get_account_by_account("admin2")
     assert account is not None
     assert account.id is not None
-    profile = await AdminUserProfileService(db_session).get_profile(account.id)
+    profile = await ProfileUserAdminService(db_session).get_profile(account.id)
     assert profile is not None

@@ -21,15 +21,15 @@ from app.deps.auth import (
 )
 from app.deps.db import get_db_session
 from app.modules.message.notice.schema import (
-    MsgNoticeAdminPageQuery,
-    MsgNoticeCreateRequest,
-    MsgNoticeSchema,
-    MsgNoticeUpdateRequest,
     MyNoticePageQuery,
     NoticeReadRequest,
     PinNoticeRequest,
+    SysNoticeAdminPageQuery,
+    SysNoticeCreateRequest,
+    SysNoticeSchema,
+    SysNoticeUpdateRequest,
 )
-from app.modules.message.notice.service import MsgNoticeService
+from app.modules.message.notice.service import SysNoticeService
 
 admin_router = APIRouter()
 portal_router = APIRouter()
@@ -37,15 +37,15 @@ portal_router = APIRouter()
 
 @portal_router.get(
     "/v1/portal/sys/notices/list",
-    response_model=ApiResponse[PageData[MsgNoticeSchema]],
+    response_model=ApiResponse[PageData[SysNoticeSchema]],
 )
 async def portal_notice_list(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[MyNoticePageQuery, Depends()],
     session: Annotated[SessionPayload | None, Depends(get_optional_session)] = None,
-) -> ApiResponse[PageData[MsgNoticeSchema]]:
+) -> ApiResponse[PageData[SysNoticeSchema]]:
     """门户端公告列表查询。"""
-    return success(await MsgNoticeService(db).page_portal_list(query, session))
+    return success(await SysNoticeService(db).page_portal_list(query, session))
 
 
 @admin_router.post(
@@ -57,11 +57,11 @@ async def portal_notice_list(
     response_model=ApiResponse[None],
 )
 async def create(
-    payload: MsgNoticeCreateRequest,
+    payload: SysNoticeCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """管理端创建消息。"""
-    await MsgNoticeService(db).create(payload)
+    await SysNoticeService(db).create(payload)
     return success()
 
 
@@ -74,11 +74,11 @@ async def create(
     response_model=ApiResponse[None],
 )
 async def update(
-    payload: MsgNoticeUpdateRequest,
+    payload: SysNoticeUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """管理端更新消息。"""
-    await MsgNoticeService(db).update(payload)
+    await SysNoticeService(db).update(payload)
     return success()
 
 
@@ -95,7 +95,7 @@ async def delete(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """管理端批量删除消息。"""
-    await MsgNoticeService(db).delete(payload)
+    await SysNoticeService(db).delete(payload)
     return success()
 
 
@@ -105,14 +105,14 @@ async def delete(
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:notice:detail")),
     ],
-    response_model=ApiResponse[MsgNoticeSchema],
+    response_model=ApiResponse[SysNoticeSchema],
 )
 async def detail(
     query: Annotated[IdQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[MsgNoticeSchema]:
+) -> ApiResponse[SysNoticeSchema]:
     """管理端查询消息详情。"""
-    return success(await MsgNoticeService(db).detail(query))
+    return success(await SysNoticeService(db).detail(query))
 
 
 @admin_router.get(
@@ -121,14 +121,14 @@ async def detail(
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("sys:notice:page")),
     ],
-    response_model=ApiResponse[PageData[MsgNoticeSchema]],
+    response_model=ApiResponse[PageData[SysNoticeSchema]],
 )
 async def page(
-    query: Annotated[MsgNoticeAdminPageQuery, Depends()],
+    query: Annotated[SysNoticeAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[PageData[MsgNoticeSchema]]:
+) -> ApiResponse[PageData[SysNoticeSchema]]:
     """管理端分页查询消息。"""
-    return success(await MsgNoticeService(db).page_admin(query))
+    return success(await SysNoticeService(db).page_admin(query))
 
 
 @admin_router.post(
@@ -145,7 +145,7 @@ async def publish(
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
     """管理端发布消息。"""
-    await MsgNoticeService(db).publish(payload, session)
+    await SysNoticeService(db).publish(payload, session)
     return success()
 
 
@@ -162,7 +162,7 @@ async def revoke(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """管理端撤回消息。"""
-    await MsgNoticeService(db).revoke(payload)
+    await SysNoticeService(db).revoke(payload)
     return success()
 
 
@@ -179,7 +179,7 @@ async def pin(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """管理端置顶/取消置顶公告。"""
-    await MsgNoticeService(db).pin(payload)
+    await SysNoticeService(db).pin(payload)
     return success()
 
 
@@ -192,28 +192,28 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
     @router.get(
         f"{base}/my-page",
         dependencies=deps,
-        response_model=ApiResponse[PageData[MsgNoticeSchema]],
+        response_model=ApiResponse[PageData[SysNoticeSchema]],
     )
     async def my_page(
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
         query: Annotated[MyNoticePageQuery, Depends()],
-    ) -> ApiResponse[PageData[MsgNoticeSchema]]:
+    ) -> ApiResponse[PageData[SysNoticeSchema]]:
         """当前用户分页查询可见消息。"""
-        return success(await MsgNoticeService(db).page_my(query, session))
+        return success(await SysNoticeService(db).page_my(query, session))
 
     @router.get(
         f"{base}/my-detail",
         dependencies=deps,
-        response_model=ApiResponse[MsgNoticeSchema],
+        response_model=ApiResponse[SysNoticeSchema],
     )
     async def my_detail(
         query: Annotated[IdQuery, Depends()],
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-    ) -> ApiResponse[MsgNoticeSchema]:
+    ) -> ApiResponse[SysNoticeSchema]:
         """当前用户查询消息详情。"""
-        return success(await MsgNoticeService(db).my_detail(query, session))
+        return success(await SysNoticeService(db).my_detail(query, session))
 
     @router.get(
         f"{base}/unread-count",
@@ -225,7 +225,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[int]:
         """当前用户未读消息数。"""
-        return success(await MsgNoticeService(db).count_unread(session))
+        return success(await SysNoticeService(db).count_unread(session))
 
     @router.post(
         f"{base}/read",
@@ -238,7 +238,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[None]:
         """当前用户标记指定消息为已读。"""
-        await MsgNoticeService(db).mark_read(payload, session)
+        await SysNoticeService(db).mark_read(payload, session)
         return success()
 
     @router.post(
@@ -251,7 +251,7 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
         session: Annotated[SessionPayload, Depends(get_current_session)],
     ) -> ApiResponse[None]:
         """当前用户标记全部消息为已读。"""
-        await MsgNoticeService(db).mark_all_read(session)
+        await SysNoticeService(db).mark_all_read(session)
         return success()
 
 

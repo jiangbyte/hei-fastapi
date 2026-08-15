@@ -10,7 +10,7 @@ from app.core.db.base import Base
 from app.core.db.mixins import TimestampMixin
 
 
-class PortalUserProfile(Base, TimestampMixin):
+class ProfileUserPortal(Base, TimestampMixin):
     """门户账户扩展资料表，承接展示资料和联系方式。"""
 
     __tablename__ = "profile_user_portal"

@@ -18,7 +18,6 @@ from app.deps.db import get_db_session
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityBindStatus
 from app.modules.user.portal.schema import (
-    PortalProfileResponse,
     PortalPublicProfileResponse,
     PortalPublicSpaceQuery,
     PortalUserCenterAvatarUpdateResponse,
@@ -26,8 +25,9 @@ from app.modules.user.portal.schema import (
     PortalUserCenterPasswordUpdateRequest,
     PortalUserCenterPhoneUpdateRequest,
     PortalUserCenterProfileUpdateRequest,
+    ProfileUserPortalResponse,
 )
-from app.modules.user.portal.service import AVATAR_MAX_SIZE, PortalUserProfileService
+from app.modules.user.portal.service import AVATAR_MAX_SIZE, ProfileUserPortalService
 from app.modules.user.schema import BindTargetRequest, PortalMeResponse
 
 router = APIRouter()
@@ -52,7 +52,7 @@ async def get_me(
     ) or next((item for item in identities if item.identity_type == "ACCOUNT"), None)
     email_identity = next((item for item in identities if item.identity_type == "EMAIL"), None)
     phone_identity = next((item for item in identities if item.identity_type == "PHONE"), None)
-    profile = await PortalUserProfileService(db).get_profile(session.account_id)
+    profile = await ProfileUserPortalService(db).get_profile(session.account_id)
     avatar = resolve_file_url(profile.avatar if profile else None)
     from app.modules.auth.service import AuthService
     from app.modules.iam.account.password_helper import is_password_expired
@@ -76,7 +76,7 @@ async def get_me(
             password_expired=await is_password_expired(db, session.account_id),
             force_bind_email=force_bind_email,
             force_bind_phone=force_bind_phone,
-            profile=PortalProfileResponse(
+            profile=ProfileUserPortalResponse(
                 account_id=session.account_id,
                 name=profile.name if profile else None,
                 nickname=profile.nickname if profile else None,
@@ -104,7 +104,7 @@ async def update_user_center_profile(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """更新当前门户用户个人资料。"""
-    await PortalUserProfileService(db).update_current_profile(payload, session)
+    await ProfileUserPortalService(db).update_current_profile(payload, session)
     return success()
 
 
@@ -121,7 +121,7 @@ async def upload_user_center_avatar(
     """上传并更新当前门户用户头像。"""
     content = await file.read(AVATAR_MAX_SIZE + 1)
     return success(
-        await PortalUserProfileService(db).update_current_avatar(
+        await ProfileUserPortalService(db).update_current_avatar(
             content=content,
             content_type=file.content_type or "",
             session=session,
@@ -209,7 +209,7 @@ async def update_user_center_password(
         payload.old_password,
         payload.new_password,
     )
-    await PortalUserProfileService(db).update_current_password(
+    await ProfileUserPortalService(db).update_current_password(
         payload.model_copy(
             update={
                 "old_password": old_password,
@@ -233,7 +233,7 @@ async def update_user_center_phone(
 ) -> ApiResponse[None]:
     """更新当前门户用户手机号绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
-    await PortalUserProfileService(db).update_current_phone(
+    await ProfileUserPortalService(db).update_current_phone(
         payload.model_copy(update={"password": password or ""}),
         session,
     )
@@ -252,7 +252,7 @@ async def update_user_center_email(
 ) -> ApiResponse[None]:
     """更新当前门户用户邮箱绑定。"""
     password = (await decrypt_passwords(payload.password_key_id, payload.password))[0]
-    await PortalUserProfileService(db).update_current_email(
+    await ProfileUserPortalService(db).update_current_email(
         payload.model_copy(update={"password": password or ""}),
         session,
     )
@@ -268,7 +268,7 @@ async def get_public_space(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PortalPublicProfileResponse]:
     """查询门户用户公开主页资料。"""
-    return success(await PortalUserProfileService(db).get_public_profile(query))
+    return success(await ProfileUserPortalService(db).get_public_profile(query))
 
 
 def _identity_login_enabled(identity) -> bool:

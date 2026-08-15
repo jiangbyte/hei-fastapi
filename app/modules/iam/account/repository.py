@@ -42,10 +42,10 @@ from app.modules.iam.group.model import SysGroup
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository, account_dept_condition
 from app.modules.iam.role.model import SysRole
-from app.modules.message.feedback.model import MsgFeedback
-from app.modules.message.notice.model import MsgNoticeRead
-from app.modules.user.admin.model import AdminUserProfile
-from app.modules.user.portal.model import PortalUserProfile
+from app.modules.message.feedback.model import SysFeedback
+from app.modules.message.notice.model import SysNoticeRead
+from app.modules.user.admin.model import ProfileUserAdmin
+from app.modules.user.portal.model import ProfileUserPortal
 
 _ACCOUNT_SUBJECT_RELATION_TYPES = [
     IamRelationType.ACCOUNT_ROLE,
@@ -365,12 +365,12 @@ class AccountRepository:
         if not email or not phone:
             admin_profile = (
                 await self.db.execute(
-                    select(AdminUserProfile).where(AdminUserProfile.account_id == account_id)
+                    select(ProfileUserAdmin).where(ProfileUserAdmin.account_id == account_id)
                 )
             ).scalar_one_or_none()
             portal_profile = (
                 await self.db.execute(
-                    select(PortalUserProfile).where(PortalUserProfile.account_id == account_id)
+                    select(ProfileUserPortal).where(ProfileUserPortal.account_id == account_id)
                 )
             ).scalar_one_or_none()
             if not email:
@@ -420,18 +420,18 @@ class AccountRepository:
             )
         )
         await self.db.execute(
-            delete(AdminUserProfile).where(AdminUserProfile.account_id.in_(unique_ids))
+            delete(ProfileUserAdmin).where(ProfileUserAdmin.account_id.in_(unique_ids))
         )
         await self.db.execute(
-            delete(PortalUserProfile).where(PortalUserProfile.account_id.in_(unique_ids))
+            delete(ProfileUserPortal).where(ProfileUserPortal.account_id.in_(unique_ids))
         )
         await self.db.execute(
-            delete(MsgNoticeRead).where(MsgNoticeRead.account_id.in_(unique_ids))
+            delete(SysNoticeRead).where(SysNoticeRead.account_id.in_(unique_ids))
         )
         # 反馈保留工单内容，清空联系方式
         await self.db.execute(
-            update(MsgFeedback)
-            .where(MsgFeedback.submitter_account_id.in_(unique_ids))
+            update(SysFeedback)
+            .where(SysFeedback.submitter_account_id.in_(unique_ids))
             .values(contact=None)
         )
 
@@ -474,8 +474,8 @@ class AccountRepository:
                 (account_identity.account_id == SysAccount.id)
                 & (account_identity.identity_type == AccountIdentityType.ACCOUNT.value),
             )
-            .outerjoin(AdminUserProfile, AdminUserProfile.account_id == SysAccount.id)
-            .outerjoin(PortalUserProfile, PortalUserProfile.account_id == SysAccount.id)
+            .outerjoin(ProfileUserAdmin, ProfileUserAdmin.account_id == SysAccount.id)
+            .outerjoin(ProfileUserPortal, ProfileUserPortal.account_id == SysAccount.id)
         )
         count_stmt = (
             select(func.count(func.distinct(SysAccount.id)))
@@ -484,8 +484,8 @@ class AccountRepository:
                 (account_identity.account_id == SysAccount.id)
                 & (account_identity.identity_type == AccountIdentityType.ACCOUNT.value),
             )
-            .outerjoin(AdminUserProfile, AdminUserProfile.account_id == SysAccount.id)
-            .outerjoin(PortalUserProfile, PortalUserProfile.account_id == SysAccount.id)
+            .outerjoin(ProfileUserAdmin, ProfileUserAdmin.account_id == SysAccount.id)
+            .outerjoin(ProfileUserPortal, ProfileUserPortal.account_id == SysAccount.id)
         )
         if data_scope_filter is not None:
             stmt = stmt.outerjoin(
@@ -502,22 +502,22 @@ class AccountRepository:
         if query.name:
             filters.append(
                 or_(
-                    AdminUserProfile.name.contains(query.name),
-                    PortalUserProfile.name.contains(query.name),
+                    ProfileUserAdmin.name.contains(query.name),
+                    ProfileUserPortal.name.contains(query.name),
                 )
             )
         if query.phone:
             filters.append(
                 or_(
-                    AdminUserProfile.phone.contains(query.phone),
-                    PortalUserProfile.phone.contains(query.phone),
+                    ProfileUserAdmin.phone.contains(query.phone),
+                    ProfileUserPortal.phone.contains(query.phone),
                 )
             )
         if query.email:
             filters.append(
                 or_(
-                    AdminUserProfile.email.contains(query.email),
-                    PortalUserProfile.email.contains(query.email),
+                    ProfileUserAdmin.email.contains(query.email),
+                    ProfileUserPortal.email.contains(query.email),
                 )
             )
         if query.account_type:

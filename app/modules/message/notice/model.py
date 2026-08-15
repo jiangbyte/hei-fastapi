@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-消息数据模型：统一运营消息（MsgNotice）与阅读记录（MsgNoticeRead）。
+消息数据模型：统一运营消息（SysNotice）与阅读记录（SysNoticeRead）。
 """
 
 from datetime import datetime
@@ -23,7 +23,7 @@ from app.core.db.mixins import TimestampMixin
 from app.core.id_generator.snowflake import generate_snowflake_id
 
 
-class MsgNotice(Base, TimestampMixin):
+class SysNotice(Base, TimestampMixin):
     """统一运营消息（通知 / 公告）。"""
 
     __tablename__ = "sys_notice"
@@ -75,7 +75,7 @@ class MsgNotice(Base, TimestampMixin):
     )
 
 
-class MsgNoticeRead(Base):
+class SysNoticeRead(Base):
     """消息阅读记录，对应 sys_notice_read 表。"""
 
     __tablename__ = "sys_notice_read"

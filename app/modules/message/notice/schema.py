@@ -18,7 +18,7 @@ from app.modules.message.target_scope import (
 )
 
 
-class MsgNoticeCreateRequest(ApiSchema):
+class SysNoticeCreateRequest(ApiSchema):
     """创建消息请求。"""
 
     kind: str = Field(min_length=1)
@@ -73,13 +73,13 @@ class MsgNoticeCreateRequest(ApiSchema):
         return self
 
 
-class MsgNoticeUpdateRequest(MsgNoticeCreateRequest):
+class SysNoticeUpdateRequest(SysNoticeCreateRequest):
     """更新消息请求（在创建请求基础上增加 ID）。"""
 
     id: str = Field(min_length=1, max_length=64)
 
 
-class MsgNoticeAdminPageQuery(PageQuery):
+class SysNoticeAdminPageQuery(PageQuery):
     """管理端消息分页查询条件。"""
 
     title: str | None = None
@@ -107,7 +107,7 @@ class PinNoticeRequest(ApiSchema):
     pinned_until: datetime | None = None
 
 
-class MsgNoticeSchema(ApiSchema):
+class SysNoticeSchema(ApiSchema):
     """消息详情响应。"""
 
     id: str

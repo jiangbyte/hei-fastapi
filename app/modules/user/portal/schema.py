@@ -13,7 +13,7 @@ from app.core.security.transport import PasswordKeyMixin
 from app.modules.auth.schema import OptionalStr
 
 
-class PortalProfileResponse(ApiSchema):
+class ProfileUserPortalResponse(ApiSchema):
     """门户账户扩展资料响应模型。"""
 
     account_id: str
@@ -45,7 +45,7 @@ class PortalPublicSpaceQuery(ApiSchema):
     account_id: str = Field(min_length=1, max_length=64)
 
 
-class PortalProfileUpsertPayload(ApiSchema):
+class ProfileUserPortalUpsertPayload(ApiSchema):
     """门户账户资料写入载荷。"""
 
     account_id: str

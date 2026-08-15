@@ -33,7 +33,7 @@ const defaultFormData = {
   phone: '',
   email_login_enabled: false,
   phone_login_enabled: false,
-  // PortalUserProfile / PortalProfileUpsertPayload
+  // ProfileUserPortal / ProfileUserPortalUpsertPayload
   name: '',
   nickname: '',
   avatar: '',

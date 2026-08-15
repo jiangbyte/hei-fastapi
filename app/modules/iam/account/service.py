@@ -49,10 +49,10 @@ from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.user.admin.repository import AdminUserProfileRepository
-from app.modules.user.admin.schema import AdminProfileUpsertPayload
-from app.modules.user.portal.repository import PortalUserProfileRepository
-from app.modules.user.portal.schema import PortalProfileUpsertPayload
+from app.modules.user.admin.repository import ProfileUserAdminRepository
+from app.modules.user.admin.schema import ProfileUserAdminUpsertPayload
+from app.modules.user.portal.repository import ProfileUserPortalRepository
+from app.modules.user.portal.schema import ProfileUserPortalUpsertPayload
 
 
 class AccountService:
@@ -79,12 +79,12 @@ class AccountService:
             )
             match payload.account_type:
                 case AccountType.ADMIN:
-                    await AdminUserProfileRepository(self.db).upsert(
-                        self._admin_profile_payload(account.id, payload),
+                    await ProfileUserAdminRepository(self.db).upsert(
+                        self._profile_user_admin_payload(account.id, payload),
                     )
                 case AccountType.PORTAL:
-                    await PortalUserProfileRepository(self.db).upsert(
-                        self._portal_profile_payload(account.id, payload),
+                    await ProfileUserPortalRepository(self.db).upsert(
+                        self._profile_user_portal_payload(account.id, payload),
                     )
                 case _:
                     raise BusinessError(f"Unsupported account type: {payload.account_type}")
@@ -110,12 +110,12 @@ class AccountService:
             account = await self.repo.get_required(payload.id)
             match account.account_type:
                 case AccountType.ADMIN.value:
-                    await AdminUserProfileRepository(self.db).upsert(
-                        self._admin_profile_payload(payload.id, payload),
+                    await ProfileUserAdminRepository(self.db).upsert(
+                        self._profile_user_admin_payload(payload.id, payload),
                     )
                 case AccountType.PORTAL.value:
-                    await PortalUserProfileRepository(self.db).upsert(
-                        self._portal_profile_payload(payload.id, payload),
+                    await ProfileUserPortalRepository(self.db).upsert(
+                        self._profile_user_portal_payload(payload.id, payload),
                     )
                 case _:
                     raise BusinessError(f"Unsupported account type: {account.account_type}")
@@ -482,13 +482,13 @@ class AccountService:
         if any(dept_id not in set(visible_dept_ids) for dept_id in unique_ids):
             raise AuthorizationError("Dept is outside current data scope")
 
-    def _admin_profile_payload(
+    def _profile_user_admin_payload(
         self,
         account_id: str,
         payload: AccountCreateRequest | AccountUpdateRequest,
-    ) -> AdminProfileUpsertPayload:
+    ) -> ProfileUserAdminUpsertPayload:
         """从账户请求构造管理端用户资料载荷。"""
-        return AdminProfileUpsertPayload(
+        return ProfileUserAdminUpsertPayload(
             account_id=account_id,
             name=payload.name,
             nickname=payload.nickname,
@@ -499,13 +499,13 @@ class AccountService:
             remark=payload.remark,
         )
 
-    def _portal_profile_payload(
+    def _profile_user_portal_payload(
         self,
         account_id: str,
         payload: AccountCreateRequest | AccountUpdateRequest,
-    ) -> PortalProfileUpsertPayload:
+    ) -> ProfileUserPortalUpsertPayload:
         """从账户请求构造门户端用户资料载荷。"""
-        return PortalProfileUpsertPayload(
+        return ProfileUserPortalUpsertPayload(
             account_id=account_id,
             name=payload.name,
             nickname=payload.nickname,

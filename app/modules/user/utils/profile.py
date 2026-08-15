@@ -10,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, account_types_with_profile
 from app.core.exceptions.business import BusinessError
-from app.modules.user.admin.model import AdminUserProfile
-from app.modules.user.admin.repository import AdminUserProfileRepository
-from app.modules.user.portal.model import PortalUserProfile
-from app.modules.user.portal.repository import PortalUserProfileRepository
+from app.modules.user.admin.model import ProfileUserAdmin
+from app.modules.user.admin.repository import ProfileUserAdminRepository
+from app.modules.user.portal.model import ProfileUserPortal
+from app.modules.user.portal.repository import ProfileUserPortalRepository
 
 
 def as_account_type(account_type: AccountType | str) -> AccountType:
@@ -31,9 +31,9 @@ def pick_profile_repo(db: AsyncSession, account_type: AccountType | str):
     account_type = as_account_type(account_type)
     match account_type:
         case AccountType.ADMIN:
-            return AdminUserProfileRepository(db)
+            return ProfileUserAdminRepository(db)
         case AccountType.PORTAL:
-            return PortalUserProfileRepository(db)
+            return ProfileUserPortalRepository(db)
         case _:
             raise BusinessError(f"Unsupported account type for profile: {account_type}")
 
@@ -43,9 +43,9 @@ def pick_profile_model(account_type: AccountType | str):
     account_type = as_account_type(account_type)
     match account_type:
         case AccountType.ADMIN:
-            return AdminUserProfile
+            return ProfileUserAdmin
         case AccountType.PORTAL:
-            return PortalUserProfile
+            return ProfileUserPortal
         case _:
             raise BusinessError(f"Unsupported account type for profile: {account_type}")
 

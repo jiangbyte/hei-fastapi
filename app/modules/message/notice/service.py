@@ -15,28 +15,28 @@ from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
 from app.modules.message.enums import NoticeKind, NoticeStatus
-from app.modules.message.notice.model import MsgNoticeRead
-from app.modules.message.notice.repository import MsgNoticeRepository
+from app.modules.message.notice.model import SysNoticeRead
+from app.modules.message.notice.repository import SysNoticeRepository
 from app.modules.message.notice.schema import (
-    MsgNoticeAdminPageQuery,
-    MsgNoticeCreateRequest,
-    MsgNoticeSchema,
-    MsgNoticeUpdateRequest,
     MyNoticePageQuery,
     NoticeReadRequest,
     PinNoticeRequest,
+    SysNoticeAdminPageQuery,
+    SysNoticeCreateRequest,
+    SysNoticeSchema,
+    SysNoticeUpdateRequest,
 )
 from app.modules.user.utils.profile import enrich_audit_name, enrich_audit_names
 
 
-class MsgNoticeService:
+class SysNoticeService:
     """消息通知业务服务，编排仓储并提供发布/阅读等用例。"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.repo = MsgNoticeRepository(db)
+        self.repo = SysNoticeRepository(db)
 
-    async def create(self, payload: MsgNoticeCreateRequest) -> None:
+    async def create(self, payload: SysNoticeCreateRequest) -> None:
         """创建消息：规范化状态，并在发布时补写发布时间。"""
         async with transactional(self.db):
             data = payload.model_dump()
@@ -52,9 +52,9 @@ class MsgNoticeService:
             data["status"] = status
             if status == NoticeStatus.PUBLISHED.value and not data.get("publish_at"):
                 data["publish_at"] = datetime.now(UTC)
-            await self.repo.create(MsgNoticeCreateRequest(**data))
+            await self.repo.create(SysNoticeCreateRequest(**data))
 
-    async def update(self, payload: MsgNoticeUpdateRequest) -> None:
+    async def update(self, payload: SysNoticeUpdateRequest) -> None:
         """更新消息。"""
         async with transactional(self.db):
             await self.repo.update(payload)
@@ -64,16 +64,16 @@ class MsgNoticeService:
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
-    async def detail(self, query: IdQuery) -> MsgNoticeSchema:
+    async def detail(self, query: IdQuery) -> SysNoticeSchema:
         """管理端查询消息详情，并补充审计人姓名。"""
         entity = await self.repo.get_required(query.id)
-        schema = to_schema(MsgNoticeSchema, entity)
+        schema = to_schema(SysNoticeSchema, entity)
         return await enrich_audit_name(self.db, schema, account_type=AccountType.ADMIN)
 
-    async def page_admin(self, query: MsgNoticeAdminPageQuery) -> PageData[MsgNoticeSchema]:
+    async def page_admin(self, query: SysNoticeAdminPageQuery) -> PageData[SysNoticeSchema]:
         """管理端分页查询消息。"""
         items, total = await self.repo.page_admin(query)
-        schemas = to_schema_list(MsgNoticeSchema, items)
+        schemas = to_schema_list(SysNoticeSchema, items)
         schemas = await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
@@ -106,7 +106,7 @@ class MsgNoticeService:
         self,
         query: MyNoticePageQuery,
         session: SessionPayload,
-    ) -> PageData[MsgNoticeSchema]:
+    ) -> PageData[SysNoticeSchema]:
         """分页查询当前用户可见消息，并标记是否已读。"""
         items, total, read_id_set = await self.repo.page_my(
             query,
@@ -120,7 +120,7 @@ class MsgNoticeService:
         self,
         query: MyNoticePageQuery,
         session: SessionPayload | None = None,
-    ) -> PageData[MsgNoticeSchema]:
+    ) -> PageData[SysNoticeSchema]:
         """门户列表页查询公告（匿名可见，登录后附加个性化信息）。"""
         account_type = AccountType.PORTAL.value
         account_id: str | None = None
@@ -136,7 +136,7 @@ class MsgNoticeService:
         schemas = [_build_schema(item, read_id_set) for item in items]
         return build_page(query, total, schemas)
 
-    async def my_detail(self, query: IdQuery, session: SessionPayload) -> MsgNoticeSchema:
+    async def my_detail(self, query: IdQuery, session: SessionPayload) -> SysNoticeSchema:
         """查询当前用户消息详情，并顺带自增查看数、标记已读。"""
         async with transactional(self.db):
             await self.repo.increment_view_count(query.id)
@@ -163,16 +163,16 @@ class MsgNoticeService:
         """查询给定消息中已被当前用户阅读的 ID 集合。"""
         if not notice_ids:
             return set()
-        stmt = select(MsgNoticeRead.notice_id).where(
-            MsgNoticeRead.notice_id.in_(notice_ids),
-            MsgNoticeRead.account_type == str(session.account_type),
-            MsgNoticeRead.account_id == session.account_id,
+        stmt = select(SysNoticeRead.notice_id).where(
+            SysNoticeRead.notice_id.in_(notice_ids),
+            SysNoticeRead.account_type == str(session.account_type),
+            SysNoticeRead.account_id == session.account_id,
         )
         return set((await self.db.execute(stmt)).scalars().all())
 
 
-def _build_schema(item, read_id_set: set[str]) -> MsgNoticeSchema:
+def _build_schema(item, read_id_set: set[str]) -> SysNoticeSchema:
     """由实体构建消息响应，并标记是否已读。"""
-    schema = to_schema(MsgNoticeSchema, item)
+    schema = to_schema(SysNoticeSchema, item)
     schema.is_read = item.id in read_id_set
     return schema

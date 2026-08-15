@@ -12,10 +12,10 @@ from app.core.storage.url import quote_object_name
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.schema import FileUploadRequest, ObjectNameQuery
 from app.modules.sys.file.service import FileService
-from app.modules.user.admin.model import AdminUserProfile
-from app.modules.user.admin.service import AdminUserProfileService
-from app.modules.user.portal.model import PortalUserProfile
-from app.modules.user.portal.service import PortalUserProfileService
+from app.modules.user.admin.model import ProfileUserAdmin
+from app.modules.user.admin.service import ProfileUserAdminService
+from app.modules.user.portal.model import ProfileUserPortal
+from app.modules.user.portal.service import ProfileUserPortalService
 
 
 def _assert_path_file_url(
@@ -85,10 +85,10 @@ async def test_admin_avatar_update_deletes_previous_file(tmp_path, db_session):
                 object_name="avatars/admin/account-1/old-avatar.png",
             )
         )
-        db_session.add(AdminUserProfile(account_id="account-1", avatar=old_avatar.object_name))
+        db_session.add(ProfileUserAdmin(account_id="account-1", avatar=old_avatar.object_name))
         await db_session.commit()
 
-        response = await AdminUserProfileService(db_session).update_current_avatar(
+        response = await ProfileUserAdminService(db_session).update_current_avatar(
             content=b"new",
             content_type="image/png",
             session=SessionPayload(
@@ -98,7 +98,7 @@ async def test_admin_avatar_update_deletes_previous_file(tmp_path, db_session):
             ),
         )
 
-        profile = await db_session.get(AdminUserProfile, "account-1")
+        profile = await db_session.get(ProfileUserAdmin, "account-1")
         old_record = (
             await db_session.execute(select(SysFile).where(SysFile.id == old_avatar.id))
         ).scalar_one_or_none()
@@ -138,10 +138,10 @@ async def test_portal_avatar_update_deletes_previous_file(tmp_path, db_session):
                 object_name="avatars/portal/account-2/old-avatar.png",
             )
         )
-        db_session.add(PortalUserProfile(account_id="account-2", avatar=old_avatar.object_name))
+        db_session.add(ProfileUserPortal(account_id="account-2", avatar=old_avatar.object_name))
         await db_session.commit()
 
-        response = await PortalUserProfileService(db_session).update_current_avatar(
+        response = await ProfileUserPortalService(db_session).update_current_avatar(
             content=b"new",
             content_type="image/png",
             session=SessionPayload(
@@ -151,7 +151,7 @@ async def test_portal_avatar_update_deletes_previous_file(tmp_path, db_session):
             ),
         )
 
-        profile = await db_session.get(PortalUserProfile, "account-2")
+        profile = await db_session.get(ProfileUserPortal, "account-2")
         old_record = (
             await db_session.execute(select(SysFile).where(SysFile.id == old_avatar.id))
         ).scalar_one_or_none()

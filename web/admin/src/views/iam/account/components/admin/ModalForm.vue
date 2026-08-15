@@ -34,7 +34,7 @@ const defaultFormData = {
   phone: '',
   email_login_enabled: false,
   phone_login_enabled: false,
-  // AdminUserProfile / AdminProfileUpsertPayload
+  // ProfileUserAdmin / ProfileUserAdminUpsertPayload
   name: '',
   nickname: '',
   avatar: '',

@@ -181,11 +181,11 @@ class DeptRepository:
         if not unique_ids:
             return {}
         from app.modules.iam.account.model import SysAccount
-        from app.modules.user.admin.model import AdminUserProfile
+        from app.modules.user.admin.model import ProfileUserAdmin
 
         stmt = (
-            select(SysAccount.id, AdminUserProfile.name)
-            .outerjoin(AdminUserProfile, AdminUserProfile.account_id == SysAccount.id)
+            select(SysAccount.id, ProfileUserAdmin.name)
+            .outerjoin(ProfileUserAdmin, ProfileUserAdmin.account_id == SysAccount.id)
             .where(SysAccount.id.in_(unique_ids))
         )
         rows = (await self.db.execute(stmt)).all()

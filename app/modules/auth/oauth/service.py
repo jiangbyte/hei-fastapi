@@ -41,8 +41,8 @@ from app.modules.iam.account.schema import (
     AccountRoleAssignRequest,
 )
 from app.modules.iam.enums import AccountIdentityType
-from app.modules.user.portal.repository import PortalUserProfileRepository
-from app.modules.user.portal.schema import PortalProfileUpsertPayload
+from app.modules.user.portal.repository import ProfileUserPortalRepository
+from app.modules.user.portal.schema import ProfileUserPortalUpsertPayload
 
 
 def _mask_open_id(open_id: str | None) -> str:
@@ -273,8 +273,8 @@ class AuthOauthService:
                 account=account,
                 account_name=account_name,
             )
-            await PortalUserProfileRepository(self.db).upsert(
-                PortalProfileUpsertPayload(
+            await ProfileUserPortalRepository(self.db).upsert(
+                ProfileUserPortalUpsertPayload(
                     account_id=account.id,
                     nickname=nickname,
                     avatar=profile.avatar,

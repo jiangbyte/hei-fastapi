@@ -29,7 +29,7 @@ from app.modules.iam.group.model import SysGroup
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.model import SysRole
 from app.modules.message.enums import FeedbackStatus
-from app.modules.message.feedback.model import MsgFeedback
+from app.modules.message.feedback.model import SysFeedback
 from app.modules.sys.audit.model import SysOperationAuditLog
 from app.modules.sys.file.model import SysFile
 
@@ -71,7 +71,7 @@ class DashboardService:
             SysOperationAuditLog.success.is_(False),
         )
         feedback_pending = await self._count(
-            MsgFeedback.id, MsgFeedback.status == FeedbackStatus.PENDING.value
+            SysFeedback.id, SysFeedback.status == FeedbackStatus.PENDING.value
         )
 
         return DashboardOverviewResponse(

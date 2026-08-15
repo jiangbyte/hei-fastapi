@@ -8,8 +8,8 @@ from pydantic import Field
 from app.core.config.enums import AccountType
 from app.core.schema.base import ApiSchema
 from app.core.schema.common_schema import IdNameResponse
-from app.modules.user.admin.schema import AdminProfileResponse
-from app.modules.user.portal.schema import PortalProfileResponse
+from app.modules.user.admin.schema import ProfileUserAdminResponse
+from app.modules.user.portal.schema import ProfileUserPortalResponse
 
 
 class BindTargetRequest(ApiSchema):
@@ -37,7 +37,7 @@ class AdminMeResponse(ApiSchema):
     password_expired: bool = False
     force_bind_email: bool = False
     force_bind_phone: bool = False
-    profile: AdminProfileResponse
+    profile: ProfileUserAdminResponse
 
 
 class PortalMeResponse(ApiSchema):
@@ -59,4 +59,4 @@ class PortalMeResponse(ApiSchema):
     password_expired: bool = False
     force_bind_email: bool = False
     force_bind_phone: bool = False
-    profile: PortalProfileResponse
+    profile: ProfileUserPortalResponse

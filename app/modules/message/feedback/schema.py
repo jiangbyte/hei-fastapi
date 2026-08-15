@@ -16,7 +16,7 @@ from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireInt
 
 
-class MsgFeedbackCreateRequest(ApiSchema):
+class SysFeedbackCreateRequest(ApiSchema):
     """创建反馈请求。"""
 
     title: str = Field(min_length=1, max_length=255)
@@ -26,7 +26,7 @@ class MsgFeedbackCreateRequest(ApiSchema):
     attach_object_names: list[str] = Field(default_factory=list)
 
 
-class MsgFeedbackUpdateRequest(ApiSchema):
+class SysFeedbackUpdateRequest(ApiSchema):
     """更新反馈请求（状态与回复）。"""
 
     id: str = Field(min_length=1, max_length=64)
@@ -34,7 +34,7 @@ class MsgFeedbackUpdateRequest(ApiSchema):
     reply: str | None = None
 
 
-class MsgFeedbackAdminPageQuery(PageQuery):
+class SysFeedbackAdminPageQuery(PageQuery):
     """管理端反馈分页查询条件。"""
 
     title: str | None = None
@@ -49,7 +49,7 @@ class MyFeedbackPageQuery(PageQuery):
     pass
 
 
-class MsgFeedbackAttachmentSchema(ApiSchema):
+class SysFeedbackAttachmentSchema(ApiSchema):
     """反馈附件信息。"""
 
     object_name: str
@@ -60,7 +60,7 @@ class MsgFeedbackAttachmentSchema(ApiSchema):
     url: str | None = None
 
 
-class MsgFeedbackSchema(ApiSchema):
+class SysFeedbackSchema(ApiSchema):
     """反馈详情响应，含附件与提交者资料。"""
 
     id: str
@@ -69,7 +69,7 @@ class MsgFeedbackSchema(ApiSchema):
     category: str
     contact: str | None = None
     attach_object_names: list[str] = Field(default_factory=list)
-    attachments: list[MsgFeedbackAttachmentSchema] = Field(default_factory=list)
+    attachments: list[SysFeedbackAttachmentSchema] = Field(default_factory=list)
     status: str
     reply: str | None = None
     replied_by: str | None = None

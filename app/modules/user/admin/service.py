@@ -24,15 +24,15 @@ from app.modules.iam.group.repository import GroupRepository
 from app.modules.iam.role.repository import RoleRepository
 from app.modules.sys.file.schema import FileUploadRequest
 from app.modules.sys.file.service import FileService
-from app.modules.user.admin.repository import AdminUserProfileRepository
+from app.modules.user.admin.repository import ProfileUserAdminRepository
 from app.modules.user.admin.schema import (
-    AdminProfileUpsertPayload,
     AdminUserCenterAvatarUpdateResponse,
     AdminUserCenterEmailUpdateRequest,
     AdminUserCenterOrgInfoResponse,
     AdminUserCenterPasswordUpdateRequest,
     AdminUserCenterPhoneUpdateRequest,
     AdminUserCenterProfileUpdateRequest,
+    ProfileUserAdminUpsertPayload,
 )
 
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 头像文件大小上限（2MB）
@@ -43,19 +43,19 @@ AVATAR_CONTENT_TYPES = {  # 允许的头像内容类型及其扩展名
 }
 
 
-class AdminUserProfileService:
+class ProfileUserAdminService:
     """管理端账户资料服务，负责资料初始化和显式查询。"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.repo = AdminUserProfileRepository(db)
+        self.repo = ProfileUserAdminRepository(db)
         self.account_repo = AccountRepository(db)
 
     async def create_default_profile(self, account_id: str):
         """为管理端账户创建默认资料记录，关联存在性由上层服务保证。"""
         return await self.repo.create_default(account_id)
 
-    async def upsert_profile(self, payload: AdminProfileUpsertPayload):
+    async def upsert_profile(self, payload: ProfileUserAdminUpsertPayload):
         """创建或更新管理端资料。"""
         return await self.repo.upsert(payload)
 
@@ -104,7 +104,7 @@ class AdminUserProfileService:
         profile = await self.repo.get_by_account_id(session.account_id)
         async with transactional(self.db):
             await self.repo.upsert(
-                AdminProfileUpsertPayload(
+                ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
                     name=payload.name,
                     nickname=payload.nickname,
@@ -203,7 +203,7 @@ class AdminUserProfileService:
                 enabled=payload.phone_login_enabled,
             )
             await self.repo.upsert(
-                AdminProfileUpsertPayload(
+                ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
                     name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
@@ -239,7 +239,7 @@ class AdminUserProfileService:
                 enabled=payload.email_login_enabled,
             )
             await self.repo.upsert(
-                AdminProfileUpsertPayload(
+                ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
                     name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
