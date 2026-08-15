@@ -1,6 +1,6 @@
 [project]
 name = "hei-fastapi"
-version = "0.1.0"
+version = "1.0.0-beta"
 description = "Large-scale FastAPI scaffold with async stack, RBAC, multi-user-system, depts and groups."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -237,7 +237,7 @@ class ObservabilitySettings(BaseSettings):
 
     enabled: bool = False
     service_name: str = "hei-fastapi"
-    service_version: str = "0.1.0"
+    service_version: str = "1.0.0-beta"
     environment: str = "dev"
     log_enabled: bool = True
     log_level: str = "INFO"
