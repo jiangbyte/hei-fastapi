@@ -110,7 +110,7 @@ cp .env.example .env
 # 按需配置 DB__URL / REDIS__URL / SNAIL_JOB__*；生产还需 APP__CONFIG_CRYPTO_KEY
 # 本地看 Swagger：SWAGGER__ENABLED=true
 
-./entrypoint.sh                          # api（默认）/ migrate / seed
+./entrypoint.sh                          # 启动 API
 ```
 
 启动后可访问：

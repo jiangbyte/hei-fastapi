@@ -17,4 +17,4 @@ python scripts/db/export_data.py
 python scripts/db/import_data.py
 ```
 
-数据库表结构由人工维护：`python scripts/db/migrate.py` 执行 Alembic 升级，`python scripts/db/import_data.py` 导入业务种子；应用启动（`entrypoint.sh api`）不执行迁移。
+数据库表结构由人工维护：`python scripts/db/migrate.py` 执行 Alembic 升级，`python scripts/db/import_data.py` 导入业务种子；应用启动（`entrypoint.sh`）不执行迁移。

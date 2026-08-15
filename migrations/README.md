@@ -12,4 +12,4 @@ python scripts/db/check_migration.py
 
 连接串来自 `.env` 的 `DB__URL`。
 
-> 数据库表结构由人工维护：应用启动（`entrypoint.sh api`）不会执行迁移，以上命令仅在维护机手动执行。禁用模块的模型仍会进入 metadata，可正常生成与执行迁移。
+> 数据库表结构由人工维护：应用启动（`entrypoint.sh`）不会执行迁移，以上命令仅在维护机手动执行。禁用模块的模型仍会进入 metadata，可正常生成与执行迁移。
