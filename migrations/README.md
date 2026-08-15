@@ -11,7 +11,11 @@ python scripts/db/check_migration.py
 ```
 
 ```bash
-docker compose run --rm hei migrate
+# 容器内执行迁移（需先构建镜像：docker build -t hei-fastapi .）
+docker run --rm \
+  -e DB__URL="postgresql+asyncpg://postgres:123456@host.docker.internal:5432/hei_fastapi" \
+  -e REDIS__URL="redis://host.docker.internal:6379/0" \
+  hei-fastapi migrate
 ```
 
 连接串来自 `.env` 的 `DB__URL`。禁用模块的模型仍会进入 metadata，可正常生成与执行迁移。

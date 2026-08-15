@@ -74,7 +74,7 @@ class AuthSettings(BaseSettings):
     default_password: str = ""
     captcha_ttl_seconds: int = 5 * 60
     password_crypto_key_ttl_seconds: int = 10 * 60
-    # 0 = 禁用（本地/开发）。Docker compose 生产类栈常设为 1800。
+    # 0 = 禁用（本地/开发）。容器/生产类栈常设为 1800。
     session_idle_timeout_seconds: int = 0
     session_bind_ip: bool = True
     session_bind_user_agent: bool = False

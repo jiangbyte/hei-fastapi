@@ -1,3 +1,12 @@
+# Build from repo root (no docker compose; same style as hei-boot):
+#   docker build -t hei-fastapi .
+#   docker run --rm -e DB__URL=... -e REDIS__URL=... hei-fastapi migrate
+#   docker run -d --name hei -p 8000:8000 -p 17889:17889 \
+#     -e APP__CONFIG_CRYPTO_KEY=... -e DB__URL=... -e REDIS__URL=... \
+#     -v hei_storage:/app/storage hei-fastapi
+#
+# 生产必填环境变量见 README「生产必填环境变量」；17889 为 SnailJob 客户端端口，
+# 需发布到 Server 可达地址（SNAIL_JOB__HOST_IP / SNAIL_JOB__HOST_PORT）。
 #FROM python:3.11-slim
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.11-slim
 #FROM docker.xuanyuan.run/library/python:3.11-slim
@@ -49,7 +58,10 @@ RUN chown -R appuser:appgroup /app/storage /app/.runtime
 USER appuser
 
 VOLUME ["/app/storage", "/app/.runtime"]
-EXPOSE 8000
+EXPOSE 8000 17889
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/internal/health/live', timeout=3)"]
 
 ENTRYPOINT ["tini", "-g", "--", "/app/entrypoint.sh"]
 CMD ["api"]

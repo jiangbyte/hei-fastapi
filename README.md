@@ -230,7 +230,6 @@ hei-fastapi
 ├── tests                        # 后端测试（pytest）
 ├── web                          # 前端（admin / portal / admin-uniapp）
 ├── docs                         # 文档与界面截图
-├── docker-compose.yml           # 后端 + 可选 admin / portal profile
 ├── entrypoint.sh                # api | migrate | seed（默认 api）
 └── dev.sh / shutdown.sh         # 本机开发辅助
 ```
@@ -266,17 +265,53 @@ hei-fastapi
 
 ## 生产部署
 
+项目不使用 docker compose 编排：后端与各前端均为独立 Dockerfile，直接 `docker build` / `docker run`（与 hei-boot 的 docker 方式一致）。
+
 ### 构建镜像
 
 ```bash
-docker compose run --rm hei migrate
-docker compose up -d --build
+# 后端（根目录 Dockerfile；tini + 非 root 用户，单进程内嵌 SnailJob 执行器）
+docker build -t hei-fastapi .
 
-# 同时启动前端
-docker compose --profile admin --profile portal up -d --build
+# 前端（nginx 托管静态资源，/api 反向代理到后端，BACKEND_URL 可配）
+docker build -t hei-fastapi-admin web/admin
+docker build -t hei-fastapi-portal web/portal
 ```
 
-前端镜像由各自 Dockerfile 构建（nginx 托管静态资源，`/api` 反向代理到后端，`BACKEND_URL` 可配）。
+### 运行后端
+
+```bash
+# 1) 迁移表结构（一次性；也可在宿主机执行 python scripts/db/migrate.py）
+docker run --rm \
+  -e DB__URL="postgresql+asyncpg://postgres:123456@host.docker.internal:5432/hei_fastapi" \
+  -e REDIS__URL="redis://host.docker.internal:6379/0" \
+  hei-fastapi migrate
+
+# 2) 启动 API（8000 为 HTTP，17889 为 SnailJob 客户端端口，需发布到 Server 可达地址）
+docker run -d --name hei \
+  -p 8000:8000 -p 17889:17889 \
+  -e APP__CONFIG_CRYPTO_KEY="..." \
+  -e DB__URL="postgresql+asyncpg://postgres:123456@host.docker.internal:5432/hei_fastapi" \
+  -e REDIS__URL="redis://host.docker.internal:6379/0" \
+  -e SNAIL_JOB__SERVER_HOST="host.docker.internal" \
+  -e SNAIL_JOB__SERVER_PORT="17888" \
+  -e SNAIL_JOB__HOST_IP="host.docker.internal" \
+  -e SNAIL_JOB__HOST_PORT="17889" \
+  -v hei_storage:/app/storage \
+  hei-fastapi
+```
+
+### 运行前端
+
+```bash
+docker run -d --name hei-admin -p 8081:81 \
+  -e BACKEND_URL="http://host.docker.internal:8000" \
+  hei-fastapi-admin
+
+docker run -d --name hei-portal -p 8082:80 \
+  -e BACKEND_URL="http://host.docker.internal:8000" \
+  hei-fastapi-portal
+```
 
 | 服务 | 默认端口 |
 | :--- | :--- |
