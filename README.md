@@ -225,8 +225,7 @@ hei-fastapi
 │   └── db_models.py             # ORM 模型注册清单（供 Alembic）
 ├── migrations                   # Alembic 迁移
 ├── scripts
-│   ├── db/                      # 迁移与数据导入导出（seed/data.sql 权威业务种子）
-│   └── docker/                  # 本地 SnailJob Server 编排
+│   └── db/                      # 迁移与数据导入导出（seed/data.sql 权威业务种子）
 ├── tests                        # 后端测试（pytest）
 ├── web                          # 前端（admin / portal / admin-uniapp）
 ├── docs                         # 文档与界面截图
@@ -287,16 +286,12 @@ docker run --rm \
   -e REDIS__URL="redis://host.docker.internal:6379/0" \
   hei-fastapi migrate
 
-# 2) 启动 API（8000 为 HTTP，17889 为 SnailJob 客户端端口，需发布到 Server 可达地址）
+# 2) 启动 API（8000 为 HTTP）
 docker run -d --name hei \
-  -p 8000:8000 -p 17889:17889 \
+  -p 8000:8000 \
   -e APP__CONFIG_CRYPTO_KEY="..." \
   -e DB__URL="postgresql+asyncpg://postgres:123456@host.docker.internal:5432/hei_fastapi" \
   -e REDIS__URL="redis://host.docker.internal:6379/0" \
-  -e SNAIL_JOB__SERVER_HOST="host.docker.internal" \
-  -e SNAIL_JOB__SERVER_PORT="17888" \
-  -e SNAIL_JOB__HOST_IP="host.docker.internal" \
-  -e SNAIL_JOB__HOST_PORT="17889" \
   -v hei_storage:/app/storage \
   hei-fastapi
 ```
@@ -316,7 +311,6 @@ docker run -d --name hei-portal -p 8082:80 \
 | 服务 | 默认端口 |
 | :--- | :--- |
 | 后端 | `8000`（`BACKEND_PORT`） |
-| SnailJob 客户端 | `17889`（`SNAIL_JOB_CLIENT_PORT`） |
 | Admin | `8081`（`ADMIN_PORT`） |
 | Portal | `8082`（`PORTAL_PORT`） |
 
@@ -328,14 +322,13 @@ docker run -d --name hei-portal -p 8082:80 \
 | `REDIS__URL` | Redis 连接（会话与 Redis Stream 审计） |
 | `APP__CONFIG_CRYPTO_KEY` | 敏感配置 Fernet 密钥（无默认值，首次上线必须设置） |
 
-可选：`SNAIL_JOB__*`、`SECRETS__BACKEND=vault`、`OBSERVABILITY__*`、`SWAGGER__ENABLED` 等。
+可选：`SECRETS__BACKEND=vault`、`OBSERVABILITY__*`、`SWAGGER__ENABLED` 等。
 
 ### 上线检查清单
 
 - 轮换 `superadmin` 默认密码与 `APP__CONFIG_CRYPTO_KEY`
 - 关闭 Swagger / 文档公网暴露（默认已关闭）
 - 仅在可信反向代理后开启 `APP__TRUSTED_PROXY_IPS`
-- SnailJob 使用独立 namespace / group 隔离；Docker 中设置 `SNAIL_JOB__HOST_IP` 为 Server 可达地址
 
 ## 二次开发
 

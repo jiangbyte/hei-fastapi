@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# 默认启动应用（单进程内嵌 SnailJob 执行器，外部 Server 见 scripts/docker/）。
+# 默认启动应用（单进程内嵌 SnailJob 执行器，对接外部 SnailJob Server）。
 ROLE="${1:-api}"
 
 start_api() {

@@ -2,8 +2,8 @@
 
 SnailJob 执行器内嵌：单进程内运行，应用 lifespan 启动后台线程执行客户端主循环。
 
-SnailJob Server 外部提供（见 scripts/docker/docker-compose.snailjob.yml），
-应用只需配置 ``SNAIL_JOB__*`` 即可接入；任务模块在启动时导入以注册执行器。
+SnailJob Server 外部提供，应用只需配置 ``SNAIL_JOB__*`` 即可接入；
+任务模块在启动时导入以注册执行器。
 """
 
 from __future__ import annotations
