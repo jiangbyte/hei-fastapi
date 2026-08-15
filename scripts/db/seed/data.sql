@@ -796,3 +796,5 @@ INSERT INTO public.sys_weak_password (id, password, created_at, created_by, upda
 
 SET session_replication_role = DEFAULT;
 COMMIT;
+INSERT INTO public.sys_config (id, config_key, config_value, category, remark, sort_code, ext_json, created_at, created_by, updated_at, updated_by, value_type, label, scope, scene, is_builtin) VALUES ('cfg_mail_tencent_region', 'MAIL_TENCENT_REGION', '', 'MAIL', '腾讯云邮件区域', 90, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-08 00:00:00+00', NULL, 'STRING', '腾讯云邮件区域', NULL, NULL, true);
+INSERT INTO public.sys_config (id, config_key, config_value, category, remark, sort_code, ext_json, created_at, created_by, updated_at, updated_by, value_type, label, scope, scene, is_builtin) VALUES ('cfg_sms_tencent_region', 'SMS_TENCENT_REGION', '', 'SMS', '腾讯云短信区域', 90, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-08 00:00:00+00', NULL, 'STRING', '腾讯云短信区域', NULL, NULL, true);
