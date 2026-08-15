@@ -51,3 +51,8 @@ class OSSStorage:
                 self.config.presign_expire_seconds,
             )
         )
+
+
+    def get_object_bytes(self, object_name: str) -> bytes:
+        """下载对象字节内容（供公开文件路由代理返回，对齐 hei-boot 直出文件）。"""
+        return self.bucket.get_object(object_name).read()

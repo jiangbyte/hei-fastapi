@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from fastapi.responses import FileResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StorageProvider
@@ -208,8 +208,15 @@ class FileService:
                 filename=entity.original_name if entity else None,
                 headers={"X-Content-Type-Options": "nosniff"},
             )
-        return RedirectResponse(
-            url=storage.get_object_url(normalized),
+        # 远程存储同样代理内容返回（对齐 hei-boot 直出文件），避免浏览器
+        # 必须直连对象存储域名才能加载图片/附件。
+        try:
+            content = await asyncio.to_thread(storage.get_object_bytes, normalized)
+        except Exception as exc:
+            raise NotFoundError("File not found") from exc
+        return Response(
+            content=content,
+            media_type=entity.content_type if entity else None,
             headers={"X-Content-Type-Options": "nosniff"},
         )
 

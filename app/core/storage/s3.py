@@ -73,6 +73,14 @@ class S3CompatibleStorage:
             )
             )
 
+    def get_object_bytes(self, object_name: str) -> bytes:
+        """下载对象字节内容（供公开文件路由代理返回，对齐 hei-boot 直出文件）。"""
+        response = self.client.get_object(Bucket=self.bucket, Key=object_name)
+        try:
+            return response["Body"].read()
+        finally:
+            response["Body"].close()
+
 
 class MinioStorage(S3CompatibleStorage):
     """MinIO 存储引擎，强制 path-style 寻址。"""
