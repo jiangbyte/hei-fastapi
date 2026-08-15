@@ -1,6 +1,6 @@
 """ Author: Charlie
 
-管理端账户资料数据模型：定义扩展资料表 admin_user_profile。
+管理端账户资料数据模型：定义扩展资料表 profile_user_admin。
 """
 
 from sqlalchemy import String, Text
@@ -13,7 +13,7 @@ from app.core.db.mixins import TimestampMixin
 class AdminUserProfile(Base, TimestampMixin):
     """管理端账户扩展资料表，承接展示资料和联系方式。"""
 
-    __tablename__ = "admin_user_profile"
+    __tablename__ = "profile_user_admin"
 
     account_id: Mapped[str] = mapped_column(String(64), primary_key=True, comment="账户ID")
     name: Mapped[str | None] = mapped_column(String(64), comment="姓名")

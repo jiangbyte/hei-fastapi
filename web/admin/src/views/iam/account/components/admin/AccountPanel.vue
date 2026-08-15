@@ -91,7 +91,7 @@ const grantOptions = computed(() =>
 
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 
-/** 管理员表格列：含 admin_user_profile.remark */
+/** 管理员表格列：含 profile_user_admin.remark */
 const tableColumns = computed<ProDataTableColumns<any>>(() => [
   { type: 'selection', fixed: 'left' },
   {

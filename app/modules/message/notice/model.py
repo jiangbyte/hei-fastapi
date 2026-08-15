@@ -26,7 +26,7 @@ from app.core.id_generator.snowflake import generate_snowflake_id
 class MsgNotice(Base, TimestampMixin):
     """统一运营消息（通知 / 公告）。"""
 
-    __tablename__ = "msg_notice"
+    __tablename__ = "sys_notice"
 
     id: Mapped[str] = mapped_column(
         String(64), primary_key=True, nullable=False, default=generate_snowflake_id, comment="主键"
@@ -76,9 +76,9 @@ class MsgNotice(Base, TimestampMixin):
 
 
 class MsgNoticeRead(Base):
-    """消息阅读记录，对应 msg_notice_read 表。"""
+    """消息阅读记录，对应 sys_notice_read 表。"""
 
-    __tablename__ = "msg_notice_read"
+    __tablename__ = "sys_notice_read"
 
     id: Mapped[str] = mapped_column(
         String(64), primary_key=True, nullable=False, default=generate_snowflake_id, comment="主键"
@@ -95,6 +95,6 @@ class MsgNoticeRead(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "notice_id", "account_type", "account_id", name="uq_msg_notice_read_account"
+            "notice_id", "account_type", "account_id", name="uq_sys_notice_read_account"
         ),
     )

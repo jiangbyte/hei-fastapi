@@ -91,7 +91,7 @@ const grantOptions = computed(() =>
 
 const avatarImgProps = { referrerPolicy: 'no-referrer' } as any
 
-/** 门户表格列：对齐 portal_user_profile（无 remark） */
+/** 门户表格列：对齐 profile_user_portal（无 remark） */
 const tableColumns = computed<ProDataTableColumns<any>>(() => [
   { type: 'selection', fixed: 'left' },
   {
