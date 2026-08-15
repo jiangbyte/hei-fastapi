@@ -50,6 +50,8 @@ class SessionPayload:
     user_agent: str | None = None
     remember_me: bool = True
     password_expired: bool = False
+    force_bind_email: bool = False
+    force_bind_phone: bool = False
     device_label: str | None = None
     login_at: str | None = None
     last_active_at: str | None = None

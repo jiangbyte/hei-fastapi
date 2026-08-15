@@ -149,12 +149,6 @@ async def _login(
         remember_me=payload.remember_me,
     )
     warning = await service.password_expiry_warning_days(session.account_id)
-    from app.modules.iam.account.repository import AccountRepository
-
-    account = await AccountRepository(db).get_required(session.account_id)
-    force_bind_email, force_bind_phone = await service._force_bind_flags(
-        account, account_type
-    )
     return success(
         LoginResponse(
             token=session.token,
@@ -162,8 +156,8 @@ async def _login(
             account_type=AccountType(str(session.account_type)),
             password_expired=session.password_expired,
             password_expiry_warning_days=warning,
-            force_bind_email=force_bind_email,
-            force_bind_phone=force_bind_phone,
+            force_bind_email=session.force_bind_email,
+            force_bind_phone=session.force_bind_phone,
         )
     )
 

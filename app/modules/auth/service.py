@@ -393,6 +393,11 @@ class AuthService:
             if payload.remember_me
             else settings.auth.token_ttl_short_seconds
         )
+        force_bind_email, force_bind_phone = await self._force_bind_flags(
+            account, payload.account_type
+        )
+        session_payload.force_bind_email = force_bind_email
+        session_payload.force_bind_phone = force_bind_phone
         await session_store.set(session_payload, ttl_seconds=ttl)
         await session_store.prune_excess_sessions(
             account_type=str(session_payload.account_type),
@@ -440,6 +445,11 @@ class AuthService:
             user_agent=user_agent,
             device_label=device_label,
         )
+        force_bind_email, force_bind_phone = await self._force_bind_flags(
+            account, account_type
+        )
+        session_payload.force_bind_email = force_bind_email
+        session_payload.force_bind_phone = force_bind_phone
         await session_store.set(
             session_payload, ttl_seconds=settings.auth.token_ttl_seconds
         )
@@ -461,9 +471,6 @@ class AuthService:
             ip=client_ip,
             user_agent=user_agent,
         )
-        force_bind_email, force_bind_phone = await self._force_bind_flags(
-            account, account_type
-        )
         return LoginResponse(
             token=session_payload.token,
             account_id=account.id,
@@ -472,8 +479,8 @@ class AuthService:
             password_expiry_warning_days=await self.password_expiry_warning_days(
                 account.id
             ),
-            force_bind_email=force_bind_email,
-            force_bind_phone=force_bind_phone,
+            force_bind_email=session_payload.force_bind_email,
+            force_bind_phone=session_payload.force_bind_phone,
         )
 
     async def _force_bind_flags(
@@ -534,8 +541,13 @@ class AuthService:
                 account_name, [AccountIdentityType.ACCOUNT]
             ) is not None:
                 raise BusinessError("账号已存在")
-            if policy.require_email or policy.require_phone:
-                raise BusinessError("当前注册策略要求邮箱/手机号注册")
+            # 策略要求联系方式时，ACCOUNT 通道需在载荷中补齐（缺失则拒绝）。
+            email = (payload.email or "").strip().lower() or None
+            phone = (payload.phone or "").strip() or None
+            if policy.require_email and not email:
+                raise BusinessError("Email is required for registration")
+            if policy.require_phone and not phone:
+                raise BusinessError("Phone is required for registration")
         elif channel == "EMAIL":
             if not config_reader.get_bool("AUTH_REGISTER_PORTAL_ALLOW_EMAIL", True):
                 raise BusinessError("邮箱注册已关闭")
