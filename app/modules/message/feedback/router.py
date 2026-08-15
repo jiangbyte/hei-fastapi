@@ -38,7 +38,7 @@ portal_router = APIRouter()
     "/v1/admin/sys/feedbacks/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:feedback:page")),
+        Depends(require_permission("sys:feedback:page")),
     ],
     response_model=ApiResponse[PageData[MsgFeedbackSchema]],
 )
@@ -54,7 +54,7 @@ async def page(
     "/v1/admin/sys/feedbacks/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:feedback:detail")),
+        Depends(require_permission("sys:feedback:detail")),
     ],
     response_model=ApiResponse[MsgFeedbackSchema],
 )
@@ -70,7 +70,7 @@ async def detail(
     "/v1/admin/sys/feedbacks/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:feedback:update")),
+        Depends(require_permission("sys:feedback:update")),
     ],
     response_model=ApiResponse[None],
 )
@@ -88,7 +88,7 @@ async def update(
     "/v1/admin/sys/feedbacks/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:feedback:delete")),
+        Depends(require_permission("sys:feedback:delete")),
     ],
     response_model=ApiResponse[None],
 )

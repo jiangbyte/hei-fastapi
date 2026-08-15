@@ -52,7 +52,7 @@ async def portal_notice_list(
     "/v1/admin/sys/notices/create",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:create")),
+        Depends(require_permission("sys:notice:create")),
     ],
     response_model=ApiResponse[None],
 )
@@ -69,7 +69,7 @@ async def create(
     "/v1/admin/sys/notices/update",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:update")),
+        Depends(require_permission("sys:notice:update")),
     ],
     response_model=ApiResponse[None],
 )
@@ -86,7 +86,7 @@ async def update(
     "/v1/admin/sys/notices/delete",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:delete")),
+        Depends(require_permission("sys:notice:delete")),
     ],
     response_model=ApiResponse[None],
 )
@@ -103,7 +103,7 @@ async def delete(
     "/v1/admin/sys/notices/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:detail")),
+        Depends(require_permission("sys:notice:detail")),
     ],
     response_model=ApiResponse[MsgNoticeSchema],
 )
@@ -119,7 +119,7 @@ async def detail(
     "/v1/admin/sys/notices/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:page")),
+        Depends(require_permission("sys:notice:page")),
     ],
     response_model=ApiResponse[PageData[MsgNoticeSchema]],
 )
@@ -135,7 +135,7 @@ async def page(
     "/v1/admin/sys/notices/publish",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:publish")),
+        Depends(require_permission("sys:notice:publish")),
     ],
     response_model=ApiResponse[None],
 )
@@ -153,7 +153,7 @@ async def publish(
     "/v1/admin/sys/notices/revoke",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:revoke")),
+        Depends(require_permission("sys:notice:revoke")),
     ],
     response_model=ApiResponse[None],
 )
@@ -170,7 +170,7 @@ async def revoke(
     "/v1/admin/sys/notices/pin",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("message:notice:pin")),
+        Depends(require_permission("sys:notice:pin")),
     ],
     response_model=ApiResponse[None],
 )
