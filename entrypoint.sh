@@ -1,34 +1,22 @@
 #!/bin/sh
 set -eu
 
-# 默认启动应用（单进程内嵌 SnailJob 执行器，对接外部 SnailJob Server）。
+# 仅启动 API（单进程内嵌 SnailJob 执行器，对接外部 SnailJob Server）。
+# 数据库表结构由人工维护：应用启动不执行迁移/种子；
+# 需要时在维护机直接运行 python scripts/db/migrate.py / import_data.py。
 ROLE="${1:-api}"
-
-start_api() {
-    exec gunicorn app.main:app -c gunicorn.conf.py
-}
-
-run_migrate() {
-    exec python scripts/db/migrate.py
-}
-
-run_seed() {
-    exec python scripts/db/import_data.py
-}
 
 case "$ROLE" in
     api|"")
-        start_api
+        exec gunicorn app.main:app -c gunicorn.conf.py
         ;;
-    migrate)
-        run_migrate
-        ;;
-    seed)
-        run_seed
+    migrate|seed)
+        echo "entrypoint role '$ROLE' removed: database schema/seed is maintained manually." >&2
+        exit 64
         ;;
     *)
         echo "Unknown entrypoint role: $ROLE" >&2
-        echo "Expected: api, migrate, seed" >&2
+        echo "Expected: api" >&2
         exit 64
         ;;
 esac

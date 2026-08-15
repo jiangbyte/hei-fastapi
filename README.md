@@ -122,7 +122,7 @@ cp .env.example .env
 | http://127.0.0.1:8000/api/v1/internal/health/live | 存活探针 |
 | http://127.0.0.1:8000/api/v1/internal/health/ready | 就绪探针（DB / Redis / 配置同步 / 存储等） |
 
-维护命令：`./entrypoint.sh migrate` / `./entrypoint.sh seed`；停止本机进程：`./shutdown.sh`。
+数据库表结构由人工维护（应用启动不执行迁移）：需要时在维护机直接运行 `python scripts/db/migrate.py` / `python scripts/db/import_data.py`；停止本机进程：`./shutdown.sh`。
 
 ### 3. 启动前端
 
@@ -229,7 +229,7 @@ hei-fastapi
 ├── tests                        # 后端测试（pytest）
 ├── web                          # 前端（admin / portal / admin-uniapp）
 ├── docs                         # 文档与界面截图
-├── entrypoint.sh                # api | migrate | seed（默认 api）
+├── entrypoint.sh                # 仅启动 API（数据库迁移由人工维护）
 └── dev.sh / shutdown.sh         # 本机开发辅助
 ```
 
@@ -279,14 +279,10 @@ docker build -t hei-fastapi-portal web/portal
 
 ### 运行后端
 
-```bash
-# 1) 迁移表结构（一次性；也可在宿主机执行 python scripts/db/migrate.py）
-docker run --rm \
-  -e DB__URL="postgresql+asyncpg://postgres:123456@host.docker.internal:5432/hei_fastapi" \
-  -e REDIS__URL="redis://host.docker.internal:6379/0" \
-  hei-fastapi migrate
+> 数据库表结构由人工维护：应用启动不会执行迁移。需要变更 schema 时，在维护机直接运行 `python scripts/db/migrate.py`（或由 DBA 执行迁移 SQL），再启动/重启应用。
 
-# 2) 启动 API（8000 为 HTTP）
+```bash
+# 启动 API（8000 为 HTTP）
 docker run -d --name hei \
   -p 8000:8000 \
   -e APP__CONFIG_CRYPTO_KEY="..." \

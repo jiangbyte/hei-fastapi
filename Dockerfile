@@ -1,11 +1,11 @@
 # Build from repo root (no docker compose; same style as hei-boot):
 #   docker build -t hei-fastapi .
-#   docker run --rm -e DB__URL=... -e REDIS__URL=... hei-fastapi migrate
 #   docker run -d --name hei -p 8000:8000 \
 #     -e APP__CONFIG_CRYPTO_KEY=... -e DB__URL=... -e REDIS__URL=... \
 #     -v hei_storage:/app/storage hei-fastapi
 #
 # 生产必填环境变量见 README「生产必填环境变量」。
+# 容器只启动 API，不执行数据库迁移（表结构由人工维护）。
 #FROM python:3.11-slim
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.11-slim
 #FROM docker.xuanyuan.run/library/python:3.11-slim
