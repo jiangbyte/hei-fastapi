@@ -8,6 +8,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.db.batch import chunked
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_knowledge_category.model import (
     CgTestKnowledgeCategory,
@@ -57,11 +58,14 @@ class CgTestKnowledgeCategoryRepository:
 
     async def delete_many(self, entity_ids: list[str]) -> None:
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(CgTestKnowledgeCategory.id).where(CgTestKnowledgeCategory.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("CgTestKnowledgeCategory not found")
-        await self.db.execute(delete(CgTestKnowledgeCategory).where(CgTestKnowledgeCategory.id.in_(unique_ids)))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            stmt = select(CgTestKnowledgeCategory.id).where(CgTestKnowledgeCategory.id.in_(batch))
+            existing_ids = set((await self.db.execute(stmt)).scalars().all())
+            if len(existing_ids) != len(batch):
+                raise NotFoundError('CgTestKnowledgeCategory not found')
+            await self.db.execute(delete(CgTestKnowledgeCategory).where(CgTestKnowledgeCategory.id.in_(batch)))
 
     async def page_admin(
         self,
@@ -90,9 +94,12 @@ class CgTestKnowledgeCategoryRepository:
     async def get_parent_name_map(self, parent_ids: set[str]) -> dict[str, str]:
         if not parent_ids:
             return {}
-        stmt = select(CgTestKnowledgeCategory.id, CgTestKnowledgeCategory.name).where(CgTestKnowledgeCategory.id.in_(parent_ids))
-        rows = (await self.db.execute(stmt)).all()
-        return {str(id_): str(name or id_) for id_, name in rows}
+        result: dict[str, str] = {}
+        for batch in chunked(sorted(parent_ids)):
+            stmt = select(CgTestKnowledgeCategory.id, CgTestKnowledgeCategory.name).where(CgTestKnowledgeCategory.id.in_(batch))
+            rows = (await self.db.execute(stmt)).all()
+            result.update({str(id_): str(name or id_) for id_, name in rows})
+        return result
 
     async def list_tree(
         self,
@@ -137,11 +144,14 @@ class CgTestKnowledgeDocRepository:
 
     async def delete_many(self, entity_ids: list[str]) -> None:
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(CgTestKnowledgeDoc.id).where(CgTestKnowledgeDoc.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("CgTestKnowledgeDoc not found")
-        await self.db.execute(delete(CgTestKnowledgeDoc).where(CgTestKnowledgeDoc.id.in_(unique_ids)))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            stmt = select(CgTestKnowledgeDoc.id).where(CgTestKnowledgeDoc.id.in_(batch))
+            existing_ids = set((await self.db.execute(stmt)).scalars().all())
+            if len(existing_ids) != len(batch):
+                raise NotFoundError('CgTestKnowledgeDoc not found')
+            await self.db.execute(delete(CgTestKnowledgeDoc).where(CgTestKnowledgeDoc.id.in_(batch)))
 
     async def page_admin(self, query: CgTestKnowledgeDocAdminPageQuery) -> tuple[list[CgTestKnowledgeDoc], int]:
         stmt: Select[tuple[CgTestKnowledgeDoc]] = select(CgTestKnowledgeDoc)

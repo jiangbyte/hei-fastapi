@@ -8,6 +8,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.db.batch import chunked
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_activity.model import (
     CgTestActivity,
@@ -53,11 +54,14 @@ class CgTestActivityRepository:
 
     async def delete_many(self, entity_ids: list[str]) -> None:
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(CgTestActivity.id).where(CgTestActivity.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("CgTestActivity not found")
-        await self.db.execute(delete(CgTestActivity).where(CgTestActivity.id.in_(unique_ids)))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            stmt = select(CgTestActivity.id).where(CgTestActivity.id.in_(batch))
+            existing_ids = set((await self.db.execute(stmt)).scalars().all())
+            if len(existing_ids) != len(batch):
+                raise NotFoundError('CgTestActivity not found')
+            await self.db.execute(delete(CgTestActivity).where(CgTestActivity.id.in_(batch)))
 
     async def page_admin(
         self,

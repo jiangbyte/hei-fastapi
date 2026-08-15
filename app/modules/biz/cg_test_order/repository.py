@@ -8,6 +8,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.db.batch import chunked
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_order.model import (
     CgTestOrder,
@@ -57,11 +58,14 @@ class CgTestOrderRepository:
 
     async def delete_many(self, entity_ids: list[str]) -> None:
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(CgTestOrder.id).where(CgTestOrder.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("CgTestOrder not found")
-        await self.db.execute(delete(CgTestOrder).where(CgTestOrder.id.in_(unique_ids)))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            stmt = select(CgTestOrder.id).where(CgTestOrder.id.in_(batch))
+            existing_ids = set((await self.db.execute(stmt)).scalars().all())
+            if len(existing_ids) != len(batch):
+                raise NotFoundError('CgTestOrder not found')
+            await self.db.execute(delete(CgTestOrder).where(CgTestOrder.id.in_(batch)))
 
     async def page_admin(
         self,
@@ -115,11 +119,14 @@ class CgTestOrderItemRepository:
 
     async def delete_many(self, entity_ids: list[str]) -> None:
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(CgTestOrderItem.id).where(CgTestOrderItem.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("CgTestOrderItem not found")
-        await self.db.execute(delete(CgTestOrderItem).where(CgTestOrderItem.id.in_(unique_ids)))
+        if not unique_ids:
+            return
+        for batch in chunked(unique_ids):
+            stmt = select(CgTestOrderItem.id).where(CgTestOrderItem.id.in_(batch))
+            existing_ids = set((await self.db.execute(stmt)).scalars().all())
+            if len(existing_ids) != len(batch):
+                raise NotFoundError('CgTestOrderItem not found')
+            await self.db.execute(delete(CgTestOrderItem).where(CgTestOrderItem.id.in_(batch)))
 
     async def page_admin(self, query: CgTestOrderItemAdminPageQuery) -> tuple[list[CgTestOrderItem], int]:
         stmt: Select[tuple[CgTestOrderItem]] = select(CgTestOrderItem)
