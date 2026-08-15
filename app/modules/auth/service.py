@@ -289,9 +289,10 @@ class AuthService:
             "expire_minutes": max(1, ttl // 60),
         }
         if channel_u == "EMAIL":
-            await send_templated_mail("REGISTER_CODE", normalized, variables)
+            # 与 hei-boot 一致：注册验证码复用 LOGIN_CODE 模板场景
+            await send_templated_mail("LOGIN_CODE", normalized, variables)
         else:
-            await send_templated_sms("REGISTER_CODE", normalized, variables)
+            await send_templated_sms("LOGIN_CODE", normalized, variables)
 
     async def consume_register_code(
         self, *, channel: str, target: str, code: str | None
