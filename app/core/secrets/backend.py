@@ -13,6 +13,15 @@ from cryptography.fernet import Fernet
 from app.core.config.settings import settings
 
 
+def _normalize_fernet_token(token: str) -> str:
+    """补齐 URL-safe Base64 padding，兼容 hei-boot FernetCodec.withoutPadding() 写出的密文。"""
+    trimmed = token.strip()
+    pad = (-len(trimmed)) % 4
+    if pad:
+        return trimmed + ("=" * pad)
+    return trimmed
+
+
 class SecretsBackend(Protocol):
     """secrets 后端协议：加密与解密（解密失败返回 None）。"""
 
@@ -37,7 +46,7 @@ class FernetEnvBackend:
     def decrypt(self, ciphertext: str) -> str | None:
         """解密文本，失败返回 None。"""
         try:
-            return self._fernet.decrypt(ciphertext.encode()).decode()
+            return self._fernet.decrypt(_normalize_fernet_token(ciphertext).encode()).decode()
         except Exception:
             return None
 
@@ -89,7 +98,9 @@ class VaultKvBackend:
     def decrypt(self, ciphertext: str) -> str | None:
         """解密文本，失败返回 None。"""
         try:
-            return self._ensure_fernet().decrypt(ciphertext.encode()).decode()
+            return self._ensure_fernet().decrypt(
+                _normalize_fernet_token(ciphertext).encode()
+            ).decode()
         except Exception:
             return None
 

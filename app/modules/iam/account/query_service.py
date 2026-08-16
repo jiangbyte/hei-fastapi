@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.schema.datetime import normalize_orm_datetimes
-from app.core.storage.url import resolve_file_url
 from app.modules.auth.oauth.repository import AccountOauthBindingRepository
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityBindStatus
@@ -18,6 +17,7 @@ from app.modules.iam.schema import (
 )
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
 from app.modules.profile.portal.repository import ProfileUserPortalRepository
+from app.modules.sys.file.service import FileService
 
 
 class AccountQueryService:
@@ -44,6 +44,22 @@ class AccountQueryService:
             binding_map.setdefault(binding.account_id, []).append(binding)
         admin_profile_map = {profile.account_id: profile for profile in admin_profiles}
         portal_profile_map = {profile.account_id: profile for profile in portal_profiles}
+
+        avatar_raws = [
+            getattr(
+                (
+                    admin_profile_map.get(account.id)
+                    if account.account_type == AccountType.ADMIN.value
+                    else portal_profile_map.get(account.id)
+                    if account.account_type == AccountType.PORTAL.value
+                    else None
+                ),
+                "avatar",
+                None,
+            )
+            for account in accounts
+        ]
+        avatar_urls = await FileService(self.db).resolve_access_urls(avatar_raws)
 
         items: list[SysAccountSchema] = []
         for account in accounts:
@@ -80,6 +96,10 @@ class AccountQueryService:
                 normalize_orm_datetimes(profile)
             for identity in account_identities:
                 normalize_orm_datetimes(identity)
+            raw_avatar = getattr(profile, "avatar", None)
+            resolved_avatar = (
+                avatar_urls.get(str(raw_avatar).strip()) if raw_avatar else None
+            )
             items.append(
                 SysAccountSchema(
                     id=account.id,
@@ -88,7 +108,7 @@ class AccountQueryService:
                     account_status=account.account_status,
                     name=getattr(profile, "name", None),
                     nickname=getattr(profile, "nickname", None),
-                    avatar=resolve_file_url(getattr(profile, "avatar", None)),
+                    avatar=resolved_avatar,
                     signature=getattr(profile, "signature", None),
                     phone=getattr(profile, "phone", None),
                     email=getattr(profile, "email", None),
@@ -144,8 +164,20 @@ class AccountQueryService:
         admin_profile_map = {profile.account_id: profile for profile in admin_profiles}
         portal_profile_map = {profile.account_id: profile for profile in portal_profiles}
 
-        items: list[SysAccountSchema] = []
+        avatar_raws = []
         for account in accounts:
+            match account.account_type:
+                case AccountType.ADMIN.value:
+                    profile = admin_profile_map.get(account.id)
+                case AccountType.PORTAL.value:
+                    profile = portal_profile_map.get(account.id)
+                case _:
+                    profile = None
+            avatar_raws.append(getattr(profile, "avatar", None))
+        avatar_urls = await FileService(self.db).resolve_access_urls(avatar_raws)
+
+        items: list[SysAccountSchema] = []
+        for account, raw_avatar in zip(accounts, avatar_raws, strict=True):
             account_identities = identity_map.get(account.id, [])
             primary_identity = next(
                 (
@@ -166,6 +198,9 @@ class AccountQueryService:
                 case _:
                     profile = None
             normalize_orm_datetimes(account)
+            resolved_avatar = (
+                avatar_urls.get(str(raw_avatar).strip()) if raw_avatar else None
+            )
             items.append(
                 SysAccountSchema(
                     id=account.id,
@@ -174,7 +209,7 @@ class AccountQueryService:
                     account_status=account.account_status,
                     name=getattr(profile, "name", None),
                     nickname=getattr(profile, "nickname", None),
-                    avatar=resolve_file_url(getattr(profile, "avatar", None)),
+                    avatar=resolved_avatar,
                     created_at=account.created_at,
                     updated_at=account.updated_at,
                 )

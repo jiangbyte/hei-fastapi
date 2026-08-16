@@ -12,7 +12,6 @@ from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse, success
 from app.core.security.session import SessionPayload
 from app.core.security.transport import decrypt_passwords
-from app.core.storage.url import resolve_file_url
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.iam.account.repository import AccountRepository
@@ -53,7 +52,9 @@ async def get_me(
     email_identity = next((item for item in identities if item.identity_type == "EMAIL"), None)
     phone_identity = next((item for item in identities if item.identity_type == "PHONE"), None)
     profile = await ProfileUserPortalService(db).get_profile(session.account_id)
-    avatar = resolve_file_url(profile.avatar if profile else None)
+    from app.modules.sys.file.service import FileService
+
+    avatar = await FileService(db).resolve_access_url(profile.avatar if profile else None)
     from app.modules.auth.service import AuthService
     from app.modules.iam.account.password_helper import is_password_expired
 

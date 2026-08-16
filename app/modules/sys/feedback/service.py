@@ -16,7 +16,7 @@ from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
-from app.core.storage.url import normalize_object_name, resolve_file_url
+from app.core.storage.url import normalize_object_name
 from app.modules.sys.feedback.repository import SysFeedbackRepository
 from app.modules.sys.feedback.schema import (
     MyFeedbackPageQuery,
@@ -27,6 +27,7 @@ from app.modules.sys.feedback.schema import (
     SysFeedbackUpdateRequest,
 )
 from app.modules.sys.file.repository import FileRepository
+from app.modules.sys.file.service import FileService
 from app.modules.profile.utils.profile import enrich_audit_names, get_profile, get_profiles_batch
 
 
@@ -153,15 +154,17 @@ class SysFeedbackService:
             entity.object_name: entity
             for entity in await self.file_repo.list_by_object_names(all_names)
         }
+        url_map = await FileService(self.db).resolve_access_urls(all_names)
         for schema in schemas:
             attachments: list[SysFeedbackAttachmentSchema] = []
             for object_name in schema.attach_object_names:
                 entity = entity_map.get(object_name)
+                resolved = url_map.get(object_name)
                 if entity is None:
                     attachments.append(
                         SysFeedbackAttachmentSchema(
                             object_name=object_name,
-                            url=resolve_file_url(object_name),
+                            url=resolved,
                         )
                     )
                     continue
@@ -172,7 +175,7 @@ class SysFeedbackService:
                         original_name=entity.original_name,
                         content_type=entity.content_type,
                         size=entity.size,
-                        url=resolve_file_url(entity.object_name) or entity.url,
+                        url=resolved,
                     )
                 )
             schema.attachments = attachments
@@ -187,7 +190,9 @@ class SysFeedbackService:
                 at = AccountType(schema.submitter_account_type)
                 profile = await get_profile(self.db, at, schema.submitter_account_id)
                 if profile:
-                    schema.submitter_avatar = resolve_file_url(profile.avatar)
+                    schema.submitter_avatar = await FileService(self.db).resolve_access_url(
+                        profile.avatar
+                    )
                     schema.submitter_nickname = profile.nickname or profile.name
             except ValueError:
                 pass
@@ -212,13 +217,20 @@ class SysFeedbackService:
             try:
                 at = AccountType(account_type_str)
                 batch = await get_profiles_batch(self.db, at, account_ids)
+                avatars = [
+                    batch[aid].avatar
+                    for aid in account_ids
+                    if aid in batch
+                ]
+                url_map = await FileService(self.db).resolve_access_urls(avatars)
                 for schema, _ in schema_map:
                     if (
                         schema.submitter_account_type == account_type_str
                         and schema.submitter_account_id in batch
                     ):
                         p = batch[schema.submitter_account_id]
-                        schema.submitter_avatar = resolve_file_url(p.avatar)
+                        raw = str(p.avatar).strip() if p.avatar else ""
+                        schema.submitter_avatar = url_map.get(raw) if raw else None
                         schema.submitter_nickname = p.nickname or p.name
             except ValueError:
                 pass

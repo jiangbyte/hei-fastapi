@@ -84,7 +84,7 @@ class FileService:
             payload.category or "uploads",
         )
         object_name = self._validate_object_name(object_name)
-        url = await asyncio.to_thread(
+        await asyncio.to_thread(
             storage.upload_bytes,
             object_name,
             payload.content,
@@ -100,7 +100,8 @@ class FileService:
                         bucket=storage_config.bucket or None,
                         content_type=payload.content_type,
                         size=len(payload.content),
-                        url=url,
+                        # 落库存 object key（对齐 hei-boot）；响应再解析为可访问 URL。
+                        url=object_name,
                     )
                 )
                 return self._with_resolved_url(to_schema(SysFileSchema, entity))
@@ -208,19 +209,77 @@ class FileService:
 
     async def resolve_access_url(self, value: str | None) -> str | None:
         """解析可浏览器访问的 URL（永久直连或重新签发预签名），对齐 hei-boot resolveAccessUrl。"""
+        results = await self.resolve_access_urls([value])
         if not value:
             return None
         raw = str(value).strip()
-        if not raw:
-            return None
-        if is_external_url(raw) and not looks_like_presigned_url(raw):
-            return raw
-        key = to_object_key(raw) if is_external_url(raw) else normalize_object_name(raw)
-        if not key or is_external_url(key):
-            return raw if is_external_url(raw) else None
-        entity = await self.repo.get_by_object_name(key)
-        storage = self._get_storage(self._resolve_entity_storage_config(entity))
-        return str(storage.get_object_url(key))
+        return results.get(raw)
+
+    async def resolve_access_urls(self, values: list[str | None]) -> dict[str, str | None]:
+        """批量解析访问 URL：查 sys_file 按 storage_provider 签发；无元数据则回退默认引擎。
+
+        返回键为原始入参（strip 后）；无法解析的值为 None。
+        """
+        result: dict[str, str | None] = {}
+        pending_keys: dict[str, list[str]] = {}  # object_key -> raw inputs
+        for value in values:
+            if value is None:
+                continue
+            raw = str(value).strip()
+            if not raw:
+                result[raw] = None
+                continue
+            if is_external_url(raw) and not looks_like_presigned_url(raw):
+                result[raw] = raw
+                continue
+            key = to_object_key(raw) if is_external_url(raw) else normalize_object_name(raw)
+            if not key or is_external_url(key):
+                result[raw] = raw if is_external_url(raw) else None
+                continue
+            pending_keys.setdefault(key, []).append(raw)
+
+        if not pending_keys:
+            return result
+
+        entities = await self.repo.list_by_object_names(list(pending_keys.keys()))
+        entity_by_key = {entity.object_name: entity for entity in entities}
+
+        for key, raws in pending_keys.items():
+            entity = entity_by_key.get(key)
+            try:
+                storage = self._get_storage(self._resolve_entity_storage_config(entity))
+                resolved = str(storage.get_object_url(key))
+            except Exception:
+                logger.warning(
+                    "Failed to resolve file URL | key=%s provider=%s",
+                    key,
+                    getattr(entity, "storage_provider", None),
+                    exc_info=True,
+                )
+                resolved = None
+            for raw in raws:
+                result[raw] = resolved
+        return result
+
+    async def scrub_persisted_presigned_urls(self) -> int:
+        """将库内疑似预签名的 sys_file.url 刷回 object_name（对齐 Boot patch 语义）。"""
+        from sqlalchemy import select, update
+
+        rows = list((await self.db.execute(select(SysFile.id, SysFile.object_name, SysFile.url))).all())
+        changed = 0
+        for file_id, object_name, url in rows:
+            if not url or url == object_name:
+                continue
+            if looks_like_presigned_url(url) or (
+                is_external_url(url) and to_object_key(url) == object_name
+            ):
+                await self.db.execute(
+                    update(SysFile).where(SysFile.id == file_id).values(url=object_name)
+                )
+                changed += 1
+        if changed:
+            await self.db.flush()
+        return changed
 
     async def download_by_id(
         self,

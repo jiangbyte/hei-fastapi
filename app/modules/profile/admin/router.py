@@ -12,7 +12,6 @@ from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse, success
 from app.core.security.session import SessionPayload
 from app.core.security.transport import decrypt_passwords
-from app.core.storage.url import resolve_file_url
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.iam.account.query_service import AccountQueryService
@@ -44,7 +43,7 @@ async def get_me(
     """查询当前管理端账户信息与组织归属。"""
     account_entity = await AccountRepository(db).get_required(session.account_id)
     account = (await AccountQueryService(db).build_account_schemas([account_entity]))[0]
-    avatar = resolve_file_url(account.avatar)
+    avatar = account.avatar
     (
         role_id_names,
         dept_id_names,

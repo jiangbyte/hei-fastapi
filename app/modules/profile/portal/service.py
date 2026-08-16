@@ -15,7 +15,7 @@ from app.core.exceptions.business import AuthenticationError, BusinessError, Not
 from app.core.schema.common_schema import IdNameResponse
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload
-from app.core.storage.url import is_external_url, normalize_object_name, resolve_file_url
+from app.core.storage.url import is_external_url, normalize_object_name
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityType
@@ -101,7 +101,7 @@ class ProfileUserPortalService:
             account_id=account_id,
             name=profile.name,
             nickname=profile.nickname,
-            avatar=resolve_file_url(profile.avatar) if profile.avatar else None,
+            avatar=await FileService(self.db).resolve_access_url(profile.avatar),
             signature=profile.signature,
         )
 
@@ -154,10 +154,10 @@ class ProfileUserPortalService:
             await self.repo.update_avatar(session.account_id, uploaded.object_name)
         await self._delete_previous_avatar(previous_avatar, uploaded.object_name)
         return PortalUserCenterAvatarUpdateResponse(
-            avatar=resolve_file_url(uploaded.object_name) or uploaded.url,
+            avatar=uploaded.url,
             file_id=uploaded.id,
             object_name=uploaded.object_name,
-            url=resolve_file_url(uploaded.object_name) or uploaded.url,
+            url=uploaded.url,
         )
 
     async def update_current_password(

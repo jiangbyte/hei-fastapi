@@ -15,7 +15,7 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.core.storage.url import normalize_object_name, resolve_file_url
+from app.core.storage.url import normalize_object_name
 from app.modules.sys.banner.repository import BannerRepository
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -24,6 +24,7 @@ from app.modules.sys.banner.schema import (
     BannerUpdateRequest,
     SysBannerSchema,
 )
+from app.modules.sys.file.service import FileService
 from app.modules.profile.utils.profile import enrich_audit_names
 
 
@@ -60,7 +61,7 @@ class BannerService:
         """查询展示图详情并解析图片 URL 与昵称。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysBannerSchema, entity)
-        _resolve_image_urls([schema])
+        await self._resolve_image_urls([schema])
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
@@ -68,7 +69,7 @@ class BannerService:
         """管理端分页查询并解析图片 URL 与昵称。"""
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysBannerSchema, entities)
-        _resolve_image_urls(schemas)
+        await self._resolve_image_urls(schemas)
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
@@ -85,7 +86,7 @@ class BannerService:
             account_type=account_type,
         )
         schemas = to_schema_list(SysBannerSchema, items)
-        _resolve_image_urls(schemas)
+        await self._resolve_image_urls(schemas)
         return schemas
 
     async def list_public(self, query: BannerPublicListQuery) -> list[SysBannerSchema]:
@@ -119,11 +120,12 @@ class BannerService:
             return
         await redis.hincrby(banner_interaction_delta_key(), payload.id, 1)
 
-
-def _resolve_image_urls(items: list[SysBannerSchema]) -> None:
-    """image 保持 object_name；image_url 给前端展示。"""
-    for item in items:
-        item.image_url = resolve_file_url(item.image) or item.image
+    async def _resolve_image_urls(self, items: list[SysBannerSchema]) -> None:
+        """image 保持 object_name；image_url 给前端展示（provider 感知解析）。"""
+        urls = await FileService(self.db).resolve_access_urls([item.image for item in items])
+        for item in items:
+            raw = str(item.image).strip() if item.image else ""
+            item.image_url = urls.get(raw) if raw else None
 
 
 async def _read_positive_deltas(redis: Redis, key: str) -> dict[str, int]:
