@@ -1,9 +1,7 @@
 """ Author: Charlie """
 
-import pytest
 
 from app.core.config.enums import StatusEnum
-from app.core.exceptions.business import NotFoundError
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
     DictCreateRequest,
@@ -78,12 +76,16 @@ async def test_dict_service_create_page_detail_update_delete(db_session):
     assert deleted_result is None
 
 
-async def test_dict_service_delete_requires_all_ids_exist(db_session):
+async def test_dict_service_delete_is_idempotent_with_missing_ids(db_session):
+    """对齐 hei-boot：批量删除对不存在的 ID 静默跳过，不报错。"""
     service = DictService(db_session)
     created = await _create_dict(db_session, service, code="VISIBLE")
 
-    with pytest.raises(NotFoundError):
-        await service.delete(DictIdsRequest(ids=[created.id, "missing"]))
+    await service.delete(DictIdsRequest(ids=[created.id, "missing"]))
+    remaining = await service.page_admin(
+        DictAdminPageQuery(current=1, size=20, code="VISIBLE")
+    )
+    assert remaining.total == 0
 
 
 async def test_dict_service_tree_supports_category_filter_and_orphan_roots(db_session):
@@ -177,7 +179,7 @@ async def test_dict_service_fills_parent_id_name_in_batch(db_session):
     assert tree[0].children[0].parent_id_name == "Parent Label"
 
 
-async def test_dict_service_parent_filter_includes_parent_and_direct_children(db_session):
+async def test_dict_service_parent_filter_matches_direct_children_only(db_session):
     service = DictService(db_session)
     parent = await _create_dict(
         db_session,
@@ -218,5 +220,6 @@ async def test_dict_service_parent_filter_includes_parent_and_direct_children(db
         )
     )
 
-    assert page.total == 3
-    assert {item.id for item in page.records} == {parent.id, enabled.id, disabled.id}
+    # 对齐 hei-boot：parent_id 仅精确匹配直接子节点（不含父节点自身）。
+    assert page.total == 2
+    assert {item.id for item in page.records} == {enabled.id, disabled.id}

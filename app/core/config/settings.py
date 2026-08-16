@@ -151,21 +151,15 @@ class CorsSettings(BaseSettings):
     ]
 
 
-class SnailJobSettings(BaseSettings):
-    """SnailJob Python 执行器客户端设置（对接外部 Server）。"""
+class JobSettings(BaseSettings):
+    """内置任务调度设置：DB 驱动轮询（sys_job 表），进程内 asyncio 后台任务。"""
 
     model_config = SettingsConfigDict(extra="ignore")
 
-    enabled: bool = True
-    server_host: str = "127.0.0.1"
-    server_port: int = 17888
-    host_ip: str = "127.0.0.1"
-    host_port: int = 17889
-    # 独立于 hei-boot（Default / hei_boot_admin），同 Server 靠 namespace+group 隔离。
-    namespace: str = "a8c3e5f17b924d6e9f0a1b2c3d4e5f60"
-    group_name: str = "hei_fastapi_admin"
-    token: str = "SJ_heiFastapiAdminToken1234567890ab"
-    labels: str = "env:dev,app:hei-fastapi"
+    # 调度扫描间隔（毫秒），对齐 hei-boot hei.job.scan-interval-ms。
+    scan_interval_ms: int = 1000
+    # 最大并发执行任务数，对齐 hei-boot hei.job.pool-size。
+    pool_size: int = 4
 
 
 class StorageSettings(BaseSettings):
@@ -312,7 +306,7 @@ class Settings(BaseSettings):
     secrets: SecretsSettings = Field(default_factory=SecretsSettings)
     mail: MailSettings = Field(default_factory=MailSettings)
     cors: CorsSettings = Field(default_factory=CorsSettings)
-    snail_job: SnailJobSettings = Field(default_factory=SnailJobSettings)
+    job: JobSettings = Field(default_factory=JobSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     password_policy: PasswordPolicySettings = Field(default_factory=PasswordPolicySettings)
     audit_alert: AuditAlertSettings = Field(default_factory=AuditAlertSettings)

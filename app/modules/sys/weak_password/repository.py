@@ -24,9 +24,10 @@ class WeakPasswordRepository:
         self.db = db
 
     async def create(self, payload: WeakPasswordCreateRequest) -> None:
-        """校验密码唯一后新增弱密码。"""
-        await self._ensure_unique(payload.password)
-        self.db.add(SysWeakPassword(password=payload.password))
+        """校验密码唯一后新增弱密码（密码 trim 存储，对齐 hei-boot）。"""
+        password = payload.password.strip()
+        await self._ensure_unique(password)
+        self.db.add(SysWeakPassword(password=password))
         await self.db.flush()
 
     async def get_by_id(self, row_id: str) -> SysWeakPassword | None:
@@ -41,19 +42,18 @@ class WeakPasswordRepository:
         return entity
 
     async def update(self, payload: WeakPasswordUpdateRequest) -> None:
-        """校验密码唯一后更新弱密码。"""
+        """校验密码唯一后更新弱密码（密码 trim 存储，对齐 hei-boot）。"""
         entity = await self.get_required(payload.id)
-        await self._ensure_unique(payload.password, exclude_id=payload.id)
-        entity.password = payload.password
+        password = payload.password.strip()
+        await self._ensure_unique(password, exclude_id=payload.id)
+        entity.password = password
         await self.db.flush()
 
     async def delete_many(self, row_ids: list[str]) -> None:
-        """批量删除；存在不存在的 ID 时抛出 NotFoundError。"""
+        """批量删除（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(row_ids))
-        stmt = select(SysWeakPassword.id).where(SysWeakPassword.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("Weak password not found")
+        if not unique_ids:
+            return
         await self.db.execute(delete(SysWeakPassword).where(SysWeakPassword.id.in_(unique_ids)))
 
     async def page_admin(
@@ -62,8 +62,9 @@ class WeakPasswordRepository:
         """按密码模糊匹配后台分页，返回记录列表与总数。"""
         stmt: Select[tuple[SysWeakPassword]] = select(SysWeakPassword)
         count_stmt = select(func.count(SysWeakPassword.id))
-        if query.password:
-            like = f"%{query.password}%"
+        keyword = query.password or query.keyword
+        if keyword:
+            like = f"%{keyword}%"
             stmt = stmt.where(SysWeakPassword.password.ilike(like))
             count_stmt = count_stmt.where(SysWeakPassword.password.ilike(like))
         stmt = (
@@ -76,10 +77,11 @@ class WeakPasswordRepository:
         return items, total
 
     async def list_all(self, query: WeakPasswordListQuery) -> list[SysWeakPassword]:
-        """按密码模糊匹配列出全部弱密码。"""
+        """按密码模糊匹配列出全部弱密码（keyword 为密码兜底过滤）。"""
         stmt = select(SysWeakPassword).order_by(SysWeakPassword.id.desc())
-        if query.password:
-            stmt = stmt.where(SysWeakPassword.password.ilike(f"%{query.password}%"))
+        keyword = query.password or query.keyword
+        if keyword:
+            stmt = stmt.where(SysWeakPassword.password.ilike(f"%{keyword}%"))
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def exists_password(self, password: str) -> bool:

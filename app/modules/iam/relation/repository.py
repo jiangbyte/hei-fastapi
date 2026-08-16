@@ -95,8 +95,9 @@ class IamRelationRepository:
         subject_id: str,
         relation_type: IamRelationType,
         account_type: str | None = None,
+        target_key: str | None = None,
     ) -> None:
-        """删除指定主体在特定关系类型下的关系，可按账户体系过滤。"""
+        """删除指定主体在特定关系类型下的关系，可按账户体系/权限键过滤。"""
         stmt = delete(SysIamRelation).where(
             SysIamRelation.subject_type == subject_type,
             SysIamRelation.subject_id == subject_id,
@@ -104,6 +105,8 @@ class IamRelationRepository:
         )
         if account_type is not None:
             stmt = stmt.where(SysIamRelation.account_type == account_type)
+        if target_key is not None:
+            stmt = stmt.where(SysIamRelation.target_key == target_key)
         await self.db.execute(stmt)
 
     async def delete_subject_relations_many(

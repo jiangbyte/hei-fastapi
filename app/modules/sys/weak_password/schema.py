@@ -24,15 +24,17 @@ class WeakPasswordUpdateRequest(WeakPasswordCreateRequest):
 
 
 class WeakPasswordAdminPageQuery(PageQuery):
-    """弱密码后台分页查询参数。"""
+    """弱密码后台分页查询参数（keyword 为密码兜底过滤，对齐 hei-boot）。"""
 
     password: str | None = Field(default=None, max_length=255)
+    keyword: str | None = Field(default=None, max_length=255)
 
 
 class WeakPasswordListQuery(ApiSchema):
-    """弱密码列表查询参数。"""
+    """弱密码列表查询参数（keyword 为密码兜底过滤，对齐 hei-boot）。"""
 
     password: str | None = Field(default=None, max_length=255)
+    keyword: str | None = Field(default=None, max_length=255)
 
 
 class SysWeakPasswordSchema(ApiSchema):

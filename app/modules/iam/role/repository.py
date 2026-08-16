@@ -53,6 +53,11 @@ class RoleRepository:
         """按主键查询角色。"""
         return await self.db.get(SysRole, role_id)
 
+    async def get_by_code(self, code: str) -> SysRole | None:
+        """按角色编码查询角色（编码唯一性预校验）。"""
+        stmt = select(SysRole).where(SysRole.code == code).limit(1)
+        return (await self.db.execute(stmt)).scalar_one_or_none()
+
     async def get_required(self, role_id: str) -> SysRole:
         """按主键查询角色，不存在时抛 NotFoundError。"""
         entity = await self.get_by_id(role_id)

@@ -46,6 +46,11 @@ def password_reset_token_key(token: str) -> str:
     return f"password:reset:{token}"
 
 
+def job_run_lock_key(job_id: str) -> str:
+    """任务执行互斥锁键（Redis 锁，防多实例重复执行）。"""
+    return f"sys:job:run:{job_id}"
+
+
 def login_otp_key(account_type: str, channel: str, target: str) -> str:
     """登录一次性验证码（OTP）键。"""
     return f"login:otp:{account_type}:{channel}:{target}"

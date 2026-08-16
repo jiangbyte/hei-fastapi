@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthenticationError, BusinessError, NotFoundError
+from app.core.schema.common_schema import IdNameResponse
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload
 from app.core.storage.url import is_external_url, normalize_object_name, resolve_file_url
@@ -60,21 +61,56 @@ class ProfileUserPortalService:
         """按账户 ID 查询门户资料。"""
         return await self.repo.get_by_account_id(account_id)
 
+    async def get_id_name_groups(
+        self,
+        role_ids: list[str],
+        dept_ids: list[str],
+        group_ids: list[str],
+    ) -> tuple[list[IdNameResponse], list[IdNameResponse], list[IdNameResponse]]:
+        """按 ID 列表批量查询角色/部门/群组的名称（对齐 hei-boot me 回显）。"""
+        from app.modules.iam.dept.repository import DeptRepository
+        from app.modules.iam.group.repository import GroupRepository
+        from app.modules.iam.role.repository import RoleRepository
+
+        roles = await RoleRepository(self.db).list_by_ids(role_ids)
+        depts = await DeptRepository(self.db).list_by_ids(dept_ids)
+        groups = await GroupRepository(self.db).list_by_ids(group_ids)
+        role_map = {item.id: item.name for item in roles}
+        dept_map = {item.id: item.name for item in depts}
+        group_map = {item.id: item.name for item in groups}
+        return (
+            [
+                IdNameResponse(id=item_id, name=role_map.get(item_id))
+                for item_id in role_ids
+            ],
+            [
+                IdNameResponse(id=item_id, name=dept_map.get(item_id))
+                for item_id in dept_ids
+            ],
+            [
+                IdNameResponse(id=item_id, name=group_map.get(item_id))
+                for item_id in group_ids
+            ],
+        )
+
     async def get_public_profile(
         self, query: PortalPublicSpaceQuery
     ) -> PortalPublicProfileResponse:
-        """查询门户用户公开主页资料，不返回联系方式和授权信息。"""
+        """查询门户用户公开主页资料，不返回联系方式和授权信息。
+
+        无资料行时返回 404（对齐 hei-boot：selectById 无行抛 Profile not found）。
+        """
         account_id = query.account_id
-        account = await self.account_repo.get_required(account_id)
-        if account.account_type != AccountType.PORTAL.value:
-            raise NotFoundError("Portal profile not found")
+        await self.account_repo.get_required(account_id)
         profile = await self.repo.get_by_account_id(account_id)
+        if profile is None:
+            raise NotFoundError("Profile not found")
         return PortalPublicProfileResponse(
             account_id=account_id,
-            name=profile.name if profile else None,
-            nickname=profile.nickname if profile else None,
-            avatar=resolve_file_url(profile.avatar if profile else None),
-            signature=profile.signature if profile else None,
+            name=profile.name,
+            nickname=profile.nickname,
+            avatar=resolve_file_url(profile.avatar) if profile.avatar else None,
+            signature=profile.signature,
         )
 
     async def update_current_profile(
@@ -82,15 +118,20 @@ class ProfileUserPortalService:
         payload: PortalUserCenterProfileUpdateRequest,
         session: SessionPayload,
     ) -> None:
-        """更新当前门户用户个人资料（保留头像、手机、邮箱等未编辑字段）。"""
+        """更新当前门户用户个人资料（头像按载荷规范化写入，其余字段保留，对齐 hei-boot）。"""
         profile = await self.repo.get_by_account_id(session.account_id)
+        avatar = (
+            normalize_object_name(payload.avatar)
+            if payload.avatar
+            else (profile.avatar if profile else None)
+        )
         async with transactional(self.db):
             await self.repo.upsert(
                 ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
                     name=payload.name,
                     nickname=payload.nickname,
-                    avatar=profile.avatar if profile else None,
+                    avatar=avatar,
                     signature=payload.signature,
                     phone=profile.phone if profile else None,
                     email=profile.email if profile else None,

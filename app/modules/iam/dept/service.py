@@ -87,7 +87,7 @@ class DeptService:
     async def list_dept_tree(self, session: SessionPayload | None = None) -> list[DeptTreeNode]:
         """返回部门树，并批量回显负责人名称。"""
         data_scope_filter = (
-            await self._dept_scope_filter(session, "iam:dept:list") if session is not None else None
+            await self._dept_scope_filter(session, "iam:dept:tree") if session is not None else None
         )
         raw_records = await self.repo.get_dept_tree(data_scope_filter)
 
@@ -220,6 +220,7 @@ def _build_dept_tree_nodes(
                 parent_id=str(raw_item["parent_id"]) if raw_item.get("parent_id") else None,
                 status=str(raw_item.get("status", "ENABLED")),
                 sort=int(raw_item.get("sort", 99)),
+                weight=int(raw_item.get("weight", raw_item.get("sort", 99))),
                 is_virtual=bool(raw_item.get("is_virtual", False)),
                 master_name=str(raw_item["master_name"]) if raw_item.get("master_name") else None,
                 deputy_master_name=str(raw_item["deputy_master_name"])

@@ -114,7 +114,7 @@ async def page(
     "/v1/admin/sys/depts/tree",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("iam:dept:list")),
+        Depends(require_permission("iam:dept:tree")),
     ],
     response_model=ApiResponse[list[DeptTreeNode]],
 )

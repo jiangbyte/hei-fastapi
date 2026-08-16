@@ -17,20 +17,20 @@ from app.core.schema.wire import WireInt
 
 
 class SysFeedbackCreateRequest(ApiSchema):
-    """创建反馈请求。"""
+    """创建反馈请求（title/category 可缺省由服务端推导，content 必填，对齐 hei-boot）。"""
 
-    title: str = Field(min_length=1, max_length=255)
-    content: str
-    category: str
+    title: str | None = Field(default=None, max_length=255)
+    content: str = Field(min_length=1)
+    category: str | None = None
     contact: str | None = None
     attach_object_names: list[str] = Field(default_factory=list)
 
 
 class SysFeedbackUpdateRequest(ApiSchema):
-    """更新反馈请求（状态与回复）。"""
+    """更新反馈请求（status 可缺省，仅回复时只传 reply，对齐 hei-boot）。"""
 
     id: str = Field(min_length=1, max_length=64)
-    status: str
+    status: str | None = None
     reply: str | None = None
 
 

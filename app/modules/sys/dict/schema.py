@@ -47,18 +47,18 @@ class DictIdsRequest(ApiSchema):
 
 
 class DictAdminPageQuery(PageQuery):
-    """字典后台分页查询参数。"""
+    """字典后台分页查询参数（code 模糊匹配、category 自由字符串，对齐 hei-boot）。"""
 
-    code: str | None = Field(default=None, max_length=50, pattern=r"^[A-Z0-9_]+$")
-    category: SysBizCategory | None = None
+    code: str | None = Field(default=None, max_length=50)
+    category: str | None = Field(default=None, max_length=32)
     parent_id: str | None = Field(default=None, max_length=32)
     status: str | None = Field(default=None, max_length=16)
 
 
 class DictTreeQuery(ApiSchema):
-    """字典树查询参数。"""
+    """字典树查询参数（category 自由字符串，对齐 hei-boot）。"""
 
-    category: SysBizCategory | None = None
+    category: str | None = Field(default=None, max_length=32)
 
 
 class SysDictSchema(ApiSchema):
@@ -83,11 +83,12 @@ class SysDictSchema(ApiSchema):
 
 
 class SysDictTreeNode(ApiSchema):
-    """字典树节点响应模型。"""
+    """字典树节点响应模型（name/weight 对齐 hei-boot 树线格式）。"""
 
     id: str
     code: str
     label: str | None = None
+    name: str | None = None
     value: str | None = None
     color: str | None = None
     category: SysBizCategory | None = None
@@ -95,4 +96,5 @@ class SysDictTreeNode(ApiSchema):
     parent_id_name: str | None = None
     status: StatusEnum | str
     sort: WireInt
+    weight: WireInt = 0
     children: list["SysDictTreeNode"] = Field(default_factory=list)

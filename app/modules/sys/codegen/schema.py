@@ -151,10 +151,10 @@ class CodegenFieldUpdateItem(ApiSchema):
 
 
 class CodegenFieldsUpdateBatchRequest(ApiSchema):
-    """代码生成字段批量更新请求。"""
+    """代码生成字段批量更新请求（至少一个字段，对齐 hei-boot @NotEmpty）。"""
 
     plan_id: str = Field(min_length=1, max_length=64)
-    fields: list[CodegenFieldUpdateItem]
+    fields: list[CodegenFieldUpdateItem] = Field(min_length=1)
 
 
 class SysCodegenFieldSchema(CodegenFieldUpdateItem):
@@ -222,7 +222,7 @@ class CodegenParentResourcesQuery(ApiSchema):
 
 
 class CodegenParentResourceOption(ApiSchema):
-    """父资源选项（树形结构）。"""
+    """父资源选项（树形结构，sort/weight 对齐 hei-boot ResourceMenuNode）。"""
 
     id: str
     parent_id: str | None = None
@@ -230,4 +230,6 @@ class CodegenParentResourceOption(ApiSchema):
     name: str
     resource_type: str
     module_id: str | None = None
+    sort: int | None = None
+    weight: int | None = None
     children: list["CodegenParentResourceOption"] = Field(default_factory=list)

@@ -75,6 +75,7 @@ class DeptTreeNode(ApiSchema):
     parent_id: str | None = None
     status: str
     sort: WireInt = 99
+    weight: WireInt = 99
     is_virtual: WireBool = False
     master_name: str | None = None
     deputy_master_name: str | None = None

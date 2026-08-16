@@ -80,9 +80,9 @@ class RoleResourceGrantInfo(ApiSchema):
 
 
 class RoleOwnResourceQuery(IdQuery):
-    """角色资源查询条件（附带账户体系）。"""
+    """角色资源查询条件（附带账户体系，缺省不过滤，对齐 hei-boot）。"""
 
-    account_type: AccountType
+    account_type: AccountType | None = None
 
 
 class RoleOwnResourceResponse(ApiSchema):
@@ -94,17 +94,17 @@ class RoleOwnResourceResponse(ApiSchema):
 
 
 class RoleGrantResourceRequest(ApiSchema):
-    """给角色授权资源的请求。"""
+    """给角色授权资源的请求（account_type 缺省按 ADMIN，对齐 hei-boot）。"""
 
     id: str = Field(min_length=1, max_length=64)
-    account_type: AccountType
+    account_type: AccountType = AccountType.ADMIN
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 
 class RoleOwnClientResourceQuery(IdQuery):
-    """角色客户端资源查询条件（附带账户体系）。"""
+    """角色客户端资源查询条件（附带账户体系，缺省不过滤，对齐 hei-boot）。"""
 
-    account_type: AccountType
+    account_type: AccountType | None = None
 
 
 class RoleOwnClientResourceResponse(ApiSchema):
@@ -116,10 +116,10 @@ class RoleOwnClientResourceResponse(ApiSchema):
 
 
 class RoleGrantClientResourceRequest(ApiSchema):
-    """给角色授权客户端资源的请求。"""
+    """给角色授权客户端资源的请求（account_type 缺省按 ADMIN，对齐 hei-boot）。"""
 
     id: str = Field(min_length=1, max_length=64)
-    account_type: AccountType
+    account_type: AccountType = AccountType.ADMIN
     grant_info_list: list[RoleResourceGrantInfo] = Field(default_factory=list)
 
 

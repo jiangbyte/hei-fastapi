@@ -2,7 +2,7 @@
 
 配置跨实例同步：通过 Redis Pub/Sub 广播配置变更事件，使多实例/多进程保持一致。
 
-提供 asyncio 监听与独立线程（SnailJob worker）两种运行方式，并记录最近事件与错误。
+提供 asyncio 监听与独立线程两种运行方式，并记录最近事件与错误。
 """
 
 from __future__ import annotations

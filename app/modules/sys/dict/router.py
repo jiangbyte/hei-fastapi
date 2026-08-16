@@ -114,7 +114,7 @@ async def page(
 @router.get(
     "/v1/admin/sys/dicts/tree",
     dependencies=[
-        Depends(require_account_type(AccountType.ADMIN, AccountType.PORTAL)),
+        Depends(require_account_type(AccountType.ADMIN)),
         # Depends(require_permission("sys:dict:tree")),
     ],
     response_model=ApiResponse[list[SysDictTreeNode]],

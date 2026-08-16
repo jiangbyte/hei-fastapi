@@ -33,7 +33,6 @@ class ReadyChecksResponse(ApiSchema):
     database: HealthCheckItem
     redis: HealthCheckItem
     config_sync: HealthCheckItem
-    snail_job: HealthCheckItem
     storage: HealthCheckItem
 
 

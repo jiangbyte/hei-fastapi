@@ -6,7 +6,7 @@
 from typing import Annotated
 from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,15 @@ from app.modules.sys.file.schema import ObjectNameQuery
 from app.modules.sys.file.service import FileService
 
 router = APIRouter()
+
+
+@router.get("/v1/files", response_class=Response)
+async def get_file_by_query(
+    object_name: Annotated[str, Query(min_length=1, max_length=512)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> Response:
+    """按查询参数读取文件内容（对齐 hei-boot 的 GET /v1/files?object_name= 入口）。"""
+    return await FileService(db).response(ObjectNameQuery(object_name=object_name))
 
 
 @router.get("/v1/files/{object_name:path}", response_class=Response)

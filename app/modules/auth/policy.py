@@ -144,14 +144,28 @@ def get_auth_options(account_type: AccountType) -> AuthOptions:
         register_enabled=register.enabled,
         register_require_phone=register.require_phone,
         register_require_email=register.require_email,
-        register_allow_account=config_reader.get_bool(
-            f"AUTH_REGISTER_{type_name}_ALLOW_ACCOUNT", True
+        # ADMIN 端与 hei-boot 一致：注册通道选项硬编码关闭（不读配置）；
+        # 仅 PORTAL 端读取 AUTH_REGISTER_PORTAL_ALLOW_* 配置。
+        register_allow_account=(
+            config_reader.get_bool(
+                f"AUTH_REGISTER_{type_name}_ALLOW_ACCOUNT", True
+            )
+            if account_type == AccountType.PORTAL
+            else False
         ),
-        register_allow_email=config_reader.get_bool(
-            f"AUTH_REGISTER_{type_name}_ALLOW_EMAIL", True
+        register_allow_email=(
+            config_reader.get_bool(
+                f"AUTH_REGISTER_{type_name}_ALLOW_EMAIL", True
+            )
+            if account_type == AccountType.PORTAL
+            else False
         ),
-        register_allow_phone=config_reader.get_bool(
-            f"AUTH_REGISTER_{type_name}_ALLOW_PHONE", False
+        register_allow_phone=(
+            config_reader.get_bool(
+                f"AUTH_REGISTER_{type_name}_ALLOW_PHONE", False
+            )
+            if account_type == AccountType.PORTAL
+            else False
         ),
         force_bind_email=config_reader.get_bool(
             f"AUTH_FORCE_BIND_{type_name}_EMAIL", False

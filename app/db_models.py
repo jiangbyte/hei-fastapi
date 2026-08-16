@@ -34,5 +34,6 @@ from app.modules.sys.banner import model as banner_model  # noqa: F401
 from app.modules.sys.codegen import model as codegen_model  # noqa: F401
 from app.modules.sys.dict import model as dict_model  # noqa: F401
 from app.modules.sys.file import model as file_model  # noqa: F401
+from app.modules.sys.job import model as job_model  # noqa: F401
 from app.modules.user.admin import model as admin_user_model  # noqa: F401
 from app.modules.user.portal import model as portal_user_model  # noqa: F401

@@ -4,7 +4,7 @@ version = "1.0.0-beta"
 description = "Large-scale FastAPI scaffold with async stack, RBAC, multi-user-system, depts and groups."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "Apache-2.0"
 authors = [
   { name = "Charlie" }
 ]
@@ -17,6 +17,7 @@ dependencies = [
   "blinker>=1.9.0",
   "boto3>=1.39.0",
   "captcha>=0.7.0",
+  "croniter>=3.0.0",
   "cryptography>=45.0.0",
   "fastapi>=0.116.0",
   "greenlet>=3.2.0",
@@ -37,7 +38,6 @@ dependencies = [
   "pydantic-settings>=2.10.0",
   "python-multipart>=0.0.20",
   "redis>=6.2.0",
-  "snail-job-python>=0.1.3",
   "snowflake-id>=1.0.2",
   "sqlalchemy>=2.0.41",
   "structlog>=24.0.0",

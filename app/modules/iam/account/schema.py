@@ -12,12 +12,13 @@ from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
+from app.modules.iam.group.schema import SysGroupSchema
+from app.modules.iam.role.schema import SysRoleSchema
 from app.modules.iam.schema import (
     AccountIdentitySchema as AccountIdentitySchema,
 )
 from app.modules.iam.schema import (
     ResourceGrantModuleOption,
-    RoleOption,
 )
 from app.modules.iam.schema import (
     SysAccountSchema as SysAccountSchema,
@@ -220,10 +221,10 @@ class AccountGrantClientResourceRequest(ApiSchema):
 
 
 class AccountOwnRoleResponse(ApiSchema):
-    """账户拥有的角色授权响应结构。"""
+    """账户拥有的角色授权响应结构（roles 为完整角色实体，对齐 hei-boot）。"""
 
     id: str
-    roles: list[RoleOption] = Field(default_factory=list)
+    roles: list[SysRoleSchema] = Field(default_factory=list)
     role_ids: list[str] = Field(default_factory=list)
 
 
@@ -235,10 +236,10 @@ class AccountGrantRoleRequest(ApiSchema):
 
 
 class AccountOwnGroupResponse(ApiSchema):
-    """账户拥有的账户组授权响应结构。"""
+    """账户拥有的账户组授权响应结构（groups 为完整组实体，对齐 hei-boot）。"""
 
     id: str
-    groups: list[AccountGroupOption] = Field(default_factory=list)
+    groups: list[SysGroupSchema] = Field(default_factory=list)
     group_ids: list[str] = Field(default_factory=list)
 
 

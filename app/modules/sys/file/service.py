@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.enums import AccountType, StorageProvider
 from app.core.config.settings import settings
 from app.core.db.transaction import transactional
-from app.core.exceptions.business import BusinessError, NotFoundError
+from app.core.exceptions.business import AuthorizationError, BusinessError, NotFoundError
 from app.core.observability.metrics import record_file_upload_rejected
 from app.core.response.pagination import PageData, PageQuery, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -39,6 +39,17 @@ from app.modules.sys.file.schema import (
 from app.modules.user.utils.profile import enrich_audit_names
 
 logger = logging.getLogger(__name__)
+
+
+def _is_invalid_public_object_name(object_name: str) -> bool:
+    """公开文件对象名合法性校验：拒绝 .. 片段、前导 / 与反斜杠（对齐 hei-boot）。"""
+    if not object_name:
+        return True
+    if object_name.startswith("/") or "\\" in object_name:
+        return True
+    if any(part in {"", ".", ".."} for part in object_name.split("/")):
+        return True
+    return False
 
 
 class FileService:
@@ -161,32 +172,48 @@ class FileService:
                 )
             await self.repo.delete(entity)
 
-    async def detail(self, query: IdQuery) -> SysFileSchema:
-        """查询文件详情并解析访问 URL 与昵称。"""
-        schema = self._with_resolved_url(
-            to_schema(SysFileSchema, await self.repo.get_required(query.id))
-        )
+    async def detail(
+        self,
+        query: IdQuery,
+        session: SessionPayload | None = None,
+    ) -> SysFileSchema:
+        """查询文件详情并解析访问 URL 与昵称（传入 session 时校验归属）。"""
+        entity = await self.repo.get_required(query.id)
+        if session is not None:
+            self.assert_owned_by_current(entity, session)
+        schema = self._with_resolved_url(to_schema(SysFileSchema, entity))
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
-    async def list_by_ids(self, payload: IdsRequest) -> list[SysFileSchema]:
-        """按 ID 列表查询文件元数据，保持请求顺序。"""
+    async def list_by_ids(
+        self,
+        payload: IdsRequest,
+        session: SessionPayload | None = None,
+    ) -> list[SysFileSchema]:
+        """按 ID 列表查询文件元数据（缺失 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(payload.ids))
         entities = await self.repo.list_by_ids(unique_ids)
-        entity_map = {entity.id: entity for entity in entities}
-        if len(entity_map) != len(unique_ids):
-            raise NotFoundError("File not found")
-        return [
-            self._with_resolved_url(to_schema(SysFileSchema, entity_map[file_id]))
-            for file_id in unique_ids
-        ]
+        if session is not None:
+            for entity in entities:
+                self.assert_owned_by_current(entity, session)
+        return [self._with_resolved_url(to_schema(SysFileSchema, entity)) for entity in entities]
 
-    async def download_by_id(self, query: IdQuery) -> Response:
-        """按 ID 下载文件。"""
+    async def download_by_id(
+        self,
+        query: IdQuery,
+        session: SessionPayload | None = None,
+    ) -> Response:
+        """按 ID 下载文件（传入 session 时校验归属）。"""
         entity = await self.repo.get_required(query.id)
+        if session is not None:
+            self.assert_owned_by_current(entity, session)
         return await self.response(entity.object_name)
 
-    async def get_url(self, query: ObjectNameQuery) -> str:
+    async def get_url(
+        self,
+        query: ObjectNameQuery,
+        session: SessionPayload | None = None,
+    ) -> str:
         """优先返回已落库的稳定 URL，不存在时退化为存储层实时构造。"""
         normalized = normalize_object_name(query.object_name)
         if not normalized:
@@ -194,10 +221,16 @@ class FileService:
         if is_external_url(normalized):
             return normalized
         entity = await self.repo.get_by_object_name(normalized)
+        if session is not None:
+            self.assert_owned_by_current(entity, session)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         return str(storage.get_object_url(normalized))
 
-    async def get_presigned_url(self, query: ObjectNameQuery) -> str:
+    async def get_presigned_url(
+        self,
+        query: ObjectNameQuery,
+        session: SessionPayload | None = None,
+    ) -> str:
         """获取对象的签名访问地址。"""
         normalized = normalize_object_name(query.object_name)
         if not normalized:
@@ -205,15 +238,24 @@ class FileService:
         if is_external_url(normalized):
             return normalized
         entity = await self.repo.get_by_object_name(normalized)
+        if session is not None:
+            self.assert_owned_by_current(entity, session)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         return str(storage.get_presigned_url(normalized))
 
     async def response(self, query: ObjectNameQuery) -> Response:
-        """按对象名返回文件内容（本地直接返回，远程重定向）。"""
+        """按对象名返回文件内容（统一 application/octet-stream，对齐 hei-boot）。
+
+        公开入口先做对象名校验（拒绝 .. / 绝对路径 / 反斜杠），并要求存在元数据行。
+        """
         normalized = normalize_object_name(query.object_name)
         if not normalized or is_external_url(normalized):
             raise NotFoundError("File not found")
+        if _is_invalid_public_object_name(query.object_name):
+            raise BusinessError("Invalid object_name")
         entity = await self.repo.get_by_object_name(normalized)
+        if entity is None:
+            raise NotFoundError("File not found")
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         if isinstance(storage, LocalStorage):
             try:
@@ -224,8 +266,8 @@ class FileService:
                 raise NotFoundError("File not found")
             return FileResponse(
                 path,
-                media_type=entity.content_type if entity else None,
-                filename=entity.original_name if entity else None,
+                media_type="application/octet-stream",
+                filename=entity.original_name,
                 headers={"X-Content-Type-Options": "nosniff"},
             )
         # 远程存储同样代理内容返回（对齐 hei-boot 直出文件），避免浏览器
@@ -236,7 +278,7 @@ class FileService:
             raise NotFoundError("File not found") from exc
         return Response(
             content=content,
-            media_type=entity.content_type if entity else None,
+            media_type="application/octet-stream",
             headers={"X-Content-Type-Options": "nosniff"},
         )
 
@@ -268,6 +310,17 @@ class FileService:
         ]
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(page_query, total, schemas)
+
+    def assert_owned_by_current(
+        self,
+        entity: SysFile | None,
+        session: SessionPayload,
+    ) -> None:
+        """校验文件归属当前账户（null→404，非本人→403），对齐 hei-boot 门户文件接口。"""
+        if entity is None:
+            raise NotFoundError("File not found")
+        if str(entity.created_by) != str(session.account_id):
+            raise AuthorizationError("无权访问该文件")
 
     def _with_resolved_url(self, schema: SysFileSchema) -> SysFileSchema:
         """按存储配置解析并回填文件的访问 URL。"""

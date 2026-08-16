@@ -20,6 +20,14 @@ from app.modules.message.notice.schema import (
     SysNoticeUpdateRequest,
 )
 
+# 服务端维护字段：更新请求不可覆盖（对齐 hei-boot：viewCount/revokedAt/sender 由服务端维护）。
+_SERVER_FIELDS = {
+    "view_count",
+    "revoked_at",
+    "sender_account_type",
+    "sender_account_id",
+}
+
 
 def _visible_to_account(account_type: str, account_id: str | None = None) -> ColumnElement[bool]:
     """构造「对指定账户可见」的过滤条件（按类型匹配或按 ID 精确匹配）。"""
@@ -89,19 +97,17 @@ class SysNoticeRepository:
         return entity
 
     async def update(self, payload: SysNoticeUpdateRequest) -> None:
-        """按载荷字段更新消息（id 除外）。"""
+        """按载荷字段更新消息（排除服务端维护字段，对齐 hei-boot）。"""
         entity = await self.get_required(payload.id)
-        for key, value in payload.model_dump(exclude={"id"}).items():
+        for key, value in payload.model_dump(exclude={"id", *_SERVER_FIELDS}).items():
             setattr(entity, key, value)
         await self.db.flush()
 
     async def delete_many(self, entity_ids: list[str]) -> None:
-        """批量删除消息，并级联清理其阅读记录。"""
+        """批量删除消息并级联清理阅读记录（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(SysNotice.id).where(SysNotice.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("SysNotice not found")
+        if not unique_ids:
+            return
         await self.db.execute(delete(SysNoticeRead).where(SysNoticeRead.notice_id.in_(unique_ids)))
         await self.db.execute(delete(SysNotice).where(SysNotice.id.in_(unique_ids)))
 
@@ -121,17 +127,6 @@ class SysNoticeRepository:
         if not unique_ids:
             return
         for batch in chunked(unique_ids):
-            existing_ids = set(
-                (
-                    await self.db.execute(
-                        select(SysNotice.id).where(SysNotice.id.in_(batch))
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            if len(existing_ids) != len(batch):
-                raise NotFoundError("SysNotice not found")
             await self.db.execute(
                 update(SysNotice)
                 .where(SysNotice.id.in_(batch))
@@ -145,28 +140,34 @@ class SysNoticeRepository:
         await self.db.flush()
 
     async def revoke_many(self, entity_ids: list[str], *, now: datetime) -> None:
-        """批量撤回消息：分批校验 ID 均存在，再逐批单条 UPDATE 落库。"""
+        """批量撤回消息（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(entity_ids))
         if not unique_ids:
             return
         for batch in chunked(unique_ids):
-            existing_ids = set(
-                (
-                    await self.db.execute(
-                        select(SysNotice.id).where(SysNotice.id.in_(batch))
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            if len(existing_ids) != len(batch):
-                raise NotFoundError("SysNotice not found")
             await self.db.execute(
                 update(SysNotice)
                 .where(SysNotice.id.in_(batch))
                 .values(status=NoticeStatus.REVOKED.value, revoked_at=now)
             )
         await self.db.flush()
+
+    async def find_published_visible(
+        self,
+        entity_id: str,
+        account_type: str,
+        account_id: str | None = None,
+    ) -> SysNotice | None:
+        """按 ID 查询「已发布且对指定账户可见」的消息，否则返回 None。"""
+        stmt = (
+            select(SysNotice)
+            .where(
+                SysNotice.id == entity_id,
+                *_published_filters(account_type=account_type, account_id=account_id),
+            )
+            .limit(1)
+        )
+        return (await self.db.execute(stmt)).scalar_one_or_none()
 
     async def page_admin(self, query: SysNoticeAdminPageQuery) -> tuple[list[SysNotice], int]:
         """管理端分页查询消息，支持标题/状态/类型过滤。"""

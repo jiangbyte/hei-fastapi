@@ -13,7 +13,9 @@ from app.core.config.enums import AccountType, StorageProvider
 from app.core.config.settings import settings
 from app.core.response.schema import ApiResponse, success
 from app.core.schema.base import IdQuery, IdsRequest
-from app.deps.auth import require_account_type
+from app.core.security.session import SessionPayload
+from app.core.storage.url import normalize_object_name
+from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
 from app.modules.sys.file.schema import (
     FileUploadRequest,
@@ -60,9 +62,10 @@ async def upload(
 async def detail(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[IdQuery, Depends()],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[SysFileSchema]:
-    """查询文件元数据详情。"""
-    return success(await FileService(db).detail(query))
+    """查询文件元数据详情（仅本人上传的文件，对齐 hei-boot 归属校验）。"""
+    return success(await FileService(db).detail(query, session=session))
 
 
 @router.post(
@@ -73,9 +76,10 @@ async def detail(
 async def list_by_ids(
     payload: IdsRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[list[SysFileSchema]]:
-    """按 ID 列表批量查询文件元数据。"""
-    return success(await FileService(db).list_by_ids(payload))
+    """按 ID 列表批量查询文件元数据（仅本人上传的文件）。"""
+    return success(await FileService(db).list_by_ids(payload, session=session))
 
 
 @router.get(
@@ -86,9 +90,10 @@ async def list_by_ids(
 async def download(
     db: Annotated[AsyncSession, Depends(get_db_session)],
     query: Annotated[IdQuery, Depends()],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> Response:
-    """按 ID 下载文件。"""
-    return await FileService(db).download_by_id(query)
+    """按 ID 下载文件（仅本人上传的文件）。"""
+    return await FileService(db).download_by_id(query, session=session)
 
 
 @router.post(
@@ -99,12 +104,14 @@ async def download(
 async def url(
     payload: FileUrlRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[FileUrlResponse]:
-    """获取文件的访问 URL。"""
+    """获取文件的访问 URL（仅本人上传的文件，object_name 归一化返回）。"""
+    normalized = normalize_object_name(payload.object_name)
     return success(
         FileUrlResponse(
-            object_name=payload.object_name,
-            url=await FileService(db).get_url(payload),
+            object_name=normalized,
+            url=await FileService(db).get_url(payload, session=session),
         )
     )
 
@@ -117,11 +124,13 @@ async def url(
 async def presigned_url(
     payload: FileUrlRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[FileUrlResponse]:
-    """获取文件的签名访问 URL。"""
+    """获取文件的签名访问 URL（仅本人上传的文件，object_name 归一化返回）。"""
+    normalized = normalize_object_name(payload.object_name)
     return success(
         FileUrlResponse(
-            object_name=payload.object_name,
-            url=await FileService(db).get_presigned_url(payload),
+            object_name=normalized,
+            url=await FileService(db).get_presigned_url(payload, session=session),
         )
     )

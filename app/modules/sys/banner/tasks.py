@@ -8,51 +8,42 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime
 
-from snailjob import ExecuteResult, ExecutorManager, JobArgs, SnailLog, job
 from sqlalchemy import or_, update
 
-from app.core.cache.redis import get_redis, init_redis
+from app.core.cache.redis import get_redis
 from app.core.config.enums import StatusEnum
-from app.core.db.session import get_session_factory, init_engine
-from app.core.tasks.async_runner import worker_async_runner
+from app.core.db.session import get_session_factory
 from app.modules.sys.banner.model import SysBanner
 from app.modules.sys.banner.service import flush_interaction_deltas
+from app.modules.sys.job.registry import job_handler
 
 logger = logging.getLogger(__name__)
 
 
-@job("bannerFlushInteractions")
-def flush_banner_interactions(_args: JobArgs) -> ExecuteResult:
+@job_handler("sys_banner_flush_interactions")
+async def flush_banner_interactions(params: dict | None) -> str:
     """周期任务：将展示图交互增量刷入数据库。"""
     try:
-        count = worker_async_runner.run(_flush_banner_interactions())
-        SnailLog.REMOTE.info(f"bannerFlushInteractions count={count}")
-        return ExecuteResult.success(count)
-    except Exception as exc:
+        count = await _flush_banner_interactions()
+        return f"flushed={count}"
+    except Exception:
         logger.exception("Flush banner interactions failed")
-        SnailLog.REMOTE.error(str(exc))
-        return ExecuteResult.failure(str(exc))
+        raise
 
 
-@job("bannerStatusJob")
-def sync_banner_status(_args: JobArgs) -> ExecuteResult:
+@job_handler("sys_banner_status_sync")
+async def sync_banner_status(params: dict | None) -> str:
     """按 start_at / end_at 激活或过期 Banner（对齐 hei-boot bannerStatusJob）。"""
     try:
-        result = worker_async_runner.run(_sync_banner_status())
-        SnailLog.REMOTE.info(
-            f"Banner status sync: expired={result['expired']}, activated={result['activated']}"
-        )
-        return ExecuteResult.success(result)
-    except Exception as exc:
+        result = await _sync_banner_status()
+        return f"expired={result['expired']},activated={result['activated']}"
+    except Exception:
         logger.exception("Banner status sync failed")
-        SnailLog.REMOTE.error(str(exc))
-        return ExecuteResult.failure(str(exc))
+        raise
 
 
 async def _flush_banner_interactions() -> int:
-    """初始化引擎与 Redis 后执行增量刷新，Redis 不可用时跳过。"""
-    init_engine()
-    await init_redis()
+    """读取 Redis 交互增量并刷库，Redis 不可用时跳过。"""
     redis = get_redis()
     if redis is None:
         logger.info("Skip display image interaction flush because Redis is unavailable")
@@ -64,7 +55,6 @@ async def _flush_banner_interactions() -> int:
 
 async def _sync_banner_status() -> dict[str, int]:
     """过期 ENABLED → DISABLED；到点且未过期的 DISABLED → ENABLED。"""
-    init_engine()
     now = datetime.now(UTC)
     session_factory = get_session_factory()
     async with session_factory() as session:
@@ -92,7 +82,3 @@ async def _sync_banner_status() -> dict[str, int]:
         activated = activated_result.rowcount or 0
         logger.info("Banner status sync expired=%s activated=%s", expired, activated)
         return {"expired": expired, "activated": activated}
-
-
-ExecutorManager.register(flush_banner_interactions)
-ExecutorManager.register(sync_banner_status)

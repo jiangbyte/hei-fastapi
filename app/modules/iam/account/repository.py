@@ -261,10 +261,11 @@ class AccountRepository:
         account_id: str,
         identity_type: AccountIdentityType,
     ) -> bool:
-        """判断账户是否已绑定指定类型且启用中的登录标识。"""
+        """判断账户是否已绑定指定类型的登录标识（仅 BOUND 状态，对齐 hei-boot）。"""
         stmt = select(SysAccountIdentity.id).where(
             SysAccountIdentity.account_id == account_id,
             SysAccountIdentity.identity_type == identity_type.value,
+            SysAccountIdentity.bind_status == AccountIdentityBindStatus.BOUND.value,
         )
         return (await self.db.execute(stmt)).first() is not None
 

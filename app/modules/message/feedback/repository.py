@@ -62,12 +62,10 @@ class SysFeedbackRepository:
         return entity
 
     async def delete_many(self, entity_ids: list[str]) -> None:
-        """批量删除反馈，存在不存在的 ID 时整体拒绝删除。"""
+        """批量删除反馈（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(entity_ids))
-        stmt = select(SysFeedback.id).where(SysFeedback.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("SysFeedback not found")
+        if not unique_ids:
+            return
         await self.db.execute(delete(SysFeedback).where(SysFeedback.id.in_(unique_ids)))
 
     async def page_admin(self, query: SysFeedbackAdminPageQuery) -> tuple[list[SysFeedback], int]:

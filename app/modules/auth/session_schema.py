@@ -10,17 +10,18 @@ from pydantic import Field
 from app.core.config.enums import AccountType
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool, WireInt
 
 
 class SessionAnalysisResponse(ApiSchema):
-    """在线会话统计概览响应。"""
+    """在线会话统计概览响应（数值按字符串线格式输出）。"""
 
-    online_account_count: int
-    online_token_count: int
-    admin_account_count: int
-    portal_account_count: int
-    one_hour_new_count: int
-    max_token_count: int
+    online_account_count: WireInt
+    online_token_count: WireInt
+    admin_account_count: WireInt
+    portal_account_count: WireInt
+    one_hour_new_count: WireInt
+    max_token_count: WireInt
 
 
 class SessionPageQuery(PageQuery):
@@ -30,12 +31,16 @@ class SessionPageQuery(PageQuery):
     account_id: str | None = Field(default=None, max_length=64)
     account: str | None = Field(default=None, max_length=128)
     ip: str | None = Field(default=None, max_length=64)
+    keyword: str | None = Field(default=None, max_length=128)
 
 
 class SessionTokenInfo(ApiSchema):
     """单个在线 token 信息。"""
 
     token: str
+    account_id: str | None = None
+    account_type: AccountType | str | None = None
+    remember_me: WireBool = True
     device_label: str | None = None
     client_ip: str | None = None
     user_agent: str | None = None
@@ -55,16 +60,18 @@ class SessionAccountItem(ApiSchema):
     avatar: str | None = None
     latest_login_ip: str | None = None
     latest_login_time: datetime | None = None
-    token_count: int
+    client_ip: str | None = None
+    device_label: str | None = None
+    token_count: WireInt
     first_login_at: datetime | None = None
     latest_active_at: datetime | None = None
     tokens: list[SessionTokenInfo] = Field(default_factory=list)
 
 
 class SessionTokensQuery(ApiSchema):
-    """按账户类型与账户 ID 定位会话。"""
+    """按账户类型与账户 ID 定位会话（account_type 缺省按 ADMIN 处理，对齐 hei-boot）。"""
 
-    account_type: AccountType
+    account_type: AccountType | None = None
     account_id: str = Field(min_length=1, max_length=64)
 
 

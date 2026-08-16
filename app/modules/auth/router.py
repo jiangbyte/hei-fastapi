@@ -49,7 +49,7 @@ from app.modules.auth.schema import (
     SendLoginCodeRequest,
     SendRegisterCodeRequest,
 )
-from app.modules.auth.service import AuthService
+from app.modules.auth.service import AuthService, session_expires_in
 
 admin_router = APIRouter()
 portal_router = APIRouter()
@@ -156,6 +156,7 @@ async def _login(
             account_type=AccountType(str(session.account_type)),
             password_expired=session.password_expired,
             password_expiry_warning_days=warning,
+            expires_in=session_expires_in(session),
             force_bind_email=session.force_bind_email,
             force_bind_phone=session.force_bind_phone,
         )
@@ -385,13 +386,13 @@ def _device_label(user_agent: str | None) -> str | None:
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
 )
 async def cancel_account(
-    payload: CancelAccountRequest,
+    payload: CancelAccountRequest | None,
     request: Request,
     response: Response,
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> CancelAccountApiResponse:
-    """统一账号注销接口，只注销当前登录账号。"""
-    await AuthService(db).cancel_current_account(payload, session)
+    """统一账号注销接口，只注销当前登录账号（请求体可省略）。"""
+    await AuthService(db).cancel_current_account(payload or CancelAccountRequest(), session)
     clear_session_cookie(response, request=request)
     return success(CancelAccountResponse(success=True))

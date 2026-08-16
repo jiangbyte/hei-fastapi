@@ -240,7 +240,7 @@ async def test_admin_dict_page_detail_tree_include_parent_id_name(client):
     assert tree_response.json()["data"][0]["children"][0]["parent_id_name"] == "Region"
 
 
-async def test_admin_dict_page_parent_filter_includes_parent_and_direct_children(client):
+async def test_admin_dict_page_parent_filter_matches_direct_children_only(client):
     token = "admin-dict-parent-filter-token"
     await _seed_admin(client, token, ["sys:dict:create", "sys:dict:page"])
     headers = {"Authorization": token}
@@ -294,8 +294,9 @@ async def test_admin_dict_page_parent_filter_includes_parent_and_direct_children
 
     assert page_response.status_code == 200
     data = page_response.json()["data"]
-    assert data["total"] == "3"
-    assert {item["id"] for item in data["records"]} == {parent_id, enabled_id, disabled_id}
+    # 对齐 hei-boot：parent_id 仅精确匹配直接子节点（不含父节点自身）。
+    assert data["total"] == "2"
+    assert {item["id"] for item in data["records"]} == {enabled_id, disabled_id}
 
 
 async def test_admin_dict_page_without_permission_returns_403(client):

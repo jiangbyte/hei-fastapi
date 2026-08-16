@@ -5,10 +5,10 @@
 
 from typing import TypedDict
 
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions.business import NotFoundError
+from app.core.exceptions.business import ConflictError, NotFoundError
 from app.modules.sys.dict.model import SysDict
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
@@ -24,6 +24,7 @@ class DictTreeRecord(TypedDict):
     id: str
     code: str
     label: str | None
+    name: str | None
     value: str | None
     color: str | None
     category: str | None
@@ -31,6 +32,7 @@ class DictTreeRecord(TypedDict):
     parent_id_name: str | None
     status: str
     sort: int
+    weight: int
     children: list["DictTreeRecord"]
 
 
@@ -42,7 +44,9 @@ class DictRepository:
         self.db = db
 
     async def create(self, payload: DictCreateRequest) -> None:
-        """新增字典并 flush。"""
+        """新增字典并 flush（code 唯一预校验，对齐 hei-boot）。"""
+        if await self.get_by_code(payload.code) is not None:
+            raise ConflictError("Dict code already exists")
         entity = SysDict(**payload.model_dump())
         self.db.add(entity)
         await self.db.flush()
@@ -50,6 +54,11 @@ class DictRepository:
     async def get_by_id(self, dict_id: str) -> SysDict | None:
         """按主键查询字典，不存在返回 None。"""
         return await self.db.get(SysDict, dict_id)
+
+    async def get_by_code(self, code: str) -> SysDict | None:
+        """按编码查询字典（编码唯一性预校验）。"""
+        stmt = select(SysDict).where(SysDict.code == code).limit(1)
+        return (await self.db.execute(stmt)).scalar_one_or_none()
 
     async def get_required(self, dict_id: str) -> SysDict:
         """按主键查询字典，不存在时抛出 NotFoundError。"""
@@ -59,20 +68,21 @@ class DictRepository:
         return entity
 
     async def update(self, payload: DictUpdateRequest) -> None:
-        """按主键更新字典字段（排除 id）。"""
+        """按主键更新字典字段（排除 id；code 唯一预校验）。"""
         entity = await self.get_required(payload.id)
+        duplicate = await self.get_by_code(payload.code)
+        if duplicate is not None and duplicate.id != payload.id:
+            raise ConflictError("Dict code already exists")
         data = payload.model_dump(exclude={"id"})
         for key, value in data.items():
             setattr(entity, key, value)
         await self.db.flush()
 
     async def delete_many(self, dict_ids: list[str]) -> None:
-        """批量删除字典；存在不存在的 ID 时抛出 NotFoundError。"""
+        """批量删除字典（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(dict_ids))
-        stmt = select(SysDict.id).where(SysDict.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("Dict not found")
+        if not unique_ids:
+            return
         await self.db.execute(delete(SysDict).where(SysDict.id.in_(unique_ids)))
 
     async def page_admin(self, query: DictAdminPageQuery) -> tuple[list[SysDict], int]:
@@ -81,12 +91,12 @@ class DictRepository:
         count_stmt = select(func.count(SysDict.id))
         filters = []
         if query.code:
-            filters.append(SysDict.code == query.code)
+            filters.append(SysDict.code.like(f"%{query.code}%"))
         if query.category:
             filters.append(SysDict.category == query.category)
         if query.parent_id:
-            # 同时匹配自身与子节点，便于按父级过滤整棵子树。
-            filters.append(or_(SysDict.id == query.parent_id, SysDict.parent_id == query.parent_id))
+            # 仅按父级精确匹配子节点（对齐 hei-boot page() 的 eq 语义）。
+            filters.append(SysDict.parent_id == query.parent_id)
         if query.status:
             filters.append(SysDict.status == str(query.status))
         if filters:
@@ -126,6 +136,7 @@ def _build_tree(items: list[SysDict]) -> list[DictTreeRecord]:
             "id": item.id,
             "code": item.code,
             "label": item.label,
+            "name": item.label,
             "value": item.value,
             "color": item.color,
             "category": item.category,
@@ -133,6 +144,7 @@ def _build_tree(items: list[SysDict]) -> list[DictTreeRecord]:
             "parent_id_name": None,
             "status": item.status,
             "sort": item.sort,
+            "weight": item.sort,
             "children": [],
         }
         for item in items

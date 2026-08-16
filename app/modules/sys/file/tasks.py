@@ -9,33 +9,42 @@ import logging
 import time
 from pathlib import Path
 
-from snailjob import ExecuteResult, ExecutorManager, JobArgs, SnailLog, job
 from sqlalchemy import select
 
 from app.core.config.enums import StorageProvider
 from app.core.db.session import get_session_factory
 from app.core.storage.local import LocalStorage
 from app.core.storage.manager import get_storage
-from app.core.tasks.async_runner import worker_async_runner
 from app.modules.sys.file.model import SysFile
+from app.modules.sys.job.registry import job_handler
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_MIN_AGE_SECONDS = 3600
+_CLEANUP_LIMIT = 200
 
-@job("sysFileCleanupLocalOrphans")
-def cleanup_local_orphans(_args: JobArgs) -> ExecuteResult:
-    """删除早于 min_age 且无对应 sys_file 行的本地文件。"""
-    try:
-        result = worker_async_runner.run(_cleanup(min_age_seconds=3600, limit=200))
-        SnailLog.REMOTE.info(
-            f"sysFileCleanupLocalOrphans scanned={result['scanned']} "
-            f"deleted={result['deleted']} skipped={result['skipped']}"
-        )
-        return ExecuteResult.success(result)
-    except Exception as exc:
-        logger.exception("Local orphan cleanup failed")
-        SnailLog.REMOTE.error(str(exc))
-        return ExecuteResult.failure(str(exc))
+
+@job_handler("sys_file_cleanup_local_orphans")
+async def cleanup_local_orphans(params: dict | None) -> str:
+    """删除早于保留期且无对应 sys_file 行的本地文件。"""
+    result = await _cleanup(
+        min_age_seconds=_parse_min_age_seconds(params), limit=_CLEANUP_LIMIT
+    )
+    return f"scanned={result['scanned']},deleted={result['deleted']},skipped={result['skipped']}"
+
+
+def _parse_min_age_seconds(params: dict | None) -> int:
+    """从执行参数解析保留期（minAgeMinutes），缺省 3600 秒（对齐 hei-boot）。"""
+    if params and params.get("minAgeMinutes") is not None:
+        try:
+            return int(str(params["minAgeMinutes"]).strip()) * 60
+        except (TypeError, ValueError):
+            logger.warning(
+                "Invalid minAgeMinutes=%r; using default %ss",
+                params["minAgeMinutes"],
+                _DEFAULT_MIN_AGE_SECONDS,
+            )
+    return _DEFAULT_MIN_AGE_SECONDS
 
 
 async def _cleanup(*, min_age_seconds: int, limit: int) -> dict[str, int]:
@@ -92,9 +101,9 @@ async def _cleanup(*, min_age_seconds: int, limit: int) -> dict[str, int]:
                     logger.debug("orphan delete failed: %s", object_name, exc_info=True)
 
     logger.info(
-        "Local orphan cleanup scanned=%s deleted=%s skipped=%s", len(candidates), deleted, skipped
+        "Local orphan cleanup scanned=%s deleted=%s skipped=%s",
+        len(candidates),
+        deleted,
+        skipped,
     )
     return {"scanned": len(candidates), "deleted": deleted, "skipped": skipped}
-
-
-ExecutorManager.register(cleanup_local_orphans)

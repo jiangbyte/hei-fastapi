@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
-from app.core.exceptions.business import BusinessError, NotFoundError
+from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
@@ -39,21 +39,31 @@ class SysFeedbackService:
         self.file_repo = FileRepository(db)
 
     async def submit(self, payload: SysFeedbackCreateRequest, session: SessionPayload) -> None:
-        """提交反馈：先规范化附件名，再落库创建记录。"""
-        attach_object_names = await self._normalize_attach_object_names(payload.attach_object_names)
+        """提交反馈：推导标题/分类默认值、规范化附件名后落库（对齐 hei-boot）。"""
+        title = (payload.title or "").strip()
+        if not title:
+            title = payload.content.strip()[:64]
+        category = (payload.category or "").strip() or "GENERAL"
+        normalized_payload = payload.model_copy(
+            update={"title": title, "category": category}
+        )
+        attach_object_names = await self._normalize_attach_object_names(
+            normalized_payload.attach_object_names
+        )
         async with transactional(self.db):
             await self.repo.create(
-                payload,
+                normalized_payload,
                 submitter_account_type=str(session.account_type),
                 submitter_account_id=session.account_id,
                 attach_object_names=attach_object_names,
             )
 
     async def update(self, payload: SysFeedbackUpdateRequest, session: SessionPayload) -> None:
-        """处理反馈：更新状态，并在回复时记录回复人与时间。"""
+        """处理反馈：仅在提供 status 时更新状态，回复时记录回复人与时间（对齐 hei-boot）。"""
         async with transactional(self.db):
             entity = await self.repo.get_required(payload.id)
-            entity.status = payload.status
+            if payload.status is not None:
+                entity.status = payload.status
             if payload.reply is not None:
                 entity.reply = payload.reply
                 entity.replied_by = session.account_id
@@ -72,13 +82,13 @@ class SysFeedbackService:
         return await self._enrich_profiles(schema)
 
     async def detail_my(self, query: IdQuery, session: SessionPayload) -> SysFeedbackSchema:
-        """查询「我的反馈」详情，非本人反馈按不存在处理。"""
+        """查询「我的反馈」详情，非本人反馈返回 403 无权查看（对齐 hei-boot）。"""
         entity = await self.repo.get_required(query.id)
         if (
             str(entity.submitter_account_type) != str(session.account_type)
             or str(entity.submitter_account_id) != str(session.account_id)
         ):
-            raise NotFoundError("SysFeedback not found")
+            raise BusinessError("无权查看")
         schema = to_schema(SysFeedbackSchema, entity)
         return await self._enrich_attachments(schema)
 

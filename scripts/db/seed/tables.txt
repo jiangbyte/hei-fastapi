@@ -1,4 +1,3 @@
-admin_user_profile
 alembic_version
 cg_test_activity
 cg_test_catalog
@@ -6,12 +5,11 @@ cg_test_knowledge_category
 cg_test_knowledge_doc
 cg_test_order
 cg_test_order_item
-msg_feedback
-msg_notice
-msg_notice_read
-portal_user_profile
+profile_user_admin
+profile_user_portal
 sys_account
 sys_account_identity
+sys_account_oauth_binding
 sys_account_password_history
 sys_alert_log
 sys_banner
@@ -22,9 +20,14 @@ sys_codegen_plan
 sys_config
 sys_dept
 sys_dict
+sys_feedback
 sys_file
 sys_group
 sys_iam_relation
+sys_job
+sys_job_log
+sys_notice
+sys_notice_read
 sys_operation_audit_log
 sys_operation_audit_outbox
 sys_position

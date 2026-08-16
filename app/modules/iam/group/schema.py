@@ -10,9 +10,9 @@ from pydantic import Field
 from app.core.config.enums import AccountType, StatusEnum
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, IdQuery
+from app.modules.iam.role.schema import SysRoleSchema
 from app.modules.iam.schema import (
     ResourceGrantModuleOption,
-    RoleOption,
     SysAccountSchema,
 )
 
@@ -101,31 +101,31 @@ class GroupGrantUserRequest(ApiSchema):
 
 
 class GroupOwnRoleQuery(IdQuery):
-    """账户组角色查询条件（附带账户体系）。"""
+    """账户组角色查询条件（附带账户体系，缺省不过滤）。"""
 
-    account_type: AccountType
+    account_type: AccountType | None = None
 
 
 class GroupOwnRoleResponse(ApiSchema):
-    """账户组拥有的角色响应结构。"""
+    """账户组拥有的角色响应结构（roles 为完整角色实体，对齐 hei-boot）。"""
 
     id: str
-    roles: list[RoleOption] = Field(default_factory=list)
+    roles: list[SysRoleSchema] = Field(default_factory=list)
     role_ids: list[str] = Field(default_factory=list)
 
 
 class GroupGrantRoleRequest(ApiSchema):
-    """给账户组授权角色的请求。"""
+    """给账户组授权角色的请求（account_type 缺省按 ADMIN，对齐 hei-boot）。"""
 
     id: str = Field(min_length=1, max_length=64)
-    account_type: AccountType
+    account_type: AccountType = AccountType.ADMIN
     role_ids: list[str] = Field(default_factory=list)
 
 
 class GroupOwnResourceQuery(IdQuery):
-    """账户组资源查询条件（附带账户体系）。"""
+    """账户组资源查询条件（附带账户体系，缺省不过滤）。"""
 
-    account_type: AccountType
+    account_type: AccountType | None = None
 
 
 class GroupOwnResourceResponse(ApiSchema):
@@ -137,17 +137,17 @@ class GroupOwnResourceResponse(ApiSchema):
 
 
 class GroupGrantResourceRequest(ApiSchema):
-    """给账户组授权资源的请求。"""
+    """给账户组授权资源的请求（account_type 缺省按 ADMIN，对齐 hei-boot）。"""
 
     id: str = Field(min_length=1, max_length=64)
-    account_type: AccountType
+    account_type: AccountType = AccountType.ADMIN
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)
 
 
 class GroupOwnClientResourceQuery(IdQuery):
-    """账户组客户端资源查询条件（附带账户体系）。"""
+    """账户组客户端资源查询条件（附带账户体系，缺省不过滤）。"""
 
-    account_type: AccountType
+    account_type: AccountType | None = None
 
 
 class GroupOwnClientResourceResponse(ApiSchema):
@@ -159,8 +159,8 @@ class GroupOwnClientResourceResponse(ApiSchema):
 
 
 class GroupGrantClientResourceRequest(ApiSchema):
-    """给账户组授权客户端资源的请求。"""
+    """给账户组授权客户端资源的请求（account_type 缺省按 ADMIN，对齐 hei-boot）。"""
 
     id: str = Field(min_length=1, max_length=64)
-    account_type: AccountType
+    account_type: AccountType = AccountType.ADMIN
     grant_info_list: list[GroupResourceGrantInfo] = Field(default_factory=list)

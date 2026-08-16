@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, field_serializer
 
 from app.core.config.enums import AccountType, DataScope, StatusEnum
 from app.core.response.pagination import PageQuery
@@ -164,9 +164,14 @@ class SysClientResourceSchema(ApiSchema):
 
 
 class ClientResourceTreeNode(SysClientResourceSchema):
-    """客户端资源树节点结构。"""
+    """客户端资源树节点结构（空 children 不出现在 JSON 中，对齐 hei-boot NON_EMPTY）。"""
 
-    children: list["ClientResourceTreeNode"] = Field(default_factory=list)
+    children: list["ClientResourceTreeNode"] | None = Field(default=None)
+
+    @field_serializer("children", when_used="json")
+    def _omit_empty_children(self, value: list["ClientResourceTreeNode"] | None):
+        """空列表序列化为 None，使叶子节点省略 children 键。"""
+        return value or None
 
 
 class ClientResourcePermissionBindRequest(ApiSchema):

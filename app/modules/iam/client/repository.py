@@ -299,6 +299,7 @@ class ClientResourceRepository:
             payload.resource_id,
             IamRelationType.CLIENT_RESOURCE_PERMISSION,
             account_type=payload.account_type.value,
+            target_key=payload.permission_key,
         )
         relation = self.relations.client_resource_permission(
             payload.resource_id,

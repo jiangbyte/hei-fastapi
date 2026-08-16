@@ -157,11 +157,12 @@ async def batch_save(
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
 )
 async def test_audit_alert_webhook(
-    payload: TestWebhookRequest,
+    payload: TestWebhookRequest | None = None,
 ) -> ApiResponse[dict]:
-    """发送审计告警测试 Webhook，失败时抛出业务错误。"""
+    """发送审计告警测试 Webhook（请求体可省略，对齐 hei-boot），失败时抛出业务错误。"""
     from app.modules.sys.audit.alert import send_test_webhook
 
+    payload = payload or TestWebhookRequest()
     err = await send_test_webhook(payload.webhook_url, payload.webhook_secret)
     if err:
         from app.core.exceptions.business import BusinessError

@@ -45,6 +45,7 @@ from app.modules.sys.dict.router import router as sys_dict_router
 from app.modules.sys.file.portal.router import router as file_portal_router
 from app.modules.sys.file.public_router import router as file_public_router
 from app.modules.sys.file.router import router as sys_file_router
+from app.modules.sys.job.router import router as sys_job_router
 from app.modules.sys.weak_password.router import router as weak_password_router
 from app.modules.user.admin.router import router as user_admin_router
 from app.modules.user.portal.router import router as user_portal_router
@@ -84,6 +85,7 @@ _ROUTERS: list[tuple[str, APIRouter]] = [
     ("admin", sys_file_router),
     ("portal", file_portal_router),
     ("public", file_public_router),
+    ("admin", sys_job_router),
     ("admin", weak_password_router),
     ("admin", user_admin_router),
     ("portal", user_portal_router),

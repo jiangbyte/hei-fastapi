@@ -21,7 +21,7 @@ from app.core.observability.tracing import shutdown_tracing
 from app.core.secrets.validate import validate_secrets_config
 from app.core.security.auth_whitelist import get_auth_whitelist_patterns
 from app.core.security.permission_registry import sync_permission_registry
-from app.core.tasks.snailjob_client import start_executor, stop_executor
+from app.modules.sys.job.scheduler import start_job_scheduler, stop_job_scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -44,15 +44,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await sync_permission_registry(app)
     await init_http_client()
 
-    # 内嵌 SnailJob 执行器（单进程模型，后台线程）。
-    start_executor()
+    # 内置任务调度器：进程内 asyncio 后台任务轮询 sys_job 到期任务。
+    await start_job_scheduler()
 
     await emit("on_db_ready")
 
     try:
         yield
     finally:
-        stop_executor()
+        await stop_job_scheduler()
         await stop_config_sync_listener()
         await stop_operation_audit_queue()
         await close_http_client()

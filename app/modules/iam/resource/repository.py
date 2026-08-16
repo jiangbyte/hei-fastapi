@@ -280,9 +280,16 @@ class ResourceRepository:
         self,
         payload: ResourcePermissionBindRequest,
     ) -> SysIamRelation:
-        """为资源追加权限挂载关系。"""
+        """为资源挂载权限关系（同键先删后插，对齐 hei-boot 覆盖语义）。"""
         if not await self.db.get(SysResource, payload.resource_id):
             raise NotFoundError("Resource not found")
+        await self.relations.delete_subject_relations(
+            IamRelationSubjectType.RESOURCE.value,
+            payload.resource_id,
+            IamRelationType.RESOURCE_PERMISSION,
+            account_type=payload.account_type.value,
+            target_key=payload.permission_key,
+        )
         data = payload.model_dump()
         data["account_type"] = payload.account_type.value
         relation = self.relations.resource_permission(**data)

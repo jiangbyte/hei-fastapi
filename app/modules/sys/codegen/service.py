@@ -99,11 +99,18 @@ class CodegenService:
         return _build_resource_options(await self.repo.list_resource_options(query.module_id))
 
     async def preview(self, query: IdQuery) -> CodegenPreviewSchema:
-        """渲染方案的文件预览，主表无字段时先反射同步。"""
+        """渲染方案的文件预览。
+
+        主表无字段，或关联类型（LEFT_TREE_TABLE/MASTER_DETAIL）子表无字段时，
+        先反射同步（对齐 hei-boot preview 的补全逻辑）。
+        """
         plan = await self.repo.get_required(query.id)
         main_fields = await self.repo.list_fields(plan.id, "MAIN")
         sub_fields = await self.repo.list_fields(plan.id, "SUB")
-        if not main_fields:
+        needs_sync = not main_fields or (
+            plan.gen_type in {"LEFT_TREE_TABLE", "MASTER_DETAIL"} and not sub_fields
+        )
+        if needs_sync:
             await self._sync_reflected_fields(plan)
             main_fields = await self.repo.list_fields(plan.id, "MAIN")
             sub_fields = await self.repo.list_fields(plan.id, "SUB")
@@ -235,6 +242,8 @@ def _build_resource_options(resources) -> list[CodegenParentResourceOption]:
             name=item.name,
             resource_type=item.resource_type,
             module_id=item.module_id,
+            sort=getattr(item, "sort", None),
+            weight=getattr(item, "sort", None),
         )
         for item in resources
     }

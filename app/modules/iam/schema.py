@@ -51,6 +51,7 @@ class SysAccountSchema(ApiSchema):
     email_identity_bind_status: AccountIdentityBindStatus | None = None
     phone_identity_bind_status: AccountIdentityBindStatus | None = None
     identities: list[AccountIdentitySchema] = Field(default_factory=list)
+    oauth_bindings: list["AccountOauthBindingSchema"] = Field(default_factory=list)
     bio: str | None = None
     level: str | None = None
     remark: str | None = None
@@ -69,6 +70,18 @@ class SysAccountSchema(ApiSchema):
     created_by: str | None = None
     updated_at: datetime = Field(examples=["2026-06-18T12:00:00Z"])
     updated_by: str | None = None
+
+
+class AccountOauthBindingSchema(ApiSchema):
+    """账户三方登录绑定项（对齐 hei-boot AccountOauthBindingResult）。"""
+
+    id: str
+    provider: str
+    open_id: str
+    union_id: str | None = None
+    nickname: str | None = None
+    avatar: str | None = None
+    bound_at: datetime | None = None
 
 
 class RoleOption(ApiSchema):
@@ -109,9 +122,12 @@ class ResourceGrantModuleOption(ApiSchema):
 
 
 class PermissionRegistryItem(ApiSchema):
-    """权限注册表条目结构。"""
+    """权限注册表条目结构（module_code/resource_code/action 由权限码按 : 拆分派生）。"""
 
     permission_key: str
     name: str
+    module_code: str | None = None
+    resource_code: str | None = None
+    action: str | None = None
     method: str | None = None
     path: str | None = None

@@ -61,6 +61,13 @@ async def get_me(
     force_bind_email, force_bind_phone = await AuthService(db)._force_bind_flags(
         account_entity, AccountType.PORTAL
     )
+    role_id_names, dept_id_names, group_id_names = (
+        await ProfileUserPortalService(db).get_id_name_groups(
+            session.role_ids,
+            session.dept_ids,
+            session.group_ids,
+        )
+    )
     return success(
         PortalMeResponse(
             account_id=session.account_id,
@@ -72,6 +79,9 @@ async def get_me(
             role_ids=session.role_ids,
             dept_ids=session.dept_ids,
             group_ids=session.group_ids,
+            role_id_names=role_id_names,
+            dept_id_names=dept_id_names,
+            group_id_names=group_id_names,
             permission_keys=session.permission_keys,
             password_expired=await is_password_expired(db, session.account_id),
             force_bind_email=force_bind_email,
@@ -261,21 +271,21 @@ async def update_user_center_email(
 
 @router.get(
     "/v1/portal/spaces/detail",
+    dependencies=[Depends(require_account_type(AccountType.PORTAL))],
     response_model=ApiResponse[PortalPublicProfileResponse],
 )
 async def get_public_space(
     query: Annotated[PortalPublicSpaceQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[PortalPublicProfileResponse]:
-    """查询门户用户公开主页资料。"""
+    """查询门户用户公开主页资料（要求 PORTAL 会话，对齐 hei-boot）。"""
     return success(await ProfileUserPortalService(db).get_public_profile(query))
 
 
 def _identity_login_enabled(identity) -> bool:
-    """判断绑定身份是否可用于登录（已绑定且已验证）。"""
+    """判断绑定身份是否可用于登录（仅要求 BOUND，对齐 hei-boot）。"""
     return bool(
         identity
         and identity.identifier
-        and identity.verified
         and identity.bind_status == AccountIdentityBindStatus.BOUND.value
     )

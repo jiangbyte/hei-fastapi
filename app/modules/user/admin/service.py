@@ -100,15 +100,20 @@ class ProfileUserAdminService:
         payload: AdminUserCenterProfileUpdateRequest,
         session: SessionPayload,
     ) -> None:
-        """更新当前账户个人资料（保留头像、手机、邮箱等未编辑字段）。"""
+        """更新当前账户个人资料（头像按载荷规范化写入，其余字段保留，对齐 hei-boot）。"""
         profile = await self.repo.get_by_account_id(session.account_id)
+        avatar = (
+            normalize_object_name(payload.avatar)
+            if payload.avatar
+            else (profile.avatar if profile else None)
+        )
         async with transactional(self.db):
             await self.repo.upsert(
                 ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
                     name=payload.name,
                     nickname=payload.nickname,
-                    avatar=profile.avatar if profile else None,
+                    avatar=avatar,
                     signature=payload.signature,
                     phone=profile.phone if profile else None,
                     email=profile.email if profile else None,
@@ -315,9 +320,5 @@ class ProfileUserAdminService:
         ids: list[str],
         name_map: dict[str, str],
     ) -> list[IdNameResponse]:
-        """按 ID 顺序组装 IdNameResponse，忽略无名称映射的 ID。"""
-        return [
-            IdNameResponse(id=item_id, name=name_map[item_id])
-            for item_id in ids
-            if item_id in name_map
-        ]
+        """按 ID 顺序组装 IdNameResponse（无名称映射时 name 为 null，对齐 hei-boot）。"""
+        return [IdNameResponse(id=item_id, name=name_map.get(item_id)) for item_id in ids]

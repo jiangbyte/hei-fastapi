@@ -164,7 +164,7 @@ class GroupService:
         role_ids = await self.repo.list_group_role_ids(
             query.id,
             role_filter,
-            account_type=query.account_type.value,
+            account_type=query.account_type.value if query.account_type else None,
         )
         return GroupOwnRoleResponse(
             id=query.id,

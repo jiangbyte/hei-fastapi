@@ -57,12 +57,10 @@ class BannerRepository:
         await self.db.flush()
 
     async def delete_many(self, banner_ids: list[str]) -> None:
-        """批量删除展示图；存在不存在的 ID 时抛出 NotFoundError。"""
+        """批量删除展示图（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(banner_ids))
-        stmt = select(SysBanner.id).where(SysBanner.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("Display image not found")
+        if not unique_ids:
+            return
         await self.db.execute(delete(SysBanner).where(SysBanner.id.in_(unique_ids)))
 
     async def page_admin(self, query: BannerAdminPageQuery) -> tuple[list[SysBanner], int]:

@@ -8,9 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.enums import AccountType
 from app.core.schema.datetime import normalize_orm_datetimes
 from app.core.storage.url import resolve_file_url
+from app.modules.auth.oauth.repository import AccountOauthBindingRepository
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.enums import AccountIdentityBindStatus
-from app.modules.iam.schema import AccountIdentitySchema, SysAccountSchema
+from app.modules.iam.schema import (
+    AccountIdentitySchema,
+    AccountOauthBindingSchema,
+    SysAccountSchema,
+)
 from app.modules.user.admin.repository import ProfileUserAdminRepository
 from app.modules.user.portal.repository import ProfileUserPortalRepository
 
@@ -30,9 +35,13 @@ class AccountQueryService:
         portal_profiles = await ProfileUserPortalRepository(self.db).list_by_account_ids(
             account_ids
         )
+        bindings = await AccountOauthBindingRepository(self.db).list_by_account_ids(account_ids)
         identity_map: dict[str, list] = {}
         for identity in identities:
             identity_map.setdefault(identity.account_id, []).append(identity)
+        binding_map: dict[str, list] = {}
+        for binding in bindings:
+            binding_map.setdefault(binding.account_id, []).append(binding)
         admin_profile_map = {profile.account_id: profile for profile in admin_profiles}
         portal_profile_map = {profile.account_id: profile for profile in portal_profiles}
 
@@ -98,6 +107,10 @@ class AccountQueryService:
                         AccountIdentitySchema.model_validate(identity)
                         for identity in account_identities
                     ],
+                    oauth_bindings=[
+                        AccountOauthBindingSchema.model_validate(binding)
+                        for binding in binding_map.get(account.id, [])
+                    ],
                     cancelled_at=account.cancelled_at,
                     cancelled_by=account.cancelled_by,
                     cancel_reason=account.cancel_reason,
@@ -119,10 +132,9 @@ class AccountQueryService:
 
 
 def _identity_login_enabled(identity) -> bool:
-    """判断登录标识是否已启用：存在、有标识、已验证且处于绑定状态。"""
+    """判断登录标识是否已启用：存在、有标识且处于绑定状态（对齐 hei-boot，不看 verified）。"""
     return bool(
         identity
         and identity.identifier
-        and identity.verified
         and identity.bind_status == AccountIdentityBindStatus.BOUND.value
     )

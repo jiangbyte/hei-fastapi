@@ -192,6 +192,7 @@ async def test_portal_register_requires_email_and_does_not_require_name_or_phone
         "/api/v1/portal/register",
         json=_secured(
             {
+                "register_channel": "ACCOUNT",
                 "account": "portal_missing_email",
                 "nickname": "Portal User",
                 "password": "Portal@123456",
@@ -202,6 +203,7 @@ async def test_portal_register_requires_email_and_does_not_require_name_or_phone
         "/api/v1/portal/register",
         json=_secured(
             {
+                "register_channel": "ACCOUNT",
                 "account": "portal_register_email",
                 "nickname": "Portal User",
                 "email": "portal-register@example.com",

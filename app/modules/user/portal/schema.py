@@ -14,13 +14,14 @@ from app.modules.auth.schema import OptionalStr
 
 
 class ProfileUserPortalResponse(ApiSchema):
-    """门户账户扩展资料响应模型。"""
+    """门户账户扩展资料响应模型（remark 恒为 null，对齐 hei-boot 线型）。"""
 
     account_id: str
     name: str | None = None
     nickname: str | None = None
     avatar: str | None = None
     signature: str | None = None
+    remark: str | None = None
     phone: str | None = None
     email: str | None = None
     phone_login_enabled: WireBool = False

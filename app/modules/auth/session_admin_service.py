@@ -65,16 +65,18 @@ class SessionAdminService:
         return build_page(query, total, page_items)
 
     async def tokens(self, query: SessionTokensQuery) -> list[SessionTokenInfo]:
-        """返回指定账户的在线 token 详情列表。"""
-        tokens = await session_store.get_account_tokens(query.account_type.value, query.account_id)
+        """返回指定账户的在线 token 详情列表（account_type 缺省按 ADMIN）。"""
+        account_type = query.account_type or AccountType.ADMIN
+        tokens = await session_store.get_account_tokens(account_type.value, query.account_id)
         sessions = await session_store.list_sessions_by_tokens(tokens)
         return [_token_info(session) for session in sessions]
 
     async def exit_sessions(self, targets: list[SessionTokensQuery]) -> None:
-        """批量删除指定账户的全部会话。"""
+        """批量删除指定账户的全部会话（account_type 缺省按 ADMIN）。"""
         for target in targets:
+            account_type = target.account_type or AccountType.ADMIN
             await session_store.delete_account_sessions(
-                target.account_type.value, target.account_id
+                account_type.value, target.account_id
             )
 
     async def exit_tokens(self, tokens: list[str]) -> None:
@@ -116,6 +118,7 @@ class SessionAdminService:
             )
             login_times = [item.login_at for item in token_infos if item.login_at]
             active_times = [item.last_active_at for item in token_infos if item.last_active_at]
+            newest = token_infos[0] if token_infos else None
             items.append(
                 SessionAccountItem(
                     account_id=account_id,
@@ -126,6 +129,8 @@ class SessionAdminService:
                     avatar=getattr(schema, "avatar", None),
                     latest_login_ip=getattr(schema, "latest_login_ip", None),
                     latest_login_time=getattr(schema, "latest_login_time", None),
+                    client_ip=newest.client_ip if newest else None,
+                    device_label=newest.device_label if newest else None,
                     token_count=len(token_infos),
                     first_login_at=min(login_times) if login_times else None,
                     latest_active_at=max(active_times) if active_times else None,
@@ -154,6 +159,16 @@ class SessionAdminService:
                 or keyword in str(item.name or "").lower()
                 or keyword in str(item.nickname or "").lower()
             ]
+        if query.keyword:
+            keyword = query.keyword.lower()
+            result = [
+                item
+                for item in result
+                if keyword in item.account.lower()
+                or keyword in str(item.name or "").lower()
+                or keyword in str(item.nickname or "").lower()
+                or keyword in item.account_id.lower()
+            ]
         if query.ip:
             result = [
                 item
@@ -174,6 +189,9 @@ def _token_info(session: SessionPayload) -> SessionTokenInfo:
     """把会话载荷转换为 token 信息模型。"""
     return SessionTokenInfo(
         token=session.token,
+        account_id=session.account_id,
+        account_type=session.account_type,
+        remember_me=session.remember_me,
         device_label=session.device_label,
         client_ip=session.client_ip,
         user_agent=session.user_agent,

@@ -1544,6 +1544,132 @@ INSERT INTO "public"."sys_iam_relation" VALUES ('rel_notice_202205', 'RESOURCE',
 INSERT INTO "public"."sys_iam_relation" VALUES ('rel_notice_202209', 'RESOURCE', '202209', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:notice:publish', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '发布消息', NULL, NULL, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-08 13:06:55.992098+00', NULL);
 INSERT INTO "public"."sys_iam_relation" VALUES ('rel_notice_202240', 'RESOURCE', '202240', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:notice:revoke', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '撤回消息', NULL, NULL, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-08 13:06:55.992098+00', NULL);
 INSERT INTO "public"."sys_iam_relation" VALUES ('rel_notice_202241', 'RESOURCE', '202241', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:notice:pin', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '置顶消息', NULL, NULL, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-08 13:06:55.992098+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_page', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:job:page', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '分页任务', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_create', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:job:create', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '新增任务', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_update', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:job:update', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '编辑任务', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_delete', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:job:delete', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '删除任务', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_detail', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:job:detail', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '任务详情', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_run', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:job:run', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '立即执行', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_iam_relation" VALUES ('rel_job_menu_log', 'RESOURCE', '204001', 'ADMIN', 'RESOURCE_PERMISSION', 'PERMISSION', '', 'sys:joblog:page', 'CASCADE', 'ALL', '[]', 'f', 0, 'ENABLED', '执行日志', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+
+-- ----------------------------
+-- Table structure for sys_job
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sys_job";
+CREATE TABLE "public"."sys_job" (
+  "id" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
+  "job_name" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
+  "execute_class" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "execute_type" varchar(16) COLLATE "pg_catalog"."default" NOT NULL,
+  "trigger_config" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "execute_param" json,
+  "last_run_time" timestamptz(6),
+  "next_run_time" timestamptz(6) NOT NULL,
+  "last_execute_result" varchar(500) COLLATE "pg_catalog"."default",
+  "enabled" bool NOT NULL,
+  "description" varchar(500) COLLATE "pg_catalog"."default",
+  "sort" int4 NOT NULL,
+  "created_at" timestamptz(6) NOT NULL DEFAULT now(),
+  "created_by" varchar(64) COLLATE "pg_catalog"."default",
+  "updated_at" timestamptz(6) NOT NULL DEFAULT now(),
+  "updated_by" varchar(64) COLLATE "pg_catalog"."default"
+)
+;
+COMMENT ON COLUMN "public"."sys_job"."id" IS '主键';
+COMMENT ON COLUMN "public"."sys_job"."job_name" IS '任务名称';
+COMMENT ON COLUMN "public"."sys_job"."execute_class" IS '任务处理器标识（JobHandler 注册 key）';
+COMMENT ON COLUMN "public"."sys_job"."execute_type" IS '触发类型：CRON 表达式 / FIXED 固定间隔';
+COMMENT ON COLUMN "public"."sys_job"."trigger_config" IS '触发配置：CRON 表达式或固定间隔秒数';
+COMMENT ON COLUMN "public"."sys_job"."execute_param" IS '执行参数（JSON 对象）';
+COMMENT ON COLUMN "public"."sys_job"."last_run_time" IS '上次执行时间';
+COMMENT ON COLUMN "public"."sys_job"."next_run_time" IS '下次执行时间';
+COMMENT ON COLUMN "public"."sys_job"."last_execute_result" IS '上次执行结果摘要';
+COMMENT ON COLUMN "public"."sys_job"."enabled" IS '启用状态';
+COMMENT ON COLUMN "public"."sys_job"."description" IS '任务描述';
+COMMENT ON COLUMN "public"."sys_job"."sort" IS '排序';
+COMMENT ON COLUMN "public"."sys_job"."created_at" IS '创建时间';
+COMMENT ON COLUMN "public"."sys_job"."created_by" IS '创建人';
+COMMENT ON COLUMN "public"."sys_job"."updated_at" IS '更新时间';
+COMMENT ON COLUMN "public"."sys_job"."updated_by" IS '更新人';
+
+-- ----------------------------
+-- Records of sys_job
+-- ----------------------------
+INSERT INTO "public"."sys_job" VALUES ('7541000000000000001', '示例任务', 'sys_job_sample', 'FIXED', '60', '{}', NULL, '2026-08-16 00:00:00+00', NULL, 't', '演示调度链路：回显执行参数', 1, '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_job" VALUES ('7541000000000000002', 'Banner 状态同步', 'sys_banner_status_sync', 'FIXED', '60', '{}', NULL, '2026-08-16 00:00:00+00', NULL, 't', '按 start_at / end_at 激活或过期 Banner', 2, '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_job" VALUES ('7541000000000000003', 'Banner 互动计数刷库', 'sys_banner_flush_interactions', 'FIXED', '60', '{}', NULL, '2026-08-16 00:00:00+00', NULL, 't', '将 Redis 互动增量写入 sys_banner.interaction_count', 3, '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_job" VALUES ('7541000000000000004', '审计告警', 'sys_audit_alert', 'FIXED', '300', '{}', NULL, '2026-08-16 00:00:00+00', NULL, 't', '按配置规则扫描审计日志并发送告警', 4, '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_job" VALUES ('7541000000000000005', '本地孤立文件清理', 'sys_file_cleanup_local_orphans', 'FIXED', '3600', '{"minAgeMinutes": 60}', NULL, '2026-08-16 00:00:00+00', NULL, 't', '删除早于保留期且无 sys_file 元数据行的本地文件', 5, '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_job" VALUES ('7541000000000000006', '注销账号清理', 'iam_account_purge_cancelled', 'CRON', '0 0 3 * * *', '{"retentionDays": 15}', NULL, '2026-08-16 00:00:00+00', NULL, 't', '每日清理已取消且超过保留期的账号数据', 6, '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+
+-- ----------------------------
+-- Indexes structure for table sys_job
+-- ----------------------------
+CREATE INDEX "ix_sys_job_enabled_next_run_time" ON "public"."sys_job" USING btree (
+  "enabled" "pg_catalog"."bool_ops" ASC NULLS LAST,
+  "next_run_time" "pg_catalog"."timestamptz_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table sys_job
+-- ----------------------------
+ALTER TABLE "public"."sys_job" ADD CONSTRAINT "pk_sys_job" PRIMARY KEY ("id");
+
+-- ----------------------------
+-- Table structure for sys_job_log
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sys_job_log";
+CREATE TABLE "public"."sys_job_log" (
+  "id" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
+  "job_id" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
+  "job_name" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
+  "execute_param" json,
+  "execute_time" timestamptz(6) NOT NULL,
+  "execute_duration_ms" int8,
+  "success" bool NOT NULL,
+  "execute_result" text COLLATE "pg_catalog"."default",
+  "executor" varchar(64) COLLATE "pg_catalog"."default",
+  "ip" varchar(64) COLLATE "pg_catalog"."default",
+  "process_id" varchar(32) COLLATE "pg_catalog"."default",
+  "app_dir" varchar(500) COLLATE "pg_catalog"."default",
+  "created_at" timestamptz(6) NOT NULL DEFAULT now(),
+  "created_by" varchar(64) COLLATE "pg_catalog"."default",
+  "updated_at" timestamptz(6) NOT NULL DEFAULT now(),
+  "updated_by" varchar(64) COLLATE "pg_catalog"."default"
+)
+;
+COMMENT ON COLUMN "public"."sys_job_log"."id" IS '主键';
+COMMENT ON COLUMN "public"."sys_job_log"."job_id" IS '任务 ID';
+COMMENT ON COLUMN "public"."sys_job_log"."job_name" IS '任务名称（冗余便于展示）';
+COMMENT ON COLUMN "public"."sys_job_log"."execute_param" IS '执行参数快照（JSON）';
+COMMENT ON COLUMN "public"."sys_job_log"."execute_time" IS '执行开始时间';
+COMMENT ON COLUMN "public"."sys_job_log"."execute_duration_ms" IS '执行用时（毫秒）';
+COMMENT ON COLUMN "public"."sys_job_log"."success" IS '执行结果：是否成功';
+COMMENT ON COLUMN "public"."sys_job_log"."execute_result" IS '执行结果摘要 / 错误信息';
+COMMENT ON COLUMN "public"."sys_job_log"."executor" IS '执行人（人工触发为账号 id，调度触发为 system）';
+COMMENT ON COLUMN "public"."sys_job_log"."ip" IS '执行实例 IP';
+COMMENT ON COLUMN "public"."sys_job_log"."process_id" IS '执行实例进程 ID';
+COMMENT ON COLUMN "public"."sys_job_log"."app_dir" IS '执行实例程序目录';
+COMMENT ON COLUMN "public"."sys_job_log"."created_at" IS '创建时间';
+COMMENT ON COLUMN "public"."sys_job_log"."created_by" IS '创建人';
+COMMENT ON COLUMN "public"."sys_job_log"."updated_at" IS '更新时间';
+COMMENT ON COLUMN "public"."sys_job_log"."updated_by" IS '更新人';
+
+-- ----------------------------
+-- Records of sys_job_log
+-- ----------------------------
+
+-- ----------------------------
+-- Indexes structure for table sys_job_log
+-- ----------------------------
+CREATE INDEX "ix_sys_job_log_job_id" ON "public"."sys_job_log" USING btree (
+  "job_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table sys_job_log
+-- ----------------------------
+ALTER TABLE "public"."sys_job_log" ADD CONSTRAINT "pk_sys_job_log" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Table structure for sys_notice
@@ -1947,6 +2073,16 @@ INSERT INTO "public"."sys_resource" VALUES ('200025', '200003', 'sys-session', '
 INSERT INTO "public"."sys_resource" VALUES ('200027', '200003', 'sys-audit-api', '操作审计接口', 'API_GROUP', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 6, 'f', 'f', 'f', 'ENABLED', '操作审计后端权限组', NULL, '{}', '2026-07-03 00:00:00+00', NULL, '2026-08-09 00:00:00+00', NULL);
 INSERT INTO "public"."sys_resource" VALUES ('200028', '200003', 'sys-login-log', '登录日志', 'MENU', '210001', '/sys/login-log', '/sys/login-log/index.vue', NULL, 'icon-park-outline:log', NULL, NULL, 5, 'f', 'f', 'f', 'ENABLED', '登录成功/失败历史记录', NULL, '{}', '2026-08-09 00:00:00+00', NULL, '2026-08-09 00:00:00+00', NULL);
 INSERT INTO "public"."sys_resource" VALUES ('200029', '200003', 'sys-audit', '操作审计', 'MENU', '210001', '/sys/audit', '/sys/audit/index.vue', NULL, 'icon-park-outline:audit', NULL, NULL, 7, 'f', 'f', 'f', 'ENABLED', '系统操作审计日志', NULL, '{}', '2026-08-09 00:00:00+00', NULL, '2026-08-09 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204001', '200003', 'sys-job', '任务管理', 'MENU', '210001', '/sys/job', '/sys/job/index.vue', NULL, 'icon-park-outline:timer', NULL, NULL, 4, 't', 'f', 'f', 'ENABLED', '任务调度管理（CRON / 固定间隔，Redis 锁防多实例重复执行）', NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204011', '204001', 'sys-job-create', '新增任务', 'BUTTON', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 1, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204012', '204001', 'sys-job-update', '编辑任务', 'BUTTON', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 2, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204013', '204001', 'sys-job-delete', '删除任务', 'BUTTON', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 3, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204014', '204001', 'sys-job-detail', '任务详情', 'BUTTON', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 4, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204015', '204001', 'sys-job-run', '立即执行', 'BUTTON', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 5, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204016', '204001', 'sys-job-log', '执行日志', 'BUTTON', '210001', NULL, NULL, NULL, NULL, NULL, NULL, 6, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204021', '204001', 'sys-job-create-page', '新增任务页', 'PAGE', '210001', '/sys/job/create', '/sys/job/form.vue', NULL, NULL, NULL, NULL, 7, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204022', '204001', 'sys-job-edit-page', '编辑任务页', 'PAGE', '210001', '/sys/job/edit', '/sys/job/form.vue', NULL, NULL, NULL, NULL, 8, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
+INSERT INTO "public"."sys_resource" VALUES ('204023', '204001', 'sys-job-detail-page', '任务详情页', 'PAGE', '210001', '/sys/job/detail', '/sys/job/detail.vue', NULL, NULL, NULL, NULL, 9, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-16 00:00:00+00', NULL, '2026-08-16 00:00:00+00', NULL);
 INSERT INTO "public"."sys_resource" VALUES ('200031', '200041', 'iam-clientmodule', '客户端模块管理', 'MENU', '210001', '/iam/client_module', '/iam/client_module/index.vue', NULL, 'icon-park-outline:application-one', NULL, NULL, 1, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-09 00:00:00+00', NULL);
 INSERT INTO "public"."sys_resource" VALUES ('200032', '200041', 'iam-clientresource', '客户端资源管理', 'MENU', '210001', '/iam/client_resource', '/iam/client_resource/index.vue', NULL, 'icon-park-outline:page-template', NULL, NULL, 2, 'f', 'f', 'f', 'ENABLED', NULL, NULL, '{}', '2026-08-08 00:00:00+00', NULL, '2026-08-09 00:00:00+00', NULL);
 INSERT INTO "public"."sys_resource" VALUES ('200040', NULL, 'resource-auth', '资源授权', 'CATALOG', '210001', '/resource-auth', NULL, NULL, 'icon-park-outline:all-application', NULL, NULL, 15, 'f', 'f', 'f', 'ENABLED', '菜单资源与资源模块授权配置', NULL, '{}', '2026-08-09 00:00:00+00', NULL, '2026-08-09 00:00:00+00', NULL);

@@ -195,7 +195,10 @@ class ClientResourceService:
         for resource in resources:
             node = node_map[resource.id]
             if resource.parent_id and resource.parent_id in node_map:
-                node_map[resource.parent_id].children.append(node)
+                parent_node = node_map[resource.parent_id]
+                if parent_node.children is None:
+                    parent_node.children = []
+                parent_node.children.append(node)
             else:
                 roots.append(node)
         return roots

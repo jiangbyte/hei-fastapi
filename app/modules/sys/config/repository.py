@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db.batch import chunked
 from app.core.db.models.sys_config import SysConfig
-from app.core.exceptions.business import NotFoundError
+from app.core.exceptions.business import ConflictError, NotFoundError
 from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.sys.config.schema import (
     ConfigAdminPageQuery,
@@ -26,7 +26,9 @@ class ConfigRepository:
         self.db = db
 
     async def create(self, payload: ConfigCreateRequest) -> None:
-        """新增配置并 flush。"""
+        """新增配置并 flush（config_key 唯一预校验，对齐 hei-boot）。"""
+        if await self.get_by_key(payload.config_key) is not None:
+            raise ConflictError("Config key already exists")
         entity = SysConfig(**payload.model_dump())
         self.db.add(entity)
         await self.db.flush()
@@ -43,7 +45,7 @@ class ConfigRepository:
         return entity
 
     async def list_by_ids(self, config_ids: list[str]) -> list[SysConfig]:
-        """按主键分批查询，保持输入顺序；存在缺失 ID 时抛 NotFoundError。"""
+        """按主键分批查询，保持输入顺序（缺失 ID 静默跳过）。"""
         unique_ids = list(dict.fromkeys(config_ids))
         if not unique_ids:
             return []
@@ -56,25 +58,24 @@ class ConfigRepository:
             )
             for entity in rows:
                 entities_by_id[entity.id] = entity
-        if len(entities_by_id) != len(unique_ids):
-            raise NotFoundError("Config not found")
-        return [entities_by_id[config_id] for config_id in unique_ids]
+        return [entities_by_id[config_id] for config_id in unique_ids if config_id in entities_by_id]
 
     async def update(self, payload: ConfigUpdateRequest) -> None:
-        """按主键更新配置字段（排除 id）。"""
+        """按主键更新配置字段（排除 id；config_key 唯一预校验）。"""
         entity = await self.get_required(payload.id)
+        duplicate = await self.get_by_key(payload.config_key)
+        if duplicate is not None and duplicate.id != payload.id:
+            raise ConflictError("Config key already exists")
         data = payload.model_dump(exclude={"id"})
         for key, value in data.items():
             setattr(entity, key, value)
         await self.db.flush()
 
     async def delete_many(self, config_ids: list[str]) -> None:
-        """批量删除配置；存在不存在的 ID 时抛出 NotFoundError。"""
+        """批量删除配置（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(config_ids))
-        stmt = select(SysConfig.id).where(SysConfig.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("Config not found")
+        if not unique_ids:
+            return
         await self.db.execute(delete(SysConfig).where(SysConfig.id.in_(unique_ids)))
 
     async def list_by_category(
@@ -150,7 +151,7 @@ class ConfigRepository:
         if query.config_key:
             filters.append(SysConfig.config_key.ilike(f"%{query.config_key}%"))
         if query.category:
-            filters.append(SysConfig.category.ilike(f"%{query.category}%"))
+            filters.append(SysConfig.category == query.category)
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)

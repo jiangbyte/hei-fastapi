@@ -42,8 +42,9 @@ class DashboardService:
 
     async def overview(self) -> DashboardOverviewResponse:
         """聚合生成仪表盘概览数据。"""
-        since = datetime.now(UTC) - timedelta(days=6)
+        # 趋势窗口下界对齐 hei-boot：6 天前的 UTC 零点（dayStart.minusDays(6)），非当前时刻。
         day_start = _day_start()
+        since = day_start - timedelta(days=6)
 
         account_total = await self._count(SysAccount.id)
         enabled = await self._count(

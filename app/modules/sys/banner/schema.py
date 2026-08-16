@@ -48,10 +48,8 @@ class BannerCreateRequest(ApiSchema):
 
     @model_validator(mode="after")
     def validate_target_account_types(self):
-        """校验目标账户类型非空且合法，并去重。"""
+        """校验目标账户类型合法并去重（空列表放行，对齐 hei-boot 默认空数组）。"""
         types = list(dict.fromkeys(self.target_account_types))
-        if not types:
-            raise ValueError("必须选择目标账户类型")
         invalid = [item for item in types if item not in _ALLOWED_ACCOUNT_TYPES]
         if invalid:
             raise ValueError(f"目标账户类型无效: {', '.join(invalid)}")
@@ -66,9 +64,9 @@ class BannerUpdateRequest(BannerCreateRequest):
 
 
 class BannerAdminPageQuery(PageQuery):
-    """展示图管理端分页查询参数。"""
+    """展示图管理端分页查询参数（target_account_type 为自由字符串，对齐 hei-boot）。"""
 
-    target_account_type: AccountType | None = None
+    target_account_type: str | None = Field(default=None, max_length=32)
     category: str | None = Field(default=None, max_length=32)
     type: str | None = Field(default=None, max_length=32)
     position: str | None = Field(default=None, max_length=32)

@@ -267,7 +267,16 @@ class ResourceService:
                 if index > -1 and resource.endswith("]")
                 else permission_key
             )
-            items.append(PermissionRegistryItem(permission_key=permission_key, name=name))
+            parts = permission_key.split(":")
+            items.append(
+                PermissionRegistryItem(
+                    permission_key=permission_key,
+                    name=name,
+                    module_code=parts[0] if len(parts) > 0 else None,
+                    resource_code=parts[1] if len(parts) > 1 else None,
+                    action=parts[2] if len(parts) > 2 else None,
+                )
+            )
         return sorted(items, key=lambda item: item.permission_key)
 
     async def _ensure_depts_visible(
@@ -416,7 +425,10 @@ def _build_resource_tree_nodes(
     for resource in resources:
         node = node_map[resource.id]
         if resource.parent_id and resource.parent_id in node_map:
-            node_map[resource.parent_id].children.append(node)
+            parent_node = node_map[resource.parent_id]
+            if parent_node.children is None:
+                parent_node.children = []
+            parent_node.children.append(node)
         else:
             roots.append(node)
     return roots

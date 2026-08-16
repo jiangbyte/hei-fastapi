@@ -32,7 +32,6 @@ from app.modules.iam.resource.schema import (
     ResourceTreeQuery,
     ResourceUpdateRequest,
     SysResourceModuleSchema,
-    SysResourcePermissionRelSchema,
     SysResourceSchema,
 )
 from app.modules.iam.resource.service import ResourceModuleService, ResourceService
@@ -160,14 +159,15 @@ async def list_resource_tree(
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:grant")),
     ],
-    response_model=ApiResponse[SysResourcePermissionRelSchema],
+    response_model=ApiResponse[None],
 )
 async def bind_resource_permission(
     payload: ResourcePermissionBindRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[SysResourcePermissionRelSchema]:
-    return success(await ResourceService(db).bind_resource_permission(payload, session))
+) -> ApiResponse[None]:
+    await ResourceService(db).bind_resource_permission(payload, session)
+    return success()
 
 
 @router.get(
@@ -189,16 +189,16 @@ async def permission_registry(
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:create")),
-        Depends(require_permission("iam:resource:grant")),
     ],
-    response_model=ApiResponse[ResourceButtonSchema],
+    response_model=ApiResponse[None],
 )
 async def create_button(
     payload: ResourceButtonCreateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[ResourceButtonSchema]:
-    return success(await ResourceService(db).create_button(payload, session))
+) -> ApiResponse[None]:
+    await ResourceService(db).create_button(payload, session)
+    return success()
 
 
 @router.post(
@@ -206,16 +206,16 @@ async def create_button(
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resource:update")),
-        Depends(require_permission("iam:resource:grant")),
     ],
-    response_model=ApiResponse[ResourceButtonSchema],
+    response_model=ApiResponse[None],
 )
 async def update_button(
     payload: ResourceButtonUpdateRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[ResourceButtonSchema]:
-    return success(await ResourceService(db).update_button(payload, session))
+) -> ApiResponse[None]:
+    await ResourceService(db).update_button(payload, session)
+    return success()
 
 
 @router.post(
@@ -331,6 +331,7 @@ async def resource_module_page(
     "/v1/admin/sys/resource-modules/selector",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
+        Depends(require_permission("iam:resourcemodule:page")),
     ],
     response_model=ApiResponse[list[ResourceModuleSelectorOption]],
 )

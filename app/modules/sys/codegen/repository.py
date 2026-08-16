@@ -58,14 +58,10 @@ class CodegenRepository:
         await self.db.flush()
 
     async def delete_many(self, plan_ids: list[str]) -> None:
-        """批量删除方案及其字段；存在不存在的 ID 时抛出 NotFoundError。"""
+        """批量删除方案及其字段（不存在的 ID 静默跳过，对齐 hei-boot 幂等语义）。"""
         unique_ids = list(dict.fromkeys(plan_ids))
         if not unique_ids:
             return
-        stmt = select(SysCodegenPlan.id).where(SysCodegenPlan.id.in_(unique_ids))
-        existing_ids = set((await self.db.execute(stmt)).scalars().all())
-        if len(existing_ids) != len(unique_ids):
-            raise NotFoundError("Codegen plan not found")
         # 先删除关联字段再删除方案，避免遗留孤儿记录。
         await self.db.execute(
             delete(SysCodegenField).where(SysCodegenField.plan_id.in_(unique_ids))

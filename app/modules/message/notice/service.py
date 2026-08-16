@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
-from app.core.exceptions.business import BusinessError
+from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
@@ -55,9 +55,22 @@ class SysNoticeService:
             await self.repo.create(SysNoticeCreateRequest(**data))
 
     async def update(self, payload: SysNoticeUpdateRequest) -> None:
-        """更新消息。"""
+        """更新消息：归一状态并在发布时回填发布时间（对齐 hei-boot）。"""
         async with transactional(self.db):
-            await self.repo.update(payload)
+            data = payload.model_dump(exclude={"view_count", "revoked_at", "sender_account_type", "sender_account_id"})
+            status = str(data.get("status") or NoticeStatus.DRAFT.value).upper()
+            if status in {"ENABLED", "ENABLE"}:
+                status = NoticeStatus.DRAFT.value
+            if status not in {
+                NoticeStatus.DRAFT.value,
+                NoticeStatus.PUBLISHED.value,
+                NoticeStatus.REVOKED.value,
+            }:
+                status = NoticeStatus.DRAFT.value
+            data["status"] = status
+            if status == NoticeStatus.PUBLISHED.value and not data.get("publish_at"):
+                data["publish_at"] = datetime.now(UTC)
+            await self.repo.update(SysNoticeUpdateRequest(id=payload.id, **data))
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除消息。"""
@@ -121,12 +134,13 @@ class SysNoticeService:
         query: MyNoticePageQuery,
         session: SessionPayload | None = None,
     ) -> PageData[SysNoticeSchema]:
-        """门户列表页查询公告（匿名可见，登录后附加个性化信息）。"""
-        account_type = AccountType.PORTAL.value
-        account_id: str | None = None
-        if session and str(session.account_type) == AccountType.PORTAL.value:
+        """门户列表页查询公告（匿名可见，登录后按会话身份过滤，对齐 hei-boot）。"""
+        if session is not None:
             account_type = str(session.account_type)
             account_id = session.account_id
+        else:
+            account_type = AccountType.PORTAL.value
+            account_id = None
         items, total, read_id_set = await self.repo.page_my(
             query,
             account_type,
@@ -137,13 +151,21 @@ class SysNoticeService:
         return build_page(query, total, schemas)
 
     async def my_detail(self, query: IdQuery, session: SessionPayload) -> SysNoticeSchema:
-        """查询当前用户消息详情，并顺带自增查看数、标记已读。"""
+        """查询当前用户消息详情。
+
+        仅已发布且对当前账户可见的消息可读（否则 404），通过后再自增查看数并标记已读，
+        对齐 hei-boot 的 myDetail 语义。
+        """
         async with transactional(self.db):
+            visible = await self.repo.find_published_visible(
+                query.id, str(session.account_type), session.account_id
+            )
+            if visible is None:
+                raise NotFoundError("SysNotice not found")
             await self.repo.increment_view_count(query.id)
             await self.repo.mark_read([query.id], str(session.account_type), session.account_id)
-        entity = await self.repo.get_required(query.id)
-        read_set = await self._check_read([entity.id], session)
-        return _build_schema(entity, read_set)
+        read_set = await self._check_read([visible.id], session)
+        return _build_schema(visible, read_set)
 
     async def count_unread(self, session: SessionPayload) -> int:
         """统计当前用户未读消息数。"""

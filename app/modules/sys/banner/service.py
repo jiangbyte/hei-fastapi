@@ -12,10 +12,10 @@ from app.core.cache.keys import banner_interaction_delta_key
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
-from app.core.exceptions.business import NotFoundError
+from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.core.storage.url import resolve_file_url
+from app.core.storage.url import normalize_object_name, resolve_file_url
 from app.modules.sys.banner.repository import BannerRepository
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -36,14 +36,20 @@ class BannerService:
         self.repo = BannerRepository(db)
 
     async def create(self, payload: BannerCreateRequest) -> None:
-        """事务内创建展示图。"""
+        """事务内创建展示图（image 对象名归一化，对齐 hei-boot）。"""
+        normalized = payload.model_copy(
+            update={"image": normalize_object_name(payload.image) or payload.image}
+        )
         async with transactional(self.db):
-            await self.repo.create(payload)
+            await self.repo.create(normalized)
 
     async def update(self, payload: BannerUpdateRequest) -> None:
-        """事务内更新展示图。"""
+        """事务内更新展示图（image 对象名归一化，对齐 hei-boot）。"""
+        normalized = payload.model_copy(
+            update={"image": normalize_object_name(payload.image) or payload.image}
+        )
         async with transactional(self.db):
-            await self.repo.update(payload)
+            await self.repo.update(normalized)
 
     async def delete(self, payload: IdsRequest) -> None:
         """事务内批量删除展示图。"""
@@ -96,13 +102,18 @@ class BannerService:
         *,
         account_type: AccountType = AccountType.PORTAL,
     ) -> None:
-        """校验可见性后向 Redis 累加一次交互计数。"""
+        """校验可见性后向 Redis 累加一次交互计数。
+
+        记录不存在 → 404；存在但当前不可见 → 400（对齐 hei-boot 错误语义）。
+        """
+        if await self.repo.get_by_id(payload.id) is None:
+            raise NotFoundError("Display image not found")
         if not await self.repo.is_public_visible(
             payload.id,
             datetime.now(UTC),
             account_type=account_type,
         ):
-            raise NotFoundError("Display image not found")
+            raise BusinessError("Banner is not publicly visible")
         redis = get_redis()
         if redis is None:
             return

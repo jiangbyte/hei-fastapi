@@ -55,7 +55,9 @@ class RoleService:
         payload: RoleCreateRequest,
         session: SessionPayload | None = None,
     ) -> None:
-        """创建角色，传入 session 时校验所属部门可见性。"""
+        """创建角色，传入 session 时校验所属部门可见性；编码需唯一（对齐 hei-boot）。"""
+        if await self.repo.get_by_code(payload.code) is not None:
+            raise BusinessError("Role code already exists")
         if session is not None and payload.owner_dept_id:
             await self._ensure_depts_visible(session, "iam:role:create", [payload.owner_dept_id])
         async with transactional(self.db):
@@ -77,6 +79,9 @@ class RoleService:
                 )
         existing = await self.repo.get_required(payload.id)
         self._ensure_protected_role_mutable(existing, payload)
+        duplicate = await self.repo.get_by_code(payload.code)
+        if duplicate is not None and duplicate.id != payload.id:
+            raise BusinessError("Role code already exists")
         async with transactional(self.db):
             await self.repo.update(payload)
 
@@ -125,7 +130,7 @@ class RoleService:
             ),
             grant_info_list=await self.repo.list_resource_grants(
                 query.id,
-                account_type=query.account_type.value,
+                account_type=query.account_type.value if query.account_type else None,
             ),
         )
 

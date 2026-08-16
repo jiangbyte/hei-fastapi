@@ -70,6 +70,18 @@ _PASSWORD_RESET_URL_KEYS = {
 }
 
 
+def session_expires_in(session: SessionPayload) -> int | None:
+    """返回会话剩余有效秒数（按 expires_at 计算），无法计算时返回 None。"""
+    if not session.expires_at:
+        return None
+    try:
+        expires_at = datetime.fromisoformat(session.expires_at)
+    except (TypeError, ValueError):
+        return None
+    remaining = int((expires_at - datetime.now(UTC)).total_seconds())
+    return remaining if remaining > 0 else None
+
+
 class AuthService:
     """认证服务，负责登录态签发、账户类型校验与会话数据组装。"""
 
@@ -480,6 +492,7 @@ class AuthService:
             password_expiry_warning_days=await self.password_expiry_warning_days(
                 account.id
             ),
+            expires_in=session_expires_in(session_payload),
             force_bind_email=session_payload.force_bind_email,
             force_bind_phone=session_payload.force_bind_phone,
         )
@@ -519,6 +532,7 @@ class AuthService:
             password_expiry_warning_days=await self.password_expiry_warning_days(
                 session.account_id
             ),
+            expires_in=session_expires_in(session),
             force_bind_email=force_bind_email,
             force_bind_phone=force_bind_phone,
         )

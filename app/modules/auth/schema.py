@@ -10,7 +10,7 @@ from pydantic import BeforeValidator, Field
 from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse
 from app.core.schema.base import ApiSchema
-from app.core.schema.wire import WireBool
+from app.core.schema.wire import WireBool, WireInt
 from app.core.security.transport import CaptchaMixin, PasswordKeyMixin
 from app.modules.auth.oauth.schema import OauthProviderOptionSchema
 from app.modules.iam.enums import AccountIdentityType
@@ -69,7 +69,8 @@ class LoginResponse(ApiSchema):
     account_id: str | None = None
     account_type: AccountType | None = None
     password_expired: WireBool = False
-    password_expiry_warning_days: int | None = None
+    password_expiry_warning_days: WireInt | None = None
+    expires_in: WireInt | None = None
     force_bind_email: WireBool = False
     force_bind_phone: WireBool = False
 
@@ -106,7 +107,7 @@ class AuthOptionsResponse(ApiSchema):
 class RegisterRequest(CaptchaMixin, PasswordKeyMixin):
     """门户注册请求：ACCOUNT / EMAIL / PHONE 通道，邮箱/手机通道需 OTP。"""
 
-    register_channel: Literal["ACCOUNT", "EMAIL", "PHONE"] = "ACCOUNT"
+    register_channel: Literal["ACCOUNT", "EMAIL", "PHONE"]
     account: str | None = Field(default=None, min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=512)
     name: str | None = Field(default=None, max_length=64)

@@ -8,12 +8,12 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supported-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Supported-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-blue)
+![License](https://img.shields.io/badge/License-Apache%202.0-C85119)
 ![Version](https://img.shields.io/badge/Version-1.0.0--beta-4B0082?logo=git&logoColor=white)
 
 HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应用同时提供管理端（Admin）与门户（Portal）两套 API**，配合同仓维护的三个前端工程，覆盖账号认证、组织权限（RBAC）、系统管理、消息反馈与运营工作台等常用能力，开箱即用、可按需裁剪。功能与 [hei-boot](https://github.com/jiangbyte/hei-boot)（Spring Boot）保持 API 契约对齐。
 
-- **后端**：Python 3.11+ · FastAPI · SQLAlchemy 2 Async · Pydantic v2 · PostgreSQL · Redis · Gunicorn + Uvicorn · SnailJob
+- **后端**：Python 3.11+ · FastAPI · SQLAlchemy 2 Async · Pydantic v2 · PostgreSQL · Redis · Gunicorn + Uvicorn
 - **前端**：`web/admin`（Vue 3 / Naive UI）· `web/portal`（React / Ant Design）· `web/admin-uniapp`（uni-app）
 - **数据约定**：对外 JSON 字段标量（含 boolean / 数字）统一按字符串收发
 
@@ -37,12 +37,13 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 
 - 数据字典、系统配置（`sys_config`，敏感配置加密存储）、Banner、文件存储（Local / MinIO / RustFS / 阿里云 OSS / 腾讯云 COS）
 - 弱口令清单、密码策略、操作审计、代码生成
+- 任务管理（`sys_job`，CRON / 固定间隔调度 + 执行日志，Redis 锁防多实例重复执行）
 - 公告 / 通知、意见反馈（管理端 + 门户双端）
 
 **运营与调度**
 
 - 运营工作台（`app/modules/dashboard`）：账号、会话、审计、文件等核心指标概览与 7 日趋势
-- SnailJob 定时任务：注销账号清理、Banner 定时上下架、审计量级告警、本地文件清理
+- 内置任务调度（`sys_job` 表，CRON / 固定间隔）：注销账号清理、Banner 定时上下架、审计量级告警、本地文件清理
 
 ## 技术栈
 
@@ -52,7 +53,7 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 | 数据 | PostgreSQL（推荐），可选 MySQL / SQLite extras；Alembic 迁移管理表结构 |
 | 缓存 / 会话 | Redis（会话、验证码、操作审计 Redis Stream）、HttpOnly Cookie + Header 双通道会话 |
 | 安全 | RSA 密码加密传输、Fernet（`APP__CONFIG_CRYPTO_KEY`）或 Vault KV v2、登录锁定 / 限流、数据脱敏 |
-| 任务 | SnailJob（外部 Server + `snail-job-python` 执行器，单进程内嵌） |
+| 任务 | 内置任务调度（`sys_job` 表，CRON / 固定间隔，Redis 锁防多实例重复执行） |
 | 观测 / 运维 | structlog；可选 Prometheus `/metrics`、OpenTelemetry / OTLP；存活 / 就绪探针 |
 | 其他 | pip 依赖管理（`requirements*.txt`）、Gunicorn + Uvicorn |
 
@@ -109,7 +110,7 @@ python scripts/db/import_data.py
 pip install -r requirements-dev.txt
 
 cp .env.example .env
-# 按需配置 DB__URL / REDIS__URL / SNAIL_JOB__*；生产还需 APP__CONFIG_CRYPTO_KEY
+# 按需配置 DB__URL / REDIS__URL / HEI_JOB__*；生产还需 APP__CONFIG_CRYPTO_KEY
 
 ./entrypoint.sh                          # 启动 API
 ```
@@ -221,7 +222,7 @@ cd web/portal && pnpm install && pnpm dev   # http://127.0.0.1:5174
 
 ```text
 hei-fastapi
-├── app                          # 应用包（FastAPI 单进程内嵌 SnailJob 执行器）
+├── app                          # 应用包
 │   ├── core                     # 平台基础设施（config / security / db / cache / storage / tasks / observability / cloud / email / sms / push / secrets）
 │   ├── deps                     # 依赖注入
 │   ├── middleware               # ASGI 中间件（鉴权、审计、限流、安全头、追踪）
@@ -248,7 +249,7 @@ hei-fastapi
 | `/api/v1/internal/**` | 健康探针 / 集群内部接口（勿对公网暴露） |
 | `/docs`、`/openapi.json` | Swagger 接口文档（默认关闭） |
 
-常用接口：`/api/v1/{admin|portal}/login`、`/captcha`、`/oauth/**`、`/sys/**`（账号、角色、字典、配置、公告、反馈等）、`/profile/**`、`/dashboard/overview`。
+常用接口：`/api/v1/{admin|portal}/login`、`/captcha`、`/oauth/**`、`/sys/**`（账号、角色、字典、配置、任务、公告、反馈等）、`/profile/**`、`/dashboard/overview`。
 
 ## 配置说明
 
@@ -261,7 +262,7 @@ hei-fastapi
 | `APP__CONFIG_CRYPTO_KEY` | 敏感配置加密密钥（Fernet），无默认值 | 空 |
 | `APP__HOST` / `APP__PORT` | 监听地址 / 端口 | `127.0.0.1` / `8000` |
 | `SWAGGER__ENABLED` | 是否开启 `/docs` | `false` |
-| `SNAIL_JOB__*` | SnailJob Server 连接与执行器配置 | — |
+| `HEI_JOB__SCAN_INTERVAL_MS` / `HEI_JOB__POOL_SIZE` | 内置任务调度扫描间隔（毫秒）与最大并发数 | `1000` / `4` |
 | `SECRETS__BACKEND` | 密钥后端（`fernet` / `vault`） | `fernet` |
 | `OBSERVABILITY__*` | 可观测性总开关与 Prometheus / OTLP 配置 | 关 |
 
@@ -274,7 +275,7 @@ hei-fastapi
 ### 构建镜像
 
 ```bash
-# 后端（根目录 Dockerfile；tini + 非 root 用户，单进程内嵌 SnailJob 执行器）
+# 后端（根目录 Dockerfile；tini + 非 root 用户，内置任务调度器随进程运行）
 docker build -t hei-fastapi .
 
 # 前端（nginx 托管静态资源，/api 反向代理到后端，BACKEND_URL 可配）
@@ -359,4 +360,4 @@ pnpm dev && pnpm build && pnpm lint
 
 ## 许可证
 
-本项目使用 [MIT License](LICENSE) 开源协议。
+本项目使用 [Apache License 2.0](LICENSE) 开源协议。

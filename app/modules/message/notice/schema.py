@@ -19,15 +19,18 @@ from app.modules.message.target_scope import (
 
 
 class SysNoticeCreateRequest(ApiSchema):
-    """创建消息请求。"""
+    """创建消息请求（content_type/severity/target_scope/status 可缺省，对齐 hei-boot 默认值）。
+
+    发送者、撤回时间、浏览数为服务端维护字段，客户端不可伪造。
+    """
 
     kind: str = Field(min_length=1)
     title: str = Field(min_length=1)
     content: str = Field(min_length=1)
-    content_type: str = Field(min_length=1)
+    content_type: str = "TEXT"
     category: str | None = None
-    severity: str = Field(min_length=1)
-    target_scope: str = Field(min_length=1)
+    severity: str = "INFO"
+    target_scope: str = "ALL"
     target_account_types: list[str] = Field(default_factory=list)
     target_account_ids: list[str] = Field(default_factory=list)
     target_dept_ids: list[str] = Field(default_factory=list)
@@ -35,15 +38,11 @@ class SysNoticeCreateRequest(ApiSchema):
     publish_locations: dict[str, Any] = Field(default_factory=dict)
     is_pinned: WireBool = False
     pinned_until: datetime | None = None
-    sender_account_type: str | None = None
-    sender_account_id: str | None = None
     source_type: str | None = None
     source_id: str | None = None
-    status: str = Field(min_length=1)
+    status: str | None = None
     publish_at: datetime | None = None
-    revoked_at: datetime | None = None
     expire_at: datetime | None = None
-    view_count: WireInt = 0
     extra: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
