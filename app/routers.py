@@ -31,10 +31,8 @@ from app.modules.iam.resource.portal.router import router as iam_resource_portal
 from app.modules.iam.resource.router import router as iam_resource_router
 from app.modules.iam.role.router import router as iam_role_router
 from app.modules.internal.health.router import router as internal_health_router
-from app.modules.sys.feedback.router import admin_router as feedback_admin_router
-from app.modules.sys.feedback.router import portal_router as feedback_portal_router
-from app.modules.sys.notice.router import admin_router as notice_admin_router
-from app.modules.sys.notice.router import portal_router as notice_portal_router
+from app.modules.profile.admin.router import router as profile_admin_router
+from app.modules.profile.portal.router import router as profile_portal_router
 from app.modules.sys.audit.router import router as sys_audit_router
 from app.modules.sys.banner.portal.router import router as banner_portal_router
 from app.modules.sys.banner.router import router as banner_router
@@ -42,12 +40,14 @@ from app.modules.sys.codegen.router import router as sys_codegen_router
 from app.modules.sys.config.router import router as sys_config_router
 from app.modules.sys.dict.portal.router import router as dict_portal_router
 from app.modules.sys.dict.router import router as sys_dict_router
+from app.modules.sys.feedback.router import admin_router as feedback_admin_router
+from app.modules.sys.feedback.router import portal_router as feedback_portal_router
 from app.modules.sys.file.portal.router import router as file_portal_router
 from app.modules.sys.file.router import router as sys_file_router
 from app.modules.sys.job.router import router as sys_job_router
+from app.modules.sys.notice.router import admin_router as notice_admin_router
+from app.modules.sys.notice.router import portal_router as notice_portal_router
 from app.modules.sys.weak_password.router import router as weak_password_router
-from app.modules.profile.admin.router import router as profile_admin_router
-from app.modules.profile.portal.router import router as profile_portal_router
 
 # (tags, router) 挂载清单，顺序与历史注册顺序一致。
 _ROUTERS: list[tuple[str, APIRouter]] = [

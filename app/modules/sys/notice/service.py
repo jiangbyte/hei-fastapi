@@ -14,6 +14,7 @@ from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
+from app.modules.profile.utils.profile import enrich_audit_name, enrich_audit_names
 from app.modules.sys.notice.enums import NoticeKind, NoticeStatus
 from app.modules.sys.notice.model import SysNoticeRead
 from app.modules.sys.notice.repository import SysNoticeRepository
@@ -26,7 +27,6 @@ from app.modules.sys.notice.schema import (
     SysNoticeSchema,
     SysNoticeUpdateRequest,
 )
-from app.modules.profile.utils.profile import enrich_audit_name, enrich_audit_names
 
 
 class SysNoticeService:

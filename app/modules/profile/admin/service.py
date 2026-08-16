@@ -22,8 +22,6 @@ from app.modules.iam.dept.repository import DeptRepository
 from app.modules.iam.enums import AccountIdentityType
 from app.modules.iam.group.repository import GroupRepository
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.sys.file.schema import FileUploadRequest
-from app.modules.sys.file.service import FileService
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
 from app.modules.profile.admin.schema import (
     AdminUserCenterAvatarUpdateResponse,
@@ -34,6 +32,8 @@ from app.modules.profile.admin.schema import (
     AdminUserCenterProfileUpdateRequest,
     ProfileUserAdminUpsertPayload,
 )
+from app.modules.sys.file.schema import FileUploadRequest
+from app.modules.sys.file.service import FileService
 
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 头像文件大小上限（2MB）
 AVATAR_CONTENT_TYPES = {  # 允许的头像内容类型及其扩展名

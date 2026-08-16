@@ -11,6 +11,7 @@ from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import to_schema, to_schema_list
+from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.dict.repository import DictRepository, DictTreeRecord
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
@@ -22,7 +23,6 @@ from app.modules.sys.dict.schema import (
     SysDictSchema,
     SysDictTreeNode,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class DictService:

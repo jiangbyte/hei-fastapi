@@ -30,6 +30,7 @@ from app.core.storage.url import (
     normalize_object_name,
     to_object_key,
 )
+from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.file.content_disposition import content_disposition_attachment
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.repository import FileRepository
@@ -41,7 +42,6 @@ from app.modules.sys.file.schema import (
     ObjectNameQuery,
     SysFileSchema,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 
 logger = logging.getLogger(__name__)
 
