@@ -69,16 +69,15 @@ class AccountSessionService:
 
             async def payload_factory(
                 token: str,
+                old: SessionPayload,
                 current_account: SysAccount = account,
                 current_authorization: dict = authorization,
             ) -> SessionPayload:
-                # 从旧会话中保留 remember_me
-                old = await session_store.get(token)
                 return self._build_session_payload_from_authorization(
                     current_account,
                     token,
                     current_authorization,
-                    remember_me=old.remember_me if old else True,
+                    remember_me=old.remember_me,
                 )
 
             payload_factories[(account.account_type, account.id)] = payload_factory

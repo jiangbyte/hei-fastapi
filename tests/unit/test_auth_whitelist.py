@@ -12,14 +12,14 @@ def test_builtin_whitelist_matches_login_and_health():
     assert is_auth_whitelisted("/api/v1/admin/login")
     assert is_auth_whitelisted("/api/v1/portal/captcha")
     assert is_auth_whitelisted("/api/v1/internal/health/live")
-    assert is_auth_whitelisted("/api/v1/files")
-    assert is_auth_whitelisted("/api/v1/files/2026/07/25/demo.png")
+    assert not is_auth_whitelisted("/api/v1/files")
+    assert not is_auth_whitelisted("/api/v1/files/2026/07/25/demo.png")
     assert is_auth_whitelisted("/api/v1/portal/sys/banners/list")
     assert not is_auth_whitelisted("/api/v1/admin/sys/banners/create")
     # 版本通配：升到 v2 时认证/公开路径仍应放行
     assert is_auth_whitelisted("/api/v2/admin/login")
     assert is_auth_whitelisted("/api/v2/portal/sys/banners/list")
-    assert is_auth_whitelisted("/api/v2/files/demo.png")
+    assert not is_auth_whitelisted("/api/v2/files/demo.png")
 
 
 def test_configured_whitelist_extends_builtin(monkeypatch):

@@ -88,10 +88,9 @@ class SysBizCategory(StrEnum):
 
 class StorageProvider(StrEnum):
     """
-    文件存储服务商
+    文件存储服务商（仅对象存储，对齐 hei-boot）
     """
 
-    LOCAL = "local"  # 本地存储
     OSS = "oss"  # 阿里云 OSS
     S3 = "s3"  # 腾讯云 COS（S3 兼容）
     MINIO = "minio"  # MinIO

@@ -24,7 +24,7 @@ from app.modules.sys.banner.schema import (
     BannerUpdateRequest,
     SysBannerSchema,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class BannerService:

@@ -42,10 +42,10 @@ from app.modules.iam.group.model import SysGroup
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository, account_dept_condition
 from app.modules.iam.role.model import SysRole
-from app.modules.message.feedback.model import SysFeedback
-from app.modules.message.notice.model import SysNoticeRead
-from app.modules.user.admin.model import ProfileUserAdmin
-from app.modules.user.portal.model import ProfileUserPortal
+from app.modules.sys.feedback.model import SysFeedback
+from app.modules.sys.notice.model import SysNoticeRead
+from app.modules.profile.admin.model import ProfileUserAdmin
+from app.modules.profile.portal.model import ProfileUserPortal
 
 _ACCOUNT_SUBJECT_RELATION_TYPES = [
     IamRelationType.ACCOUNT_ROLE,

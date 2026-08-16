@@ -8,7 +8,6 @@ from threading import RLock
 from app.core.config.enums import StorageProvider
 from app.core.config.reader import config_reader
 from app.core.storage.config import StorageConfig, fallback_storage_config
-from app.core.storage.local import LocalStorage
 from app.core.storage.oss import OSSStorage
 from app.core.storage.s3 import MinioStorage, RustFSStorage, S3CompatibleStorage
 
@@ -74,8 +73,6 @@ def resolve_storage_config(
 
 def _build_storage(config: StorageConfig):
     """按配置的 provider 构建对应的存储客户端实例。"""
-    if config.provider == StorageProvider.LOCAL:
-        return LocalStorage(config)
     if config.provider == StorageProvider.MINIO:
         return MinioStorage(config)
     if config.provider == StorageProvider.RUSTFS:

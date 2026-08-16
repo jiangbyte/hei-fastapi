@@ -88,14 +88,28 @@ async function resolveDeptName(id: string): Promise<string> {
   }
 }
 
-async function fillScope(registerMap: Record<string, string>, forceMap: Record<string, string>, type: AccountType) {
+async function fillScope(
+  registerMap: Record<string, string>,
+  forceMap: Record<string, string>,
+  type: AccountType,
+) {
   const target = state.byType[type]
   target.enabled = parseBool(registerMap[accountConfigKey(PREFIX, type, 'ENABLED')])
-  target.allowAccount = parseBool(registerMap[accountConfigKey(PREFIX, type, 'ALLOW_ACCOUNT')] ?? 'TRUE')
-  target.allowEmail = parseBool(registerMap[accountConfigKey(PREFIX, type, 'ALLOW_EMAIL')] ?? 'TRUE')
-  target.allowPhone = parseBool(registerMap[accountConfigKey(PREFIX, type, 'ALLOW_PHONE')] ?? 'FALSE')
-  target.requireEmail = parseBool(registerMap[accountConfigKey(PREFIX, type, 'REQUIRE_EMAIL')] ?? 'FALSE')
-  target.requirePhone = parseBool(registerMap[accountConfigKey(PREFIX, type, 'REQUIRE_PHONE')] ?? 'FALSE')
+  target.allowAccount = parseBool(
+    registerMap[accountConfigKey(PREFIX, type, 'ALLOW_ACCOUNT')] ?? 'TRUE',
+  )
+  target.allowEmail = parseBool(
+    registerMap[accountConfigKey(PREFIX, type, 'ALLOW_EMAIL')] ?? 'TRUE',
+  )
+  target.allowPhone = parseBool(
+    registerMap[accountConfigKey(PREFIX, type, 'ALLOW_PHONE')] ?? 'FALSE',
+  )
+  target.requireEmail = parseBool(
+    registerMap[accountConfigKey(PREFIX, type, 'REQUIRE_EMAIL')] ?? 'FALSE',
+  )
+  target.requirePhone = parseBool(
+    registerMap[accountConfigKey(PREFIX, type, 'REQUIRE_PHONE')] ?? 'FALSE',
+  )
   target.forceBindEmail = parseBool(forceMap[accountConfigKey(FORCE_PREFIX, type, 'EMAIL')])
   target.forceBindPhone = parseBool(forceMap[accountConfigKey(FORCE_PREFIX, type, 'PHONE')])
   target.defaultRoleId = registerMap[accountConfigKey(PREFIX, type, 'DEFAULT_ROLE_ID')] || ''

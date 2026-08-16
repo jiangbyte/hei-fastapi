@@ -56,10 +56,18 @@ function getStoredUserInfo() {
 }
 
 function getSafeRedirect(redirect?: string) {
-  if (!redirect || redirect.startsWith('/auth')) {
-    return import.meta.env.VITE_HOME_PATH
+  const home = import.meta.env.VITE_HOME_PATH
+  const value = String(redirect ?? '').trim()
+  if (!value) {
+    return home
   }
-  return redirect
+  if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
+    return home
+  }
+  if (value.includes('://')) {
+    return home
+  }
+  return value
 }
 
 export function resolveSecurityWallPath(user: AuthUserInfo | null | undefined): string | null {

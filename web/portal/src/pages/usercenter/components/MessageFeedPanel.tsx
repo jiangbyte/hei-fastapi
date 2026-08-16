@@ -4,10 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Badge, Button, Empty, List, Pagination, Space, Spin, Tag, Typography, message } from 'antd'
 import { NotificationOutlined, SoundOutlined } from '@ant-design/icons'
 import { myNoticeApi } from '@/api'
-import {
-  MessageDetailModal,
-  type MessageDetailSource,
-} from '@/components/sys/MessageDetailModal'
+import { MessageDetailModal, type MessageDetailSource } from '@/components/sys/MessageDetailModal'
 import { useMessageUnreadStore } from '@/stores/messageUnread'
 import { formatDateTime, wireBool } from '@/utils'
 import { dictTypeData } from '@/utils/dict'

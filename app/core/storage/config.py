@@ -9,15 +9,11 @@ from dataclasses import dataclass
 
 from app.core.config.enums import StorageProvider
 from app.core.config.settings import settings
-from app.core.paths import DEFAULT_FILES_PUBLIC_PATH
-
-# 相对于 PROJECT_ROOT；位于已 gitignore 的 .runtime/ 下。
-DEFAULT_LOCAL_STORAGE_ROOT = ".runtime/storage"
 
 
 @dataclass(frozen=True, slots=True)
 class StorageConfig:
-    """存储提供方配置：桶、端点、凭据、公开路径与本地根目录等。"""
+    """存储提供方配置：桶、端点、凭据、公开桶与预签名等。"""
 
     id: str
     name: str
@@ -29,19 +25,21 @@ class StorageConfig:
     region: str = ""
     use_ssl: bool = False
     base_url: str = ""
-    public_path: str = DEFAULT_FILES_PUBLIC_PATH
-    local_root: str = DEFAULT_LOCAL_STORAGE_ROOT
-    windows_root: str = ""
+    bucket_public: bool = False
     is_default: bool = False
+    # MinIO/RustFS 使用 path-style；腾讯云 COS 等默认 virtual-host。
+    force_path_style: bool = False
     presign_expire_seconds: int = 3600
 
 
 def fallback_storage_config() -> StorageConfig:
     """从环境 settings 构建启动/测试回退配置。"""
+    provider = StorageProvider(settings.storage.provider)
+    force_path_style = provider in {StorageProvider.MINIO, StorageProvider.RUSTFS}
     return StorageConfig(
         id="__settings__",
         name="settings",
-        provider=StorageProvider(settings.storage.provider),
+        provider=provider,
         bucket=settings.storage.bucket or "",
         endpoint=settings.storage.endpoint or "",
         access_key=settings.storage.access_key or "",
@@ -49,8 +47,8 @@ def fallback_storage_config() -> StorageConfig:
         region=settings.storage.region or "",
         use_ssl=settings.storage.use_ssl,
         base_url=settings.storage.base_url or "",
-        public_path=settings.storage.public_path or DEFAULT_FILES_PUBLIC_PATH,
-        local_root=settings.storage.local_root or DEFAULT_LOCAL_STORAGE_ROOT,
+        bucket_public=settings.storage.bucket_public,
         is_default=True,
+        force_path_style=force_path_style,
         presign_expire_seconds=settings.storage.presign_expire_seconds,
     )

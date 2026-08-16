@@ -4,7 +4,7 @@
 import type { UploadFileInfo } from 'naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { fileApi } from '@/api'
-import { buildPublicFileUrl, formatFileSize, normalizeUploadedFile } from '@/utils'
+import { formatFileSize, normalizeUploadedFile } from '@/utils'
 import type { UploadedFileValueType } from '@/utils'
 import { computed, reactive, ref, watch } from 'vue'
 
@@ -66,18 +66,41 @@ const currentUrl = computed(() => {
   if (!value) {
     return undefined
   }
-  // 已是可访问地址，或上传后暂存的 url
-  if (/^(https?:|data:|blob:)/i.test(value) || value.startsWith('/')) {
+  if (/^(https?:|data:|blob:)/i.test(value)) {
     return value
   }
-  // 业务字段存的是 object_name 时，走统一公开访问路径预览
-  return buildPublicFileUrl(value)
+  return undefined
 })
 const currentName = computed(
   () => state.fileName || props.file?.name || props.value || '未选择文件',
 )
 const uploadText = computed(() => props.buttonText || '上传')
 const actionIcon = computed(() => props.icon || 'icon-park-outline:upload')
+
+watch(
+  () => props.value,
+  async (value) => {
+    const raw = String(value || '').trim()
+    if (!raw) {
+      state.fileUrl = ''
+      return
+    }
+    if (/^(https?:|data:|blob:)/i.test(raw)) {
+      state.fileUrl = raw
+      return
+    }
+    if (state.fileUrl && state.fileUrl.includes(raw)) {
+      return
+    }
+    try {
+      const response = await fileApi.url(raw)
+      state.fileUrl = response.data?.url || ''
+    } catch {
+      state.fileUrl = ''
+    }
+  },
+  { immediate: true },
+)
 
 watch(
   () => props.file,

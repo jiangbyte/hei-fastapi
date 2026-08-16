@@ -14,8 +14,7 @@ from app.core.config.crypto import decrypt_config_value
 from app.core.config.enums import StorageProvider
 from app.core.db.models.sys_config import SysConfig
 from app.core.db.session import get_session_factory
-from app.core.paths import DEFAULT_FILES_PUBLIC_PATH
-from app.core.storage.config import DEFAULT_LOCAL_STORAGE_ROOT, StorageConfig
+from app.core.storage.config import StorageConfig
 from app.core.storage.engines import (
     PROVIDER_DISPLAY_NAMES,
     config_key,
@@ -199,6 +198,9 @@ def _storage_config_from_cache(
 
     use_ssl_raw = g("USE_SSL", "FALSE")
     use_ssl = use_ssl_raw.lower() in ("true", "1", "yes")
+    bucket_public_raw = g("BUCKET_PUBLIC", "FALSE")
+    bucket_public = bucket_public_raw.lower() in ("true", "1", "yes")
+    force_path_style = provider in {StorageProvider.MINIO, StorageProvider.RUSTFS}
     return StorageConfig(
         id=provider.value,
         name=PROVIDER_DISPLAY_NAMES.get(provider, provider.value),
@@ -210,10 +212,9 @@ def _storage_config_from_cache(
         region=g("REGION"),
         use_ssl=use_ssl,
         base_url=g("BASE_URL"),
-        public_path=g("PUBLIC_PATH", DEFAULT_FILES_PUBLIC_PATH),
-        local_root=g("LOCAL_ROOT", DEFAULT_LOCAL_STORAGE_ROOT),
-        windows_root=g("WINDOWS_ROOT"),
+        bucket_public=bucket_public,
         is_default=is_default,
+        force_path_style=force_path_style,
         presign_expire_seconds=presign_expire_seconds,
     )
 

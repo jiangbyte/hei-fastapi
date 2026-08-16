@@ -9,9 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
+from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
+from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.job import cron as cron_util
+from app.modules.sys.job import registry as job_registry
 from app.modules.sys.job.execution import EXECUTOR_SYSTEM, submit_run
 from app.modules.sys.job.repository import JobLogRepository, JobRepository
 from app.modules.sys.job.schema import (
@@ -23,7 +26,6 @@ from app.modules.sys.job.schema import (
     SysJobLogSchema,
     SysJobSchema,
 )
-from app.modules.user.utils.profile import enrich_audit_names
 
 
 class JobService:
@@ -35,9 +37,16 @@ class JobService:
         self.repo = JobRepository(db)
         self.log_repo = JobLogRepository(db)
 
+    @staticmethod
+    def _ensure_handler(execute_class: str) -> None:
+        """校验 execute_class 已注册为处理器。"""
+        if job_registry.resolve(execute_class) is None:
+            raise BusinessError(f"未找到任务处理器: {execute_class}")
+
     async def create(self, payload: JobCreateRequest) -> None:
         """事务内创建任务：校验触发配置并计算首次下次执行时间。"""
         cron_util.validate(payload.execute_type, payload.trigger_config)
+        self._ensure_handler(payload.execute_class)
         next_run_time = cron_util.compute_next_run_time(
             payload.execute_type, payload.trigger_config, datetime.now(UTC)
         )
@@ -53,6 +62,7 @@ class JobService:
                 or entity.trigger_config != str(payload.trigger_config)
             )
             cron_util.validate(payload.execute_type, payload.trigger_config)
+            self._ensure_handler(payload.execute_class)
             await self.repo.update(payload)
             if config_changed:
                 entity.next_run_time = cron_util.compute_next_run_time(
@@ -89,8 +99,10 @@ class JobService:
                 )
 
     async def run_now(self, payload: IdQuery, *, executor: str | None) -> None:
-        """立即执行：校验任务存在后异步提交（force=true），接口立即返回。"""
+        """立即执行：校验任务存在且已启用后异步提交（force=true），接口立即返回。"""
         job = await self.repo.get_required(payload.id)
+        if not job.enabled:
+            raise BusinessError("任务未启用，请先启用后再执行")
         await submit_run(job.id, force=True, executor=executor or EXECUTOR_SYSTEM)
 
     async def page_logs(self, query: JobLogAdminPageQuery) -> PageData[SysJobLogSchema]:

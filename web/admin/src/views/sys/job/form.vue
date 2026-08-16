@@ -6,7 +6,7 @@
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
 import { jobApi } from '@/api'
-import { createRequiredRule, toNullableString } from '@/utils'
+import { createRequiredRule, toNullableString, wireBool, wireInt } from '@/utils'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -74,6 +74,10 @@ async function fetchDetail(id: string) {
     state.formModel = {
       ...defaultFormData,
       ...data,
+      enabled: wireBool(data.enabled ?? true),
+      sort: data.sort !== undefined && data.sort !== null && data.sort !== ''
+        ? wireInt(String(data.sort))
+        : 0,
       paramText: param,
     }
   } finally {

@@ -1,171 +1,93 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from urllib.parse import unquote, urlparse
+文件服务单测：使用内存假存储替代 LOCAL。
+"""
+
+from __future__ import annotations
 
 from sqlalchemy import select
 
-from app.core.config.enums import AccountType
+from app.core.config.enums import StorageProvider
 from app.core.config.settings import settings
+from app.core.schema.base import IdQuery
 from app.core.schema.datetime import format_utc_iso8601
-from app.core.security.session import SessionPayload
-from app.core.storage.url import quote_object_name
+from app.core.storage.config import StorageConfig
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.schema import FileUploadRequest, ObjectNameQuery
 from app.modules.sys.file.service import FileService
-from app.modules.user.admin.model import ProfileUserAdmin
-from app.modules.user.admin.service import ProfileUserAdminService
-from app.modules.user.portal.model import ProfileUserPortal
-from app.modules.user.portal.service import ProfileUserPortalService
 
 
-def _assert_path_file_url(
-    url: str, object_name: str, *, public_path: str = "/api/v1/files"
-) -> None:
-    parsed = urlparse(url)
-    assert not parsed.query
-    assert parsed.path == f"{public_path.rstrip('/')}/{quote_object_name(object_name)}"
-    assert unquote(parsed.path.removeprefix(public_path.rstrip("/") + "/")) == object_name
-
-
-async def test_file_service_upload_and_url(tmp_path, db_session):
-    old_provider = settings.storage.provider
-    old_root = settings.storage.local_root
-    old_base_url = settings.storage.base_url
-    old_public_path = settings.storage.public_path
-    settings.storage.provider = "local"
-    settings.storage.local_root = str(tmp_path)
-    settings.storage.base_url = ""
-    settings.storage.public_path = "/api/v1/files"
-    try:
-        service = FileService(db_session)
-        entity = await service.upload(
-            FileUploadRequest(filename="avatar.png", content=b"hello", content_type="image/png")
-        )
-        await db_session.commit()
-        assert entity.object_name.startswith("uploads/")
-        assert entity.object_name.endswith(".png")
-        _assert_path_file_url(entity.url, entity.object_name)
-        assert str(tmp_path) not in entity.url
-        assert format_utc_iso8601(entity.created_at).endswith("Z")
-        assert await service.get_url(ObjectNameQuery(object_name=entity.object_name)) == entity.url
-        stored = (
-            await db_session.execute(select(SysFile).where(SysFile.id == entity.id))
-        ).scalar_one()
-        assert stored.original_name == "avatar.png"
-        await service.delete_by_object_name(entity.object_name)
-        deleted = (
-            await db_session.execute(select(SysFile).where(SysFile.id == entity.id))
-        ).scalar_one_or_none()
-        assert deleted is None
-        assert not (tmp_path / entity.object_name).exists()
-    finally:
-        settings.storage.provider = old_provider
-        settings.storage.local_root = old_root
-        settings.storage.base_url = old_base_url
-        settings.storage.public_path = old_public_path
-
-
-async def test_admin_avatar_update_deletes_previous_file(tmp_path, db_session):
-    old_provider = settings.storage.provider
-    old_root = settings.storage.local_root
-    old_base_url = settings.storage.base_url
-    old_public_path = settings.storage.public_path
-    settings.storage.provider = "local"
-    settings.storage.local_root = str(tmp_path)
-    settings.storage.base_url = ""
-    settings.storage.public_path = "/api/v1/files"
-    try:
-        file_service = FileService(db_session)
-        old_avatar = await file_service.upload(
-            FileUploadRequest(
-                filename="old-avatar.png",
-                content=b"old",
-                content_type="image/png",
-                category="avatars",
-                object_name="avatars/admin/account-1/old-avatar.png",
-            )
-        )
-        db_session.add(ProfileUserAdmin(account_id="account-1", avatar=old_avatar.object_name))
-        await db_session.commit()
-
-        response = await ProfileUserAdminService(db_session).update_current_avatar(
-            content=b"new",
-            content_type="image/png",
-            session=SessionPayload(
-                token="token",
-                account_id="account-1",
-                account_type=AccountType.ADMIN,
-            ),
+class _MemoryStorage:
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+        self.config = StorageConfig(
+            id="memory",
+            name="memory",
+            provider=StorageProvider.MINIO,
+            bucket="test",
+            bucket_public=True,
+            base_url="https://cdn.example.com",
+            is_default=True,
         )
 
-        profile = await db_session.get(ProfileUserAdmin, "account-1")
-        old_record = (
-            await db_session.execute(select(SysFile).where(SysFile.id == old_avatar.id))
-        ).scalar_one_or_none()
-        new_record = (
-            await db_session.execute(select(SysFile).where(SysFile.id == response.file_id))
-        ).scalar_one_or_none()
-        assert profile is not None
-        assert profile.avatar == response.object_name
-        assert old_record is None
-        assert new_record is not None
-        assert not (tmp_path / old_avatar.object_name).exists()
-        assert (tmp_path / response.object_name).exists()
-    finally:
-        settings.storage.provider = old_provider
-        settings.storage.local_root = old_root
-        settings.storage.base_url = old_base_url
-        settings.storage.public_path = old_public_path
+    def upload_bytes(self, object_name: str, content: bytes, content_type: str = "") -> str:
+        self.objects[object_name] = content
+        return self.get_object_url(object_name)
+
+    def delete_object(self, object_name: str) -> None:
+        self.objects.pop(object_name, None)
+
+    def get_object_url(self, object_name: str) -> str:
+        return f"https://cdn.example.com/{object_name}"
+
+    def get_presigned_url(self, object_name: str) -> str:
+        return f"https://cdn.example.com/{object_name}?X-Amz-Signature=test"
+
+    def get_object_bytes(self, object_name: str) -> bytes:
+        return self.objects[object_name]
 
 
-async def test_portal_avatar_update_deletes_previous_file(tmp_path, db_session):
-    old_provider = settings.storage.provider
-    old_root = settings.storage.local_root
-    old_base_url = settings.storage.base_url
-    old_public_path = settings.storage.public_path
-    settings.storage.provider = "local"
-    settings.storage.local_root = str(tmp_path)
-    settings.storage.base_url = ""
-    settings.storage.public_path = "/api/v1/files"
-    try:
-        file_service = FileService(db_session)
-        old_avatar = await file_service.upload(
-            FileUploadRequest(
-                filename="old-avatar.png",
-                content=b"old",
-                content_type="image/png",
-                category="avatars",
-                object_name="avatars/portal/account-2/old-avatar.png",
-            )
-        )
-        db_session.add(ProfileUserPortal(account_id="account-2", avatar=old_avatar.object_name))
-        await db_session.commit()
+def _install_memory_storage(monkeypatch) -> _MemoryStorage:
+    storage = _MemoryStorage()
+    config = storage.config
+    monkeypatch.setattr(
+        "app.modules.sys.file.service.resolve_storage_config", lambda *a, **k: config
+    )
+    monkeypatch.setattr("app.modules.sys.file.service.get_storage", lambda *a, **k: storage)
+    monkeypatch.setattr(settings.storage, "provider", StorageProvider.MINIO)
+    return storage
 
-        response = await ProfileUserPortalService(db_session).update_current_avatar(
-            content=b"new",
-            content_type="image/png",
-            session=SessionPayload(
-                token="token",
-                account_id="account-2",
-                account_type=AccountType.PORTAL,
-            ),
-        )
 
-        profile = await db_session.get(ProfileUserPortal, "account-2")
-        old_record = (
-            await db_session.execute(select(SysFile).where(SysFile.id == old_avatar.id))
-        ).scalar_one_or_none()
-        new_record = (
-            await db_session.execute(select(SysFile).where(SysFile.id == response.file_id))
-        ).scalar_one_or_none()
-        assert profile is not None
-        assert profile.avatar == response.object_name
-        assert old_record is None
-        assert new_record is not None
-        assert not (tmp_path / old_avatar.object_name).exists()
-        assert (tmp_path / response.object_name).exists()
-    finally:
-        settings.storage.provider = old_provider
-        settings.storage.local_root = old_root
-        settings.storage.base_url = old_base_url
-        settings.storage.public_path = old_public_path
+async def test_file_service_upload_and_url(monkeypatch, db_session):
+    storage = _install_memory_storage(monkeypatch)
+    service = FileService(db_session)
+    entity = await service.upload(
+        FileUploadRequest(filename="avatar.png", content=b"hello", content_type="image/png")
+    )
+    await db_session.commit()
+    assert entity.object_name.startswith("uploads/")
+    assert entity.object_name.endswith(".png")
+    assert entity.url == f"https://cdn.example.com/{entity.object_name}"
+    assert entity.object_name in storage.objects
+    assert format_utc_iso8601(entity.created_at).endswith("Z")
+    assert await service.get_url(ObjectNameQuery(object_name=entity.object_name)) == entity.url
+    stored = (await db_session.execute(select(SysFile).where(SysFile.id == entity.id))).scalar_one()
+    assert stored.original_name == "avatar.png"
+    await service.delete_by_object_name(entity.object_name)
+    deleted = (
+        await db_session.execute(select(SysFile).where(SysFile.id == entity.id))
+    ).scalar_one_or_none()
+    assert deleted is None
+    assert entity.object_name not in storage.objects
+
+
+async def test_file_service_download_has_content_disposition(monkeypatch, db_session):
+    _install_memory_storage(monkeypatch)
+    service = FileService(db_session)
+    entity = await service.upload(
+        FileUploadRequest(filename="报告.png", content=b"png", content_type="image/png")
+    )
+    await db_session.commit()
+    response = await service.download_by_id(IdQuery(id=entity.id))
+    assert response.body == b"png"
+    assert "filename*=UTF-8''" in response.headers["Content-Disposition"]

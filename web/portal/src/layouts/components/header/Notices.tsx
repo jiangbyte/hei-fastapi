@@ -8,10 +8,7 @@ import { myNoticeApi } from '@/api'
 import { formatDateTime, wireBool } from '@/utils'
 import { readPageMeta } from '@/utils/wire'
 import { useMessageUnreadStore } from '@/stores/messageUnread'
-import {
-  MessageDetailModal,
-  type MessageDetailSource,
-} from '@/components/sys/MessageDetailModal'
+import { MessageDetailModal, type MessageDetailSource } from '@/components/sys/MessageDetailModal'
 import { NoticeList, type BannerItem } from '../common/NoticeList'
 
 const pageSize = 8

@@ -181,7 +181,7 @@ class DeptRepository:
         if not unique_ids:
             return {}
         from app.modules.iam.account.model import SysAccount
-        from app.modules.user.admin.model import ProfileUserAdmin
+        from app.modules.profile.admin.model import ProfileUserAdmin
 
         stmt = (
             select(SysAccount.id, ProfileUserAdmin.name)

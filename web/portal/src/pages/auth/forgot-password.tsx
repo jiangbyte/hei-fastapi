@@ -155,7 +155,13 @@ export function ForgotPasswordPage() {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading} className="auth-submit">
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              loading={loading}
+              className="auth-submit"
+            >
               {isResetMode ? '重置密码' : '发送重置链接'}
             </Button>
           </Form.Item>

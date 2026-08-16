@@ -22,7 +22,7 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInst | null>(null)
 
-/** SysAccount + identity + profile_user_admin 可写字段 */
+/** SysAccount + identity + admin_user_profile 可写字段 */
 const defaultFormData = {
   // SysAccount
   account_type: ACCOUNT_TYPE,
@@ -34,7 +34,7 @@ const defaultFormData = {
   phone: '',
   email_login_enabled: false,
   phone_login_enabled: false,
-  // ProfileUserAdmin / ProfileUserAdminUpsertPayload
+  // AdminUserProfile / AdminProfileUpsertPayload
   name: '',
   nickname: '',
   avatar: '',

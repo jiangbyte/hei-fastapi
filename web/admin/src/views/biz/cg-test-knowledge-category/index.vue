@@ -10,7 +10,17 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { cgTestKnowledgeCategoryApi } from '@/api'
 import { readPageMeta } from '@/utils/wire'
-import { dictList, createTagColor, dictTypeColor, dictTypeData, displayValue, formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
+import {
+  dictList,
+  createTagColor,
+  dictTypeColor,
+  dictTypeData,
+  displayValue,
+  formatDateTime,
+  hasPermission,
+  normalizeSearchValues,
+  renderButtonIcon,
+} from '@/utils'
 import { NButton, NFlex, NIcon, NInput, NInputGroup, NTag } from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -36,8 +46,6 @@ const state = reactive({
 const treeData = computed(() => buildTreeNodes(state.treeRows))
 const hasChildCheckedRows = computed(() => state.childCheckedRowKeys.length > 0)
 const canCreateChild = computed(() => Boolean(state.selectedMasterId))
-
-
 
 const childSearchForm = createProSearchForm<any>({
   defaultCollapsed: true,
@@ -86,7 +94,6 @@ const childPagination = computed<PaginationProps>(() => ({
   },
 }))
 
-
 const childColumns = computed<ProDataTableColumns<any>>(() => [
   { type: 'selection', fixed: 'left' },
   { title: 'category_id', path: 'category_id', width: 150, ellipsis: { tooltip: true } },
@@ -98,7 +105,7 @@ const childColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 150,
     ellipsis: { tooltip: true },
-    render: row => (
+    render: (row) => (
       <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
         {dictTypeData('COMMON_STATUS', row.status) || displayValue(row.status)}
       </NTag>
@@ -107,21 +114,36 @@ const childColumns = computed<ProDataTableColumns<any>>(() => [
   { title: 'summary', path: 'summary', width: 150, ellipsis: { tooltip: true } },
   { title: 'content', path: 'content', width: 150, ellipsis: { tooltip: true } },
   { title: 'author', path: 'author', width: 150, ellipsis: { tooltip: true } },
-  { title: '更新时间', path: 'updated_at', width: 190, render: row => formatDateTime(row.updated_at) },
+  {
+    title: '更新时间',
+    path: 'updated_at',
+    width: 190,
+    render: (row) => formatDateTime(row.updated_at),
+  },
   {
     title: '操作',
     key: 'actions',
     width: 130,
     fixed: 'right',
-    render: row => (
+    render: (row) => (
       <NFlex size={12}>
         {hasPermission('biz:cgtestknowledgecategory:detail') ? (
-          <NButton type="info" size="small" text={true} onClick={() => openChildDetailModal(row.id)}>
+          <NButton
+            type="info"
+            size="small"
+            text={true}
+            onClick={() => openChildDetailModal(row.id)}
+          >
             {renderButtonIcon('icon-park-outline:preview-open')}
           </NButton>
         ) : null}
         {hasPermission('biz:cgtestknowledgecategory:update') ? (
-          <NButton type="primary" size="small" text={true} onClick={() => openChildEditModal(row.id)}>
+          <NButton
+            type="primary"
+            size="small"
+            text={true}
+            onClick={() => openChildEditModal(row.id)}
+          >
             {renderButtonIcon('icon-park-outline:edit')}
           </NButton>
         ) : null}
@@ -140,11 +162,12 @@ onMounted(() => {
   fetchChildPage()
 })
 
-
 async function fetchTree() {
   state.treeLoading = true
   try {
-    const response = await cgTestKnowledgeCategoryApi.tree({ keyword: state.treeKeyword || undefined })
+    const response = await cgTestKnowledgeCategoryApi.tree({
+      keyword: state.treeKeyword || undefined,
+    })
     state.treeRows = response.data ?? []
   } finally {
     state.treeLoading = false
@@ -171,7 +194,7 @@ function handleTreeSelect(keys: Array<string | number>) {
 }
 
 function buildTreeNodes(items: any[]): any[] {
-  return items.map(item => ({
+  return items.map((item) => ({
     key: item.id,
     label: item.name,
     children: item.children?.length ? buildTreeNodes(item.children) : undefined,
@@ -189,16 +212,20 @@ async function fetchChildPage() {
     })
     const data = response.data ?? {}
     state.childRows = data.records ?? []
-    const childPageMeta = readPageMeta(data, { current: state.childPage, size: state.childPageSize })
+    const childPageMeta = readPageMeta(data, {
+      current: state.childPage,
+      size: state.childPageSize,
+    })
     state.childTotal = childPageMeta.total
     state.childPage = childPageMeta.current
     state.childPageSize = childPageMeta.size
-    state.childCheckedRowKeys = state.childCheckedRowKeys.filter(key => state.childRows.some(item => item.id === key))
+    state.childCheckedRowKeys = state.childCheckedRowKeys.filter((key) =>
+      state.childRows.some((item) => item.id === key),
+    )
   } finally {
     state.childLoading = false
   }
 }
-
 
 function openChildDetailModal(id: string) {
   childDetailModalRef.value?.openModal(id)
@@ -212,11 +239,9 @@ function openChildEditModal(id: string) {
   childFormModalRef.value?.openModal(id)
 }
 
-
 function handleChildCheckedRowKeys(keys: Array<string | number>) {
   state.childCheckedRowKeys = keys.map(String)
 }
-
 
 function confirmChildDelete(value: string | string[]) {
   const ids = Array.isArray(value) ? value : [value]
@@ -234,7 +259,7 @@ function confirmChildDelete(value: string | string[]) {
 
 async function deleteChildRows(ids: string[]) {
   await cgTestKnowledgeCategoryApi.childRemove({ ids })
-  state.childCheckedRowKeys = state.childCheckedRowKeys.filter(key => !ids.includes(key))
+  state.childCheckedRowKeys = state.childCheckedRowKeys.filter((key) => !ids.includes(key))
   window.$message.success('删除成功')
   await fetchChildPage()
 }
@@ -242,8 +267,15 @@ async function deleteChildRows(ids: string[]) {
 
 <template>
   <div class="generated-left-tree-table">
-    <ProCard class="generated-tree" content-class="h-full min-h-0 overflow-hidden">
-      <NFlex class="generated-tree-layout" vertical :size="12">
+    <ProCard
+      class="generated-tree"
+      content-class="h-full min-h-0 overflow-hidden"
+    >
+      <NFlex
+        class="generated-tree-layout"
+        vertical
+        :size="12"
+      >
         <NInputGroup>
           <NInput
             v-model:value="state.treeKeyword"
@@ -251,11 +283,24 @@ async function deleteChildRows(ids: string[]) {
             placeholder="搜索KnowledgeCategory"
             @keyup.enter="searchTree"
           />
-          <NButton type="primary" :loading="state.treeLoading" title="搜索" @click="searchTree">
-            <template #icon><NIcon><Icon icon="icon-park-outline:search" /></NIcon></template>
+          <NButton
+            type="primary"
+            :loading="state.treeLoading"
+            title="搜索"
+            @click="searchTree"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:search" /></NIcon>
+            </template>
           </NButton>
-          <NButton :disabled="!state.treeKeyword" title="重置" @click="resetTreeSearch">
-            <template #icon><NIcon><Icon icon="icon-park-outline:refresh" /></NIcon></template>
+          <NButton
+            :disabled="!state.treeKeyword"
+            title="重置"
+            @click="resetTreeSearch"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
+            </template>
           </NButton>
         </NInputGroup>
         <div class="generated-tree-body">
@@ -264,7 +309,10 @@ async function deleteChildRows(ids: string[]) {
             class="generated-tree-spin"
             content-class="generated-tree-spin-content"
           >
-            <NScrollbar class="generated-tree-scroll" content-class="generated-tree-scroll-content">
+            <NScrollbar
+              class="generated-tree-scroll"
+              content-class="generated-tree-scroll-content"
+            >
               <NTree
                 block-line
                 block-node
@@ -282,7 +330,10 @@ async function deleteChildRows(ids: string[]) {
       </NFlex>
     </ProCard>
 
-    <NFlex class="min-w-0 min-h-0 h-full" vertical>
+    <NFlex
+      class="min-w-0 min-h-0 h-full"
+      vertical
+    >
       <ProCard content-class="pb-0!">
         <ProSearchForm
           :form="childSearchForm"
@@ -306,14 +357,36 @@ async function deleteChildRows(ids: string[]) {
       >
         <template #toolbar>
           <NFlex>
-            <NButton v-if="hasPermission('biz:cgtestknowledgecategory:create')" type="primary" text :disabled="!canCreateChild" @click="openChildCreateModal">
-              <template #icon><NIcon><Icon icon="icon-park-outline:plus" /></NIcon></template>
+            <NButton
+              v-if="hasPermission('biz:cgtestknowledgecategory:create')"
+              type="primary"
+              text
+              :disabled="!canCreateChild"
+              @click="openChildCreateModal"
+            >
+              <template #icon>
+                <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
+              </template>
             </NButton>
-            <NButton text :loading="state.childLoading" @click="fetchChildPage">
-              <template #icon><NIcon><Icon icon="icon-park-outline:refresh" /></NIcon></template>
+            <NButton
+              text
+              :loading="state.childLoading"
+              @click="fetchChildPage"
+            >
+              <template #icon>
+                <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
+              </template>
             </NButton>
-            <NButton v-if="hasPermission('biz:cgtestknowledgecategory:delete')" type="error" text :disabled="!hasChildCheckedRows" @click="confirmChildDelete(state.childCheckedRowKeys)">
-              <template #icon><NIcon><Icon icon="icon-park-outline:delete" /></NIcon></template>
+            <NButton
+              v-if="hasPermission('biz:cgtestknowledgecategory:delete')"
+              type="error"
+              text
+              :disabled="!hasChildCheckedRows"
+              @click="confirmChildDelete(state.childCheckedRowKeys)"
+            >
+              <template #icon>
+                <NIcon><Icon icon="icon-park-outline:delete" /></NIcon>
+              </template>
             </NButton>
           </NFlex>
         </template>
@@ -321,7 +394,10 @@ async function deleteChildRows(ids: string[]) {
     </NFlex>
 
     <ChildModalDetail ref="childDetailModalRef" />
-    <ChildModalForm ref="childFormModalRef" @saved="fetchChildPage" />
+    <ChildModalForm
+      ref="childFormModalRef"
+      @saved="fetchChildPage"
+    />
   </div>
 </template>
 

@@ -22,7 +22,7 @@ from app.modules.sys.dict.schema import (
     SysDictSchema,
     SysDictTreeNode,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class DictService:

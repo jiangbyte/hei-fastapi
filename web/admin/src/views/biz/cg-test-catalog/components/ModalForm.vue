@@ -38,29 +38,18 @@ const state = reactive({
   treeRows: [] as any[],
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑Catalog' : '新增Catalog')
-const parentTreeOptions = computed(() =>
-  buildParentTreeOptions(state.treeRows, state.dataId),
-)
+const modalTitle = computed(() => (state.dataId ? '编辑Catalog' : '新增Catalog'))
+const parentTreeOptions = computed(() => buildParentTreeOptions(state.treeRows, state.dataId))
 const rules = computed<FormRules>(() => ({
-  parent_id: [
-    createRequiredRule('parent_id', 'input'),
-  ],
-  code: [
-    createRequiredRule('code', 'input'),
-  ],
-  name: [
-    createRequiredRule('name', 'input'),
-  ],
-  category: [
-    createRequiredRule('category', 'input'),
-  ],
-  status: [
-    createRequiredRule('status', 'change'),
-  ],
+  parent_id: [createRequiredRule('parent_id', 'input')],
+  code: [createRequiredRule('code', 'input')],
+  name: [createRequiredRule('name', 'input')],
+  category: [createRequiredRule('category', 'input')],
+  status: [createRequiredRule('status', 'change')],
   sort: [
     {
-      validator: () => typeof state.formModel.sort === 'number' && Number.isFinite(state.formModel.sort),
+      validator: () =>
+        typeof state.formModel.sort === 'number' && Number.isFinite(state.formModel.sort),
       message: '请输入sort',
       trigger: ['input', 'blur'],
     },
@@ -72,12 +61,8 @@ const rules = computed<FormRules>(() => ({
       trigger: 'change',
     },
   ],
-  icon: [
-    createRequiredRule('icon', 'input'),
-  ],
-  description: [
-    createRequiredRule('description', 'input'),
-  ],
+  icon: [createRequiredRule('icon', 'input')],
+  description: [createRequiredRule('description', 'input')],
   extra: [
     createRequiredRule('extra', 'input'),
     {
@@ -122,7 +107,10 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-    is_visible: data.is_visible == null || data.is_visible === '' ? defaultFormData.is_visible : wireBool(String(data.is_visible)),
+    is_visible:
+      data.is_visible == null || data.is_visible === ''
+        ? defaultFormData.is_visible
+        : wireBool(String(data.is_visible)),
     sort: data.sort == null || data.sort === '' ? defaultFormData.sort : wireInt(String(data.sort)),
     extra: stringifyJsonValue(data.extra),
   }
@@ -176,7 +164,11 @@ function closeModal() {
   state.submitLoading = false
 }
 
-function buildParentTreeOptions(items: any[], editingId: string | null, disabledParent = false): any[] {
+function buildParentTreeOptions(
+  items: any[],
+  editingId: string | null,
+  disabledParent = false,
+): any[] {
   return items.map((item) => {
     const itemId = String(item.id ?? '')
     const disabled = disabledParent || (editingId !== null && itemId === editingId)
@@ -225,8 +217,18 @@ defineExpose({
   >
     <NSpin :show="state.loading || state.treeLoading">
       <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-        <NForm ref="formRef" :model="state.formModel" :rules="rules" label-placement="left" label-width="110" :disabled="state.loading || state.treeLoading || state.submitLoading">
-          <NFormItem label="父级" path="parent_id">
+        <NForm
+          ref="formRef"
+          :model="state.formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="110"
+          :disabled="state.loading || state.treeLoading || state.submitLoading"
+        >
+          <NFormItem
+            label="父级"
+            path="parent_id"
+          >
             <NTreeSelect
               v-model:value="state.formModel.parent_id"
               clearable
@@ -239,32 +241,73 @@ defineExpose({
               class="w-full"
             />
           </NFormItem>
-          <NFormItem label="code" path="code">
+          <NFormItem
+            label="code"
+            path="code"
+          >
             <NInput v-model:value="state.formModel.code" />
           </NFormItem>
-          <NFormItem label="name" path="name">
+          <NFormItem
+            label="name"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem label="category" path="category">
+          <NFormItem
+            label="category"
+            path="category"
+          >
             <NInput v-model:value="state.formModel.category" />
           </NFormItem>
-          <NFormItem label="status" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" />
+          <NFormItem
+            label="status"
+            path="status"
+          >
+            <DictSelect
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
+            />
           </NFormItem>
-          <NFormItem label="sort" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" />
+          <NFormItem
+            label="sort"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="is_visible" path="is_visible">
+          <NFormItem
+            label="is_visible"
+            path="is_visible"
+          >
             <NSwitch v-model:value="state.formModel.is_visible" />
           </NFormItem>
-          <NFormItem label="icon" path="icon">
+          <NFormItem
+            label="icon"
+            path="icon"
+          >
             <NInput v-model:value="state.formModel.icon" />
           </NFormItem>
-          <NFormItem label="description" path="description">
-            <NInput v-model:value="state.formModel.description" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="description"
+            path="description"
+          >
+            <NInput
+              v-model:value="state.formModel.description"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="extra" path="extra">
-            <NInput v-model:value="state.formModel.extra" type="textarea" :autosize="{ minRows: 4, maxRows: 12 }" />
+          <NFormItem
+            label="extra"
+            path="extra"
+          >
+            <NInput
+              v-model:value="state.formModel.extra"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 12 }"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
@@ -272,8 +315,16 @@ defineExpose({
 
     <template #action>
       <NSpace justify="end">
-        <NButton @click="closeModal">取消</NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm">确认</NButton>
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

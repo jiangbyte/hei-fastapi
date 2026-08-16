@@ -254,10 +254,7 @@ export function AuthRegisterForm() {
               </Form.Item>
             ) : null}
             {options.register_require_phone ? (
-              <Form.Item
-                name="phone"
-                rules={[{ required: true, message: '请输入手机号' }]}
-              >
+              <Form.Item name="phone" rules={[{ required: true, message: '请输入手机号' }]}>
                 <Input placeholder="手机号（必填）" allowClear />
               </Form.Item>
             ) : null}

@@ -26,8 +26,6 @@ async function handleCallback() {
   const action = String(route.query.oauth_action || '')
   const rawMessage = typeof route.query.oauth_message === 'string' ? route.query.oauth_message : ''
   const oauthCode = typeof route.query.oauth_code === 'string' ? route.query.oauth_code : ''
-  // 兼容旧版 URL token（过渡期）
-  const legacyToken = typeof route.query.token === 'string' ? route.query.token : ''
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : undefined
 
   if (status !== 'ok') {
@@ -56,26 +54,20 @@ async function handleCallback() {
     let forceBindEmail = false
     let forceBindPhone = false
 
-    if (oauthCode) {
-      const { data } = await oauthExchange({ code: oauthCode })
-      const token = data?.token
-      if (!token) {
-        throw new Error('兑换登录凭证失败')
-      }
-      clearToken()
-      setToken(String(token), true)
-      authStore.sessionChecked = true
-      passwordExpired = wireBool(data?.password_expired ?? false)
-      forceBindEmail = wireBool(data?.force_bind_email ?? false)
-      forceBindPhone = wireBool(data?.force_bind_phone ?? false)
-    } else if (legacyToken) {
-      clearToken()
-      setToken(legacyToken, true)
-      authStore.sessionChecked = true
-      passwordExpired = wireBool(String(route.query.password_expired ?? false))
-      forceBindEmail = wireBool(String(route.query.force_bind_email ?? false))
-      forceBindPhone = wireBool(String(route.query.force_bind_phone ?? false))
+    if (!oauthCode) {
+      throw new Error('缺少 oauth_code')
     }
+    const { data } = await oauthExchange({ code: oauthCode })
+    const token = data?.token
+    if (!token) {
+      throw new Error('兑换登录凭证失败')
+    }
+    clearToken()
+    setToken(String(token), true)
+    authStore.sessionChecked = true
+    passwordExpired = wireBool(data?.password_expired ?? false)
+    forceBindEmail = wireBool(data?.force_bind_email ?? false)
+    forceBindPhone = wireBool(data?.force_bind_phone ?? false)
 
     if (action === 'bound') {
       tip.value = '绑定成功，正在跳转…'

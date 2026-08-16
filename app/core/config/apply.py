@@ -46,13 +46,6 @@ def apply_storage_config() -> None:
         raise RuntimeError(
             f"DEFAULT_FILE_ENGINE={engine!r} does not map to a known storage provider."
         )
-    if default.provider == StorageProvider.LOCAL:
-        if not (default.local_root or default.windows_root):
-            raise RuntimeError(
-                "Default LOCAL storage requires STORAGE_LOCAL_LOCAL_ROOT "
-                "or STORAGE_LOCAL_WINDOWS_ROOT."
-            )
-        return
     missing: list[str] = []
     if not default.bucket:
         missing.append("bucket")

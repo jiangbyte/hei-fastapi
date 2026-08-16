@@ -1,14 +1,14 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from app.core.paths import (
-    DEFAULT_FILES_PUBLIC_PATH,
-    api_version_glob_prefix,
-)
+API 路径常量单测。
+"""
 
-
-def test_files_public_path_matches_v1_convention():
-    assert DEFAULT_FILES_PUBLIC_PATH == "/api/v1/files"
+from app.core.paths import API_ROOT_PREFIX, api_version_glob_prefix
 
 
-def test_version_glob_for_whitelist():
+def test_api_root_prefix():
+    assert API_ROOT_PREFIX == "/api"
+
+
+def test_api_version_glob_prefix():
     assert api_version_glob_prefix() == "/api/v*"

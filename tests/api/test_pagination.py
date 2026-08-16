@@ -1,12 +1,36 @@
 """ Author: Charlie """
 
-from app.core.config.enums import AccountStatusEnum, AccountType
+from app.core.config.enums import AccountStatusEnum, AccountType, StorageProvider
 from app.core.security.session import SessionPayload, session_store
+from app.core.storage.config import StorageConfig
 from app.modules.iam.account.model import SysAccount
 from app.modules.sys.file.model import SysFile
 
 
-async def test_admin_file_list_uses_current_size_total_pages_records(client):
+class _MemoryStorage:
+    def __init__(self) -> None:
+        self.config = StorageConfig(
+            id="memory",
+            name="memory",
+            provider=StorageProvider.MINIO,
+            bucket="test",
+            bucket_public=True,
+            base_url="https://cdn.example.com",
+            is_default=True,
+        )
+
+    def get_object_url(self, object_name: str) -> str:
+        return f"https://cdn.example.com/{object_name}"
+
+
+async def test_admin_file_list_uses_current_size_total_pages_records(client, monkeypatch):
+    storage = _MemoryStorage()
+    monkeypatch.setattr(
+        "app.modules.sys.file.service.resolve_storage_config",
+        lambda *a, **k: storage.config,
+    )
+    monkeypatch.setattr("app.modules.sys.file.service.get_storage", lambda *a, **k: storage)
+
     override = client._transport.app.dependency_overrides
     get_db_session = next(iter(override))
 
@@ -21,11 +45,11 @@ async def test_admin_file_list_uses_current_size_total_pages_records(client):
         file = SysFile(
             object_name="uploads/20260617/demo.txt",
             original_name="demo.txt",
-            storage_provider="local",
-            bucket=None,
+            storage_provider="minio",
+            bucket="test",
             content_type="text/plain",
             size=4,
-            url="http://testserver/storage/uploads/20260617/demo.txt",
+            url="https://cdn.example.com/uploads/20260617/demo.txt",
             created_by=account_id,
         )
         session.add_all([account, file])

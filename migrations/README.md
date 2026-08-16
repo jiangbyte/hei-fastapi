@@ -1,15 +1,14 @@
 # 数据库迁移
 
-Alembic 版本目录，只管理表结构。当前基线为单一初始迁移 `*_initial_schema.py`。
-
-业务数据不在迁移里维护，见 `scripts/db/seed/`。
+Alembic 版本目录，只管理**表结构**增量变更。演示库全量重建请使用 [`scripts/db.sql`](../scripts/db.sql)。
 
 ```bash
-python scripts/db/makemigration.py "describe schema change"
-python scripts/db/migrate.py
-python scripts/db/check_migration.py
+# 在项目根目录执行
+alembic upgrade head
+alembic revision --autogenerate -m "describe schema change"
+alembic check
 ```
 
-连接串来自 `.env` 的 `DB__URL`。
+连接串来自 `.env` 的 `DB__URL`（见 `alembic.ini` / `migrations/env.py`）。
 
-> 数据库表结构由人工维护：应用启动（`entrypoint.sh`）不会执行迁移，以上命令仅在维护机手动执行。禁用模块的模型仍会进入 metadata，可正常生成与执行迁移。
+> 应用启动（`entrypoint.sh`）不会执行迁移；以上命令仅在维护机手动执行。

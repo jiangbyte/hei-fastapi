@@ -32,7 +32,7 @@ from app.modules.biz.cg_test_order.schema import (
     CgTestOrderSchema,
     CgTestOrderUpdateRequest,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestOrderService:

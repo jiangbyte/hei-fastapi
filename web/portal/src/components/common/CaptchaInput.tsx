@@ -23,7 +23,7 @@ export const CaptchaInput = forwardRef<CaptchaInputHandle, Props>(function Captc
   { value = '', onChange, status, onCaptchaIdChange, size = 'middle' },
   ref,
 ) {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [imageBase64, setImageBase64] = useState('')
   const idChangeRef = useRef(onCaptchaIdChange)
   const valueChangeRef = useRef(onChange)
@@ -45,7 +45,25 @@ export const CaptchaInput = forwardRef<CaptchaInputHandle, Props>(function Captc
   useImperativeHandle(ref, () => ({ refresh }))
 
   useEffect(() => {
-    void refresh()
+    let cancelled = false
+    void (async () => {
+      try {
+        const response = await authApi.captcha('svg')
+        if (cancelled) {
+          return
+        }
+        idChangeRef.current?.(response.data.captcha_id)
+        valueChangeRef.current?.('')
+        setImageBase64(response.data.image_base64)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const imageSrc = imageBase64 ? `data:image/svg+xml;base64,${imageBase64}` : ''
@@ -67,9 +85,7 @@ export const CaptchaInput = forwardRef<CaptchaInputHandle, Props>(function Captc
         onClick={() => void refresh()}
         aria-label="刷新验证码"
       >
-        <Spin spinning={loading}>
-          {imageSrc ? <img src={imageSrc} alt="验证码" /> : null}
-        </Spin>
+        <Spin spinning={loading}>{imageSrc ? <img src={imageSrc} alt="验证码" /> : null}</Spin>
       </button>
     </div>
   )

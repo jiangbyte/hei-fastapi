@@ -16,8 +16,8 @@ from app.modules.iam.schema import (
     AccountOauthBindingSchema,
     SysAccountSchema,
 )
-from app.modules.user.admin.repository import ProfileUserAdminRepository
-from app.modules.user.portal.repository import ProfileUserPortalRepository
+from app.modules.profile.admin.repository import ProfileUserAdminRepository
+from app.modules.profile.portal.repository import ProfileUserPortalRepository
 
 
 class AccountQueryService:
@@ -126,6 +126,57 @@ class AccountQueryService:
                     created_by=account.created_by,
                     updated_at=account.updated_at,
                     updated_by=account.updated_by,
+                )
+            )
+        return items
+
+    async def build_account_picker_schemas(self, accounts: list) -> list[SysAccountSchema]:
+        """授权弹窗候选用户：仅批量组装 id/账号/昵称/头像等展示字段，跳过 OAuth 与完整 identity 列表。"""
+        account_ids = [account.id for account in accounts]
+        identities = await self.repo.list_identities_by_account_ids(account_ids)
+        admin_profiles = await ProfileUserAdminRepository(self.db).list_by_account_ids(account_ids)
+        portal_profiles = await ProfileUserPortalRepository(self.db).list_by_account_ids(
+            account_ids
+        )
+        identity_map: dict[str, list] = {}
+        for identity in identities:
+            identity_map.setdefault(identity.account_id, []).append(identity)
+        admin_profile_map = {profile.account_id: profile for profile in admin_profiles}
+        portal_profile_map = {profile.account_id: profile for profile in portal_profiles}
+
+        items: list[SysAccountSchema] = []
+        for account in accounts:
+            account_identities = identity_map.get(account.id, [])
+            primary_identity = next(
+                (
+                    item
+                    for item in account_identities
+                    if item.identity_type == "ACCOUNT" and item.is_primary
+                ),
+                None,
+            ) or next(
+                (item for item in account_identities if item.identity_type == "ACCOUNT"),
+                None,
+            )
+            match account.account_type:
+                case AccountType.ADMIN.value:
+                    profile = admin_profile_map.get(account.id)
+                case AccountType.PORTAL.value:
+                    profile = portal_profile_map.get(account.id)
+                case _:
+                    profile = None
+            normalize_orm_datetimes(account)
+            items.append(
+                SysAccountSchema(
+                    id=account.id,
+                    account=getattr(primary_identity, "identifier", ""),
+                    account_type=account.account_type,
+                    account_status=account.account_status,
+                    name=getattr(profile, "name", None),
+                    nickname=getattr(profile, "nickname", None),
+                    avatar=resolve_file_url(getattr(profile, "avatar", None)),
+                    created_at=account.created_at,
+                    updated_at=account.updated_at,
                 )
             )
         return items

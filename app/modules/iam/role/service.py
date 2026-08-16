@@ -40,7 +40,7 @@ from app.modules.iam.role.schema import (
     RoleUpdateRequest,
     SysRoleSchema,
 )
-from app.modules.user.utils.profile import get_profiles_batch
+from app.modules.profile.utils.profile import get_profiles_batch
 
 
 class RoleService:
@@ -201,7 +201,7 @@ class RoleService:
         role_users = await self.repo.list_role_accounts(query.id, account_filter)
         return RoleOwnUserResponse(
             id=query.id,
-            users=await AccountQueryService(self.db).build_account_schemas(users),
+            users=await AccountQueryService(self.db).build_account_picker_schemas(users),
             account_ids=[account.id for account in role_users],
         )
 

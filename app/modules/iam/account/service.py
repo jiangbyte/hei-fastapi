@@ -49,10 +49,10 @@ from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.user.admin.repository import ProfileUserAdminRepository
-from app.modules.user.admin.schema import ProfileUserAdminUpsertPayload
-from app.modules.user.portal.repository import ProfileUserPortalRepository
-from app.modules.user.portal.schema import ProfileUserPortalUpsertPayload
+from app.modules.profile.admin.repository import ProfileUserAdminRepository
+from app.modules.profile.admin.schema import ProfileUserAdminUpsertPayload
+from app.modules.profile.portal.repository import ProfileUserPortalRepository
+from app.modules.profile.portal.schema import ProfileUserPortalUpsertPayload
 
 
 class AccountService:

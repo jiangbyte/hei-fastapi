@@ -20,7 +20,7 @@ from app.modules.iam.position.schema import (
     PositionUpdateRequest,
     SysPositionSchema,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class PositionService:

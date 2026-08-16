@@ -27,7 +27,7 @@ from app.modules.biz.cg_test_activity.schema import (
     CgTestActivitySchema,
     CgTestActivityUpdateRequest,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestActivityService:

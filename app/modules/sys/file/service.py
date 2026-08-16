@@ -10,10 +10,10 @@ from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from uuid import uuid4
 
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import AccountType, StorageProvider
+from app.core.config.enums import AccountType
 from app.core.config.settings import settings
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, BusinessError, NotFoundError
@@ -23,9 +23,14 @@ from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.data_scope import build_data_scope_filter
 from app.core.security.session import SessionPayload
 from app.core.storage.config import StorageConfig
-from app.core.storage.local import LocalStorage
 from app.core.storage.manager import get_storage, resolve_storage_config
-from app.core.storage.url import is_external_url, normalize_object_name
+from app.core.storage.url import (
+    is_external_url,
+    looks_like_presigned_url,
+    normalize_object_name,
+    to_object_key,
+)
+from app.modules.sys.file.content_disposition import content_disposition_attachment
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.repository import FileRepository
 from app.modules.sys.file.schema import (
@@ -36,13 +41,13 @@ from app.modules.sys.file.schema import (
     ObjectNameQuery,
     SysFileSchema,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 logger = logging.getLogger(__name__)
 
 
 def _is_invalid_public_object_name(object_name: str) -> bool:
-    """公开文件对象名合法性校验：拒绝 .. 片段、前导 / 与反斜杠（对齐 hei-boot）。"""
+    """对象名合法性校验：拒绝 .. 片段、前导 / 与反斜杠。"""
     if not object_name:
         return True
     if object_name.startswith("/") or "\\" in object_name:
@@ -92,11 +97,7 @@ class FileService:
                         object_name=object_name,
                         original_name=PurePosixPath(payload.filename).name,
                         storage_provider=storage_config.provider,
-                        bucket=(
-                            storage_config.bucket
-                            if storage_config.provider != StorageProvider.LOCAL
-                            else None
-                        ),
+                        bucket=storage_config.bucket or None,
                         content_type=payload.content_type,
                         size=len(payload.content),
                         url=url,
@@ -130,21 +131,28 @@ class FileService:
         if not entities:
             return
         async with transactional(self.db):
-            # 对象存储删除为外部 I/O，并发执行避免逐文件串行等待。
-            for entity in entities:
-                try:
-                    await asyncio.to_thread(
-                        self._get_storage(self._resolve_entity_storage_config(entity)).delete_object,
-                        entity.object_name,
-                    )
-                except Exception as exc:
-                    logger.warning(
-                        "Failed to delete storage object, skip (id=%s, object=%s, provider=%s): %s",
-                        entity.id,
-                        entity.object_name,
-                        entity.storage_provider,
-                        exc,
-                    )
+            # 对象存储删除为外部 I/O，有界并发避免逐文件串行等待。
+            semaphore = asyncio.Semaphore(8)
+
+            async def _delete_object(entity: SysFile) -> None:
+                async with semaphore:
+                    try:
+                        await asyncio.to_thread(
+                            self._get_storage(
+                                self._resolve_entity_storage_config(entity)
+                            ).delete_object,
+                            entity.object_name,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "Failed to delete storage object, skip (id=%s, object=%s, provider=%s): %s",
+                            entity.id,
+                            entity.object_name,
+                            entity.storage_provider,
+                            exc,
+                        )
+
+            await asyncio.gather(*[_delete_object(entity) for entity in entities])
             await self.repo.delete_many([entity.id for entity in entities])
 
     async def delete_by_object_name(self, object_name: str) -> None:
@@ -198,6 +206,22 @@ class FileService:
                 self.assert_owned_by_current(entity, session)
         return [self._with_resolved_url(to_schema(SysFileSchema, entity)) for entity in entities]
 
+    async def resolve_access_url(self, value: str | None) -> str | None:
+        """解析可浏览器访问的 URL（永久直连或重新签发预签名），对齐 hei-boot resolveAccessUrl。"""
+        if not value:
+            return None
+        raw = str(value).strip()
+        if not raw:
+            return None
+        if is_external_url(raw) and not looks_like_presigned_url(raw):
+            return raw
+        key = to_object_key(raw) if is_external_url(raw) else normalize_object_name(raw)
+        if not key or is_external_url(key):
+            return raw if is_external_url(raw) else None
+        entity = await self.repo.get_by_object_name(key)
+        storage = self._get_storage(self._resolve_entity_storage_config(entity))
+        return str(storage.get_object_url(key))
+
     async def download_by_id(
         self,
         query: IdQuery,
@@ -207,7 +231,7 @@ class FileService:
         entity = await self.repo.get_required(query.id)
         if session is not None:
             self.assert_owned_by_current(entity, session)
-        return await self.response(entity.object_name)
+        return await self.response(ObjectNameQuery(object_name=entity.object_name))
 
     async def get_url(
         self,
@@ -218,13 +242,16 @@ class FileService:
         normalized = normalize_object_name(query.object_name)
         if not normalized:
             raise NotFoundError("File not found")
-        if is_external_url(normalized):
+        if is_external_url(normalized) and not looks_like_presigned_url(normalized):
             return normalized
-        entity = await self.repo.get_by_object_name(normalized)
+        key = to_object_key(normalized) if is_external_url(normalized) else normalized
+        if not key:
+            raise NotFoundError("File not found")
+        entity = await self.repo.get_by_object_name(key)
         if session is not None:
             self.assert_owned_by_current(entity, session)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
-        return str(storage.get_object_url(normalized))
+        return str(storage.get_object_url(key))
 
     async def get_presigned_url(
         self,
@@ -235,19 +262,19 @@ class FileService:
         normalized = normalize_object_name(query.object_name)
         if not normalized:
             raise NotFoundError("File not found")
-        if is_external_url(normalized):
+        if is_external_url(normalized) and not looks_like_presigned_url(normalized):
             return normalized
-        entity = await self.repo.get_by_object_name(normalized)
+        key = to_object_key(normalized) if is_external_url(normalized) else normalized
+        if not key:
+            raise NotFoundError("File not found")
+        entity = await self.repo.get_by_object_name(key)
         if session is not None:
             self.assert_owned_by_current(entity, session)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
-        return str(storage.get_presigned_url(normalized))
+        return str(storage.get_presigned_url(key))
 
     async def response(self, query: ObjectNameQuery) -> Response:
-        """按对象名返回文件内容（统一 application/octet-stream，对齐 hei-boot）。
-
-        公开入口先做对象名校验（拒绝 .. / 绝对路径 / 反斜杠），并要求存在元数据行。
-        """
+        """按对象名流式返回文件内容（鉴权下载），带 RFC5987 Content-Disposition。"""
         normalized = normalize_object_name(query.object_name)
         if not normalized or is_external_url(normalized):
             raise NotFoundError("File not found")
@@ -257,21 +284,6 @@ class FileService:
         if entity is None:
             raise NotFoundError("File not found")
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
-        if isinstance(storage, LocalStorage):
-            try:
-                path = storage.get_path(normalized)
-            except ValueError as exc:
-                raise NotFoundError("File not found") from exc
-            if not path.exists() or not path.is_file():
-                raise NotFoundError("File not found")
-            return FileResponse(
-                path,
-                media_type="application/octet-stream",
-                filename=entity.original_name,
-                headers={"X-Content-Type-Options": "nosniff"},
-            )
-        # 远程存储同样代理内容返回（对齐 hei-boot 直出文件），避免浏览器
-        # 必须直连对象存储域名才能加载图片/附件。
         try:
             content = await asyncio.to_thread(storage.get_object_bytes, normalized)
         except Exception as exc:
@@ -279,7 +291,10 @@ class FileService:
         return Response(
             content=content,
             media_type="application/octet-stream",
-            headers={"X-Content-Type-Options": "nosniff"},
+            headers={
+                "X-Content-Type-Options": "nosniff",
+                "Content-Disposition": content_disposition_attachment(entity.original_name),
+            },
         )
 
     async def page(

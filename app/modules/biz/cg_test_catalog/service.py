@@ -29,7 +29,7 @@ from app.modules.biz.cg_test_catalog.schema import (
     CgTestCatalogTreeNode,
     CgTestCatalogUpdateRequest,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestCatalogService:

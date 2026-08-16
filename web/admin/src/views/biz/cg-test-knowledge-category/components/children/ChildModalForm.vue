@@ -40,45 +40,30 @@ const state = reactive({
   formModel: normalizeFormData(),
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑知识文档' : '新增知识文档')
+const modalTitle = computed(() => (state.dataId ? '编辑知识文档' : '新增知识文档'))
 const rules = computed<FormRules>(() => ({
-  category_id: [
-    createRequiredRule('category_id', 'input'),
-  ],
-  code: [
-    createRequiredRule('code', 'input'),
-  ],
-  title: [
-    createRequiredRule('title', 'input'),
-  ],
-  type: [
-    createRequiredRule('type', 'input'),
-  ],
-  status: [
-    createRequiredRule('status', 'change'),
-  ],
-  summary: [
-    createRequiredRule('summary', 'input'),
-  ],
-  content: [
-    createRequiredRule('content', 'input'),
-  ],
-  author: [
-    createRequiredRule('author', 'input'),
-  ],
-  published_at: [
-    createRequiredRule('published_at', 'change'),
-  ],
+  category_id: [createRequiredRule('category_id', 'input')],
+  code: [createRequiredRule('code', 'input')],
+  title: [createRequiredRule('title', 'input')],
+  type: [createRequiredRule('type', 'input')],
+  status: [createRequiredRule('status', 'change')],
+  summary: [createRequiredRule('summary', 'input')],
+  content: [createRequiredRule('content', 'input')],
+  author: [createRequiredRule('author', 'input')],
+  published_at: [createRequiredRule('published_at', 'change')],
   view_count: [
     {
-      validator: () => typeof state.formModel.view_count === 'number' && Number.isFinite(state.formModel.view_count),
+      validator: () =>
+        typeof state.formModel.view_count === 'number' &&
+        Number.isFinite(state.formModel.view_count),
       message: '请输入view_count',
       trigger: ['input', 'blur'],
     },
   ],
   sort: [
     {
-      validator: () => typeof state.formModel.sort === 'number' && Number.isFinite(state.formModel.sort),
+      validator: () =>
+        typeof state.formModel.sort === 'number' && Number.isFinite(state.formModel.sort),
       message: '请输入sort',
       trigger: ['input', 'blur'],
     },
@@ -131,8 +116,14 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-    is_top: data.is_top == null || data.is_top === '' ? defaultFormData.is_top : wireBool(String(data.is_top)),
-    view_count: data.view_count == null || data.view_count === '' ? defaultFormData.view_count : wireInt(String(data.view_count)),
+    is_top:
+      data.is_top == null || data.is_top === ''
+        ? defaultFormData.is_top
+        : wireBool(String(data.is_top)),
+    view_count:
+      data.view_count == null || data.view_count === ''
+        ? defaultFormData.view_count
+        : wireInt(String(data.view_count)),
     sort: data.sort == null || data.sort === '' ? defaultFormData.sort : wireInt(String(data.sort)),
     published_at: toFormDateTime(data.published_at),
     settings: stringifyJsonValue(data.settings),
@@ -225,48 +216,128 @@ defineExpose({
   >
     <NSpin :show="state.loading">
       <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-        <NForm ref="formRef" :model="state.formModel" :rules="rules" label-placement="left" label-width="110" :disabled="state.loading || state.submitLoading">
-          <NFormItem label="category_id" path="category_id">
+        <NForm
+          ref="formRef"
+          :model="state.formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="110"
+          :disabled="state.loading || state.submitLoading"
+        >
+          <NFormItem
+            label="category_id"
+            path="category_id"
+          >
             <NInput v-model:value="state.formModel.category_id" />
           </NFormItem>
-          <NFormItem label="code" path="code">
+          <NFormItem
+            label="code"
+            path="code"
+          >
             <NInput v-model:value="state.formModel.code" />
           </NFormItem>
-          <NFormItem label="title" path="title">
+          <NFormItem
+            label="title"
+            path="title"
+          >
             <NInput v-model:value="state.formModel.title" />
           </NFormItem>
-          <NFormItem label="type" path="type">
+          <NFormItem
+            label="type"
+            path="type"
+          >
             <NInput v-model:value="state.formModel.type" />
           </NFormItem>
-          <NFormItem label="status" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" />
+          <NFormItem
+            label="status"
+            path="status"
+          >
+            <DictSelect
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
+            />
           </NFormItem>
-          <NFormItem label="summary" path="summary">
-            <NInput v-model:value="state.formModel.summary" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="summary"
+            path="summary"
+          >
+            <NInput
+              v-model:value="state.formModel.summary"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="content" path="content">
-            <NInput v-model:value="state.formModel.content" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="content"
+            path="content"
+          >
+            <NInput
+              v-model:value="state.formModel.content"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="author" path="author">
+          <NFormItem
+            label="author"
+            path="author"
+          >
             <NInput v-model:value="state.formModel.author" />
           </NFormItem>
-          <NFormItem label="published_at" path="published_at">
-            <NDatePicker v-model:formatted-value="state.formModel.published_at" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="w-full" clearable />
+          <NFormItem
+            label="published_at"
+            path="published_at"
+          >
+            <NDatePicker
+              v-model:formatted-value="state.formModel.published_at"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="w-full"
+              clearable
+            />
           </NFormItem>
-          <NFormItem label="view_count" path="view_count">
-            <NInputNumber v-model:value="state.formModel.view_count" class="w-full" />
+          <NFormItem
+            label="view_count"
+            path="view_count"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.view_count"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="sort" path="sort">
-            <NInputNumber v-model:value="state.formModel.sort" class="w-full" />
+          <NFormItem
+            label="sort"
+            path="sort"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.sort"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="is_top" path="is_top">
+          <NFormItem
+            label="is_top"
+            path="is_top"
+          >
             <NSwitch v-model:value="state.formModel.is_top" />
           </NFormItem>
-          <NFormItem label="settings" path="settings">
-            <NInput v-model:value="state.formModel.settings" type="textarea" :autosize="{ minRows: 4, maxRows: 12 }" />
+          <NFormItem
+            label="settings"
+            path="settings"
+          >
+            <NInput
+              v-model:value="state.formModel.settings"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 12 }"
+            />
           </NFormItem>
-          <NFormItem label="extra" path="extra">
-            <NInput v-model:value="state.formModel.extra" type="textarea" :autosize="{ minRows: 4, maxRows: 12 }" />
+          <NFormItem
+            label="extra"
+            path="extra"
+          >
+            <NInput
+              v-model:value="state.formModel.extra"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 12 }"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
@@ -274,8 +345,16 @@ defineExpose({
 
     <template #action>
       <NSpace justify="end">
-        <NButton @click="closeModal">取消</NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm">确认</NButton>
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

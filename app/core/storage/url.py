@@ -1,42 +1,16 @@
 """ Author: Charlie
 
-文件 URL 工具：对象名编码、公开访问 URL 构建与对象名归一化。
+文件 URL 工具：对象名编码、规范化与访问 URL 解析（对齐 hei-boot FileAccessUrls）。
 """
 
-from urllib.parse import quote, urljoin, urlparse
+from __future__ import annotations
 
-from app.core.paths import DEFAULT_FILES_PUBLIC_PATH
+from urllib.parse import quote, urlparse
 
 
 def quote_object_name(object_name: str) -> str:
     """对对象名各段做 URL 编码（保留斜杠分隔）。"""
     return "/".join(quote(part) for part in object_name.strip("/").split("/") if part)
-
-
-def _default_storage_urls() -> tuple[str, str]:
-    """读取默认存储的 base_url 与 public_path，无默认存储时返回约定值。"""
-    from app.core.config.reader import config_reader
-
-    active = config_reader.get_default_storage()
-    if active is not None:
-        return active.base_url or "", active.public_path or DEFAULT_FILES_PUBLIC_PATH
-    return "", DEFAULT_FILES_PUBLIC_PATH
-
-
-def build_file_access_url(
-    object_name: str,
-    *,
-    base_url: str | None = None,
-    public_path: str | None = None,
-) -> str:
-    """构建公开访问路径：``{public_path}/{object_name}``。"""
-    default_base, default_public = _default_storage_urls()
-    resolved_base_url = default_base if base_url is None else base_url
-    resolved_public_path = default_public if public_path is None else public_path
-    path = f"{resolved_public_path.rstrip('/')}/{quote_object_name(object_name)}"
-    if resolved_base_url:
-        return urljoin(resolved_base_url.rstrip("/") + "/", path.lstrip("/"))
-    return path
 
 
 def is_external_url(value: str) -> bool:
@@ -45,8 +19,36 @@ def is_external_url(value: str) -> bool:
     return parsed.scheme in {"http", "https", "data", "blob"}
 
 
-def normalize_object_name(value: str | None, *, public_path: str | None = None) -> str | None:
-    """从公开 URL 或路径中归一化出纯对象名；外部 URL 原样返回。"""
+def looks_like_presigned_url(value: str) -> bool:
+    """是否疑似预签名 / 临时存储 URL（不可当永久地址透传）。"""
+    if not value:
+        return False
+    lower = value.lower()
+    return (
+        "x-amz-" in lower
+        or "x-oss-" in lower
+        or "signature=" in lower
+        or "x-goog-signature" in lower
+    )
+
+
+def strip_to_object_key(path_or_key: str | None) -> str | None:
+    """从路径或 key 中提取纯 object key（对齐 hei-boot FileAccessUrls.stripToObjectKey）。"""
+    if not path_or_key:
+        return None
+    normalized = path_or_key.replace("\\", "/").lstrip("/")
+    if normalized.startswith("api/v1/files/"):
+        normalized = normalized[len("api/v1/files/") :]
+    slash = normalized.find("/")
+    if slash > 0:
+        rest = normalized[slash + 1 :]
+        if rest.startswith("uploads/"):
+            normalized = rest
+    return normalized or None
+
+
+def normalize_object_name(value: str | None) -> str | None:
+    """规范化对象名（纯 object key）；外部 URL 原样返回。"""
     if not value:
         return None
     raw_value = str(value).strip()
@@ -54,28 +56,35 @@ def normalize_object_name(value: str | None, *, public_path: str | None = None) 
         return None
     if is_external_url(raw_value):
         return raw_value
+    return strip_to_object_key(raw_value)
 
-    _, default_public = _default_storage_urls()
-    resolved_public_path = (public_path or default_public).rstrip("/")
-    path_only = urlparse(raw_value).path if "://" in raw_value else raw_value
-    prefix = resolved_public_path + "/"
-    if path_only.startswith(prefix):
-        return path_only[len(prefix) :].lstrip("/")
-    if path_only == resolved_public_path:
+
+def to_object_key(value: str | None) -> str | None:
+    """把任意形式的对象引用转成纯 object key（用于存储引擎删除/加载）。"""
+    if not value:
         return None
-    return path_only.replace("\\", "/").lstrip("/")
+    if is_external_url(value):
+        try:
+            return strip_to_object_key(urlparse(value.strip()).path)
+        except Exception:
+            return None
+    return strip_to_object_key(value)
 
 
-def resolve_file_url(
-    value: str | None,
-    *,
-    base_url: str | None = None,
-    public_path: str | None = None,
-) -> str | None:
-    """把对象名或 URL 归一化为最终可访问的文件 URL。"""
-    object_name = normalize_object_name(value, public_path=public_path)
-    if not object_name:
+def resolve_file_url(value: str | None) -> str | None:
+    """解析可浏览器访问的 URL（公开直连或预签名）；委托 FileService.resolve_access_url。"""
+    if not value:
         return None
-    if is_external_url(object_name):
-        return object_name
-    return build_file_access_url(object_name, base_url=base_url, public_path=public_path)
+    # 延迟导入避免与 file.service 循环依赖；无会话时仅做轻量规范化。
+    from app.core.storage.manager import get_storage
+
+    if is_external_url(value) and not looks_like_presigned_url(value):
+        return value
+    key = to_object_key(value) if is_external_url(value) else normalize_object_name(value)
+    if not key or is_external_url(key):
+        return value if is_external_url(value) else None
+    try:
+        storage = get_storage()
+        return str(storage.get_object_url(key))
+    except Exception:
+        return None

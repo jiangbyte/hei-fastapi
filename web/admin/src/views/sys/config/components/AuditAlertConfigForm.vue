@@ -116,8 +116,8 @@ async function reload() {
     ).toUpperCase()
     state.pushConfigured = Boolean(
       pushMap.PUSH_DINGTALK_WEBHOOK ||
-        pushMap.PUSH_LARK_WEBHOOK ||
-        pushMap.PUSH_WECHAT_WORK_WEBHOOK,
+      pushMap.PUSH_LARK_WEBHOOK ||
+      pushMap.PUSH_WECHAT_WORK_WEBHOOK,
     )
     state.mailConfigured = Boolean(mailMap.MAIL_LOCAL_HOST || mailMap.MAIL_LOCAL_FROM_EMAIL)
 
@@ -291,7 +291,7 @@ async function testWebhook() {
 <template>
   <NSpin :show="state.loading">
     <ConfigSectionLayout
-      description="配置审计告警开关、通知渠道与已实现规则。保存后下次审计告警任务执行即生效。"
+      description="配置审计告警开关、通知渠道与已实现规则。保存后下次任务执行即生效。"
       :saving="state.saving"
       @save="save"
       @reset="reset"
@@ -352,7 +352,9 @@ async function testWebhook() {
               <div class="alert-rule__meta">
                 <p class="sys-config__hint">
                   复用「邮件引擎」SMTP 配置
-                  <template v-if="!state.mailConfigured"> （尚未配置） </template>
+                  <template v-if="!state.mailConfigured">
+                    （尚未配置）
+                  </template>
                 </p>
                 <NButton
                   text
@@ -409,7 +411,9 @@ async function testWebhook() {
                 <span class="alert-rule__label">自定义 Webhook</span>
                 <NSwitch v-model:value="state.notifyCustomWebhook" />
               </div>
-              <p class="sys-config__hint">仅在需要独立接收地址时启用；一般优先用上方消息推送</p>
+              <p class="sys-config__hint">
+                仅在需要独立接收地址时启用；一般优先用上方消息推送
+              </p>
             </div>
           </div>
 
@@ -480,7 +484,9 @@ async function testWebhook() {
                 <span class="alert-rule__label">非常时段敏感操作</span>
                 <NSwitch v-model:value="state.ruleUnusualHours" />
               </div>
-              <p class="sys-config__hint">凌晨 0-6 点的角色/权限变更</p>
+              <p class="sys-config__hint">
+                凌晨 0-6 点的角色/权限变更
+              </p>
             </div>
 
             <div class="alert-rule__row">
@@ -488,7 +494,9 @@ async function testWebhook() {
                 <span class="alert-rule__label">敏感操作检测</span>
                 <NSwitch v-model:value="state.ruleSensitiveOps" />
               </div>
-              <p class="sys-config__hint">5 分钟内角色授权/权限变更次数</p>
+              <p class="sys-config__hint">
+                5 分钟内角色授权/权限变更次数
+              </p>
             </div>
 
             <div class="alert-rule__row">

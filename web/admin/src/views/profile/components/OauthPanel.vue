@@ -64,7 +64,7 @@ async function bind(provider: string) {
       window.$message.error('无法发起绑定')
       return
     }
-    window.location.href = String(url)
+    window.location.assign(String(url))
   } catch {
     // 全局错误提示
   } finally {

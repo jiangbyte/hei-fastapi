@@ -2,19 +2,18 @@
 
 | 路径 | 用途 |
 | --- | --- |
-| `db/migrate.py` | 执行 Alembic 升级 |
-| `db/makemigration.py` | 生成迁移 |
-| `db/check_migration.py` | 检查迁移与模型一致性 |
-| `db/export_data.py` | 导出业务数据到 `db/seed/data.sql` |
-| `db/import_data.py` | 导入 `db/seed/data.sql` |
-| `db/seed/` | 数据种子（见其中 README） |
+| `db.sql` | 演示库全量重建（表结构 + 种子数据，对齐 hei-boot） |
 
 ```bash
-python scripts/db/migrate.py
-python scripts/db/makemigration.py "describe schema change"
-python scripts/db/check_migration.py
-python scripts/db/export_data.py
-python scripts/db/import_data.py
+# 空库全量导入（演示 / 本地重建）
+psql -U postgres -h 127.0.0.1 -d hei_fastapi -f scripts/db.sql
 ```
 
-数据库表结构由人工维护：`python scripts/db/migrate.py` 执行 Alembic 升级，`python scripts/db/import_data.py` 导入业务种子；应用启动（`entrypoint.sh`）不执行迁移。
+增量 schema 变更使用项目根目录 Alembic（见 `migrations/README.md`）：
+
+```bash
+alembic upgrade head
+alembic revision --autogenerate -m "describe schema change"
+```
+
+应用启动（`entrypoint.sh`）不执行迁移或导入。

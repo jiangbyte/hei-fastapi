@@ -18,11 +18,14 @@ export function renderIcon(icon?: string, size = 18) {
   return () => h(Icon, { icon, width: size, height: size })
 }
 
+/**
+ * 生成按钮默认插槽内联渲染的图标 VNode（NIcon 包裹 Iconify 图标）。
+ *
+ * 直接返回 VNode 而非对象，供 JSX 插槽内容 {renderButtonIcon('...')} 使用；
+ * 若需经 NButton 的 icon 插槽渲染，返回其 .icon 字段即可。
+ */
 export function renderButtonIcon(icon: string, size = 16) {
-  return {
-    icon: () =>
-      h(NIcon, null, {
-        default: () => h(Icon, { icon, width: size, height: size }),
-      }),
-  }
+  return h(NIcon, null, {
+    default: () => h(Icon, { icon, width: size, height: size }),
+  })
 }

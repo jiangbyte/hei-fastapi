@@ -7,9 +7,8 @@ from __future__ import annotations
 
 from app.core.config.enums import StorageProvider
 
-# DEFAULT_FILE_ENGINE 取值 → provider
+# DEFAULT_FILE_ENGINE 取值 → provider（仅对象存储，对齐 hei-boot）
 FILE_ENGINE_TO_PROVIDER: dict[str, StorageProvider] = {
-    "LOCAL": StorageProvider.LOCAL,
     "MINIO": StorageProvider.MINIO,
     "RUSTFS": StorageProvider.RUSTFS,
     "ALIYUN": StorageProvider.OSS,
@@ -17,7 +16,6 @@ FILE_ENGINE_TO_PROVIDER: dict[str, StorageProvider] = {
 }
 
 PROVIDER_TO_FILE_ENGINE: dict[str, str] = {
-    StorageProvider.LOCAL.value: "LOCAL",
     StorageProvider.MINIO.value: "MINIO",
     StorageProvider.RUSTFS.value: "RUSTFS",
     StorageProvider.OSS.value: "ALIYUN",
@@ -26,7 +24,6 @@ PROVIDER_TO_FILE_ENGINE: dict[str, str] = {
 
 # provider → sys_config 键前缀（STORAGE_{ENGINE}_*）
 PROVIDER_TO_KEY_PREFIX: dict[StorageProvider, str] = {
-    StorageProvider.LOCAL: "STORAGE_LOCAL",
     StorageProvider.MINIO: "STORAGE_MINIO",
     StorageProvider.RUSTFS: "STORAGE_RUSTFS",
     StorageProvider.OSS: "STORAGE_ALIYUN",
@@ -34,7 +31,6 @@ PROVIDER_TO_KEY_PREFIX: dict[StorageProvider, str] = {
 }
 
 PROVIDER_DISPLAY_NAMES: dict[StorageProvider, str] = {
-    StorageProvider.LOCAL: "本地文件",
     StorageProvider.MINIO: "MinIO",
     StorageProvider.RUSTFS: "RustFS",
     StorageProvider.OSS: "阿里云 OSS",

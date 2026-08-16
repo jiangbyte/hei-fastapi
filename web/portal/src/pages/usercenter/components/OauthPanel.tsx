@@ -22,36 +22,53 @@ type ProviderOption = {
   web_oauth: boolean
 }
 
+function mapProviders(list: any[]): ProviderOption[] {
+  return list
+    .map((item: any) => ({
+      provider: String(item.provider || ''),
+      label: String(item.label || item.provider || ''),
+      enabled: wireBool(item.enabled ?? false),
+      web_oauth: wireBool(item.web_oauth ?? true),
+    }))
+    .filter((item: ProviderOption) => item.provider && item.enabled && item.web_oauth)
+}
+
 export function OauthPanel() {
   const [loading, setLoading] = useState(true)
   const [bindingProvider, setBindingProvider] = useState<string | null>(null)
   const [bindings, setBindings] = useState<Binding[]>([])
   const [providers, setProviders] = useState<ProviderOption[]>([])
 
+  const applyData = useCallback((bindData: unknown, optData: any) => {
+    setBindings(Array.isArray(bindData) ? (bindData as Binding[]) : [])
+    const list = Array.isArray(optData?.oauth_providers) ? optData.oauth_providers : []
+    setProviders(mapProviders(list))
+  }, [])
+
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
       const [bindRes, optRes] = await Promise.all([authApi.oauthBindings(), authApi.authOptions()])
-      setBindings(Array.isArray(bindRes?.data) ? bindRes.data : [])
-      const list = Array.isArray(optRes?.data?.oauth_providers) ? optRes.data.oauth_providers : []
-      setProviders(
-        list
-          .map((item: any) => ({
-            provider: String(item.provider || ''),
-            label: String(item.label || item.provider || ''),
-            enabled: wireBool(item.enabled ?? false),
-            web_oauth: wireBool(item.web_oauth ?? true),
-          }))
-          .filter((item: ProviderOption) => item.provider && item.enabled && item.web_oauth),
-      )
+      applyData(bindRes?.data, optRes?.data)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [applyData])
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    let cancelled = false
+    void (async () => {
+      try {
+        const [bindRes, optRes] = await Promise.all([authApi.oauthBindings(), authApi.authOptions()])
+        if (!cancelled) applyData(bindRes?.data, optRes?.data)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [applyData])
 
   const boundSet = useMemo(() => new Set(bindings.map((item) => item.provider)), [bindings])
 
@@ -65,7 +82,7 @@ export function OauthPanel() {
         message.error('无法发起绑定')
         return
       }
-      window.location.href = String(url)
+      window.location.assign(String(url))
     } catch {
       // 全局错误提示
     } finally {
@@ -130,7 +147,9 @@ export function OauthPanel() {
             )
           })}
           {!providers.length ? (
-            <Typography.Text type="secondary">暂无可绑定的三方登录（未开启或未配置）</Typography.Text>
+            <Typography.Text type="secondary">
+              暂无可绑定的三方登录（未开启或未配置）
+            </Typography.Text>
           ) : null}
         </Space>
       </div>

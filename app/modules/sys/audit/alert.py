@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.config.reader import config_reader
 from app.core.config.settings import settings
@@ -27,29 +27,45 @@ class AlertDispatcher:
         if not events:
             return
 
-        # 1. 查询冷却期内已发送的规则
-        cooldown_sec = settings.audit_alert.alert_cooldown_seconds
-        since = datetime.now(UTC) - timedelta(seconds=cooldown_sec)
-        stmt = (
-            select(SysAlertLog.rule_name)
-            .where(
-                SysAlertLog.created_at >= since,
-                SysAlertLog.rule_name.in_({e.rule_name for e in events}),
+        default_cooldown = max(60, settings.audit_alert.alert_cooldown_seconds)
+        rule_names = list(dict.fromkeys(event.rule_name for event in events))
+        # 取各规则最近一条告警时间，一次查询替代按事件循环 COUNT。
+        latest_rows = (
+            await db_session.execute(
+                select(SysAlertLog.rule_name, func.max(SysAlertLog.created_at))
+                .where(SysAlertLog.rule_name.in_(rule_names))
+                .group_by(SysAlertLog.rule_name)
             )
-            .distinct()
-        )
-        existing = set((await db_session.execute(stmt)).scalars().all())
+        ).all()
+        latest_by_rule = {str(rule): created_at for rule, created_at in latest_rows}
+        now = datetime.now(UTC)
+        new_events: list[AlertEvent] = []
+        for event in events:
+            cooldown_sec = (
+                event.cooldown_seconds
+                if event.cooldown_seconds is not None
+                else default_cooldown
+            )
+            cooldown_sec = max(60, int(cooldown_sec))
+            latest = latest_by_rule.get(event.rule_name)
+            if latest is not None:
+                if latest.tzinfo is None:
+                    latest = latest.replace(tzinfo=UTC)
+                if latest >= now - timedelta(seconds=cooldown_sec):
+                    logger.info(
+                        "Audit alert suppressed: rule=%s cooldown=%ss",
+                        event.rule_name,
+                        cooldown_sec,
+                    )
+                    continue
+            new_events.append(event)
 
-        # 2. 过滤出未发送的新事件
-        new_events = [e for e in events if e.rule_name not in existing]
         if not new_events:
             return
 
-        # 3. 发送
         for event in new_events:
             await self._send_alert(event)
 
-        # 4. 记录
         for event in new_events:
             db_session.add(
                 SysAlertLog(

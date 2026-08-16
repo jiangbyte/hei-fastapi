@@ -4,7 +4,7 @@ from app.core.config.enums import AccountType
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.account.schema import AccountCreateRequest
 from app.modules.iam.account.service import AccountService
-from app.modules.user.admin.service import ProfileUserAdminService
+from app.modules.profile.admin.service import ProfileUserAdminService
 
 
 async def test_create_admin_account_creates_profile(db_session):

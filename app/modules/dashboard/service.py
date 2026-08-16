@@ -5,6 +5,7 @@
 
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from time import monotonic
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,10 +29,14 @@ from app.modules.iam.enums import ResourceType
 from app.modules.iam.group.model import SysGroup
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.model import SysRole
-from app.modules.message.enums import FeedbackStatus
-from app.modules.message.feedback.model import SysFeedback
 from app.modules.sys.audit.model import SysOperationAuditLog
+from app.modules.sys.feedback.enums import FeedbackStatus
+from app.modules.sys.feedback.model import SysFeedback
 from app.modules.sys.file.model import SysFile
+
+# 仪表盘在线数短缓存，避免每次 overview 全量 hydrate 会话。
+_ONLINE_CACHE_TTL_SECONDS = 30.0
+_online_cache: tuple[float, int] | None = None
 
 
 class DashboardService:
@@ -55,9 +60,7 @@ class DashboardService:
         )
         today_new = await self._count(SysAccount.id, SysAccount.created_at >= day_start)
 
-        online_sessions = len(
-            await session_store.list_sessions_by_tokens(await session_store.list_tokens())
-        )
+        online_sessions = await self._online_session_count()
         file_total = await self._count(SysFile.id)
         storage_bytes = int(
             (await self.db.execute(select(func.coalesce(func.sum(SysFile.size), 0)))).scalar_one()
@@ -111,6 +114,19 @@ class DashboardService:
             ),
             files=DashboardFiles(by_content_type=await self._file_type_share()),
         )
+
+    async def _online_session_count(self) -> int:
+        """读取在线 token 近似数量（SCARD + 短缓存），不做会话 hydrate。"""
+        global _online_cache
+        now = monotonic()
+        if _online_cache is not None and _online_cache[0] > now:
+            return _online_cache[1]
+        try:
+            count = await session_store.count_tokens()
+        except Exception:
+            count = 0
+        _online_cache = (now + _ONLINE_CACHE_TTL_SECONDS, count)
+        return count
 
     async def _count(self, column, *filters) -> int:
         """对指定列计数，并叠加可选过滤条件。"""

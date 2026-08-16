@@ -20,7 +20,7 @@ from app.core.schema.base import (
 )
 from app.core.security.data_scope import build_data_scope_filter, default_owner_dept_id
 from app.core.security.session import SessionPayload
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 from app.core.db.transaction import transactional
 from {{ ctx.module_import }}.model import {{ main.entity_name }}
 from {{ ctx.module_import }}.repository import (

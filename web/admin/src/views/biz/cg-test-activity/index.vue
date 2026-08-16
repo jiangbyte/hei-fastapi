@@ -10,7 +10,17 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { cgTestActivityApi } from '@/api'
 import { readPageMeta } from '@/utils/wire'
-import { dictList, createTagColor, dictTypeColor, dictTypeData, displayValue, formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
+import {
+  dictList,
+  createTagColor,
+  dictTypeColor,
+  dictTypeData,
+  displayValue,
+  formatDateTime,
+  hasPermission,
+  normalizeSearchValues,
+  renderButtonIcon,
+} from '@/utils'
 import { NButton, NFlex, NIcon, NTag } from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -89,7 +99,7 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
     path: 'status',
     width: 150,
     ellipsis: { tooltip: true },
-    render: row => (
+    render: (row) => (
       <NTag color={createTagColor(dictTypeColor('COMMON_STATUS', row.status))} bordered={false}>
         {dictTypeData('COMMON_STATUS', row.status) || displayValue(row.status)}
       </NTag>
@@ -97,14 +107,24 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
   },
   { title: 'cover_url', path: 'cover_url', width: 150, ellipsis: { tooltip: true } },
   { title: 'description', path: 'description', width: 150, ellipsis: { tooltip: true } },
-  { title: 'start_at', path: 'start_at', width: 190, render: row => formatDateTime(row.start_at) },
-  { title: '更新时间', path: 'updated_at', width: 190, render: row => formatDateTime(row.updated_at) },
+  {
+    title: 'start_at',
+    path: 'start_at',
+    width: 190,
+    render: (row) => formatDateTime(row.start_at),
+  },
+  {
+    title: '更新时间',
+    path: 'updated_at',
+    width: 190,
+    render: (row) => formatDateTime(row.updated_at),
+  },
   {
     title: '操作',
     key: 'actions',
     width: 130,
     fixed: 'right',
-    render: row => (
+    render: (row) => (
       <NFlex size={12}>
         {hasPermission('biz:cgtestactivity:detail') ? (
           <NButton type="info" size="small" text={true} onClick={() => openDetailModal(row.id)}>
@@ -133,14 +153,20 @@ onMounted(() => {
 async function fetchPage() {
   state.loading = true
   try {
-    const response = await cgTestActivityApi.page({ current: state.page, size: state.pageSize, ...state.searchValues })
+    const response = await cgTestActivityApi.page({
+      current: state.page,
+      size: state.pageSize,
+      ...state.searchValues,
+    })
     const data = response.data ?? {}
     state.rows = data.records ?? []
     const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
     state.total = pageMeta.total
     state.page = pageMeta.current
     state.pageSize = pageMeta.size
-    state.checkedRowKeys = state.checkedRowKeys.filter(key => state.rows.some(item => item.id === key))
+    state.checkedRowKeys = state.checkedRowKeys.filter((key) =>
+      state.rows.some((item) => item.id === key),
+    )
   } finally {
     state.loading = false
   }
@@ -178,14 +204,17 @@ function confirmDelete(value: string | string[]) {
 
 async function deleteRows(ids: string[]) {
   await cgTestActivityApi.remove({ ids })
-  state.checkedRowKeys = state.checkedRowKeys.filter(key => !ids.includes(key))
+  state.checkedRowKeys = state.checkedRowKeys.filter((key) => !ids.includes(key))
   window.$message.success('删除成功')
   await fetchPage()
 }
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"
@@ -210,20 +239,44 @@ async function deleteRows(ids: string[]) {
     >
       <template #toolbar>
         <NFlex>
-          <NButton v-if="hasPermission('biz:cgtestactivity:create')" type="primary" text @click="openCreateModal">
-            <template #icon><NIcon><Icon icon="icon-park-outline:plus" /></NIcon></template>
+          <NButton
+            v-if="hasPermission('biz:cgtestactivity:create')"
+            type="primary"
+            text
+            @click="openCreateModal"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:plus" /></NIcon>
+            </template>
           </NButton>
-          <NButton text :loading="state.loading" @click="fetchPage">
-            <template #icon><NIcon><Icon icon="icon-park-outline:refresh" /></NIcon></template>
+          <NButton
+            text
+            :loading="state.loading"
+            @click="fetchPage"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:refresh" /></NIcon>
+            </template>
           </NButton>
-          <NButton v-if="hasPermission('biz:cgtestactivity:delete')" type="error" text :disabled="!hasCheckedRows" @click="confirmDelete(state.checkedRowKeys)">
-            <template #icon><NIcon><Icon icon="icon-park-outline:delete" /></NIcon></template>
+          <NButton
+            v-if="hasPermission('biz:cgtestactivity:delete')"
+            type="error"
+            text
+            :disabled="!hasCheckedRows"
+            @click="confirmDelete(state.checkedRowKeys)"
+          >
+            <template #icon>
+              <NIcon><Icon icon="icon-park-outline:delete" /></NIcon>
+            </template>
           </NButton>
         </NFlex>
       </template>
     </ProDataTable>
 
     <ModalDetail ref="detailModalRef" />
-    <ModalForm ref="formModalRef" @saved="fetchPage" />
+    <ModalForm
+      ref="formModalRef"
+      @saved="fetchPage"
+    />
   </NFlex>
 </template>

@@ -1,9 +1,12 @@
 """ Author: Charlie
 
-审计日志分析器 — 检测可疑模式并生成告警。
+审计日志分析器 — 检测可疑模式并生成告警（对齐 hei-boot AuditAlertJob）。
 
 每条规则独立开关，由 settings.audit_alert 控制。
 """
+
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -14,6 +17,20 @@ from app.core.config.settings import settings
 
 logger = logging.getLogger(__name__)
 
+# 与 hei-boot AuditAlertJob.SENSITIVE_ACTIONS 一致。
+SENSITIVE_ACTIONS = (
+    "role_create",
+    "role_grant",
+    "permission_change",
+    "permission_grant",
+)
+
+SENSITIVE_OPS_ACTIONS = (
+    "role_grant",
+    "permission_change",
+    "permission_grant",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class AlertEvent:
@@ -23,6 +40,8 @@ class AlertEvent:
     severity: str  # INFO / WARNING / CRITICAL
     summary: str
     details: dict | None = None
+    # 冷却秒数；None 时分发器使用全局 AUDIT_ALERT_ALERT_COOLDOWN_SECONDS。
+    cooldown_seconds: int | None = None
 
 
 class AuditAnalyzer:
@@ -34,7 +53,7 @@ class AuditAnalyzer:
         cfg = settings.audit_alert
 
         if cfg.rule_brute_force:
-            events.extend(await self._check_brute_force(db_session, cfg.brute_force_threshold))
+            events.extend(await self._check_audit_volume(db_session, cfg.brute_force_threshold))
         if cfg.rule_unusual_hours:
             events.extend(await self._check_unusual_hours(db_session))
         if cfg.rule_sensitive_ops:
@@ -46,34 +65,46 @@ class AuditAnalyzer:
 
         return events
 
-    async def _check_brute_force(self, db, threshold: int) -> list[AlertEvent]:
-        """同 IP 分析窗口内多次失败登录。"""
+    async def _check_audit_volume(self, db, threshold: int) -> list[AlertEvent]:
+        """暴力破解近似检测：分析窗口内审计日志总量超过阈值（Boot: audit_volume）。"""
         from app.modules.sys.audit.model import SysOperationAuditLog
 
         window_seconds = max(60, settings.audit_alert.analysis_interval_seconds)
         since = datetime.now(UTC) - timedelta(seconds=window_seconds)
-        stmt = (
-            select(
-                SysOperationAuditLog.ip,
-                func.count(SysOperationAuditLog.id).label("cnt"),
+        volume = (
+            await db.execute(
+                select(func.count(SysOperationAuditLog.id)).where(
+                    SysOperationAuditLog.created_at >= since
+                )
             )
-            .where(
-                SysOperationAuditLog.created_at >= since,
-                SysOperationAuditLog.success == False,  # noqa: E712
-                SysOperationAuditLog.action == "login",
-            )
-            .group_by(SysOperationAuditLog.ip)
-            .having(func.count(SysOperationAuditLog.id) >= threshold)
+        ).scalar_one()
+        volume = int(volume or 0)
+        logger.info(
+            "Audit volume in last %ss: %s, threshold=%s",
+            window_seconds,
+            volume,
+            threshold,
         )
-        rows = (await db.execute(stmt)).all()
+        if volume < threshold:
+            return []
+        cooldown = max(window_seconds, settings.audit_alert.alert_cooldown_seconds)
         return [
             AlertEvent(
-                rule_name="brute_force",
-                severity="CRITICAL",
-                summary=f"IP {row.ip} 在 1 分钟内失败登录 {row.cnt} 次",
-                details={"ip": row.ip, "count": row.cnt, "threshold": threshold},
+                rule_name="audit_volume",
+                severity="WARNING",
+                summary=(
+                    f"Audit log volume {volume} exceeded threshold {threshold} "
+                    f"in last {window_seconds} seconds"
+                ),
+                details={
+                    "volume": volume,
+                    "threshold": threshold,
+                    "window_seconds": window_seconds,
+                    "window_minutes": max(1, window_seconds // 60),
+                    "since": since.isoformat(),
+                },
+                cooldown_seconds=cooldown,
             )
-            for row in rows
         ]
 
     async def _check_unusual_hours(self, db) -> list[AlertEvent]:
@@ -81,17 +112,12 @@ class AuditAnalyzer:
         from app.modules.sys.audit.model import SysOperationAuditLog
 
         now = datetime.now(UTC)
-        if now.hour not in range(0, 6):
+        if now.hour > 5:
             return []
         since = now - timedelta(hours=1)
-        sensitive_actions = ("role_create", "role_grant", "permission_change")
-        stmt = (
-            select(SysOperationAuditLog)
-            .where(
-                SysOperationAuditLog.created_at >= since,
-                SysOperationAuditLog.action.in_(sensitive_actions),
-            )
-            .limit(20)
+        stmt = select(SysOperationAuditLog).where(
+            SysOperationAuditLog.created_at >= since,
+            SysOperationAuditLog.action.in_(SENSITIVE_ACTIONS),
         )
         rows = (await db.execute(stmt)).scalars().all()
         if not rows:
@@ -106,30 +132,29 @@ class AuditAnalyzer:
         ]
 
     async def _check_sensitive_ops(self, db) -> list[AlertEvent]:
-        """检测角色授权/权限变更等敏感操作。"""
+        """检测角色授权/权限变更等敏感操作（按账户聚合）。"""
         from app.modules.sys.audit.model import SysOperationAuditLog
 
         since = datetime.now(UTC) - timedelta(seconds=300)
-        sensitive_actions = ("role_grant", "permission_change", "permission_grant")
         stmt = (
             select(
                 SysOperationAuditLog.account_id,
-                SysOperationAuditLog.action,
                 func.count(SysOperationAuditLog.id).label("cnt"),
             )
             .where(
                 SysOperationAuditLog.created_at >= since,
-                SysOperationAuditLog.action.in_(sensitive_actions),
+                SysOperationAuditLog.action.in_(SENSITIVE_OPS_ACTIONS),
+                SysOperationAuditLog.account_id.isnot(None),
             )
-            .group_by(SysOperationAuditLog.account_id, SysOperationAuditLog.action)
+            .group_by(SysOperationAuditLog.account_id)
         )
         rows = (await db.execute(stmt)).all()
         return [
             AlertEvent(
                 rule_name="sensitive_ops",
                 severity="WARNING",
-                summary=f"账户 {row.account_id} 执行了 {row.action} ({row.cnt} 次)",
-                details={"account_id": row.account_id, "action": row.action, "count": row.cnt},
+                summary=f"账户 {row.account_id} 执行了敏感操作 ({row.cnt} 次)",
+                details={"account_id": row.account_id, "count": row.cnt},
             )
             for row in rows
         ]
@@ -147,6 +172,7 @@ class AuditAnalyzer:
             .where(
                 SysOperationAuditLog.created_at >= since,
                 SysOperationAuditLog.action == "delete",
+                SysOperationAuditLog.account_id.isnot(None),
             )
             .group_by(SysOperationAuditLog.account_id)
             .having(func.count(SysOperationAuditLog.id) >= threshold)
@@ -157,13 +183,17 @@ class AuditAnalyzer:
                 rule_name="bulk_delete",
                 severity="WARNING",
                 summary=f"账户 {row.account_id} 在 5 分钟内删除了 {row.cnt} 条记录",
-                details={"account_id": row.account_id, "count": row.cnt, "threshold": threshold},
+                details={
+                    "account_id": row.account_id,
+                    "count": row.cnt,
+                    "threshold": threshold,
+                },
             )
             for row in rows
         ]
 
     async def _check_ip_anomaly(self, db, threshold: int) -> list[AlertEvent]:
-        """同账户短时间内从多个不同 IP 登录。"""
+        """同账户 15 分钟内从多个不同 IP 成功登录。"""
         from app.modules.sys.audit.model import SysOperationAuditLog
 
         since = datetime.now(UTC) - timedelta(seconds=900)
@@ -186,7 +216,9 @@ class AuditAnalyzer:
             AlertEvent(
                 rule_name="ip_anomaly",
                 severity="WARNING",
-                summary=f"账户 {row.account_id} 在 15 分钟内从 {row.ip_cnt} 个不同 IP 登录",
+                summary=(
+                    f"账户 {row.account_id} 在 15 分钟内从 {row.ip_cnt} 个不同 IP 登录"
+                ),
                 details={
                     "account_id": row.account_id,
                     "ip_count": row.ip_cnt,

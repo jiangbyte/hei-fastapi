@@ -119,9 +119,7 @@ export function EmailPanel() {
         password: encrypted.values.password || '',
         password_key_id: encrypted.password_key_id,
         email: email || null,
-        email_login_enabled: forceBindEmail
-          ? true
-          : wireBool(values.email_login_enabled ?? false),
+        email_login_enabled: forceBindEmail ? true : wireBool(values.email_login_enabled ?? false),
         otp_code: otpCode.trim() || undefined,
       })
       setConfirmOpen(false)
@@ -139,7 +137,9 @@ export function EmailPanel() {
     <>
       <Spin spinning={loading}>
         {forceBindEmail ? (
-          <Typography.Paragraph type="warning">请先绑定邮箱后才能继续使用系统。</Typography.Paragraph>
+          <Typography.Paragraph type="warning">
+            请先绑定邮箱后才能继续使用系统。
+          </Typography.Paragraph>
         ) : null}
         <Form
           form={form}
@@ -182,7 +182,11 @@ export function EmailPanel() {
                 placeholder="请输入验证码"
                 onChange={(e) => setOtpCode(e.target.value)}
               />
-              <Button loading={sendingCode} disabled={otpCooldown > 0} onClick={() => void sendBindCode()}>
+              <Button
+                loading={sendingCode}
+                disabled={otpCooldown > 0}
+                onClick={() => void sendBindCode()}
+              >
                 {otpCooldown > 0 ? `${otpCooldown}s` : '发送验证码'}
               </Button>
             </Space.Compact>

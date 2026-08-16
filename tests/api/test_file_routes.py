@@ -1,10 +1,46 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from app.core.config.enums import AccountStatusEnum, AccountType
+文件管理 API 路由测试：使用内存假存储，不再依赖 LOCAL / public proxy。
+"""
+
+from __future__ import annotations
+
+from app.core.config.enums import AccountStatusEnum, AccountType, StorageProvider
 from app.core.config.settings import settings
 from app.core.security.session import SessionPayload, session_store
+from app.core.storage.config import StorageConfig
 from app.deps.db import get_db_session
 from app.modules.iam.account.model import SysAccount
+
+
+class _MemoryStorage:
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+        self.config = StorageConfig(
+            id="memory",
+            name="memory",
+            provider=StorageProvider.MINIO,
+            bucket="test",
+            bucket_public=True,
+            base_url="https://cdn.example.com",
+            is_default=True,
+        )
+
+    def upload_bytes(self, object_name: str, content: bytes, content_type: str = "") -> str:
+        self.objects[object_name] = content
+        return self.get_object_url(object_name)
+
+    def delete_object(self, object_name: str) -> None:
+        self.objects.pop(object_name, None)
+
+    def get_object_url(self, object_name: str) -> str:
+        return f"https://cdn.example.com/{object_name}"
+
+    def get_presigned_url(self, object_name: str) -> str:
+        return f"https://cdn.example.com/{object_name}?X-Amz-Signature=test"
+
+    def get_object_bytes(self, object_name: str) -> bytes:
+        return self.objects[object_name]
 
 
 async def _seed_admin(client, token: str, permissions: list[str]) -> None:
@@ -34,15 +70,14 @@ async def _seed_admin(client, token: str, permissions: list[str]) -> None:
         break
 
 
-async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
-    old_provider = settings.storage.provider
-    old_root = settings.storage.local_root
-    old_base_url = settings.storage.base_url
-    old_public_path = settings.storage.public_path
-    settings.storage.provider = "local"
-    settings.storage.local_root = str(tmp_path)
-    settings.storage.base_url = ""
-    settings.storage.public_path = "/api/v1/files"
+async def test_admin_file_upload_page_detail_update_delete(client, monkeypatch):
+    storage = _MemoryStorage()
+    monkeypatch.setattr(
+        "app.modules.sys.file.service.resolve_storage_config",
+        lambda *a, **k: storage.config,
+    )
+    monkeypatch.setattr("app.modules.sys.file.service.get_storage", lambda *a, **k: storage)
+    monkeypatch.setattr(settings.storage, "provider", StorageProvider.MINIO)
 
     token = "admin-file-token"
     await _seed_admin(
@@ -54,77 +89,73 @@ async def test_admin_file_upload_page_detail_update_delete(client, tmp_path):
             "sys:file:detail",
             "sys:file:update",
             "sys:file:delete",
+            "sys:file:download",
+            "sys:file:url",
         ],
     )
     headers = {"Authorization": token}
 
-    try:
-        upload_response = await client.post(
-            "/api/v1/admin/sys/file/upload",
-            headers=headers,
-            files={"file": ("report.png", b"image-bytes", "image/png")},
-        )
-        assert upload_response.status_code == 200
-        uploaded = upload_response.json()["data"]
-        assert uploaded["original_name"] == "report.png"
-        assert uploaded["content_type"] == "image/png"
-        assert uploaded["url"].startswith("/api/v1/files/")
-        assert "?" not in uploaded["url"]
-        assert uploaded["object_name"] in uploaded["url"] or uploaded["url"].endswith(
-            uploaded["object_name"].split("/")[-1]
-        )
-        assert (tmp_path / uploaded["object_name"]).exists()
+    upload_response = await client.post(
+        "/api/v1/admin/sys/file/upload",
+        headers=headers,
+        files={"file": ("report.png", b"image-bytes", "image/png")},
+    )
+    assert upload_response.status_code == 200
+    uploaded = upload_response.json()["data"]
+    assert uploaded["original_name"] == "report.png"
+    assert uploaded["content_type"] == "image/png"
+    assert uploaded["url"].startswith("https://cdn.example.com/")
+    assert uploaded["object_name"] in storage.objects
 
-        public_response = await client.get(uploaded["url"])
-        assert public_response.status_code == 200
-        assert public_response.content == b"image-bytes"
+    page_response = await client.get(
+        "/api/v1/admin/sys/file/page?current=1&size=20&original_name=report&content_type=image",
+        headers=headers,
+    )
+    assert page_response.status_code == 200
+    assert page_response.json()["data"]["total"] == "1"
+    file_id = page_response.json()["data"]["records"][0]["id"]
 
-        page_response = await client.get(
-            "/api/v1/admin/sys/file/page?current=1&size=20&original_name=report&content_type=image",
-            headers=headers,
-        )
-        assert page_response.status_code == 200
-        assert page_response.json()["data"]["total"] == "1"
-        file_id = page_response.json()["data"]["records"][0]["id"]
+    detail_response = await client.get(
+        f"/api/v1/admin/sys/file/detail?id={file_id}",
+        headers=headers,
+    )
+    assert detail_response.status_code == 200
+    assert detail_response.json()["data"]["object_name"] == uploaded["object_name"]
 
-        detail_response = await client.get(
-            f"/api/v1/admin/sys/file/detail?id={file_id}",
-            headers=headers,
-        )
-        assert detail_response.status_code == 200
-        assert detail_response.json()["data"]["object_name"] == uploaded["object_name"]
+    download_response = await client.get(
+        f"/api/v1/admin/sys/file/download?id={file_id}",
+        headers=headers,
+    )
+    assert download_response.status_code == 200
+    assert download_response.content == b"image-bytes"
+    assert "attachment" in download_response.headers.get("content-disposition", "")
 
-        update_response = await client.post(
-            "/api/v1/admin/sys/file/update",
-            headers=headers,
-            json={"id": file_id, "original_name": "renamed.png"},
-        )
-        assert update_response.status_code == 200
-        assert update_response.json()["data"] is None
+    update_response = await client.post(
+        "/api/v1/admin/sys/file/update",
+        headers=headers,
+        json={"id": file_id, "original_name": "renamed.png"},
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["data"] is None
 
-        updated_detail_response = await client.get(
-            f"/api/v1/admin/sys/file/detail?id={file_id}",
-            headers=headers,
-        )
-        assert updated_detail_response.json()["data"]["original_name"] == "renamed.png"
-        assert updated_detail_response.json()["data"]["object_name"] == uploaded["object_name"]
+    updated_detail_response = await client.get(
+        f"/api/v1/admin/sys/file/detail?id={file_id}",
+        headers=headers,
+    )
+    assert updated_detail_response.json()["data"]["original_name"] == "renamed.png"
+    assert updated_detail_response.json()["data"]["object_name"] == uploaded["object_name"]
 
-        delete_response = await client.post(
-            "/api/v1/admin/sys/file/delete",
-            headers=headers,
-            json={"ids": [file_id]},
-        )
-        assert delete_response.status_code == 200
-        assert delete_response.json()["data"] is None
-        assert not (tmp_path / uploaded["object_name"]).exists()
+    delete_response = await client.post(
+        "/api/v1/admin/sys/file/delete",
+        headers=headers,
+        json={"ids": [file_id]},
+    )
+    assert delete_response.status_code == 200
+    assert delete_response.json()["data"] is None
+    assert uploaded["object_name"] not in storage.objects
 
-        empty_page_response = await client.get(
-            "/api/v1/admin/sys/file/page?current=1&size=20&original_name=renamed",
-            headers=headers,
-        )
-        assert empty_page_response.json()["data"]["total"] == "0"
-    finally:
-        settings.storage.provider = old_provider
-        settings.storage.local_root = old_root
-        settings.storage.base_url = old_base_url
-        settings.storage.public_path = old_public_path
+    empty_page_response = await client.get(
+        "/api/v1/admin/sys/file/page?current=1&size=20&original_name=renamed",
+        headers=headers,
+    )
+    assert empty_page_response.json()["data"]["total"] == "0"

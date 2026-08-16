@@ -5,19 +5,27 @@
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2%20Async-D71F00?logo=sqlalchemy&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supported-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Supported-DC382D?logo=redis&logoColor=white)
+![Vue](https://img.shields.io/badge/Admin-Vue%203-4FC08D?logo=vuedotjs&logoColor=white)
+![React](https://img.shields.io/badge/Portal-React-61DAFB?logo=react&logoColor=black)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.0--beta-orange)
 
-**HEI FastAPI** 是一个 FastAPI 异步后端脚手架：一个应用同时提供**管理端（Admin）**与**门户（Portal）**双端 API，覆盖账号认证、组织权限（RBAC）、系统管理、消息反馈与运营工作台等常用能力。配合同仓维护的 Vue 3 / React / uni-app 三套前端，与 [hei-boot](https://github.com/jiangbyte/hei-boot) 保持 API 契约对齐。
+**HEI FastAPI** 是一套开箱即用的 FastAPI 异步工程化脚手架：单个后端应用同时提供 **Admin** 与 **Portal** 双端 API，同仓维护 Vue 3 / React / uni-app 前端，覆盖认证授权、组织权限、系统运维、消息通知与运营看板等常见后台能力。与 [hei-boot](https://github.com/jiangbyte/hei-boot) 保持 API 契约与前端对齐。
 
-## 特性
+> 当前版本：`1.0.0-beta` · 协议：[Apache License 2.0](LICENSE)
 
-- **双端账号体系**：ADMIN / PORTAL 独立会话（HttpOnly Cookie / Authorization 双通道）；密码 RSA 加密传输、验证码登录、登录锁定与限流、JustAuth 三方登录
-- **RBAC 权限**：账号 / 角色 / 部门 / 用户组 / 岗位，菜单与资源多层授权，权限码三段式规范
-- **系统管理**：字典、配置（`sys_config` 敏感加密）、Banner、文件存储（Local / MinIO / RustFS / 阿里云 OSS / 腾讯云 COS）、公告通知、意见反馈、弱口令清单
-- **运维能力**：操作审计、运营工作台概览与 7 日趋势、内置任务调度（`sys_job` 管理台）
-- **代码生成**：单表 / 树表 / 主子表方案，预览与 ZIP 下载
-- **三端前端**：`web/admin`（Vue 3 + Naive UI）、`web/portal`（React + Ant Design）、`web/admin-uniapp`（uni-app）
+## 目录
+
+- [界面预览](#界面预览)
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [工程结构](#工程结构)
+- [快速开始](#快速开始)
+- [默认账号](#默认账号)
+- [相关文档](#相关文档)
+- [姊妹项目](#姊妹项目)
+- [License](#license)
 
 ## 界面预览
 
@@ -59,12 +67,28 @@
     <td align="center">角色管理</td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/admin-iam-resource.png" alt="资源授权" /></td>
-    <td></td>
+    <td width="50%"><img src="docs/images/admin-iam-dept.png" alt="部门管理" /></td>
+    <td width="50%"><img src="docs/images/admin-iam-group.png" alt="用户组管理" /></td>
   </tr>
   <tr>
+    <td align="center">部门管理</td>
+    <td align="center">用户组管理</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-iam-position.png" alt="岗位管理" /></td>
+    <td width="50%"><img src="docs/images/admin-iam-resource.png" alt="资源授权" /></td>
+  </tr>
+  <tr>
+    <td align="center">岗位管理</td>
     <td align="center">资源授权</td>
-    <td></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-iam-resource-module.png" alt="资源模块" /></td>
+    <td width="50%"><img src="docs/images/admin-iam-client-resource.png" alt="客户端资源" /></td>
+  </tr>
+  <tr>
+    <td align="center">资源模块</td>
+    <td align="center">客户端资源</td>
   </tr>
 </table>
 
@@ -86,6 +110,14 @@
   <tr>
     <td align="center">操作审计</td>
     <td align="center">代码生成</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-sys-session.png" alt="在线会话" /></td>
+    <td width="50%"><img src="docs/images/admin-sys-login-log.png" alt="登录日志" /></td>
+  </tr>
+  <tr>
+    <td align="center">在线会话</td>
+    <td align="center">登录日志</td>
   </tr>
 </table>
 
@@ -110,55 +142,124 @@
   </tr>
 </table>
 
+### 管理端 · 业务示例
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/admin-biz-order.png" alt="订单示例" /></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td align="center">订单示例</td>
+    <td></td>
+  </tr>
+</table>
+
+## 功能特性
+
+- **双端账号体系**：ADMIN / PORTAL 独立会话（HttpOnly Cookie / Authorization 双通道）；密码 RSA 传输、验证码登录、失败锁定与限流；可配置三方 OAuth 登录
+- **RBAC 权限**：账号 / 角色 / 部门 / 用户组 / 岗位；菜单、按钮与 API 资源授权；在线会话踢出
+- **系统管理**：字典、动态配置（敏感项 Fernet 加密）、Banner、公告 / 通知、意见反馈、弱口令库
+- **对象存储**：S3 兼容存储（MinIO / RustFS / 阿里云 OSS / 腾讯云 COS 等），直链或预签名访问
+- **运维能力**：操作审计与告警、登录日志、运营工作台（概览与近 7 日趋势）、内置任务调度（`sys_job`；种子任务默认禁用，需在管理端启用）
+- **代码生成**：单表 / 树表 / 主子表方案，预览与 ZIP 下载
+- **三端前端**：`web/admin`（Vue 3 + Naive UI）、`web/portal`（React + Ant Design）、`web/admin-uniapp`（uni-app）
+
+## 技术栈
+
+| 层级 | 技术 |
+| --- | --- |
+| 后端 | Python 3.11+ · FastAPI · uvicorn / gunicorn · Pydantic Settings |
+| 持久化 | PostgreSQL · SQLAlchemy 2（async）· Alembic · asyncpg |
+| 缓存 / 会话 | Redis |
+| 文档 | OpenAPI（`/docs`、`/redoc`，默认关闭，见 `.env.example`） |
+| 其他 | boto3 / oss2 · croniter · cryptography · OpenTelemetry（可选） |
+| 管理端 | Vue 3 · Vite · TypeScript · Naive UI · Pinia · UnoCSS |
+| 门户 | React 19 · Vite · TypeScript · Ant Design · Zustand · UnoCSS |
+| 移动端 | uni-app 3 · Vue 3 · TypeScript · uview-pro |
+
+## 工程结构
+
+```text
+hei-fastapi
+├── app/                      # FastAPI 应用
+│   ├── core/                 # 配置、安全、存储、中间件等
+│   └── modules/              # 业务模块（auth / iam / sys / profile / dashboard / biz）
+├── web/
+│   ├── admin                 # 管理端（Vue 3）
+│   ├── portal                # 门户（React）
+│   └── admin-uniapp          # 管理端 uni-app
+├── scripts/db.sql            # 数据库结构 + 种子数据（对齐 hei-boot）
+├── migrations/               # Alembic 增量表结构
+├── tests/                    # 单元 / API 测试
+└── docs/images               # README 截图
+```
+
 ## 快速开始
 
 ### 环境要求
 
-- Python 3.11+ 与 pip（推荐 conda 环境）
+- Python **3.11+**、pip（推荐 conda / venv）
 - PostgreSQL、Redis
-- Node.js 22+ 与 pnpm 9+（前端）
+- Node.js **22+**、pnpm **9+**（前端）
 
-### 初始化数据库
-
-表结构由 Alembic 迁移管理，业务种子以 `scripts/db/seed/data.sql` 为权威来源：
+### 1. 初始化数据库
 
 ```bash
 createdb -U postgres -h 127.0.0.1 hei_fastapi
-python scripts/db/migrate.py       # 迁移表结构
-python scripts/db/import_data.py   # 导入业务种子数据
+psql -U postgres -h 127.0.0.1 -d hei_fastapi -f scripts/db.sql
 ```
 
-### 启动后端
+> 演示 / 本地环境以 [`scripts/db.sql`](scripts/db.sql) 全量重建库表与种子数据。已有库的增量变更使用 Alembic：`alembic upgrade head`。应用启动（`entrypoint.sh`）不执行迁移。
+
+### 2. 启动后端
 
 ```bash
 pip install -r requirements-dev.txt
 cp .env.example .env
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+# 按需修改 DB__URL / REDIS__URL / APP__CONFIG_CRYPTO_KEY / STORAGE__* 等
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-> Linux / 容器环境可直接使用 `./entrypoint.sh` 启动。
+| 项 | 地址 |
+| --- | --- |
+| API | http://127.0.0.1:8000 |
+| OpenAPI | http://127.0.0.1:8000/docs（需 `SWAGGER__ENABLED=true`） |
 
-### 启动前端
+> Linux / 容器可用 `./entrypoint.sh`（gunicorn）。Docker 相关见 [`docker/`](docker/) 与根目录 [`Dockerfile`](Dockerfile)。
+
+### 3. 启动前端
 
 ```bash
-cd web/admin && pnpm install && pnpm dev   # http://127.0.0.1:5173
-cd web/portal && pnpm install && pnpm dev  # http://127.0.0.1:5174
+# 管理端 → http://127.0.0.1:5173
+cd web/admin && pnpm install && pnpm dev
+
+# 门户 → http://127.0.0.1:5174
+cd web/portal && pnpm install && pnpm dev
 ```
 
-### 默认账号
+uni-app 端见 [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md)。
+
+## 默认账号
 
 | 端 | 地址 | 账号 | 密码 |
 | --- | --- | --- | --- |
 | Admin | http://localhost:5173 | `superadmin` | `123456` |
 | Portal | http://localhost:5174 | `user` | `123456` |
 
-> 口令以 `data.sql` 导出当时为准；生产环境首次启动后请立即修改默认密码。
+> 仅供本地演示。部署到非本机环境后请立即修改默认密码，并更换配置加密密钥、对象存储凭证等敏感项。
 
-## 文档
+## 相关文档
 
-- [.env.example](.env.example) — 环境变量样例
-- [scripts/db/seed/data.sql](scripts/db/seed/data.sql) — 业务种子数据
-- [scripts/db/migrate.py](scripts/db/migrate.py) — 表结构迁移
+| 文档 | 说明 |
+| --- | --- |
+| [`web/admin/README.md`](web/admin/README.md) | 管理端前端说明与环境变量 |
+| [`web/portal/README.md`](web/portal/README.md) | 门户前端说明与环境变量 |
+| [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md) | uni-app 端说明 |
+| [`.env.example`](.env.example) | 后端环境变量样例 |
+| [`scripts/db.sql`](scripts/db.sql) | 数据库结构与种子数据 |
+| [`migrations/README.md`](migrations/README.md) | Alembic 增量迁移说明 |
+| [`scripts/README.md`](scripts/README.md) | 脚本用法 |
 
 ## 姊妹项目
 
@@ -166,8 +267,8 @@ cd web/portal && pnpm install && pnpm dev  # http://127.0.0.1:5174
 | --- | --- | --- |
 | [**hei-boot**](https://github.com/jiangbyte/hei-boot) | Spring Boot 工程化脚手架 | Apache License 2.0 |
 | [**hei-gin**](https://github.com/jiangbyte/hei-gin) | Go 轻量级后端框架 | Apache License 2.0 |
-| [**hei-fastapi**](https://github.com/jiangbyte/hei-fastapi) | FastAPI 原型项目（早期阶段，仅供参考） | Apache License 2.0 |
+| [**hei-fastapi**](https://github.com/jiangbyte/hei-fastapi) | FastAPI 异步脚手架（本仓库） | Apache License 2.0 |
 
 ## License
 
-本项目使用 [Apache License 2.0](LICENSE) 开源协议，三个姊妹项目协议一致。完整条款见 [LICENSE](LICENSE)，版权归属声明见 [NOTICE](NOTICE)。
+本项目基于 [Apache License 2.0](LICENSE) 开源。完整条款见 [LICENSE](LICENSE)，版权声明见 [NOTICE](NOTICE)。

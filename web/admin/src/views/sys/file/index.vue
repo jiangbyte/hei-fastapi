@@ -189,10 +189,20 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
             type="primary"
             size="small"
             text={true}
-            loading={isDownloading(row.id)}
-            onClick={() => openFile(row)}
+            onClick={() => openFileUrl(row)}
           >
             {renderButtonIcon('icon-park-outline:link')}
+          </NButton>
+        ) : null}
+        {hasPermission('sys:file:url') ? (
+          <NButton
+            type="primary"
+            size="small"
+            text={true}
+            loading={isDownloading(row.id)}
+            onClick={() => downloadRow(row)}
+          >
+            {renderButtonIcon('icon-park-outline:download')}
           </NButton>
         ) : null}
         {hasPermission('sys:file:delete') ? (
@@ -264,7 +274,16 @@ function isDownloading(id?: string | number | null) {
   return state.downloadingIds.includes(String(id ?? ''))
 }
 
-async function openFile(row: any) {
+async function openFileUrl(row: any) {
+  const url = String(row?.url || '').trim()
+  if (!url || !/^(https?:)/i.test(url)) {
+    window.$message.warning('暂无可打开的访问地址')
+    return
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+async function downloadRow(row: any) {
   const id = String(row.id || '')
   if (!id || isDownloading(id)) {
     return

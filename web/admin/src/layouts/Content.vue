@@ -8,9 +8,7 @@ const routeStore = useRouteStore()
 </script>
 
 <template>
-  <n-el
-    class="h-full min-h-0 overflow-hidden p-8px"
-  >
+  <n-el class="h-full min-h-0 overflow-hidden p-8px">
     <router-view v-slot="{ Component, route }">
       <transition
         name="fade-slide"

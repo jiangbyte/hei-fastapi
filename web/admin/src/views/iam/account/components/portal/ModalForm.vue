@@ -21,7 +21,7 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInst | null>(null)
 
-/** SysAccount + identity + profile_user_portal 可写字段（无 bio/level/remark） */
+/** SysAccount + identity + portal_user_profile 可写字段（无 bio/level/remark） */
 const defaultFormData = {
   // SysAccount
   account_type: ACCOUNT_TYPE,
@@ -33,7 +33,7 @@ const defaultFormData = {
   phone: '',
   email_login_enabled: false,
   phone_login_enabled: false,
-  // ProfileUserPortal / ProfileUserPortalUpsertPayload
+  // PortalUserProfile / PortalProfileUpsertPayload
   name: '',
   nickname: '',
   avatar: '',

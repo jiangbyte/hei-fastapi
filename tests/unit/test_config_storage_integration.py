@@ -1,12 +1,16 @@
-""" Author: Charlie """
+""" Author: Charlie
 
-from pathlib import Path
+存储配置解析与缓存单测（对象存储）。
+"""
+
+from dataclasses import replace
 
 import pytest
 
 from app.core.config.enums import StorageProvider
 from app.core.storage import manager as storage_manager
 from app.core.storage.config import StorageConfig
+from app.core.storage.s3 import S3CompatibleStorage
 
 
 @pytest.fixture(autouse=True)
@@ -16,20 +20,26 @@ def clear_storage_manager_cache():
     storage_manager.clear_storage_cache()
 
 
-def _local_config(config_id: str, root: Path, *, is_default: bool = False) -> StorageConfig:
+def _minio_config(config_id: str, *, is_default: bool = False, bucket_public: bool = True) -> StorageConfig:
     return StorageConfig(
         id=config_id,
         name=config_id,
-        provider=StorageProvider.LOCAL,
-        local_root=str(root),
-        public_path=f"/files/{config_id}",
+        provider=StorageProvider.MINIO,
+        bucket="test-bucket",
+        endpoint="http://127.0.0.1:9000",
+        access_key="ak",
+        secret_key="sk",
+        bucket_public=bucket_public,
+        base_url="https://cdn.example.com" if bucket_public else "",
+        force_path_style=True,
         is_default=is_default,
     )
 
 
-def test_resolve_storage_config_uses_snapshot_config_id_and_provider(monkeypatch, tmp_path):
-    default_config = _local_config("local-default", tmp_path / "default", is_default=True)
-    archive_config = _local_config("local-archive", tmp_path / "archive")
+def test_resolve_storage_config_uses_snapshot_config_id_and_provider(monkeypatch):
+    default_config = _minio_config("minio-default", is_default=True)
+    archive_config = _minio_config("minio-archive", bucket_public=True)
+    archive_config = replace(archive_config, base_url="https://archive.example.com")
     monkeypatch.setattr(
         storage_manager.config_reader,
         "_storage_configs",
@@ -41,21 +51,23 @@ def test_resolve_storage_config_uses_snapshot_config_id_and_provider(monkeypatch
     monkeypatch.setattr(storage_manager.config_reader, "_default_storage_id", default_config.id)
     monkeypatch.setattr(storage_manager.config_reader, "_version", 100)
 
-    assert storage_manager.resolve_storage_config("local-archive") == archive_config
-    assert storage_manager.resolve_storage_config(provider=StorageProvider.LOCAL) == default_config
+    assert storage_manager.resolve_storage_config("minio-archive") == archive_config
+    assert storage_manager.resolve_storage_config(provider=StorageProvider.MINIO) == default_config
 
-    from urllib.parse import urlparse
+    class _FakeStorage:
+        def __init__(self, config: StorageConfig) -> None:
+            self.config = config
 
-    storage = storage_manager.get_storage("local-archive", allow_settings_fallback=False)
-    assert storage.root == (tmp_path / "archive").resolve()
-    url = storage.get_object_url("a/b.txt")
-    parsed = urlparse(url)
-    assert parsed.path == "/files/local-archive/a/b.txt"
-    assert not parsed.query
+        def get_object_url(self, object_name: str) -> str:
+            return f"{self.config.base_url.rstrip('/')}/{object_name}"
+
+    monkeypatch.setattr(storage_manager, "_build_storage", lambda config: _FakeStorage(config))
+    storage = storage_manager.get_storage("minio-archive", allow_settings_fallback=False)
+    assert storage.get_object_url("a/b.txt") == "https://archive.example.com/a/b.txt"
 
 
-def test_storage_cache_is_versioned_by_config_snapshot(monkeypatch, tmp_path):
-    first_config = _local_config("local-default", tmp_path / "v1", is_default=True)
+def test_storage_cache_is_versioned_by_config_snapshot(monkeypatch):
+    first_config = _minio_config("minio-default", is_default=True)
     monkeypatch.setattr(
         storage_manager.config_reader,
         "_storage_configs",
@@ -64,9 +76,16 @@ def test_storage_cache_is_versioned_by_config_snapshot(monkeypatch, tmp_path):
     monkeypatch.setattr(storage_manager.config_reader, "_default_storage_id", first_config.id)
     monkeypatch.setattr(storage_manager.config_reader, "_version", 1)
 
+    builds: list[StorageConfig] = []
+
+    def _build(config: StorageConfig):
+        builds.append(config)
+        return object()
+
+    monkeypatch.setattr(storage_manager, "_build_storage", _build)
     first_storage = storage_manager.get_storage(allow_settings_fallback=False)
 
-    second_config = _local_config("local-default", tmp_path / "v2", is_default=True)
+    second_config = replace(first_config, base_url="https://v2.example.com")
     monkeypatch.setattr(
         storage_manager.config_reader,
         "_storage_configs",
@@ -76,7 +95,7 @@ def test_storage_cache_is_versioned_by_config_snapshot(monkeypatch, tmp_path):
 
     second_storage = storage_manager.get_storage(allow_settings_fallback=False)
     assert second_storage is not first_storage
-    assert second_storage.root == (tmp_path / "v2").resolve()
+    assert len(builds) == 2
 
 
 def test_explicit_unknown_storage_config_id_does_not_fallback(monkeypatch):
@@ -85,6 +104,16 @@ def test_explicit_unknown_storage_config_id_does_not_fallback(monkeypatch):
 
     with pytest.raises(RuntimeError, match="Storage config is not available"):
         storage_manager.resolve_storage_config("missing-storage")
+
+
+def test_public_url_uses_base_url_when_bucket_public():
+    config = _minio_config("minio", bucket_public=True)
+    storage = S3CompatibleStorage.__new__(S3CompatibleStorage)
+    storage.config = config
+    storage.bucket = config.bucket
+    storage.force_path_style = True
+    storage._endpoint_url = "http://127.0.0.1:9000"
+    assert storage._build_public_direct_url("uploads/a.png") == "https://cdn.example.com/uploads/a.png"
 
 
 def test_config_value_type_coerced():

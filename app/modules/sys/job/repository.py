@@ -119,3 +119,26 @@ class JobLogRepository:
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
         return items, total
+
+    async def cleanup_expired(self, *, before: datetime, batch_size: int) -> int:
+        """按 execute_time 分批删除过期日志，返回累计删除行数。"""
+        limit = max(1, batch_size)
+        total_deleted = 0
+        max_rounds = 1000
+        for _ in range(max_rounds):
+            ids_stmt = (
+                select(SysJobLog.id)
+                .where(SysJobLog.execute_time < before)
+                .order_by(SysJobLog.execute_time.asc())
+                .limit(limit)
+            )
+            ids = list((await self.db.execute(ids_stmt)).scalars().all())
+            if not ids:
+                break
+            result = await self.db.execute(delete(SysJobLog).where(SysJobLog.id.in_(ids)))
+            deleted = int(result.rowcount or 0)
+            total_deleted += deleted
+            await self.db.flush()
+            if deleted < limit:
+                break
+        return total_deleted

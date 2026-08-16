@@ -199,16 +199,6 @@ def _seed_jobs(op) -> None:
             "sort": 4,
         },
         {
-            "id": "7541000000000000005",
-            "job_name": "本地孤立文件清理",
-            "execute_class": "sys_file_cleanup_local_orphans",
-            "execute_type": "FIXED",
-            "trigger_config": "3600",
-            "execute_param": '{"minAgeMinutes": 60}',
-            "description": "删除早于保留期且无 sys_file 元数据行的本地文件",
-            "sort": 5,
-        },
-        {
             "id": "7541000000000000006",
             "job_name": "注销账号清理",
             "execute_class": "iam_account_purge_cancelled",
@@ -217,6 +207,16 @@ def _seed_jobs(op) -> None:
             "execute_param": '{"retentionDays": 15}',
             "description": "每日清理已取消且超过保留期的账号数据",
             "sort": 6,
+        },
+        {
+            "id": "7541000000000000007",
+            "job_name": "任务执行日志清理",
+            "execute_class": "sys_job_log_cleanup",
+            "execute_type": "CRON",
+            "trigger_config": "0 30 3 * * *",
+            "execute_param": '{"retentionDays": 30, "batchSize": 1000}',
+            "description": "按保留天数批量清理过期 sys_job_log",
+            "sort": 7,
         },
     ]
     for row in rows:

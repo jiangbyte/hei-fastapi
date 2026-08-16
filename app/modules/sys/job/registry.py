@@ -45,8 +45,8 @@ def load_handlers() -> None:
     from app.modules.iam.account import tasks as _account_tasks  # noqa: F401
     from app.modules.sys.audit import tasks as _audit_tasks  # noqa: F401
     from app.modules.sys.banner import tasks as _banner_tasks  # noqa: F401
-    from app.modules.sys.file import tasks as _file_tasks  # noqa: F401
     from app.modules.sys.job import sample as _sample_tasks  # noqa: F401
+    from app.modules.sys.job import tasks as _job_tasks  # noqa: F401
 
 
 def resolve(name: str) -> JobHandlerType | None:

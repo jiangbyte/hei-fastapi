@@ -153,6 +153,11 @@ class SessionStore:
             value.decode("utf-8") if isinstance(value, bytes) else str(value) for value in values
         ]
 
+    async def count_tokens(self) -> int:
+        """统计全局在线 token 索引数量（含可能过期残留，用于仪表盘近似在线数）。"""
+        redis = self._get_required_redis()
+        return int(await redis.scard(login_tokens_key()) or 0)
+
     async def list_sessions_by_tokens(self, tokens: list[str]) -> list[SessionPayload]:
         """批量读取 token 会话（MGET），顺手清理全局索引里的过期 token。"""
         unique_tokens = list(dict.fromkeys(tokens))
@@ -214,7 +219,7 @@ class SessionStore:
         self,
         account_type: str,
         account_id: str,
-        payload_factory: Callable[[str], Awaitable[SessionPayload]],
+        payload_factory: Callable[[str, SessionPayload], Awaitable[SessionPayload]],
     ) -> None:
         """刷新某个账户所有在线会话中的授权上下文，保留原 token 不变。"""
         await self.refresh_accounts_sessions(
@@ -225,7 +230,9 @@ class SessionStore:
     async def refresh_accounts_sessions(
         self,
         targets: list[tuple[str, str]],
-        payload_factories: dict[tuple[str, str], Callable[[str], Awaitable[SessionPayload]]],
+        payload_factories: dict[
+            tuple[str, str], Callable[[str, SessionPayload], Awaitable[SessionPayload]]
+        ],
     ) -> None:
         """批量刷新多个账户在线会话，Redis 读写合并为批量操作。"""
         unique_targets = [
@@ -241,15 +248,23 @@ class SessionStore:
         if not token_targets:
             return
 
-        existing_sessions = await self._get_many(
+        existing_raw = await self._get_many(
             redis,
             [login_token_key(token) for token, _ in token_targets],
         )
         updates: list[tuple[SessionPayload, str]] = []
-        for (token, target), existing in zip(token_targets, existing_sessions, strict=True):
-            if not existing:
+        for (token, target), raw in zip(token_targets, existing_raw, strict=True):
+            if not raw:
                 continue
-            refreshed = await payload_factories[target](token)
+            raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+            try:
+                data = json.loads(raw_text)
+            except (ValueError, TypeError):
+                continue
+            data.setdefault("client_resource_ids", [])
+            data.setdefault("client_permission_keys", [])
+            existing = SessionPayload(**data)
+            refreshed = await payload_factories[target](token, existing)
             updates.append((refreshed, token))
         await self._set_sessions(redis, updates)
 

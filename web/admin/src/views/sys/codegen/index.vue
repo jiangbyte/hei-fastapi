@@ -17,7 +17,17 @@ import {
   refreshDict,
   renderButtonIcon,
 } from '@/utils'
-import { NAlert, NButton, NCheckbox, NFlex, NInput, NInputNumber, NSelect, NTag, NTreeSelect } from 'naive-ui'
+import {
+  NAlert,
+  NButton,
+  NCheckbox,
+  NFlex,
+  NInput,
+  NInputNumber,
+  NSelect,
+  NTag,
+  NTreeSelect,
+} from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive, ref } from 'vue'
 
@@ -45,8 +55,8 @@ function packagesFromModulePath(modulePath: string) {
     .trim()
     .replaceAll('\\', '/')
     .split('/')
-    .filter(part => part && part !== '.')
-    .map(part => part.replaceAll('-', '_').toLowerCase())
+    .filter((part) => part && part !== '.')
+    .map((part) => part.replaceAll('-', '_').toLowerCase())
   if (!parts.length) {
     return {
       basePackage: 'github.jiangbyte.io.biz.modules.biz',
@@ -65,7 +75,8 @@ function packagesFromModulePath(modulePath: string) {
 }
 
 const genTypeHelp: Record<string, string> = {
-  TABLE: '生成 module 层单表 CRUD（Entity/Mapper/Convert/Param/Service/Controller）+ Vue 列表页与菜单 SQL。',
+  TABLE:
+    '生成 module 层单表 CRUD（Entity/Mapper/Convert/Param/Service/Controller）+ Vue 列表页与菜单 SQL。',
   TREE: '在单表基础上增加树形接口 /tree 与 list 权限，前端为树形维护页。',
   LEFT_TREE_TABLE: '主表左树（含 /tree），子表挂在主 Controller 的 /children/*，前端左树右表。',
   MASTER_DETAIL: '主表列表 + 子表 /children/*，无树接口；前端主从表联动。',
@@ -663,8 +674,9 @@ async function openPreview(id: string) {
   try {
     const response = await codegenApi.preview({ id })
     state.previewFiles = response.data?.files ?? []
-    const first = state.previewFiles.find((file) => previewGroupOf(file.path) === state.previewGroup)
-      ?? state.previewFiles[0]
+    const first =
+      state.previewFiles.find((file) => previewGroupOf(file.path) === state.previewGroup) ??
+      state.previewFiles[0]
     if (first) {
       state.previewGroup = previewGroupOf(first.path)
       state.previewPath = first.path
@@ -1192,7 +1204,8 @@ function handleDictCodeUpdate(row: any, value: string | number | Array<string | 
           class="mb-12px"
           :bordered="false"
         >
-          Java 列由库类型映射而来（String / Integer / BigDecimal 等），控件与字典会进入预览中的 Param、表单与查询条件。
+          Java 列由库类型映射而来（String / Integer / BigDecimal 等），控件与字典会进入预览中的
+          Param、表单与查询条件。
         </NAlert>
         <NDataTable
           :columns="fieldColumns"

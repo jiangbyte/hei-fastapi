@@ -6,16 +6,11 @@ import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
 import { NButton, NFlex, NIcon, NTag } from 'naive-ui'
 import { jobApi } from '@/api'
-import {
-  formatDateTime,
-  hasPermission,
-  normalizeSearchValues,
-  renderButtonIcon,
-} from '@/utils'
+import { formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { readPageMeta } from '@/utils/wire'
+import { readPageMeta, wireBool } from '@/utils/wire'
 
 const router = useRouter()
 const state = reactive({
@@ -95,10 +90,14 @@ const pagination = computed<PaginationProps>(() => ({
 }))
 
 function renderEnabled(row: any) {
-  return row.enabled ? (
-    <NTag size="small" type="success" bordered={false}>启用</NTag>
+  return wireBool(row.enabled) ? (
+    <NTag size="small" type="success" bordered={false}>
+      启用
+    </NTag>
   ) : (
-    <NTag size="small" type="error" bordered={false}>停用</NTag>
+    <NTag size="small" type="error" bordered={false}>
+      停用
+    </NTag>
   )
 }
 
@@ -176,29 +175,33 @@ const tableColumns = computed<ProDataTableColumns<any>>(() => [
   {
     title: '操作',
     key: 'actions',
-    width: 250,
+    width: 200,
     fixed: 'right',
     render: (row) => (
       <NFlex size={12}>
         {hasPermission('sys:job:run') ? (
           <NButton type="warning" size="small" text={true} onClick={() => confirmRun(row)}>
-            {renderButtonIcon('icon-park-outline:play')} 执行
+            {renderButtonIcon('icon-park-outline:play')}
+          </NButton>
+        ) : null}
+        {hasPermission('sys:job:detail') ? (
+          <NButton type="info" size="small" text={true} onClick={() => openDetail(row.id)}>
+            {renderButtonIcon('icon-park-outline:preview-open')}
           </NButton>
         ) : null}
         {hasPermission('sys:joblog:page') ? (
-          <NButton type="info" size="small" text={true} onClick={() => openDetail(row.id)}>
-            {renderButtonIcon('icon-park-outline:preview-open')} 日志
+          <NButton type="info" size="small" text={true} onClick={() => openLog(row.id)}>
+            {renderButtonIcon('icon-park-outline:log')}
           </NButton>
         ) : null}
         {hasPermission('sys:job:update') ? (
           <NButton type="primary" size="small" text={true} onClick={() => openEdit(row.id)}>
-            {renderButtonIcon('icon-park-outline:edit')} 编辑
+            {renderButtonIcon('icon-park-outline:edit')}
           </NButton>
         ) : null}
         {hasPermission('sys:job:update') ? (
           <NButton size="small" text={true} onClick={() => toggleEnabled(row)}>
-            {renderButtonIcon(row.enabled ? 'icon-park-outline:pause' : 'icon-park-outline:play')}
-            {row.enabled ? '停用' : '启用'}
+            {renderButtonIcon(wireBool(row.enabled) ? 'icon-park-outline:pause' : 'icon-park-outline:play')}
           </NButton>
         ) : null}
         {hasPermission('sys:job:delete') ? (
@@ -240,6 +243,10 @@ function openDetail(id: string) {
   router.push({ path: '/sys/job/detail', query: { id } })
 }
 
+function openLog(id: string) {
+  router.push({ path: '/sys/job/log', query: { id } })
+}
+
 function openCreate() {
   router.push('/sys/job/create')
 }
@@ -268,7 +275,7 @@ function confirmRun(row: any) {
 }
 
 function toggleEnabled(row: any) {
-  const target = !row.enabled
+  const target = !wireBool(row.enabled)
   window.$dialog.info({
     title: target ? '启用任务' : '停用任务',
     draggable: true,
@@ -316,7 +323,10 @@ async function deleteData(ids: string[]) {
 </script>
 
 <template>
-  <NFlex class="h-full min-h-0" vertical>
+  <NFlex
+    class="h-full min-h-0"
+    vertical
+  >
     <ProCard content-class="pb-0!">
       <ProSearchForm
         :form="searchForm"

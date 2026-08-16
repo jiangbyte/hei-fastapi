@@ -41,8 +41,8 @@ from app.modules.iam.account.schema import (
     AccountRoleAssignRequest,
 )
 from app.modules.iam.enums import AccountIdentityType
-from app.modules.user.portal.repository import ProfileUserPortalRepository
-from app.modules.user.portal.schema import ProfileUserPortalUpsertPayload
+from app.modules.profile.portal.repository import ProfileUserPortalRepository
+from app.modules.profile.portal.schema import ProfileUserPortalUpsertPayload
 
 
 def _mask_open_id(open_id: str | None) -> str:

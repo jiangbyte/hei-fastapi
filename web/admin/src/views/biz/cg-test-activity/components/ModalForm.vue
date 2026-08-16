@@ -41,45 +41,30 @@ const state = reactive({
   formModel: normalizeFormData(),
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑Activity' : '新增Activity')
+const modalTitle = computed(() => (state.dataId ? '编辑Activity' : '新增Activity'))
 const rules = computed<FormRules>(() => ({
-  code: [
-    createRequiredRule('code', 'input'),
-  ],
-  name: [
-    createRequiredRule('name', 'input'),
-  ],
-  category: [
-    createRequiredRule('category', 'input'),
-  ],
-  type: [
-    createRequiredRule('type', 'input'),
-  ],
-  status: [
-    createRequiredRule('status', 'change'),
-  ],
-  cover_url: [
-    createRequiredRule('cover_url', 'input'),
-  ],
-  description: [
-    createRequiredRule('description', 'input'),
-  ],
-  start_at: [
-    createRequiredRule('start_at', 'change'),
-  ],
-  end_at: [
-    createRequiredRule('end_at', 'change'),
-  ],
+  code: [createRequiredRule('code', 'input')],
+  name: [createRequiredRule('name', 'input')],
+  category: [createRequiredRule('category', 'input')],
+  type: [createRequiredRule('type', 'input')],
+  status: [createRequiredRule('status', 'change')],
+  cover_url: [createRequiredRule('cover_url', 'input')],
+  description: [createRequiredRule('description', 'input')],
+  start_at: [createRequiredRule('start_at', 'change')],
+  end_at: [createRequiredRule('end_at', 'change')],
   max_participants: [
     {
-      validator: () => typeof state.formModel.max_participants === 'number' && Number.isFinite(state.formModel.max_participants),
+      validator: () =>
+        typeof state.formModel.max_participants === 'number' &&
+        Number.isFinite(state.formModel.max_participants),
       message: '请输入max_participants',
       trigger: ['input', 'blur'],
     },
   ],
   price: [
     {
-      validator: () => typeof state.formModel.price === 'number' && Number.isFinite(state.formModel.price),
+      validator: () =>
+        typeof state.formModel.price === 'number' && Number.isFinite(state.formModel.price),
       message: '请输入price',
       trigger: ['input', 'blur'],
     },
@@ -139,10 +124,22 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-    is_public: data.is_public == null || data.is_public === '' ? defaultFormData.is_public : wireBool(String(data.is_public)),
-    need_approval: data.need_approval == null || data.need_approval === '' ? defaultFormData.need_approval : wireBool(String(data.need_approval)),
-    max_participants: data.max_participants == null || data.max_participants === '' ? defaultFormData.max_participants : wireInt(String(data.max_participants)),
-    price: data.price == null || data.price === '' ? defaultFormData.price : wireFloat(String(data.price)),
+    is_public:
+      data.is_public == null || data.is_public === ''
+        ? defaultFormData.is_public
+        : wireBool(String(data.is_public)),
+    need_approval:
+      data.need_approval == null || data.need_approval === ''
+        ? defaultFormData.need_approval
+        : wireBool(String(data.need_approval)),
+    max_participants:
+      data.max_participants == null || data.max_participants === ''
+        ? defaultFormData.max_participants
+        : wireInt(String(data.max_participants)),
+    price:
+      data.price == null || data.price === ''
+        ? defaultFormData.price
+        : wireFloat(String(data.price)),
     start_at: toFormDateTime(data.start_at),
     end_at: toFormDateTime(data.end_at),
     rule_config: stringifyJsonValue(data.rule_config),
@@ -236,51 +233,136 @@ defineExpose({
   >
     <NSpin :show="state.loading">
       <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
-        <NForm ref="formRef" :model="state.formModel" :rules="rules" label-placement="left" label-width="110" :disabled="state.loading || state.submitLoading">
-          <NFormItem label="code" path="code">
+        <NForm
+          ref="formRef"
+          :model="state.formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="110"
+          :disabled="state.loading || state.submitLoading"
+        >
+          <NFormItem
+            label="code"
+            path="code"
+          >
             <NInput v-model:value="state.formModel.code" />
           </NFormItem>
-          <NFormItem label="name" path="name">
+          <NFormItem
+            label="name"
+            path="name"
+          >
             <NInput v-model:value="state.formModel.name" />
           </NFormItem>
-          <NFormItem label="category" path="category">
+          <NFormItem
+            label="category"
+            path="category"
+          >
             <NInput v-model:value="state.formModel.category" />
           </NFormItem>
-          <NFormItem label="type" path="type">
+          <NFormItem
+            label="type"
+            path="type"
+          >
             <NInput v-model:value="state.formModel.type" />
           </NFormItem>
-          <NFormItem label="status" path="status">
-            <DictSelect v-model="state.formModel.status" dict-code="COMMON_STATUS" />
+          <NFormItem
+            label="status"
+            path="status"
+          >
+            <DictSelect
+              v-model="state.formModel.status"
+              dict-code="COMMON_STATUS"
+            />
           </NFormItem>
-          <NFormItem label="cover_url" path="cover_url">
+          <NFormItem
+            label="cover_url"
+            path="cover_url"
+          >
             <NInput v-model:value="state.formModel.cover_url" />
           </NFormItem>
-          <NFormItem label="description" path="description">
-            <NInput v-model:value="state.formModel.description" type="textarea" :autosize="{ minRows: 3, maxRows: 8 }" />
+          <NFormItem
+            label="description"
+            path="description"
+          >
+            <NInput
+              v-model:value="state.formModel.description"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 8 }"
+            />
           </NFormItem>
-          <NFormItem label="start_at" path="start_at">
-            <NDatePicker v-model:formatted-value="state.formModel.start_at" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="w-full" clearable />
+          <NFormItem
+            label="start_at"
+            path="start_at"
+          >
+            <NDatePicker
+              v-model:formatted-value="state.formModel.start_at"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="w-full"
+              clearable
+            />
           </NFormItem>
-          <NFormItem label="end_at" path="end_at">
-            <NDatePicker v-model:formatted-value="state.formModel.end_at" type="datetime" value-format="yyyy-MM-dd HH:mm:ss" class="w-full" clearable />
+          <NFormItem
+            label="end_at"
+            path="end_at"
+          >
+            <NDatePicker
+              v-model:formatted-value="state.formModel.end_at"
+              type="datetime"
+              value-format="yyyy-MM-dd HH:mm:ss"
+              class="w-full"
+              clearable
+            />
           </NFormItem>
-          <NFormItem label="max_participants" path="max_participants">
-            <NInputNumber v-model:value="state.formModel.max_participants" class="w-full" />
+          <NFormItem
+            label="max_participants"
+            path="max_participants"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.max_participants"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="price" path="price">
-            <NInputNumber v-model:value="state.formModel.price" class="w-full" />
+          <NFormItem
+            label="price"
+            path="price"
+          >
+            <NInputNumber
+              v-model:value="state.formModel.price"
+              class="w-full"
+            />
           </NFormItem>
-          <NFormItem label="is_public" path="is_public">
+          <NFormItem
+            label="is_public"
+            path="is_public"
+          >
             <NSwitch v-model:value="state.formModel.is_public" />
           </NFormItem>
-          <NFormItem label="need_approval" path="need_approval">
+          <NFormItem
+            label="need_approval"
+            path="need_approval"
+          >
             <NSwitch v-model:value="state.formModel.need_approval" />
           </NFormItem>
-          <NFormItem label="rule_config" path="rule_config">
-            <NInput v-model:value="state.formModel.rule_config" type="textarea" :autosize="{ minRows: 4, maxRows: 12 }" />
+          <NFormItem
+            label="rule_config"
+            path="rule_config"
+          >
+            <NInput
+              v-model:value="state.formModel.rule_config"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 12 }"
+            />
           </NFormItem>
-          <NFormItem label="extra" path="extra">
-            <NInput v-model:value="state.formModel.extra" type="textarea" :autosize="{ minRows: 4, maxRows: 12 }" />
+          <NFormItem
+            label="extra"
+            path="extra"
+          >
+            <NInput
+              v-model:value="state.formModel.extra"
+              type="textarea"
+              :autosize="{ minRows: 4, maxRows: 12 }"
+            />
           </NFormItem>
         </NForm>
       </NScrollbar>
@@ -288,8 +370,16 @@ defineExpose({
 
     <template #action>
       <NSpace justify="end">
-        <NButton @click="closeModal">取消</NButton>
-        <NButton type="primary" :loading="state.submitLoading" @click="submitForm">确认</NButton>
+        <NButton @click="closeModal">
+          取消
+        </NButton>
+        <NButton
+          type="primary"
+          :loading="state.submitLoading"
+          @click="submitForm"
+        >
+          确认
+        </NButton>
       </NSpace>
     </template>
   </NModal>

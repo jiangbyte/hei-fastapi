@@ -5,6 +5,7 @@
 
 from collections import Counter
 from datetime import UTC, datetime, timedelta
+from time import monotonic
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +22,9 @@ from app.modules.auth.session_schema import (
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
 
+_ANALYSIS_CACHE_TTL_SECONDS = 30.0
+_analysis_cache: tuple[float, SessionAnalysisResponse] | None = None
+
 
 class SessionAdminService:
     """会话管理服务：在线会话分析、分页与强制下线。"""
@@ -32,6 +36,11 @@ class SessionAdminService:
 
     async def analysis(self) -> SessionAnalysisResponse:
         """统计在线账户、token 与近一小时新增等指标。"""
+        global _analysis_cache
+        now_mono = monotonic()
+        if _analysis_cache is not None and _analysis_cache[0] > now_mono:
+            return _analysis_cache[1]
+
         grouped = await self._group_online_sessions()
         token_counts = [len(items) for items in grouped.values()]
         now = datetime.now(UTC)
@@ -43,7 +52,7 @@ class SessionAdminService:
                 if login_at and login_at >= one_hour_ago:
                     one_hour_new_count += 1
         account_types = Counter(account_type for account_type, _ in grouped)
-        return SessionAnalysisResponse(
+        result = SessionAnalysisResponse(
             online_account_count=len(grouped),
             online_token_count=sum(token_counts),
             admin_account_count=account_types.get(AccountType.ADMIN.value, 0),
@@ -51,17 +60,28 @@ class SessionAdminService:
             one_hour_new_count=one_hour_new_count,
             max_token_count=max(token_counts, default=0),
         )
+        _analysis_cache = (now_mono + _ANALYSIS_CACHE_TTL_SECONDS, result)
+        return result
 
     async def page(self, query: SessionPageQuery) -> PageData[SessionAccountItem]:
         """按账户维度分页返回在线会话。"""
         grouped = await self._group_online_sessions()
-        items = await self._build_items(grouped)
-        items = self._filter_items(items, query)
-        items.sort(key=self._sort_key, reverse=True)
-        total = len(items)
-        page_items = items[
-            query.offset : query.offset + query.size
-        ]
+        grouped = self._filter_grouped(grouped, query)
+        needs_profile = bool(query.account or query.keyword)
+        if needs_profile:
+            items = await self._build_items(grouped)
+            items = self._filter_profile_items(items, query)
+            items.sort(key=self._sort_key, reverse=True)
+            total = len(items)
+            page_items = items[query.offset : query.offset + query.size]
+            return build_page(query, total, page_items)
+
+        sorted_keys = sorted(grouped.keys(), key=lambda key: self._group_sort_key(grouped[key]), reverse=True)
+        total = len(sorted_keys)
+        page_keys = sorted_keys[query.offset : query.offset + query.size]
+        page_grouped = {key: grouped[key] for key in page_keys}
+        page_items = await self._build_items(page_grouped)
+        page_items.sort(key=self._sort_key, reverse=True)
         return build_page(query, total, page_items)
 
     async def tokens(self, query: SessionTokensQuery) -> list[SessionTokenInfo]:
@@ -73,11 +93,11 @@ class SessionAdminService:
 
     async def exit_sessions(self, targets: list[SessionTokensQuery]) -> None:
         """批量删除指定账户的全部会话（account_type 缺省按 ADMIN）。"""
-        for target in targets:
-            account_type = target.account_type or AccountType.ADMIN
-            await session_store.delete_account_sessions(
-                account_type.value, target.account_id
-            )
+        pairs = [
+            ((target.account_type or AccountType.ADMIN).value, target.account_id)
+            for target in targets
+        ]
+        await session_store.delete_accounts_sessions(pairs)
 
     async def exit_tokens(self, tokens: list[str]) -> None:
         """批量删除指定 token 的会话（去重后逐个删除）。"""
@@ -93,6 +113,34 @@ class SessionAdminService:
             grouped.setdefault((str(session.account_type), session.account_id), []).append(session)
         return grouped
 
+    def _filter_grouped(
+        self,
+        grouped: dict[tuple[str, str], list[SessionPayload]],
+        query: SessionPageQuery,
+    ) -> dict[tuple[str, str], list[SessionPayload]]:
+        """仅用会话载荷可判定的条件过滤（账户类型 / ID / IP）。"""
+        result = grouped
+        if query.account_type:
+            wanted = query.account_type.value
+            result = {
+                key: sessions
+                for key, sessions in result.items()
+                if key[0] == wanted
+            }
+        if query.account_id:
+            result = {
+                key: sessions
+                for key, sessions in result.items()
+                if query.account_id in key[1]
+            }
+        if query.ip:
+            result = {
+                key: sessions
+                for key, sessions in result.items()
+                if any(query.ip in str(session.client_ip or "") for session in sessions)
+            }
+        return result
+
     async def _build_items(
         self,
         grouped: dict[tuple[str, str], list[SessionPayload]],
@@ -104,11 +152,13 @@ class SessionAdminService:
         accounts = await self.account_repo.list_accounts_by_ids(account_ids)
         schema_map = {
             schema.id: schema
-            for schema in await AccountQueryService(self.db).build_account_schemas(accounts)
+            for schema in await AccountQueryService(self.db).build_account_picker_schemas(accounts)
         }
+        account_map = {account.id: account for account in accounts}
         items: list[SessionAccountItem] = []
         for (account_type, account_id), sessions in grouped.items():
             schema = schema_map.get(account_id)
+            account = account_map.get(account_id)
             token_infos = [_token_info(session) for session in sessions]
             token_infos.sort(
                 key=lambda item: (
@@ -127,8 +177,8 @@ class SessionAdminService:
                     name=getattr(schema, "name", None),
                     nickname=getattr(schema, "nickname", None),
                     avatar=getattr(schema, "avatar", None),
-                    latest_login_ip=getattr(schema, "latest_login_ip", None),
-                    latest_login_time=getattr(schema, "latest_login_time", None),
+                    latest_login_ip=getattr(account, "latest_login_ip", None),
+                    latest_login_time=getattr(account, "latest_login_time", None),
                     client_ip=newest.client_ip if newest else None,
                     device_label=newest.device_label if newest else None,
                     token_count=len(token_infos),
@@ -139,17 +189,13 @@ class SessionAdminService:
             )
         return items
 
-    def _filter_items(
+    def _filter_profile_items(
         self,
         items: list[SessionAccountItem],
         query: SessionPageQuery,
     ) -> list[SessionAccountItem]:
-        """按查询条件过滤账户维度会话项。"""
+        """按账号名 / 昵称等资料字段过滤。"""
         result = items
-        if query.account_type:
-            result = [item for item in result if str(item.account_type) == query.account_type.value]
-        if query.account_id:
-            result = [item for item in result if query.account_id in item.account_id]
         if query.account:
             keyword = query.account.lower()
             result = [
@@ -169,13 +215,17 @@ class SessionAdminService:
                 or keyword in str(item.nickname or "").lower()
                 or keyword in item.account_id.lower()
             ]
-        if query.ip:
-            result = [
-                item
-                for item in result
-                if any(query.ip in str(token.client_ip or "") for token in item.tokens)
-            ]
         return result
+
+    def _group_sort_key(self, sessions: list[SessionPayload]) -> tuple[datetime, str]:
+        """分组排序键：最近活跃时间。"""
+        latest = datetime.min.replace(tzinfo=UTC)
+        account_id = sessions[0].account_id if sessions else ""
+        for session in sessions:
+            active = _parse_datetime(session.last_active_at) or _parse_datetime(session.login_at)
+            if active and active > latest:
+                latest = active
+        return latest, account_id
 
     def _sort_key(self, item: SessionAccountItem) -> tuple[datetime, str]:
         """会话项排序键：最近活跃时间 + 账户 ID。"""

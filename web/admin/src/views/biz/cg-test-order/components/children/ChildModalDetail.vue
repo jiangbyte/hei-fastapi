@@ -51,10 +51,21 @@ defineExpose({
 </script>
 
 <template>
-  <NModal v-model:show="state.showModal" preset="card" draggable :mask-closable="false" title="订单明细详情" style="width: 680px">
+  <NModal
+    v-model:show="state.showModal"
+    preset="card"
+    draggable
+    :mask-closable="false"
+    title="订单明细详情"
+    style="width: 680px"
+  >
     <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
-        <NDescriptions label-placement="left" bordered :column="1">
+        <NDescriptions
+          label-placement="left"
+          bordered
+          :column="1"
+        >
           <NDescriptionsItem label="id">
             {{ displayValue(state.detail.id) }}
           </NDescriptionsItem>
@@ -71,8 +82,14 @@ defineExpose({
             {{ displayValue(state.detail.category) }}
           </NDescriptionsItem>
           <NDescriptionsItem label="status">
-            <NTag :color="createTagColor(dictTypeColor('COMMON_STATUS', state.detail.status))" :bordered="false">
-              {{ dictTypeData('COMMON_STATUS', state.detail.status) || displayValue(state.detail.status) }}
+            <NTag
+              :color="createTagColor(dictTypeColor('COMMON_STATUS', state.detail.status))"
+              :bordered="false"
+            >
+              {{
+                dictTypeData('COMMON_STATUS', state.detail.status) ||
+                  displayValue(state.detail.status)
+              }}
             </NTag>
           </NDescriptionsItem>
           <NDescriptionsItem label="quantity">
@@ -88,18 +105,42 @@ defineExpose({
             {{ displayValue(state.detail.is_gift) }}
           </NDescriptionsItem>
           <NDescriptionsItem label="item_config">
-            <NCode :code="formatJsonValue(state.detail.item_config)" language="json" word-wrap />
+            <NCode
+              :code="formatJsonValue(state.detail.item_config)"
+              language="json"
+              word-wrap
+            />
           </NDescriptionsItem>
           <NDescriptionsItem label="remark">
             {{ displayValue(state.detail.remark) }}
           </NDescriptionsItem>
           <NDescriptionsItem label="extra">
-            <NCode :code="formatJsonValue(state.detail.extra)" language="json" word-wrap />
+            <NCode
+              :code="formatJsonValue(state.detail.extra)"
+              language="json"
+              word-wrap
+            />
           </NDescriptionsItem>
-          <NDescriptionsItem label="创建时间">{{ formatDateTime(state.detail.created_at) }}</NDescriptionsItem>
-          <NDescriptionsItem label="创建人">{{ displayValue(state.detail.created_name || state.detail.created_by) }}</NDescriptionsItem>
-          <NDescriptionsItem label="更新时间">{{ formatDateTime(state.detail.updated_at) }}</NDescriptionsItem>
-          <NDescriptionsItem label="更新人">{{ displayValue(state.detail.updated_name || state.detail.updated_by) }}</NDescriptionsItem>
+          <NDescriptionsItem label="创建时间">
+            {{
+              formatDateTime(state.detail.created_at)
+            }}
+          </NDescriptionsItem>
+          <NDescriptionsItem label="创建人">
+            {{
+              displayValue(state.detail.created_name || state.detail.created_by)
+            }}
+          </NDescriptionsItem>
+          <NDescriptionsItem label="更新时间">
+            {{
+              formatDateTime(state.detail.updated_at)
+            }}
+          </NDescriptionsItem>
+          <NDescriptionsItem label="更新人">
+            {{
+              displayValue(state.detail.updated_name || state.detail.updated_by)
+            }}
+          </NDescriptionsItem>
         </NDescriptions>
       </NSpin>
     </NScrollbar>

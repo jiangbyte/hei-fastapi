@@ -14,7 +14,6 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.core.config.enums import StorageProvider
-from app.core.paths import DEFAULT_FILES_PUBLIC_PATH
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -160,12 +159,15 @@ class JobSettings(BaseSettings):
     scan_interval_ms: int = 1000
     # 最大并发执行任务数，对齐 hei-boot hei.job.pool-size。
     pool_size: int = 4
+    # 任务执行日志保留天数 / 分批删除大小，对齐 hei-boot hei.job.log.*。
+    log_retention_days: int = 30
+    log_batch_size: int = 1000
 
 
 class StorageSettings(BaseSettings):
-    """文件存储设置：本地 / OSS / S3 / MinIO 及上传限制。"""
+    """文件存储设置：对象存储（MinIO/RustFS/OSS/COS）及上传限制。"""
 
-    provider: StorageProvider = StorageProvider.LOCAL
+    provider: StorageProvider = StorageProvider.MINIO
     bucket: str = ""
     endpoint: str = ""
     access_key: str = ""
@@ -174,8 +176,7 @@ class StorageSettings(BaseSettings):
     use_ssl: bool = False
     presign_expire_seconds: int = 3600
     base_url: str = ""
-    public_path: str = DEFAULT_FILES_PUBLIC_PATH
-    local_root: str = ".runtime/storage"
+    bucket_public: bool = False
     upload_max_bytes: int = 10 * 1024 * 1024
     upload_allowed_content_types: list[str] = [
         "image/jpeg",

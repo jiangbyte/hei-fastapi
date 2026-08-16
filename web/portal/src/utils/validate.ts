@@ -8,9 +8,20 @@ export function isValidPhone(value: string) {
   return /^1\d{10}$/.test(value.trim())
 }
 
+/**
+ * 仅允许同源相对路径：以单个 / 开头，禁止 // 与 /auth 前缀。
+ */
 export function getSafeRedirect(redirect?: string | null) {
-  if (!redirect || redirect.startsWith('/auth')) {
-    return import.meta.env.VITE_HOME_PATH || '/'
+  const home = import.meta.env.VITE_HOME_PATH || '/'
+  const value = String(redirect ?? '').trim()
+  if (!value) {
+    return home
   }
-  return redirect
+  if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth')) {
+    return home
+  }
+  if (value.includes('://')) {
+    return home
+  }
+  return value
 }

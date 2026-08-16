@@ -13,7 +13,7 @@ from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.account.schema import AccountAdminPageQuery
 from app.modules.iam.account.service import AccountService
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
-from app.modules.user.admin.model import ProfileUserAdmin
+from app.modules.profile.admin.model import ProfileUserAdmin
 from tests.iam_relation_helpers import account_dept
 
 

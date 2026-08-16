@@ -7,16 +7,12 @@
 
 此处只放：
 - ``API_ROOT_PREFIX``：路由挂载用
-- ``DEFAULT_FILES_PUBLIC_PATH``：与当前公开文件路由一致的默认值，避免三处字面量漂移
 - ``api_version_glob_prefix``：白名单 fnmatch 用 ``/api/v*``，匹配时不绑死某一版
 """
 from __future__ import annotations
 
 # 路由挂载的全局 API 前缀。
 API_ROOT_PREFIX = "/api"
-
-# 与装饰器里的 /v1/... 及公开文件路由保持一致；不是全库版本开关。
-DEFAULT_FILES_PUBLIC_PATH = f"{API_ROOT_PREFIX}/v1/files"
 
 
 def api_version_glob_prefix() -> str:

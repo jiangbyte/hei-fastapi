@@ -1,7 +1,7 @@
 <!-- Author: Charlie -->
 
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, watch } from 'vue'
 import ConfigSectionLayout from './ConfigSectionLayout.vue'
 import {
   ACCOUNT_TYPE_TABS,
@@ -17,7 +17,11 @@ const CATEGORY = 'AUTH_OAUTH'
 const PREFIX = 'AUTH_OAUTH'
 
 const PROVIDERS = [
-  { key: 'GITHUB', label: 'GitHub', fields: ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI'] as const },
+  {
+    key: 'GITHUB',
+    label: 'GitHub',
+    fields: ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI'] as const,
+  },
   { key: 'GITEE', label: 'Gitee', fields: ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI'] as const },
   { key: 'QQ', label: 'QQ', fields: ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI'] as const },
   {
@@ -25,7 +29,12 @@ const PROVIDERS = [
     label: '微信开放平台',
     fields: ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI'] as const,
   },
-  { key: 'WECHAT_MP', label: '微信小程序', fields: ['APP_ID', 'APP_SECRET'] as const, portalOnly: true },
+  {
+    key: 'WECHAT_MP',
+    label: '微信小程序',
+    fields: ['APP_ID', 'APP_SECRET'] as const,
+    portalOnly: true,
+  },
 ] as const
 
 type ProviderKey = (typeof PROVIDERS)[number]['key']
@@ -81,7 +90,11 @@ function providerConfigKey(type: AccountType, provider: string, field: string) {
   return accountConfigKey(PREFIX, type, `${provider}_${field}`)
 }
 
-function fillProvider(map: Record<string, string>, type: AccountType, provider: ProviderKey): ProviderForm {
+function fillProvider(
+  map: Record<string, string>,
+  type: AccountType,
+  provider: ProviderKey,
+): ProviderForm {
   return {
     enabled: parseBool(map[providerConfigKey(type, provider, 'ENABLED')]),
     clientId: map[providerConfigKey(type, provider, 'CLIENT_ID')] || '',
@@ -130,22 +143,43 @@ function reset() {
 }
 
 const current = computed(() => state.byType[state.subTab])
+const isPortal = computed(() => state.subTab === 'PORTAL')
 const visibleProviders = computed(() =>
-  PROVIDERS.filter((item) => !('portalOnly' in item && item.portalOnly && state.subTab === 'ADMIN')),
+  PROVIDERS.filter(
+    (item) => !('portalOnly' in item && item.portalOnly && state.subTab === 'ADMIN'),
+  ),
+)
+
+watch(
+  visibleProviders,
+  (list) => {
+    if (!list.some((item) => item.key === state.providerTab)) {
+      state.providerTab = list[0]?.key ?? 'GITHUB'
+    }
+  },
+  { immediate: true },
 )
 
 async function save() {
   state.saving = true
   try {
+    const portalCb = state.frontendPortal.trim()
+    const adminCb = state.frontendAdmin.trim()
+    if (portalCb && !/^https?:\/\//i.test(portalCb)) {
+      throw new Error('门户 OAuth 前端回调页必须以 http:// 或 https:// 开头')
+    }
+    if (adminCb && !/^https?:\/\//i.test(adminCb)) {
+      throw new Error('管理端 OAuth 前端回调页必须以 http:// 或 https:// 开头')
+    }
     const items: Array<{ config_key: string; config_value: string; category: string }> = [
       {
         config_key: 'AUTH_OAUTH_FRONTEND_CALLBACK_PORTAL',
-        config_value: state.frontendPortal,
+        config_value: portalCb,
         category: CATEGORY,
       },
       {
         config_key: 'AUTH_OAUTH_FRONTEND_CALLBACK_ADMIN',
-        config_value: state.frontendAdmin,
+        config_value: adminCb,
         category: CATEGORY,
       },
     ]
@@ -180,6 +214,8 @@ async function save() {
       frontendPortal: state.frontendPortal,
       frontendAdmin: state.frontendAdmin,
     })
+  } catch (e: any) {
+    window.$message.error(e?.message || '保存失败')
   } finally {
     state.saving = false
   }
@@ -211,13 +247,19 @@ async function save() {
         class="sys-config-form"
         label-placement="top"
       >
-        <NFormItem label="前端 OAuth 回调页（门户）">
+        <NFormItem
+          v-if="isPortal"
+          label="前端 OAuth 回调页"
+        >
           <NInput
             v-model:value="state.frontendPortal"
             placeholder="如 https://portal.example.com/auth/oauth/callback"
           />
         </NFormItem>
-        <NFormItem label="前端 OAuth 回调页（管理端）">
+        <NFormItem
+          v-else
+          label="前端 OAuth 回调页"
+        >
           <NInput
             v-model:value="state.frontendAdmin"
             placeholder="如 https://admin.example.com/auth/oauth/callback"

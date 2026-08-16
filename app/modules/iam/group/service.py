@@ -43,7 +43,7 @@ from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class GroupService:
@@ -130,7 +130,7 @@ class GroupService:
         group_users = await self.repo.list_group_accounts(query.id, account_filter)
         return GroupOwnUserResponse(
             id=query.id,
-            users=await AccountQueryService(self.db).build_account_schemas(users),
+            users=await AccountQueryService(self.db).build_account_picker_schemas(users),
             account_ids=[account.id for account in group_users],
         )
 

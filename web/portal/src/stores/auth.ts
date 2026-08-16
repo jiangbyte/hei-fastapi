@@ -97,7 +97,9 @@ export function isAllowedUnderSecurityWall(
 ): boolean {
   if (!user) return true
   if (user.passwordExpired) {
-    return pathname.startsWith('/usercenter') && new URLSearchParams(search).get('tab') === 'password'
+    return (
+      pathname.startsWith('/usercenter') && new URLSearchParams(search).get('tab') === 'password'
+    )
   }
   if (user.forceBindEmail || user.forceBindPhone) {
     if (!pathname.startsWith('/usercenter')) return false

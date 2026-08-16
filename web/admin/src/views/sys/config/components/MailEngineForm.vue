@@ -379,7 +379,10 @@ async function save() {
           </NGi>
           <NGi :span="12">
             <NFormItem label="区域（留空默认 ap-guangzhou）">
-              <NInput v-model:value="state.tencent.region" placeholder="ap-guangzhou" />
+              <NInput
+                v-model:value="state.tencent.region"
+                placeholder="ap-guangzhou"
+              />
             </NFormItem>
           </NGi>
         </NGrid>

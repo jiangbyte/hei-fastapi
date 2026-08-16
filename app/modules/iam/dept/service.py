@@ -23,7 +23,7 @@ from app.modules.iam.dept.schema import (
     DeptUpdateRequest,
     SysDeptSchema,
 )
-from app.modules.user.utils.profile import get_profiles_batch
+from app.modules.profile.utils.profile import get_profiles_batch
 
 
 class DeptService:

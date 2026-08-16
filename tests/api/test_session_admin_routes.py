@@ -6,7 +6,7 @@ from app.core.security.session import SessionPayload, session_store
 from app.deps.db import get_db_session
 from app.modules.iam.account.model import SysAccount, SysAccountIdentity
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
-from app.modules.user.admin.model import ProfileUserAdmin
+from app.modules.profile.admin.model import ProfileUserAdmin
 
 
 async def _seed_session_admin(client, token: str, permissions: list[str]) -> SysAccount:

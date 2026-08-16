@@ -21,7 +21,14 @@
   --auth-deco-grid: color-mix(in srgb, var(--auth-text) 4%, transparent);
   --auth-deco-ring: color-mix(in srgb, var(--auth-text) 9%, transparent);
   --auth-deco-dot: color-mix(in srgb, var(--auth-text) 16%, transparent);
-  --auth-deco-beam: linear-gradient(115deg, transparent 0%, transparent 36%, color-mix(in srgb, #ffffff 65%, transparent) 50%, transparent 64%, transparent 100%);
+  --auth-deco-beam: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 36%,
+    color-mix(in srgb, #ffffff 65%, transparent) 50%,
+    transparent 64%,
+    transparent 100%
+  );
 
   position: relative;
   isolation: isolate;
@@ -33,7 +40,11 @@
   box-sizing: border-box;
   overflow: auto;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--auth-primary) 6%, transparent), transparent 42%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--auth-primary) 6%, transparent),
+      transparent 42%
+    ),
     var(--auth-bg);
   color: var(--auth-text);
   font-family: var(--auth-font);
@@ -56,7 +67,14 @@
   --auth-deco-grid: color-mix(in srgb, #ffffff 5%, transparent);
   --auth-deco-ring: color-mix(in srgb, #ffffff 10%, transparent);
   --auth-deco-dot: color-mix(in srgb, #ffffff 22%, transparent);
-  --auth-deco-beam: linear-gradient(115deg, transparent 0%, transparent 36%, color-mix(in srgb, #ffffff 6%, transparent) 50%, transparent 64%, transparent 100%);
+  --auth-deco-beam: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 36%,
+    color-mix(in srgb, #ffffff 6%, transparent) 50%,
+    transparent 64%,
+    transparent 100%
+  );
 }
 
 /* ===== 暗黑模式 UI 组件 token 修复 =====
@@ -119,12 +137,37 @@
     radial-gradient(circle at 8% 58%, var(--auth-deco-dot) 0 1.6px, transparent 2.4px),
     radial-gradient(circle at 94% 62%, var(--auth-deco-dot) 0 1.3px, transparent 2.1px),
     radial-gradient(circle at 42% 12%, var(--auth-deco-dot) 0 1.2px, transparent 2px),
-    radial-gradient(circle at 8% 104%, transparent 0 150px, var(--auth-deco-ring) 151px 152px, transparent 153px),
-    var(--auth-deco-beam),
-    linear-gradient(var(--auth-deco-grid) 1px, transparent 1px),
+    radial-gradient(
+      circle at 8% 104%,
+      transparent 0 150px,
+      var(--auth-deco-ring) 151px 152px,
+      transparent 153px
+    ),
+    var(--auth-deco-beam), linear-gradient(var(--auth-deco-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--auth-deco-grid) 1px, transparent 1px);
-  background-size: auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, auto, 44px 44px, 44px 44px;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
+  background-size:
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    auto,
+    44px 44px,
+    44px 44px;
+  background-repeat:
+    no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat,
+    no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat,
+    repeat;
 }
 
 /* 背景层 2：右上角同心圆环 + 左下角大圆环装饰 */
@@ -205,7 +248,12 @@
   background:
     radial-gradient(520px 360px at 12% 0%, rgba(255, 255, 255, 0.18), transparent 62%),
     radial-gradient(460px 340px at 96% 88%, rgba(0, 0, 0, 0.18), transparent 60%),
-    linear-gradient(150deg, color-mix(in srgb, var(--auth-primary) 72%, #ffffff), var(--auth-primary) 46%, color-mix(in srgb, var(--auth-primary) 80%, #052c66));
+    linear-gradient(
+      150deg,
+      color-mix(in srgb, var(--auth-primary) 72%, #ffffff),
+      var(--auth-primary) 46%,
+      color-mix(in srgb, var(--auth-primary) 80%, #052c66)
+    );
   justify-content: stretch;
   padding: 32px 36px;
   overflow: hidden;
@@ -573,7 +621,10 @@
   font-family: var(--auth-mono);
   font-size: 11px;
   font-weight: 600;
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .auth-oauth__icon:hover:not(:disabled) {

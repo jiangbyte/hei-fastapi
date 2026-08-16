@@ -34,7 +34,7 @@ from app.modules.biz.cg_test_knowledge_category.schema import (
     CgTestKnowledgeDocSchema,
     CgTestKnowledgeDocUpdateRequest,
 )
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestKnowledgeCategoryService:

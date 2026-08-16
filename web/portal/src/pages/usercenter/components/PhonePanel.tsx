@@ -119,9 +119,7 @@ export function PhonePanel() {
         password: encrypted.values.password || '',
         password_key_id: encrypted.password_key_id,
         phone: phone || null,
-        phone_login_enabled: forceBindPhone
-          ? true
-          : wireBool(values.phone_login_enabled ?? false),
+        phone_login_enabled: forceBindPhone ? true : wireBool(values.phone_login_enabled ?? false),
         otp_code: otpCode.trim() || undefined,
       })
       setConfirmOpen(false)
@@ -139,7 +137,9 @@ export function PhonePanel() {
     <>
       <Spin spinning={loading}>
         {forceBindPhone ? (
-          <Typography.Paragraph type="warning">请先绑定手机号后才能继续使用系统。</Typography.Paragraph>
+          <Typography.Paragraph type="warning">
+            请先绑定手机号后才能继续使用系统。
+          </Typography.Paragraph>
         ) : null}
         <Form
           form={form}
@@ -178,7 +178,11 @@ export function PhonePanel() {
                 placeholder="请输入验证码"
                 onChange={(e) => setOtpCode(e.target.value)}
               />
-              <Button loading={sendingCode} disabled={otpCooldown > 0} onClick={() => void sendBindCode()}>
+              <Button
+                loading={sendingCode}
+                disabled={otpCooldown > 0}
+                onClick={() => void sendBindCode()}
+              >
                 {otpCooldown > 0 ? `${otpCooldown}s` : '发送验证码'}
               </Button>
             </Space.Compact>

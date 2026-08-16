@@ -50,9 +50,9 @@ export function AuthLoginForm() {
     allow_phone: true,
     allow_otp: true,
   })
-  const [oauthProviders, setOauthProviders] = useState<
-    Array<{ provider: string; label: string }>
-  >([])
+  const [oauthProviders, setOauthProviders] = useState<Array<{ provider: string; label: string }>>(
+    [],
+  )
   const [oauthLoading, setOauthLoading] = useState<string | null>(null)
   const captchaRef = useRef<CaptchaInputHandle>(null)
   const captchaId = Form.useWatch('captcha_id', form) || ''
@@ -128,7 +128,7 @@ export function AuthLoginForm() {
         message.error('无法发起三方登录')
         return
       }
-      window.location.href = String(url)
+      window.location.assign(String(url))
     } catch {
       // 全局错误提示
     } finally {
@@ -197,15 +197,22 @@ export function AuthLoginForm() {
         password = encrypted.values.password || ''
         passwordKeyId = encrypted.password_key_id
       }
-      const next = await login(identity, password, redirect || undefined, values.remember, resolvedActiveType, {
-        password_key_id: passwordKeyId,
-        captcha_id: values.captcha_id,
-        captcha_value: values.captcha_value,
-        login_mode: resolvedLoginMode,
-        ...(resolvedLoginMode === 'OTP' && values.otp_code?.trim()
-          ? { otp_code: values.otp_code.trim() }
-          : {}),
-      })
+      const next = await login(
+        identity,
+        password,
+        redirect || undefined,
+        values.remember,
+        resolvedActiveType,
+        {
+          password_key_id: passwordKeyId,
+          captcha_id: values.captcha_id,
+          captcha_value: values.captcha_value,
+          login_mode: resolvedLoginMode,
+          ...(resolvedLoginMode === 'OTP' && values.otp_code?.trim()
+            ? { otp_code: values.otp_code.trim() }
+            : {}),
+        },
+      )
       message.success('登录成功')
       navigate(next)
     } catch {

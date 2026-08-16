@@ -60,8 +60,8 @@ from app.modules.iam.account.schema import (
 )
 from app.modules.iam.enums import AccountIdentityType
 from app.modules.sys.audit.service import OperationAuditService
-from app.modules.user.portal.repository import ProfileUserPortalRepository
-from app.modules.user.portal.schema import ProfileUserPortalUpsertPayload
+from app.modules.profile.portal.repository import ProfileUserPortalRepository
+from app.modules.profile.portal.schema import ProfileUserPortalUpsertPayload
 
 # 各账户类型对应的密码重置链接模板配置键。
 _PASSWORD_RESET_URL_KEYS = {

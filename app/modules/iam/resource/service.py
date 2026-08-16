@@ -41,7 +41,7 @@ from app.modules.iam.resource.schema import (
     SysResourceSchema,
 )
 from app.modules.iam.schema import PermissionRegistryItem, ResourceGrantModuleOption
-from app.modules.user.utils.profile import enrich_audit_names
+from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class ResourceService:

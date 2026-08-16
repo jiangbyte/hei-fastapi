@@ -30,7 +30,11 @@
   background:
     radial-gradient(ellipse 90% 55% at 12% -5%, var(--auth-ocean-2), transparent 58%),
     radial-gradient(ellipse 70% 45% at 100% 108%, var(--auth-ocean-1), transparent 55%),
-    linear-gradient(180deg, var(--auth-bg) 0%, color-mix(in srgb, var(--auth-primary) 4%, var(--auth-bg)) 100%);
+    linear-gradient(
+      180deg,
+      var(--auth-bg) 0%,
+      color-mix(in srgb, var(--auth-primary) 4%, var(--auth-bg)) 100%
+    );
   color: var(--auth-text);
   font-family: var(--auth-font-body);
 }
@@ -469,7 +473,10 @@ html.dark .portal-auth {
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .auth-oauth__icon:hover:not(:disabled) {

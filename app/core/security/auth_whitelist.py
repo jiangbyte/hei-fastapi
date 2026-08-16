@@ -76,8 +76,6 @@ BUILTIN_AUTH_WHITELIST: tuple[str, ...] = (
     *_builtin_client_auth_paths(),
     f"{api_version_glob_prefix()}/internal/health",
     f"{api_version_glob_prefix()}/internal/health/*",
-    f"{api_version_glob_prefix()}/files",
-    f"{api_version_glob_prefix()}/files/*",
     *_builtin_portal_public_paths(),
 )
 

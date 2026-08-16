@@ -29,8 +29,6 @@ export function OAuthCallbackPage() {
       const action = searchParams.get('oauth_action') || ''
       const rawMessage = searchParams.get('oauth_message')
       const oauthCode = searchParams.get('oauth_code')
-      // 兼容旧版 URL token（过渡期）
-      const legacyToken = searchParams.get('token')
       const redirect = searchParams.get('redirect')
 
       if (status !== 'ok') {
@@ -55,26 +53,20 @@ export function OAuthCallbackPage() {
         let forceBindEmail = false
         let forceBindPhone = false
 
-        if (oauthCode) {
-          const { data } = await oauthExchange({ code: oauthCode })
-          const token = data?.token
-          if (!token) {
-            throw new Error('兑换登录凭证失败')
-          }
-          clearToken()
-          clearAuthStorage()
-          setToken(String(token), true)
-          passwordExpired = wireBool(data?.password_expired ?? false)
-          forceBindEmail = wireBool(data?.force_bind_email ?? false)
-          forceBindPhone = wireBool(data?.force_bind_phone ?? false)
-        } else if (legacyToken) {
-          clearToken()
-          clearAuthStorage()
-          setToken(legacyToken, true)
-          passwordExpired = wireBool(searchParams.get('password_expired') ?? false)
-          forceBindEmail = wireBool(searchParams.get('force_bind_email') ?? false)
-          forceBindPhone = wireBool(searchParams.get('force_bind_phone') ?? false)
+        if (!oauthCode) {
+          throw new Error('缺少 oauth_code')
         }
+        const { data } = await oauthExchange({ code: oauthCode })
+        const token = data?.token
+        if (!token) {
+          throw new Error('兑换登录凭证失败')
+        }
+        clearToken()
+        clearAuthStorage()
+        setToken(String(token), true)
+        passwordExpired = wireBool(data?.password_expired ?? false)
+        forceBindEmail = wireBool(data?.force_bind_email ?? false)
+        forceBindPhone = wireBool(data?.force_bind_phone ?? false)
 
         if (action === 'bound') {
           await refreshUserInfo()
