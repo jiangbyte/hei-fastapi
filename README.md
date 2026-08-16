@@ -17,6 +17,14 @@ HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应
 - **前端**：`web/admin`（Vue 3 / Naive UI）· `web/portal`（React / Ant Design）· `web/admin-uniapp`（uni-app）
 - **数据约定**：对外 JSON 字段标量（含 boolean / 数字）统一按字符串收发
 
+## 姊妹项目
+
+| 项目 | 说明 | 协议 |
+| :--- | :--- | :--- |
+| [**hei-boot**](https://github.com/jiangbyte/hei-boot) | Spring Boot 工程化脚手架 | Apache License 2.0 |
+| [**hei-gin**](https://github.com/jiangbyte/hei-gin) | Go 轻量级后端框架 | Apache License 2.0 |
+| [**hei-fastapi**](https://github.com/jiangbyte/hei-fastapi) | FastAPI 原型项目（早期阶段，仅供参考） | Apache License 2.0 |
+
 ## 功能特性
 
 **认证与账号（`app/modules/auth`）**
