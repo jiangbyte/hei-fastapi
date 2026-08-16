@@ -360,4 +360,4 @@ pnpm dev && pnpm build && pnpm lint
 
 ## 许可证
 
-本项目使用 [Apache License 2.0](LICENSE) 开源协议。
+本项目使用 [Apache License 2.0](LICENSE) 开源协议，版权归属声明见 [NOTICE](NOTICE)。
