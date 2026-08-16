@@ -8,7 +8,7 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supported-4169E1?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Supported-DC382D?logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?logo=docker&logoColor=white)
-![License](https://img.shields.io/badge/License-Apache%202.0-C85119)
+![License](https://img.shields.io/badge/License-Apache_2.0-blue)
 ![Version](https://img.shields.io/badge/Version-1.0.0--beta-4B0082?logo=git&logoColor=white)
 
 HEI FastAPI 是一个 FastAPI 异步一体化应用脚手架：**一个后端应用同时提供管理端（Admin）与门户（Portal）两套 API**，配合同仓维护的三个前端工程，覆盖账号认证、组织权限（RBAC）、系统管理、消息反馈与运营工作台等常用能力，开箱即用、可按需裁剪。功能与 [hei-boot](https://github.com/jiangbyte/hei-boot)（Spring Boot）保持 API 契约对齐。
@@ -366,6 +366,6 @@ python -m pytest
 pnpm dev && pnpm build && pnpm lint
 ```
 
-## 许可证
+## 开源协议
 
-本项目使用 [Apache License 2.0](LICENSE) 开源协议，版权归属声明见 [NOTICE](NOTICE)。
+本项目使用 [Apache License 2.0](LICENSE) 开源协议，三个姊妹项目（hei-boot / hei-gin / hei-fastapi）协议一致。完整条款见 [LICENSE](LICENSE)，版权归属声明见 [NOTICE](NOTICE)。
