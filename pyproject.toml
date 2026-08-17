@@ -59,6 +59,7 @@ dev = [
   "aiomysql>=0.2.0",
   "asyncpg>=0.30.0",
   "bandit>=1.8.0",
+  "jsonschema>=4.23.0",
   "mypy>=1.16.0",
   "pip-audit>=2.8.0",
   "pytest>=8.4.0",
