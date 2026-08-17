@@ -2,8 +2,6 @@
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
-
 from app.core.response.schema import ApiResponse
 from app.core.schema.base import ApiSchema, to_schema
 from app.core.schema.datetime import format_utc_iso8601
@@ -20,9 +18,11 @@ def test_schema_normalizes_datetime_to_utc():
     assert format_utc_iso8601(schema.created_at).endswith("Z")
 
 
-def test_schema_rejects_naive_datetime():
-    with pytest.raises(ValueError):
-        SampleSchema(created_at=datetime(2026, 6, 17, 12, 0, 0))
+def test_schema_accepts_naive_datetime_as_utc():
+    """API 入参 / MySQL ORM 的 naive datetime 统一视为 UTC（不拒绝）。"""
+    schema = SampleSchema(created_at=datetime(2026, 6, 17, 12, 0, 0))
+    assert schema.created_at.tzinfo is UTC
+    assert format_utc_iso8601(schema.created_at) == "2026-06-17T12:00:00.000Z"
 
 
 class SampleOrm:

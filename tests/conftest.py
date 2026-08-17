@@ -265,8 +265,14 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
     monkeypatch.setattr(health_router, "get_session_factory", lambda: session_factory)
 
     async def override_get_db_session() -> AsyncIterator[AsyncSession]:
+        # 与生产 get_db_session 一致：成功提交，否则外层 autobegin + savepoint 写入会回滚。
         async with session_factory() as session:
-            yield session
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
 
     app.dependency_overrides[get_db_session] = override_get_db_session
     async with AsyncClient(

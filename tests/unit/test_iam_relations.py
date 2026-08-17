@@ -34,7 +34,7 @@ async def _create_role(db_session, payload: RoleCreateRequest) -> str:
     await RoleService(db_session).create(payload)
     stmt = select(SysRole.id).where(SysRole.code == payload.code)
     role_id = (await db_session.execute(stmt)).scalar_one()
-    await db_session.rollback()
+    await db_session.commit()
     return role_id
 
 
@@ -42,7 +42,7 @@ async def _create_resource(db_session, payload: ResourceCreateRequest) -> str:
     await ResourceService(db_session).create(payload)
     stmt = select(SysResource.id).where(SysResource.code == payload.code)
     resource_id = (await db_session.execute(stmt)).scalar_one()
-    await db_session.rollback()
+    await db_session.commit()
     return resource_id
 
 
@@ -50,7 +50,7 @@ async def _create_group(db_session, payload: GroupCreateRequest) -> str:
     await GroupService(db_session).create(payload)
     stmt = select(SysGroup.id).where(SysGroup.name == payload.name)
     group_id = (await db_session.execute(stmt)).scalar_one()
-    await db_session.rollback()
+    await db_session.commit()
     return group_id
 
 
