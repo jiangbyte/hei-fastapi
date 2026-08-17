@@ -14,7 +14,6 @@ os.environ.setdefault("SWAGGER__ENABLED", "true")
 from app.factory import create_app  # noqa: E402
 from scripts.e2e.contract import has_json_200, iter_operations  # noqa: E402
 
-
 _BINARY_SUFFIXES = ("/download",)
 
 
