@@ -295,6 +295,7 @@ class ResourceRepository:
         relation = self.relations.resource_permission(**data)
         self.db.add(relation)
         await self.db.flush()
+        await self.db.refresh(relation)
         return relation
 
     async def replace_resource_permission(
@@ -315,6 +316,7 @@ class ResourceRepository:
         relation = self.relations.resource_permission(**data)
         self.db.add(relation)
         await self.db.flush()
+        await self.db.refresh(relation)
         return relation
 
     async def delete_button(self, button_id: str) -> None:

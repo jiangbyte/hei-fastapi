@@ -104,7 +104,7 @@ class FileService:
                         url=object_name,
                     )
                 )
-                return self._with_resolved_url(to_schema(SysFileSchema, entity))
+            return self._with_resolved_url(to_schema(SysFileSchema, entity))
         except Exception:
             # 补偿：元数据提交失败时避免孤立对象。
             try:

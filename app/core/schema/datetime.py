@@ -28,9 +28,13 @@ def format_utc_iso8601(value: datetime) -> str:
 
 
 def normalize_orm_datetimes(item: object) -> None:
-    """将 ORM 对象中数据库驱动返回的 naive datetime 视为 UTC。"""
-    values = getattr(item, "__dict__", {})
-    for field_name, value in values.items():
+    """将 ORM 对象中已加载的 naive datetime 视为 UTC（不触发惰性加载）。"""
+    values = getattr(item, "__dict__", None)
+    if not isinstance(values, dict):
+        return
+    for field_name, value in list(values.items()):
+        if field_name.startswith("_"):
+            continue
         if isinstance(value, datetime) and (value.tzinfo is None or value.utcoffset() is None):
             setattr(item, field_name, value.replace(tzinfo=UTC))
 

@@ -5,10 +5,15 @@ ORM 通用混入：为模型提供审计时间戳与数据范围部门归属字�
 TimestampMixin 的审计人由 audit 钩子自动注入，OwnerDeptMixin 供数据范围过滤复用。
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.orm import Mapped, mapped_column
+
+
+def _utc_now() -> datetime:
+    """客户端默认时间戳，避免仅依赖 server_default 时异步会话惰性加载 MissingGreenlet。"""
+    return datetime.now(UTC)
 
 
 class TimestampMixin:
@@ -16,6 +21,7 @@ class TimestampMixin:
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=_utc_now,
         server_default=func.now(),
         nullable=False,
         comment="创建时间",
@@ -23,8 +29,9 @@ class TimestampMixin:
     created_by: Mapped[str | None] = mapped_column(String(64), nullable=True, comment="创建人")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=_utc_now,
+        onupdate=_utc_now,
         server_default=func.now(),
-        onupdate=func.now(),
         nullable=False,
         comment="更新时间",
     )

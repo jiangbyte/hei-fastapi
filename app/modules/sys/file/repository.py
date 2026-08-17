@@ -25,6 +25,8 @@ class FileRepository:
         entity = SysFile(**payload.model_dump())
         self.db.add(entity)
         await self.db.flush()
+        # 显式 refresh：避免仅 server_default 时异步惰性加载 MissingGreenlet
+        await self.db.refresh(entity)
         return entity
 
     async def get_by_object_name(self, object_name: str) -> SysFile | None:
