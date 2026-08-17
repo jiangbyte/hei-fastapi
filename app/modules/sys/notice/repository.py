@@ -5,11 +5,12 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Select, String, and_, cast, delete, exists, func, or_, select, update
+from sqlalchemy import Select, and_, delete, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import ColumnElement
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like, json_array_contains, json_array_length
 from app.core.exceptions.business import NotFoundError
 from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.sys.notice.enums import NoticeKind, NoticeStatus, TargetScope
@@ -32,9 +33,9 @@ _SERVER_FIELDS = {
 
 def _visible_to_account(account_type: str, account_id: str | None = None) -> ColumnElement[bool]:
     """构造「对指定账户可见」的过滤条件（按类型匹配或按 ID 精确匹配）。"""
-    type_match = (func.json_array_length(SysNotice.target_account_types) == 0) | cast(
-        SysNotice.target_account_types, String
-    ).contains('"' + account_type + '"')
+    type_match = (json_array_length(SysNotice.target_account_types) == 0) | json_array_contains(
+        SysNotice.target_account_types, account_type
+    )
     clauses: list[ColumnElement[bool]] = [
         and_(
             SysNotice.target_scope.in_([TargetScope.ALL.value, TargetScope.ACCOUNT_TYPE.value]),
@@ -45,7 +46,7 @@ def _visible_to_account(account_type: str, account_id: str | None = None) -> Col
         clauses.append(
             and_(
                 SysNotice.target_scope == TargetScope.SPECIFIC.value,
-                cast(SysNotice.target_account_ids, String).contains('"' + account_id + '"'),
+                json_array_contains(SysNotice.target_account_ids, account_id),
             )
         )
     return or_(*clauses)
@@ -176,7 +177,7 @@ class SysNoticeRepository:
         count_stmt = select(func.count(SysNotice.id))
         filters = []
         if query.title:
-            filters.append(SysNotice.title.ilike(f"%{query.title}%"))
+            filters.append(ci_like(SysNotice.title, f"%{query.title}%"))
         if query.status is not None:
             filters.append(SysNotice.status == query.status)
         if query.kind:

@@ -8,6 +8,7 @@ from datetime import datetime
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.sys.job.model import SysJob, SysJobLog
 from app.modules.sys.job.schema import JobAdminPageQuery, JobCreateRequest, JobLogAdminPageQuery
@@ -59,7 +60,7 @@ class JobRepository:
         count_stmt = select(func.count(SysJob.id))
         filters = []
         if query.job_name:
-            filters.append(SysJob.job_name.ilike(f"%{query.job_name}%"))
+            filters.append(ci_like(SysJob.job_name, f"%{query.job_name}%"))
         if query.execute_type:
             filters.append(SysJob.execute_type == str(query.execute_type))
         if query.enabled is not None:

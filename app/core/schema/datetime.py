@@ -8,9 +8,13 @@ from typing import Any, get_args, get_origin
 
 
 def ensure_utc_datetime(value: datetime) -> datetime:
-    """将任意带时区的时间统一转换为 UTC，禁止无时区时间直接入模。"""
+    """将时间统一转换为 UTC。
+
+    MySQL 等驱动对 ``DateTime(timezone=True)`` 常返回 naive datetime，
+    与 ORM 侧 ``normalize_orm_datetimes`` 一致，视为 UTC。
+    """
     if value.tzinfo is None or value.utcoffset() is None:
-        raise ValueError("datetime values must include timezone information")
+        return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
 
 

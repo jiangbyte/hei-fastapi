@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 import uuid
@@ -160,6 +161,11 @@ class RateLimitMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """匹配限流规则并在超限时返回 429。"""
         if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # e2e 全路由扫描会短时间打满通用 API 限额；仅测试进程开启。
+        if os.environ.get("E2E_DISABLE_RATE_LIMIT") == "1":
             await self.app(scope, receive, send)
             return
 

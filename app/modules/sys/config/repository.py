@@ -7,6 +7,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like
 from app.core.db.models.sys_config import SysConfig
 from app.core.exceptions.business import ConflictError, NotFoundError
 from app.core.id_generator.snowflake import generate_snowflake_id
@@ -149,7 +150,7 @@ class ConfigRepository:
         count_stmt = select(func.count(SysConfig.id))
         filters = []
         if query.config_key:
-            filters.append(SysConfig.config_key.ilike(f"%{query.config_key}%"))
+            filters.append(ci_like(SysConfig.config_key, f"%{query.config_key}%"))
         if query.category:
             filters.append(SysConfig.category == query.category)
         if filters:

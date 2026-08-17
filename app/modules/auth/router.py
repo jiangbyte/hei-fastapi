@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.enums import AccountType
 from app.core.exceptions.business import BusinessError
 from app.core.network.client_ip import get_client_ip
-from app.core.response.schema import success
+from app.core.response.schema import ApiResponse, success
 from app.core.security.session import SessionPayload
 from app.core.security.session_token import (
     clear_session_cookie,
@@ -218,13 +218,13 @@ async def auth_refresh(
     return success(await AuthService(db).refresh_session(session.token, account_type))
 
 
-@admin_router.post("/v1/admin/send-login-code")
-@portal_router.post("/v1/portal/send-login-code")
+@admin_router.post("/v1/admin/send-login-code", response_model=ApiResponse[None])
+@portal_router.post("/v1/portal/send-login-code", response_model=ApiResponse[None])
 async def send_login_code(
     payload: SendLoginCodeRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-):
+) -> ApiResponse[None]:
     """发送邮箱/短信登录验证码。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     path = request.url.path
@@ -238,11 +238,11 @@ async def send_login_code(
     return success()
 
 
-@portal_router.post("/v1/portal/register/send-code")
+@portal_router.post("/v1/portal/register/send-code", response_model=ApiResponse[None])
 async def portal_register_send_code(
     payload: SendRegisterCodeRequest,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-):
+) -> ApiResponse[None]:
     """发送门户注册通道（邮箱/手机）验证码。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     await AuthService(db).send_register_code(
@@ -269,12 +269,12 @@ async def portal_register(
     )
 
 
-@admin_router.post("/v1/admin/forgot-password")
+@admin_router.post("/v1/admin/forgot-password", response_model=ApiResponse[None])
 async def admin_forgot_password(
     payload: ForgotPasswordRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-):
+) -> ApiResponse[None]:
     """管理端忘记密码，发送重置邮件。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     await AuthService(db).forgot_password(
@@ -286,12 +286,12 @@ async def admin_forgot_password(
     return success()
 
 
-@admin_router.post("/v1/admin/reset-password")
+@admin_router.post("/v1/admin/reset-password", response_model=ApiResponse[None])
 async def admin_reset_password(
     payload: ResetPasswordRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-):
+) -> ApiResponse[None]:
     """管理端重置密码端点。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     password = await decrypt_password(payload.password_key_id, payload.password)
@@ -304,12 +304,12 @@ async def admin_reset_password(
     return success()
 
 
-@portal_router.post("/v1/portal/forgot-password")
+@portal_router.post("/v1/portal/forgot-password", response_model=ApiResponse[None])
 async def portal_forgot_password(
     payload: ForgotPasswordRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-):
+) -> ApiResponse[None]:
     """门户端忘记密码，发送重置邮件。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     await AuthService(db).forgot_password(
@@ -321,12 +321,12 @@ async def portal_forgot_password(
     return success()
 
 
-@portal_router.post("/v1/portal/reset-password")
+@portal_router.post("/v1/portal/reset-password", response_model=ApiResponse[None])
 async def portal_reset_password(
     payload: ResetPasswordRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db_session)],
-):
+) -> ApiResponse[None]:
     """门户端重置密码端点。"""
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     password = await decrypt_password(payload.password_key_id, payload.password)

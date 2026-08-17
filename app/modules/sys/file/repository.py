@@ -7,6 +7,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.schema import FileAdminPageQuery, FileRecordCreate, FileUpdateRequest
@@ -77,13 +78,13 @@ class FileRepository:
         count_stmt = select(func.count(SysFile.id))
         filters = []
         if query.original_name:
-            filters.append(SysFile.original_name.ilike(f"%{query.original_name}%"))
+            filters.append(ci_like(SysFile.original_name, f"%{query.original_name}%"))
         if query.object_name:
-            filters.append(SysFile.object_name.ilike(f"%{query.object_name}%"))
+            filters.append(ci_like(SysFile.object_name, f"%{query.object_name}%"))
         if query.storage_provider:
             filters.append(SysFile.storage_provider == query.storage_provider)
         if query.content_type:
-            filters.append(SysFile.content_type.ilike(f"%{query.content_type}%"))
+            filters.append(ci_like(SysFile.content_type, f"%{query.content_type}%"))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:

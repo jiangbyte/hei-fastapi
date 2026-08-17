@@ -1,9 +1,12 @@
 # 数据库迁移
 
-Alembic 版本目录，只管理**表结构**增量变更。演示库全量重建请使用 [`scripts/db.sql`](../scripts/db.sql)。
+Alembic 版本目录，只管理**表结构**增量变更。
+
+- **PostgreSQL 演示全量**（含种子）：[`scripts/db.sql`](../scripts/db.sql)
+- **MySQL / 可移植建表**：对本空库执行 `alembic upgrade head`（种子数据需另行导入或走业务初始化）
 
 ```bash
-# 在项目根目录执行
+# 在项目根目录执行；DB__URL 支持 postgresql+asyncpg / mysql+aiomysql（或 asyncmy）
 alembic upgrade head
 alembic revision --autogenerate -m "describe schema change"
 alembic check

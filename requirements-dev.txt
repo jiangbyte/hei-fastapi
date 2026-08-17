@@ -1,6 +1,6 @@
-# 开发/测试依赖
+# 开发依赖 = 运行时 + 测试 / 静态检查（与 pyproject.toml [project.optional-dependencies].dev 对齐）
 -r requirements.txt
-aiosqlite>=0.21.0
+aiomysql>=0.2.0
 bandit>=1.8.0
 mypy>=1.16.0
 pip-audit>=2.8.0

@@ -2704,12 +2704,6 @@ CREATE INDEX "idx_sys_notice_status_pinned_publish" ON "public"."sys_notice" USI
   "is_pinned" "pg_catalog"."bool_ops" ASC NULLS LAST,
   "publish_at" "pg_catalog"."timestamptz_ops" DESC NULLS FIRST
 );
-CREATE INDEX "idx_sys_notice_target_account_ids_gin" ON "public"."sys_notice" USING gin (
-  (target_account_ids::jsonb) "pg_catalog"."jsonb_ops"
-);
-CREATE INDEX "idx_sys_notice_target_account_types_gin" ON "public"."sys_notice" USING gin (
-  (target_account_types::jsonb) "pg_catalog"."jsonb_ops"
-);
 
 -- ----------------------------
 -- Primary Key structure for table sys_notice

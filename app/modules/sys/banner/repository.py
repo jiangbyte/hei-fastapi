@@ -5,10 +5,11 @@
 
 from datetime import datetime
 
-from sqlalchemy import Select, String, case, cast, delete, func, or_, select, update
+from sqlalchemy import Select, case, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StatusEnum
+from app.core.db.compat import json_array_contains
 from app.core.exceptions.business import NotFoundError
 from app.modules.sys.banner.model import SysBanner
 from app.modules.sys.banner.schema import (
@@ -17,11 +18,6 @@ from app.modules.sys.banner.schema import (
     BannerPublicListQuery,
     BannerUpdateRequest,
 )
-
-
-def _json_array_contains(column, value: str):
-    """跨方言粗匹配：JSON 数组序列化后包含 "VALUE"。"""
-    return cast(column, String).contains(f'"{value}"')
 
 
 class BannerRepository:
@@ -70,7 +66,7 @@ class BannerRepository:
         filters = []
         if query.target_account_type:
             filters.append(
-                _json_array_contains(
+                json_array_contains(
                     SysBanner.target_account_types,
                     str(query.target_account_type),
                 )
@@ -104,7 +100,7 @@ class BannerRepository:
     ) -> list[SysBanner]:
         """查询指定账户类型可见且处于展示期内的展示图列表。"""
         stmt = select(SysBanner).where(
-            _json_array_contains(SysBanner.target_account_types, account_type.value),
+            json_array_contains(SysBanner.target_account_types, account_type.value),
             SysBanner.status == StatusEnum.ENABLED.value,
             SysBanner.position == str(query.position),
             or_(SysBanner.start_at.is_(None), SysBanner.start_at <= now),
@@ -127,7 +123,7 @@ class BannerRepository:
         """判断指定展示图对目标账户类型是否当前可见。"""
         stmt = select(SysBanner.id).where(
             SysBanner.id == banner_id,
-            _json_array_contains(SysBanner.target_account_types, account_type.value),
+            json_array_contains(SysBanner.target_account_types, account_type.value),
             SysBanner.status == StatusEnum.ENABLED.value,
             or_(SysBanner.start_at.is_(None), SysBanner.start_at <= now),
             or_(SysBanner.end_at.is_(None), SysBanner.end_at >= now),

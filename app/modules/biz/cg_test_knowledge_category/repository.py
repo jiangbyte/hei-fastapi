@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_knowledge_category.model import (
     CgTestKnowledgeCategory,
@@ -76,9 +77,9 @@ class CgTestKnowledgeCategoryRepository:
         count_stmt = select(func.count(CgTestKnowledgeCategory.id))
         filters = []
         if query.code:
-            filters.append(CgTestKnowledgeCategory.code.ilike(f"%{query.code}%"))
+            filters.append(ci_like(CgTestKnowledgeCategory.code, f"%{query.code}%"))
         if query.name:
-            filters.append(CgTestKnowledgeCategory.name.ilike(f"%{query.name}%"))
+            filters.append(ci_like(CgTestKnowledgeCategory.name, f"%{query.name}%"))
         if query.status is not None:
             filters.append(CgTestKnowledgeCategory.status == query.status)
         if data_scope_filter is not None:
@@ -109,7 +110,7 @@ class CgTestKnowledgeCategoryRepository:
         stmt = select(CgTestKnowledgeCategory).order_by(CgTestKnowledgeCategory.id.asc())
         filters = []
         if keyword:
-            filters.append(CgTestKnowledgeCategory.name.ilike(f"%{keyword}%"))
+            filters.append(ci_like(CgTestKnowledgeCategory.name, f"%{keyword}%"))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:
@@ -160,11 +161,11 @@ class CgTestKnowledgeDocRepository:
         if query.category_id:
             filters.append(CgTestKnowledgeDoc.category_id == query.category_id)
         if query.code:
-            filters.append(CgTestKnowledgeDoc.code.ilike(f"%{query.code}%"))
+            filters.append(ci_like(CgTestKnowledgeDoc.code, f"%{query.code}%"))
         if query.title:
-            filters.append(CgTestKnowledgeDoc.title.ilike(f"%{query.title}%"))
+            filters.append(ci_like(CgTestKnowledgeDoc.title, f"%{query.title}%"))
         if query.type:
-            filters.append(CgTestKnowledgeDoc.type.ilike(f"%{query.type}%"))
+            filters.append(ci_like(CgTestKnowledgeDoc.type, f"%{query.type}%"))
         if query.status is not None:
             filters.append(CgTestKnowledgeDoc.status == query.status)
         if filters:

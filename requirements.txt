@@ -1,5 +1,5 @@
 # 运行时依赖（与 pyproject.toml [project.dependencies] 保持一致）
-# 默认 PostgreSQL：asyncpg；可选 MySQL/SQLite 驱动见 README。
+# 默认 PostgreSQL：asyncpg。MySQL 另装：pip install -e ".[mysql]"（aiomysql/asyncmy），见 README。
 alembic>=1.16.0
 alibabacloud-dm20151123>=1.0.0
 alibabacloud-dysmsapi20170525>=1.0.0

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_catalog.model import (
     CgTestCatalog,
@@ -72,11 +73,11 @@ class CgTestCatalogRepository:
         count_stmt = select(func.count(CgTestCatalog.id))
         filters = []
         if query.code:
-            filters.append(CgTestCatalog.code.ilike(f"%{query.code}%"))
+            filters.append(ci_like(CgTestCatalog.code, f"%{query.code}%"))
         if query.name:
-            filters.append(CgTestCatalog.name.ilike(f"%{query.name}%"))
+            filters.append(ci_like(CgTestCatalog.name, f"%{query.name}%"))
         if query.category:
-            filters.append(CgTestCatalog.category.ilike(f"%{query.category}%"))
+            filters.append(ci_like(CgTestCatalog.category, f"%{query.category}%"))
         if query.status is not None:
             filters.append(CgTestCatalog.status == query.status)
         if data_scope_filter is not None:
@@ -109,7 +110,7 @@ class CgTestCatalogRepository:
         stmt = select(CgTestCatalog).order_by(CgTestCatalog.id.asc())
         filters = []
         if keyword:
-            filters.append(CgTestCatalog.name.ilike(f"%{keyword}%"))
+            filters.append(ci_like(CgTestCatalog.name, f"%{keyword}%"))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:

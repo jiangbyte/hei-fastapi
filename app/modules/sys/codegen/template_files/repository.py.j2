@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from {{ ctx.module_import }}.model import (
     {{ main.entity_name }},
@@ -97,7 +98,7 @@ class {{ main.entity_name }}Repository:
             filters.append({{ main.entity_name }}.{{ field.name }} == query.{{ field.name }})
 {% else %}
         if query.{{ field.name }}:
-            filters.append({{ main.entity_name }}.{{ field.name }}.ilike(f"%{query.{{ field.name }}}%"))
+            filters.append(ci_like({{ main.entity_name }}.{{ field.name }}, f"%{query.{{ field.name }}}%"))
 {% endif %}
 {% endfor %}
         if data_scope_filter is not None:
@@ -129,7 +130,7 @@ class {{ main.entity_name }}Repository:
         stmt = select({{ main.entity_name }}).order_by({{ main.entity_name }}.{{ main.pk_name }}.asc())
         filters = []
         if keyword:
-            filters.append({{ main.entity_name }}.{{ plan.tree_label_field }}.ilike(f"%{keyword}%"))
+            filters.append(ci_like({{ main.entity_name }}.{{ plan.tree_label_field }}, f"%{keyword}%"))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:
@@ -187,7 +188,7 @@ class {{ sub.entity_name }}Repository:
             filters.append({{ sub.entity_name }}.{{ field.name }} == query.{{ field.name }})
 {% else %}
         if query.{{ field.name }}:
-            filters.append({{ sub.entity_name }}.{{ field.name }}.ilike(f"%{query.{{ field.name }}}%"))
+            filters.append(ci_like({{ sub.entity_name }}.{{ field.name }}, f"%{query.{{ field.name }}}%"))
 {% endif %}
 {% endfor %}
         if filters:

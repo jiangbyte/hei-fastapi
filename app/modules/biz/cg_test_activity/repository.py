@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_activity.model import (
     CgTestActivity,
@@ -72,13 +73,13 @@ class CgTestActivityRepository:
         count_stmt = select(func.count(CgTestActivity.id))
         filters = []
         if query.code:
-            filters.append(CgTestActivity.code.ilike(f"%{query.code}%"))
+            filters.append(ci_like(CgTestActivity.code, f"%{query.code}%"))
         if query.name:
-            filters.append(CgTestActivity.name.ilike(f"%{query.name}%"))
+            filters.append(ci_like(CgTestActivity.name, f"%{query.name}%"))
         if query.category:
-            filters.append(CgTestActivity.category.ilike(f"%{query.category}%"))
+            filters.append(ci_like(CgTestActivity.category, f"%{query.category}%"))
         if query.type:
-            filters.append(CgTestActivity.type.ilike(f"%{query.type}%"))
+            filters.append(ci_like(CgTestActivity.type, f"%{query.type}%"))
         if query.status is not None:
             filters.append(CgTestActivity.status == query.status)
         if data_scope_filter is not None:

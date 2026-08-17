@@ -1,0 +1,57 @@
+{
+  "elapsed_seconds": 111.8,
+  "rounds": [
+    {
+      "dialect": "mysql",
+      "e2e_exit": 0,
+      "report": "E:\\projects\\mine\\hei\\hei-fastapi\\scripts\\e2e\\report-mysql.json",
+      "admin_login_ok": true,
+      "portal_login_ok": true,
+      "fail_5xx": 0,
+      "hard_fail": 0,
+      "out_pass": 110,
+      "out_total": 110,
+      "in_pass": 120,
+      "in_total": 120,
+      "crud_pass": 9,
+      "crud_total": 9,
+      "contract": {
+        "ops_total": 274,
+        "out_pass": 110,
+        "out_fail": 0,
+        "in_pass": 120,
+        "in_fail": 0,
+        "skipped": 40,
+        "fail_5xx": 0,
+        "sql_suspect": 0
+      },
+      "schema_fails": 0
+    },
+    {
+      "dialect": "postgresql",
+      "e2e_exit": 0,
+      "report": "E:\\projects\\mine\\hei\\hei-fastapi\\scripts\\e2e\\report-postgresql.json",
+      "admin_login_ok": true,
+      "portal_login_ok": true,
+      "fail_5xx": 0,
+      "hard_fail": 0,
+      "out_pass": 110,
+      "out_total": 110,
+      "in_pass": 120,
+      "in_total": 120,
+      "crud_pass": 9,
+      "crud_total": 9,
+      "contract": {
+        "ops_total": 274,
+        "out_pass": 110,
+        "out_fail": 0,
+        "in_pass": 120,
+        "in_fail": 0,
+        "skipped": 40,
+        "fail_5xx": 0,
+        "sql_suspect": 0
+      },
+      "schema_fails": 0
+    }
+  ]
+}

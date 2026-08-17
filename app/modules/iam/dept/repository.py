@@ -10,6 +10,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.db.compat import like_contains
 from app.core.exceptions.business import NotFoundError
 from app.modules.iam.dept.model import SysDept
 from app.modules.iam.dept.schema import DeptAdminPageQuery, DeptCreateRequest, DeptUpdateRequest
@@ -106,7 +107,7 @@ class DeptRepository:
         count_stmt = select(func.count(SysDept.id))
         filters = []
         if query.name:
-            filters.append(SysDept.name.contains(query.name))
+            filters.append(like_contains(SysDept.name, query.name))
         if query.category:
             filters.append(SysDept.category == query.category)
         if query.parent_id:

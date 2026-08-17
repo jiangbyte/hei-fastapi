@@ -9,6 +9,7 @@ from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions.business import ConflictError, NotFoundError
+from app.core.db.compat import like_contains
 from app.modules.sys.dict.model import SysDict
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
@@ -91,7 +92,7 @@ class DictRepository:
         count_stmt = select(func.count(SysDict.id))
         filters = []
         if query.code:
-            filters.append(SysDict.code.like(f"%{query.code}%"))
+            filters.append(like_contains(SysDict.code, query.code))
         if query.category:
             filters.append(SysDict.category == query.category)
         if query.parent_id:

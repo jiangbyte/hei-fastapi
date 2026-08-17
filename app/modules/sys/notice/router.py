@@ -12,6 +12,7 @@ from app.core.config.enums import AccountType, account_type_url_segment
 from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
 from app.core.schema.base import IdQuery, IdsRequest
+from app.core.schema.wire import WireInt
 from app.core.security.session import SessionPayload
 from app.deps.auth import (
     get_current_session,
@@ -218,12 +219,12 @@ def register_current_user_routes(router: APIRouter, account_type: AccountType) -
     @router.get(
         f"{base}/unread-count",
         dependencies=deps,
-        response_model=ApiResponse[int],
+        response_model=ApiResponse[WireInt],
     )
     async def unread_count(
         db: Annotated[AsyncSession, Depends(get_db_session)],
         session: Annotated[SessionPayload, Depends(get_current_session)],
-    ) -> ApiResponse[int]:
+    ) -> ApiResponse[WireInt]:
         """当前用户未读消息数。"""
         return success(await SysNoticeService(db).count_unread(session))
 

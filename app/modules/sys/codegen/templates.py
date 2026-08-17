@@ -13,6 +13,8 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from app.core.config.settings import settings
+from app.core.db.compat import dialect_name_from_url
 from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.sys.codegen.model import SysCodegenField, SysCodegenPlan
 from app.modules.sys.codegen.schema import CodegenPreviewFile
@@ -210,6 +212,7 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
             menu_permission=menu_permission_context(has_tree)
             if template_name == "menu_permission.sql.j2"
             else None,
+            db_dialect=dialect_name_from_url(settings.db.url),
         ).rstrip()
         + "\n"
     )

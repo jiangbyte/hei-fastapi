@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.db.batch import chunked
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.biz.cg_test_order.model import (
     CgTestOrder,
@@ -76,11 +77,11 @@ class CgTestOrderRepository:
         count_stmt = select(func.count(CgTestOrder.id))
         filters = []
         if query.name:
-            filters.append(CgTestOrder.name.ilike(f"%{query.name}%"))
+            filters.append(ci_like(CgTestOrder.name, f"%{query.name}%"))
         if query.status is not None:
             filters.append(CgTestOrder.status == query.status)
         if query.type:
-            filters.append(CgTestOrder.type.ilike(f"%{query.type}%"))
+            filters.append(ci_like(CgTestOrder.type, f"%{query.type}%"))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:
@@ -135,9 +136,9 @@ class CgTestOrderItemRepository:
         if query.order_id:
             filters.append(CgTestOrderItem.order_id == query.order_id)
         if query.name:
-            filters.append(CgTestOrderItem.name.ilike(f"%{query.name}%"))
+            filters.append(ci_like(CgTestOrderItem.name, f"%{query.name}%"))
         if query.category:
-            filters.append(CgTestOrderItem.category.ilike(f"%{query.category}%"))
+            filters.append(ci_like(CgTestOrderItem.category, f"%{query.category}%"))
         if query.status is not None:
             filters.append(CgTestOrderItem.status == query.status)
         if filters:

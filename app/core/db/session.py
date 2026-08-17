@@ -2,7 +2,7 @@
 
 数据库会话：创建异步引擎与会话工厂，并提供获取与关闭的全局单例。
 
-连接池参数对 SQLite 跳过，可观测性开启时对引擎注入链路追踪。
+仅支持 PostgreSQL / MySQL；可观测性开启时对引擎注入链路追踪。
 """
 
 from sqlalchemy.ext.asyncio import (
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.config.settings import settings
+from app.core.db.compat import dialect_name_from_url
 from app.core.observability.tracing import init_tracing
 
 # 进程级全局异步引擎与会话工厂。
@@ -25,13 +26,16 @@ def init_engine() -> None:
     global engine, async_session_factory
     if engine is not None:
         return
-    engine_kwargs: dict[str, object] = {"echo": settings.db.echo}
-    if not settings.db.url.startswith("sqlite"):
-        engine_kwargs["pool_size"] = settings.db.pool_size
-        engine_kwargs["max_overflow"] = settings.db.max_overflow
-        engine_kwargs["pool_timeout"] = settings.db.pool_timeout_seconds
-        engine_kwargs["pool_recycle"] = settings.db.pool_recycle_seconds
-        engine_kwargs["pool_pre_ping"] = settings.db.pool_pre_ping
+    # 启动时校验 URL，拒绝 sqlite 等非支持方言。
+    dialect_name_from_url(settings.db.url)
+    engine_kwargs: dict[str, object] = {
+        "echo": settings.db.echo,
+        "pool_size": settings.db.pool_size,
+        "max_overflow": settings.db.max_overflow,
+        "pool_timeout": settings.db.pool_timeout_seconds,
+        "pool_recycle": settings.db.pool_recycle_seconds,
+        "pool_pre_ping": settings.db.pool_pre_ping,
+    }
     engine = create_async_engine(settings.db.url, **engine_kwargs)
     async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
     if settings.observability.enabled and settings.observability.db_observability_enabled:

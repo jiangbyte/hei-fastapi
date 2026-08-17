@@ -8,13 +8,34 @@ from collections.abc import AsyncIterator
 import pytest
 from fastapi import APIRouter
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import app.db_models  # noqa: F401 — 注册全部 ORM 元数据
 from app.core.config.settings import settings
 from app.core.db.base import Base
+from app.core.db.compat import dialect_name_from_url
 from app.core.db.session import close_engine
 from app.deps.db import get_db_session
 from app.factory import create_app
+
+
+def _test_db_url() -> str:
+    """测试库 URL：优先环境变量 DB__URL，默认本地 PostgreSQL。"""
+    url = (settings.db.url or "").strip()
+    dialect_name_from_url(url)
+    return url
+
+
+async def _prepare_schema(engine) -> None:
+    """重建测试表结构，保证用例隔离。"""
+    async with engine.begin() as conn:
+        if engine.dialect.name == "mysql":
+            await conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+        if engine.dialect.name == "mysql":
+            await conn.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
 class FakeRedis:
@@ -215,9 +236,8 @@ def event_loop():
 
 @pytest.fixture
 async def db_session() -> AsyncIterator[AsyncSession]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    engine = create_async_engine(_test_db_url())
+    await _prepare_schema(engine)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
         yield session
@@ -237,9 +257,8 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
         raise RuntimeError("test unhandled error")
 
     app.include_router(test_router)
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    engine = create_async_engine(_test_db_url())
+    await _prepare_schema(engine)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     from app.modules.internal.health import router as health_router
 

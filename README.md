@@ -4,6 +4,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.116%2B-009688?logo=fastapi&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2%20Async-D71F00?logo=sqlalchemy&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supported-4169E1?logo=postgresql&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-Supported-4479A1?logo=mysql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-Supported-DC382D?logo=redis&logoColor=white)
 ![Vue](https://img.shields.io/badge/Admin-Vue%203-4FC08D?logo=vuedotjs&logoColor=white)
 ![React](https://img.shields.io/badge/Portal-React-61DAFB?logo=react&logoColor=black)
@@ -170,7 +171,7 @@
 | 层级 | 技术 |
 | --- | --- |
 | 后端 | Python 3.11+ · FastAPI · uvicorn / gunicorn · Pydantic Settings |
-| 持久化 | PostgreSQL · SQLAlchemy 2（async）· Alembic · asyncpg |
+| 持久化 | PostgreSQL / MySQL · SQLAlchemy 2（async）· Alembic · asyncpg / aiomysql |
 | 缓存 / 会话 | Redis |
 | 文档 | OpenAPI（`/docs`、`/redoc`，默认关闭，见 `.env.example`） |
 | 其他 | boto3 / oss2 · croniter · cryptography · OpenTelemetry（可选） |
@@ -200,22 +201,39 @@ hei-fastapi
 ### 环境要求
 
 - Python **3.11+**、pip（推荐 conda / venv）
-- PostgreSQL、Redis
+- **PostgreSQL 或 MySQL**、Redis（通过 `DB__URL` 二选一，不支持 SQLite）
 - Node.js **22+**、pnpm **9+**（前端）
 
 ### 1. 初始化数据库
+
+**PostgreSQL（演示全量，含种子）：**
 
 ```bash
 createdb -U postgres -h 127.0.0.1 hei_fastapi
 psql -U postgres -h 127.0.0.1 -d hei_fastapi -f scripts/db.sql
 ```
 
-> 演示 / 本地环境以 [`scripts/db.sql`](scripts/db.sql) 全量重建库表与种子数据。已有库的增量变更使用 Alembic：`alembic upgrade head`。应用启动（`entrypoint.sh`）不执行迁移。
+**PostgreSQL / MySQL（可移植建表，推荐）：**
+
+```bash
+# PostgreSQL
+# DB__URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/hei_fastapi
+# pip install -e ".[postgres]"
+
+# MySQL（先建空库，字符集建议 utf8mb4）
+# DB__URL=mysql+aiomysql://root:password@127.0.0.1:3306/hei_fastapi
+# pip install -e ".[mysql]"
+
+alembic upgrade head
+```
+
+> `scripts/db.sql` 仅适用于 PostgreSQL 演示全量重建。MySQL 请用 Alembic。已有库的增量变更同样使用 `alembic upgrade head`。应用启动（`entrypoint.sh`）不执行迁移。
 
 ### 2. 启动后端
 
 ```bash
 pip install -r requirements-dev.txt
+# 或按方言：pip install -e ".[dev,postgres]" / pip install -e ".[dev,mysql]"
 cp .env.example .env
 # 按需修改 DB__URL / REDIS__URL / APP__CONFIG_CRYPTO_KEY / STORAGE__* 等
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
@@ -257,8 +275,8 @@ uni-app 端见 [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md)。
 | [`web/portal/README.md`](web/portal/README.md) | 门户前端说明与环境变量 |
 | [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md) | uni-app 端说明 |
 | [`.env.example`](.env.example) | 后端环境变量样例 |
-| [`scripts/db.sql`](scripts/db.sql) | 数据库结构与种子数据 |
-| [`migrations/README.md`](migrations/README.md) | Alembic 增量迁移说明 |
+| [`scripts/db.sql`](scripts/db.sql) | PostgreSQL 演示库结构与种子数据 |
+| [`migrations/README.md`](migrations/README.md) | Alembic 增量迁移（PG / MySQL） |
 | [`scripts/README.md`](scripts/README.md) | 脚本用法 |
 
 ## 姊妹项目

@@ -230,6 +230,6 @@ class CodegenParentResourceOption(ApiSchema):
     name: str
     resource_type: str
     module_id: str | None = None
-    sort: int | None = None
-    weight: int | None = None
+    sort: WireInt | None = None
+    weight: WireInt | None = None
     children: list["CodegenParentResourceOption"] = Field(default_factory=list)

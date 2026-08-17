@@ -55,11 +55,8 @@ mysql = [
 postgres = [
   "asyncpg>=0.30.0",
 ]
-sqlite = [
-  "aiosqlite>=0.21.0",
-]
 dev = [
-  "aiosqlite>=0.21.0",
+  "aiomysql>=0.2.0",
   "asyncpg>=0.30.0",
   "bandit>=1.8.0",
   "mypy>=1.16.0",

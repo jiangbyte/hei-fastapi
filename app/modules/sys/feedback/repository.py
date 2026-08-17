@@ -9,6 +9,7 @@ Author: jiangbyte
 from sqlalchemy import Select, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import NotFoundError
 from app.modules.sys.feedback.enums import FeedbackStatus
 from app.modules.sys.feedback.model import SysFeedback
@@ -74,7 +75,7 @@ class SysFeedbackRepository:
         count_stmt = select(func.count(SysFeedback.id))
         filters = []
         if query.title:
-            filters.append(SysFeedback.title.ilike(f"%{query.title}%"))
+            filters.append(ci_like(SysFeedback.title, f"%{query.title}%"))
         if query.category:
             filters.append(SysFeedback.category == query.category)
         if query.status:

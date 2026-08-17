@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import ColumnElement
 
+from app.core.db.compat import like_contains
 from app.core.exceptions.business import NotFoundError
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.dept.model import SysDept
@@ -107,9 +108,9 @@ class RoleRepository:
         count_stmt = select(func.count(SysRole.id))
         filters = []
         if query.code:
-            filters.append(SysRole.code.contains(query.code))
+            filters.append(like_contains(SysRole.code, query.code))
         if query.name:
-            filters.append(SysRole.name.contains(query.name))
+            filters.append(like_contains(SysRole.name, query.name))
         if query.category:
             filters.append(SysRole.category == query.category)
         if query.scope_type:

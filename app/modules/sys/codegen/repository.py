@@ -10,6 +10,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType, StatusEnum
+from app.core.db.compat import ci_like
 from app.core.exceptions.business import ConflictError, NotFoundError
 from app.modules.iam.enums import ResourceType
 from app.modules.iam.resource.model import SysResource, SysResourceModule
@@ -74,9 +75,9 @@ class CodegenRepository:
         count_stmt = select(func.count(SysCodegenPlan.id))
         filters = []
         if query.name:
-            filters.append(SysCodegenPlan.name.ilike(f"%{query.name}%"))
+            filters.append(ci_like(SysCodegenPlan.name, f"%{query.name}%"))
         if query.main_table:
-            filters.append(SysCodegenPlan.main_table.ilike(f"%{query.main_table}%"))
+            filters.append(ci_like(SysCodegenPlan.main_table, f"%{query.main_table}%"))
         if query.gen_type:
             filters.append(SysCodegenPlan.gen_type == query.gen_type)
         if filters:

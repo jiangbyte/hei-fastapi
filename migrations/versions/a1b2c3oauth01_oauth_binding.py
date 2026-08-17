@@ -198,7 +198,7 @@ def _insert_config(op, config_key, category, remark, sort, value_type, label, sc
     conn.execute(
         sa.text(
             "INSERT INTO sys_config (id, config_key, config_value, category, remark, sort_code, value_type, label, scope, scene, is_builtin, ext_json) "
-            "VALUES (:id, :key, :value, :category, :remark, :sort, :value_type, :label, :scope, :scene, TRUE, '{}'::json)"
+            "VALUES (:id, :key, :value, :category, :remark, :sort, :value_type, :label, :scope, :scene, TRUE, :ext_json)"
         ),
         {
             "id": f"cfg_{config_key.lower()}",
@@ -211,5 +211,6 @@ def _insert_config(op, config_key, category, remark, sort, value_type, label, sc
             "label": label,
             "scope": scope,
             "scene": scene,
+            "ext_json": "{}",
         },
     )

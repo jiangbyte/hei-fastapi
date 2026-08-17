@@ -57,7 +57,15 @@ class SysNoticeService:
     async def update(self, payload: SysNoticeUpdateRequest) -> None:
         """更新消息：归一状态并在发布时回填发布时间（对齐 hei-boot）。"""
         async with transactional(self.db):
-            data = payload.model_dump(exclude={"view_count", "revoked_at", "sender_account_type", "sender_account_id"})
+            data = payload.model_dump(
+                exclude={
+                    "id",
+                    "view_count",
+                    "revoked_at",
+                    "sender_account_type",
+                    "sender_account_id",
+                }
+            )
             status = str(data.get("status") or NoticeStatus.DRAFT.value).upper()
             if status in {"ENABLED", "ENABLE"}:
                 status = NoticeStatus.DRAFT.value

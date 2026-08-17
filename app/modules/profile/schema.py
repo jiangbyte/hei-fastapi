@@ -8,6 +8,7 @@ from pydantic import Field
 from app.core.config.enums import AccountType
 from app.core.schema.base import ApiSchema
 from app.core.schema.common_schema import IdNameResponse
+from app.core.schema.wire import WireBool
 from app.modules.profile.admin.schema import ProfileUserAdminResponse
 from app.modules.profile.portal.schema import ProfileUserPortalResponse
 
@@ -34,9 +35,9 @@ class AdminMeResponse(ApiSchema):
     dept_id_names: list[IdNameResponse] = Field(default_factory=list)
     group_id_names: list[IdNameResponse] = Field(default_factory=list)
     permission_keys: list[str]
-    password_expired: bool = False
-    force_bind_email: bool = False
-    force_bind_phone: bool = False
+    password_expired: WireBool = False
+    force_bind_email: WireBool = False
+    force_bind_phone: WireBool = False
     profile: ProfileUserAdminResponse
 
 
@@ -56,7 +57,7 @@ class PortalMeResponse(ApiSchema):
     dept_id_names: list[IdNameResponse] = Field(default_factory=list)
     group_id_names: list[IdNameResponse] = Field(default_factory=list)
     permission_keys: list[str] = Field(default_factory=list)
-    password_expired: bool = False
-    force_bind_email: bool = False
-    force_bind_phone: bool = False
+    password_expired: WireBool = False
+    force_bind_email: WireBool = False
+    force_bind_phone: WireBool = False
     profile: ProfileUserPortalResponse

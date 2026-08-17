@@ -4,6 +4,7 @@
 """
 
 from app.core.schema.base import ApiSchema
+from app.core.schema.wire import WireBool
 
 
 class RootHealthResponse(ApiSchema):
@@ -22,8 +23,8 @@ class LiveHealthResponse(ApiSchema):
 class HealthCheckItem(ApiSchema):
     """单个基础设施组件的就绪检查结果。"""
 
-    enabled: bool
-    ok: bool
+    enabled: WireBool
+    ok: WireBool
     detail: str | None = None
 
 

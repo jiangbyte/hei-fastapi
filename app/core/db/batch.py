@@ -3,7 +3,7 @@
 批量操作分批工具：对 IN 类查询按固定大小分批执行。
 
 管理端批量接口的 ID 列表无上限，单条大 IN 会触发部分数据库
-（如 SQLite 999 变量、MySQL max_allowed_packet）的绑定变量上限，
+（如 MySQL max_allowed_packet）的绑定变量上限，
 按固定大小分批可将单条语句规模控制在安全范围。
 """
 from collections.abc import Iterator
