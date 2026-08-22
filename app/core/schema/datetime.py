@@ -19,12 +19,13 @@ def ensure_utc_datetime(value: datetime) -> datetime:
 
 
 def format_utc_iso8601(value: datetime) -> str:
-    """将时间序列化为标准 ISO 8601 UTC 字符串，并统一输出 `Z` 后缀。"""
-    if value.tzinfo is None or value.utcoffset() is None:
-        value = value.replace(tzinfo=UTC)
-    else:
-        value = value.astimezone(UTC)
-    return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    """将时间序列化为 ISO 8601 UTC 字符串（微秒精度，对齐 hei-boot OffsetDateTime）。"""
+    value = ensure_utc_datetime(value)
+    base = value.strftime("%Y-%m-%dT%H:%M:%S")
+    if value.microsecond:
+        frac = f"{value.microsecond:06d}".rstrip("0")
+        return f"{base}.{frac}Z"
+    return f"{base}Z"
 
 
 def normalize_orm_datetimes(item: object) -> None:

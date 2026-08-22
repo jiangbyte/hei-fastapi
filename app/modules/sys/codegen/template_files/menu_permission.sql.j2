@@ -39,7 +39,7 @@ VALUES (
   '{{ action.resource_id }}',
   '{{ menu_permission.menu_id }}',
   '{{ permission_prefix.replace(":", "_") }}_{{ action.key }}',
-  '{{ action.label }}{{ plan.main_business_name }}',
+  '{{ action.label }}{{ plan.business_name }}',
   'BUTTON',
   NULLIF({{ plan.resource_module_id | sql }}, ''),
   {{ action.sort }},
@@ -70,7 +70,7 @@ VALUES (
   false,
   {{ action.sort }},
   'ENABLED',
-  '{{ action.label }}{{ plan.main_business_name }}',
+  '{{ action.label }}{{ plan.business_name }}',
   '{}'
 )
 {% if db_dialect == 'mysql' %}

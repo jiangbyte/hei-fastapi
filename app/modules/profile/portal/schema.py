@@ -17,7 +17,6 @@ class ProfileUserPortalResponse(ApiSchema):
     """门户账户扩展资料响应模型（remark 恒为 null，对齐 hei-boot 线型）。"""
 
     account_id: str
-    name: str | None = None
     nickname: str | None = None
     avatar: str | None = None
     signature: str | None = None
@@ -34,7 +33,6 @@ class PortalPublicProfileResponse(ApiSchema):
     """门户公开主页资料响应模型。"""
 
     account_id: str
-    name: str | None = None
     nickname: str | None = None
     avatar: str | None = None
     signature: str | None = None
@@ -50,7 +48,6 @@ class ProfileUserPortalUpsertPayload(ApiSchema):
     """门户账户资料写入载荷。"""
 
     account_id: str
-    name: str | None = None
     nickname: str | None = None
     avatar: str | None = None
     signature: str | None = None
@@ -61,10 +58,10 @@ class ProfileUserPortalUpsertPayload(ApiSchema):
 class PortalUserCenterProfileUpdateRequest(ApiSchema):
     """当前门户用户个人资料更新请求。"""
 
-    name: str | None = Field(default=None, max_length=64)
     nickname: str | None = Field(default=None, max_length=64)
     avatar: str | None = None
     signature: str | None = None
+    remark: str | None = None
 
 
 class PortalUserCenterPasswordUpdateRequest(PasswordKeyMixin):

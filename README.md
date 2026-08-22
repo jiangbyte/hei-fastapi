@@ -162,9 +162,8 @@
 - **RBAC 权限**：账号 / 角色 / 部门 / 用户组 / 岗位；菜单、按钮与 API 资源授权；在线会话踢出
 - **系统管理**：字典、动态配置（敏感项 Fernet 加密）、Banner、公告 / 通知、意见反馈、弱口令库
 - **对象存储**：S3 兼容存储（MinIO / RustFS / 阿里云 OSS / 腾讯云 COS 等），直链或预签名访问
-- **运维能力**：操作审计与告警、登录日志、运营工作台（概览与近 7 日趋势）、内置任务调度（`sys_job`；种子任务默认禁用，需在管理端启用）
-- **代码生成**：单表 / 树表 / 主子表方案，预览与 ZIP 下载
-- **三端前端**：`web/admin`（Vue 3 + Naive UI）、`web/portal`（React + Ant Design）、`web/admin-uniapp`（uni-app）
+- **运维能力**：操作审计与告警、登录日志、运营工作台、内置任务调度（`sys_job`；种子任务默认禁用，需在管理端启用）
+- **代码生成**：单表 / 树表 / 主子表方案，预览与 ZIP 下载；前端产物默认输出到姊妹仓库 [hei-admin](https://github.com/jiangbyte/hei-admin)（`CODEGEN_FRONTEND_ROOT` 可配置）
 
 ## 技术栈
 
@@ -175,9 +174,6 @@
 | 缓存 / 会话 | Redis |
 | 文档 | OpenAPI（`/docs`、`/redoc`，默认关闭，见 `.env.example`） |
 | 其他 | boto3 / oss2 · croniter · cryptography · OpenTelemetry（可选） |
-| 管理端 | Vue 3 · Vite · TypeScript · Naive UI · Pinia · UnoCSS |
-| 门户 | React 19 · Vite · TypeScript · Ant Design · Zustand · UnoCSS |
-| 移动端 | uni-app 3 · Vue 3 · TypeScript · uview-pro |
 
 ## 工程结构
 
@@ -185,16 +181,14 @@
 hei-fastapi
 ├── app/                      # FastAPI 应用
 │   ├── core/                 # 配置、安全、存储、中间件等
-│   └── modules/              # 业务模块（auth / iam / sys / profile / dashboard / biz）
-├── web/
-│   ├── admin                 # 管理端（Vue 3）
-│   ├── portal                # 门户（React）
-│   └── admin-uniapp          # 管理端 uni-app
+│   └── modules/              # 业务模块（auth / iam / sys / profile / workspace / biz）
 ├── scripts/db.sql            # 数据库结构 + 种子数据（对齐 hei-boot）
 ├── migrations/               # Alembic 增量表结构
 ├── tests/                    # 单元 / API 测试
 └── docs/images               # README 截图
 ```
+
+前端使用姊妹仓库 [hei-admin](https://github.com/jiangbyte/hei-admin)（管理端）与 [hei-portal](https://github.com/jiangbyte/hei-portal)（门户），通过环境变量代理 API，与本仓库 `hei-boot` 用法一致。
 
 ## 快速开始
 
@@ -202,7 +196,7 @@ hei-fastapi
 
 - Python **3.11+**、pip（推荐 conda / venv）
 - **PostgreSQL 或 MySQL**、Redis（通过 `DB__URL` 二选一，不支持 SQLite）
-- Node.js **22+**、pnpm **9+**（前端）
+- Node.js **22+**、pnpm **9+**（姊妹前端 hei-admin / hei-portal）
 
 ### 1. 初始化数据库
 
@@ -246,17 +240,19 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 > Linux / 容器可用 `./entrypoint.sh`（gunicorn）。Docker 相关见 [`docker/`](docker/) 与根目录 [`Dockerfile`](Dockerfile)。
 
-### 3. 启动前端
+### 3. 启动前端（姊妹仓库）
+
+管理端与门户在独立仓库维护，与本后端 API 契约对齐：
 
 ```bash
-# 管理端 → http://127.0.0.1:5173
-cd web/admin && pnpm install && pnpm dev
+# 管理端 hei-admin → http://127.0.0.1:5173
+cd ../hei-admin && pnpm install && pnpm dev
 
-# 门户 → http://127.0.0.1:5174
-cd web/portal && pnpm install && pnpm dev
+# 门户 hei-portal → http://127.0.0.1:5174
+cd ../hei-portal && pnpm install && pnpm dev
 ```
 
-uni-app 端见 [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md)。
+将 `VITE_API_PROXY` 指向本后端（默认 `http://127.0.0.1:8000`）。
 
 ## 默认账号
 
@@ -271,9 +267,8 @@ uni-app 端见 [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md)。
 
 | 文档 | 说明 |
 | --- | --- |
-| [`web/admin/README.md`](web/admin/README.md) | 管理端前端说明与环境变量 |
-| [`web/portal/README.md`](web/portal/README.md) | 门户前端说明与环境变量 |
-| [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md) | uni-app 端说明 |
+| [hei-admin README](https://github.com/jiangbyte/hei-admin) | 管理端前端说明与环境变量 |
+| [hei-portal README](https://github.com/jiangbyte/hei-portal) | 门户前端说明与环境变量 |
 | [`.env.example`](.env.example) | 后端环境变量样例 |
 | [`scripts/db.sql`](scripts/db.sql) | PostgreSQL 演示库结构与种子数据 |
 | [`migrations/README.md`](migrations/README.md) | Alembic 增量迁移（PG / MySQL） |
@@ -284,6 +279,8 @@ uni-app 端见 [`web/admin-uniapp/README.md`](web/admin-uniapp/README.md)。
 | 项目 | 说明 | 协议 |
 | --- | --- | --- |
 | [**hei-boot**](https://github.com/jiangbyte/hei-boot) | Spring Boot 工程化脚手架 | Apache License 2.0 |
+| [**hei-admin**](https://github.com/jiangbyte/hei-admin) | Vue 3 管理端前端 | Apache License 2.0 |
+| [**hei-portal**](https://github.com/jiangbyte/hei-portal) | React 门户前端 | Apache License 2.0 |
 | [**hei-gin**](https://github.com/jiangbyte/hei-gin) | Go 轻量级后端框架 | Apache License 2.0 |
 | [**hei-fastapi**](https://github.com/jiangbyte/hei-fastapi) | FastAPI 异步脚手架（本仓库） | Apache License 2.0 |
 

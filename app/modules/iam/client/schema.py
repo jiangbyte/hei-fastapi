@@ -161,11 +161,14 @@ class SysClientResourceSchema(ApiSchema):
     updated_at: datetime
     updated_by: str | None = None
     updated_name: str | None = None
+    children: list["SysClientResourceSchema"] = Field(default_factory=list)
 
 
 class ClientResourceTreeNode(SysClientResourceSchema):
     """客户端资源树节点结构（空 children 不出现在 JSON 中，对齐 hei-boot NON_EMPTY）。"""
 
+    weight: WireInt | None = None
+    parent_id_name: str | None = None
     children: list["ClientResourceTreeNode"] | None = Field(default=None)
 
     @field_serializer("children", when_used="json")

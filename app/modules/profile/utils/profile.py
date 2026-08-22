@@ -72,9 +72,9 @@ async def get_profiles_batch(
 
 
 def _profile_display_name(profile: object) -> str | None:
-    """提取资料展示名（优先姓名，其次昵称）。"""
-    name = getattr(profile, "name", None) or getattr(profile, "nickname", None)
-    return str(name) if name else None
+    """提取资料展示名（昵称）。"""
+    nickname = getattr(profile, "nickname", None)
+    return str(nickname) if nickname else None
 
 
 async def enrich_audit_names(

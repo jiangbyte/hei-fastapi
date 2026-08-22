@@ -58,8 +58,6 @@ class AccountCreateRequest(ApiSchema):
     phone_identity_verified: WireBool = False
     email_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     phone_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
-    bio: str | None = Field(default=None, max_length=255)
-    level: str | None = Field(default=None, max_length=32)
     remark: str | None = None
 
 
@@ -86,8 +84,6 @@ class AccountUpdateRequest(ApiSchema):
     phone_identity_verified: WireBool = False
     email_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     phone_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
-    bio: str | None = Field(default=None, max_length=255)
-    level: str | None = Field(default=None, max_length=32)
     remark: str | None = None
 
 

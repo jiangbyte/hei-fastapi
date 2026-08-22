@@ -129,9 +129,9 @@ class CodegenService:
         self, payload: CodegenPlanCreateRequest | CodegenPlanUpdateRequest
     ) -> None:
         """校验方案引用的主表/子表与主键/外键字段确实存在。"""
-        main_columns = await self.repo.list_database_columns(payload.main_table)
+        main_columns = await self.repo.list_database_columns(payload.table_name)
         main_column_names = {column["column_name"] for column in main_columns}
-        if payload.main_pk not in main_column_names:
+        if payload.pk_column not in main_column_names:
             raise ConflictError("Main primary key field does not exist")
         if payload.gen_type in {"TREE", "LEFT_TREE_TABLE"}:
             if payload.tree_parent_field not in main_column_names:
@@ -150,7 +150,7 @@ class CodegenService:
 
     async def _sync_reflected_fields(self, plan: SysCodegenPlan) -> None:
         """反射主表（及子表）列并合并写入字段配置。"""
-        main_columns = await self.repo.list_database_columns(plan.main_table)
+        main_columns = await self.repo.list_database_columns(plan.table_name)
         await self.repo.upsert_reflected_fields(
             plan.id,
             "MAIN",
@@ -169,12 +169,12 @@ def _column_schema_data(column: dict) -> dict:
     """从内省列元数据提取响应所需字段。"""
     return {
         "column_name": column["column_name"],
-        "column_comment": column.get("column_comment"),
+        "label": column.get("column_comment"),
         "db_type": column["db_type"],
-        "python_type": column["python_type"],
-        "typescript_type": column["typescript_type"],
-        "is_primary_key": column["is_primary_key"],
-        "is_nullable": column["is_nullable"],
+        "value_type": column["python_type"],
+        "ui_type": column["typescript_type"],
+        "primary_key": column["is_primary_key"],
+        "nullable": column["is_nullable"],
         "max_length": column.get("max_length"),
     }
 
@@ -190,21 +190,21 @@ def _default_field(column: dict, table_role: str) -> CodegenFieldUpdateItem:
     return CodegenFieldUpdateItem(
         table_role=table_role,  # type: ignore[arg-type]
         column_name=column_name,
-        column_comment=column.get("column_comment"),
+        label=column.get("column_comment"),
         db_type=column["db_type"],
-        python_type=python_type,
-        typescript_type=column["typescript_type"],
-        form_widget=widget,
+        value_type=python_type,
+        ui_type=column["typescript_type"],
+        widget=widget,
         dict_code="COMMON_STATUS" if column_name == "status" else None,
         query_operator=_default_query_operator(column_name, python_type),
-        show_in_table=not is_audit,
-        show_in_form=not is_pk and not is_audit,
-        show_in_detail=True,
-        show_in_query=column_name in {"name", "title", "code", "status", "category", "type"},
-        is_primary_key=is_pk,
-        is_required=not is_nullable and not is_pk and not is_audit,
-        is_unique=False,
-        is_nullable=is_nullable,
+        in_table=not is_audit,
+        in_form=not is_pk and not is_audit,
+        in_detail=True,
+        in_query=column_name in {"name", "title", "code", "status", "category", "type"},
+        primary_key=is_pk,
+        required=not is_nullable and not is_pk and not is_audit,
+        unique_flag=False,
+        nullable=is_nullable,
         max_length=column.get("max_length"),
         sort=int(column.get("sort") or 99),
     )
@@ -233,25 +233,30 @@ def _default_query_operator(column_name: str, python_type: str) -> str | None:
 
 
 def _build_resource_options(resources) -> list[CodegenParentResourceOption]:
-    """将资源列表构建为父子树形选项。"""
+    """将资源列表构建为父子树形选项（对齐 hei-boot parentResources）。"""
+    ids = {item.id for item in resources}
     node_map = {
         item.id: CodegenParentResourceOption(
             id=item.id,
             parent_id=item.parent_id,
-            code=item.code,
             name=item.name,
             resource_type=item.resource_type,
             module_id=item.module_id,
             sort=getattr(item, "sort", None),
-            weight=getattr(item, "sort", None),
+            weight=getattr(item, "sort", None) or 0,
+            children=None,
         )
         for item in resources
     }
     roots: list[CodegenParentResourceOption] = []
     for item in resources:
         node = node_map[item.id]
-        if item.parent_id and item.parent_id in node_map:
-            node_map[item.parent_id].children.append(node)
+        parent_id = item.parent_id
+        if parent_id and parent_id in ids:
+            parent = node_map[parent_id]
+            if parent.children is None:
+                parent.children = []
+            parent.children.append(node)
         else:
             roots.append(node)
     return roots

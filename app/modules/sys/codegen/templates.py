@@ -17,6 +17,12 @@ from app.core.config.settings import settings
 from app.core.db.compat import dialect_name_from_url
 from app.core.id_generator.snowflake import generate_snowflake_id
 from app.modules.sys.codegen.model import SysCodegenField, SysCodegenPlan
+from app.modules.sys.codegen.paths import (
+    frontend_api_export_path,
+    frontend_api_file_path,
+    frontend_api_index_append_path,
+    frontend_view_path,
+)
 from app.modules.sys.codegen.schema import CodegenPreviewFile
 
 AUDIT_COLUMNS = {"created_at", "created_by", "updated_at", "updated_by"}
@@ -56,7 +62,7 @@ class RenderContext:
     def backend_parts(self) -> tuple[str, ...]:
         return tuple(
             python_identifier(part)
-            for part in self.plan.main_module_path.strip("/.").split("/")
+            for part in self.plan.module_path.strip("/.").split("/")
             if part.strip()
         )
 
@@ -74,7 +80,7 @@ class RenderContext:
 
     @property
     def view_path(self) -> str:
-        return str(PurePosixPath("web/admin/src/views") / self.plan.component_path.strip("/"))
+        return frontend_view_path(self.plan.component_path)
 
     @property
     def view_component_dir(self) -> str:
@@ -87,23 +93,12 @@ class RenderContext:
 
     @property
     def api_file(self) -> str:
-        component_path = PurePosixPath(self.plan.component_path.strip("/"))
-        parts = component_path.parts
-        if len(parts) >= 2 and parts[-1] == "index.vue":
-            return (
-                str(PurePosixPath("web/admin/src/api") / PurePosixPath(*parts[:-1])).replace(
-                    ".vue", ".ts"
-                )
-                + ".ts"
-            )
-        return str(
-            PurePosixPath("web/admin/src/api") / f"{snake_case(self.plan.main_entity_name)}.ts"
-        )
+        return frontend_api_file_path(self.plan.component_path, self.plan.entity_name)
 
     @property
     def api_export(self) -> str:
-        rel = PurePosixPath(self.api_file).relative_to("web/admin/src/api")
-        return f"export * as {camel_case(self.plan.main_entity_name)}Api from './{rel.with_suffix('').as_posix()}'"
+        rel = frontend_api_export_path(self.api_file)
+        return f"export * as {camel_case(self.plan.entity_name)}Api from '{rel}'"
 
 
 def render_files(
@@ -126,12 +121,12 @@ def render_files(
         (f"{ctx.backend_dir}/service.py", "python", "service.py.j2"),
         (f"{ctx.backend_dir}/router.py", "python", "router.py.j2"),
         (ctx.api_file, "typescript", "api.ts.j2"),
-        ("web/admin/src/api/index.ts.append", "typescript", "api_index_export.ts.j2"),
+        (frontend_api_index_append_path(), "typescript", "api_index_export.ts.j2"),
         (ctx.view_path, "vue", "index.vue.j2"),
         (f"{ctx.view_component_dir}/ModalForm.vue", "vue", "modal_form.vue.j2"),
         (f"{ctx.view_component_dir}/ModalDetail.vue", "vue", "modal_detail.vue.j2"),
         (
-            f"scripts/{snake_case(plan.main_entity_name)}_menu_permission.sql",
+            f"scripts/{snake_case(plan.entity_name)}_menu_permission.sql",
             "sql",
             "menu_permission.sql.j2",
         ),
@@ -174,9 +169,9 @@ def render_template(template_name: str, ctx: RenderContext) -> str:
         else set()
     )
     main = entity_context(
-        ctx.plan.main_entity_name,
-        ctx.plan.main_table,
-        ctx.plan.main_pk,
+        ctx.plan.entity_name,
+        ctx.plan.table_name,
+        ctx.plan.pk_column,
         ctx.main_fields,
         table_exclude=main_table_exclude,
     )
@@ -255,19 +250,19 @@ def entity_context(
     ]
     form_fields = [field_context(field) for field in fields if is_form_field(field)]
     query_fields = [
-        field_context(field) for field in fields if field.show_in_query and not field.is_primary_key
+        field_context(field) for field in fields if field.in_query and not field.primary_key
     ]
     table_fields = [
         field_context(field)
         for field in fields
-        if field.show_in_table
+        if field.in_table
         and field.column_name not in AUDIT_COLUMNS
         and field.column_name not in table_exclude
     ]
     detail_fields = [
         field_context(field)
         for field in fields
-        if field.show_in_detail and field.column_name not in AUDIT_COLUMNS
+        if field.in_detail and field.column_name not in AUDIT_COLUMNS
     ]
     return {
         "entity_name": entity_name,
@@ -287,6 +282,7 @@ def entity_context(
         "has_form_float": any(field["python_type"] == "float" for field in form_fields),
         "has_detail_json": any(field["is_json"] for field in detail_fields),
         "has_table_dict": any(field["dict_code"] for field in table_fields),
+        "has_query_dict": any(field["dict_code"] for field in query_fields),
         "has_table_bool": any(field["is_bool"] for field in table_fields),
         "has_table_tag": any(field["dict_code"] or field["is_bool"] for field in table_fields),
         "has_detail_dict": any(field["dict_code"] for field in detail_fields),
@@ -334,28 +330,28 @@ def menu_permission_context(needs_list_permission: bool) -> dict[str, Any]:
 def field_context(field: SysCodegenField) -> dict[str, Any]:
     """将字段配置转为模板所需上下文。"""
     python_type = normalized_py_type(field)
-    is_datetime = field.form_widget == "datetime" or python_type == "datetime"
+    is_datetime = field.widget == "datetime" or python_type == "datetime"
     is_json = is_json_field(field, python_type)
     return {
         "name": field.column_name,
-        "label": field.column_comment or field.column_name,
-        "comment": field.column_comment,
+        "label": field.label or field.column_name,
+        "comment": field.label,
         "db_type": field.db_type,
         "python_type": python_type,
         "schema_type": schema_py_type(field),
         "query_schema_type": query_schema_py_type(field),
-        "ts_type": field.typescript_type,
+        "ts_type": field.ui_type,
         "sa_type": sa_type(field),
-        "form_widget": field.form_widget,
+        "form_widget": field.widget,
         "dict_code": field.dict_code,
         "query_operator": field.query_operator or "LIKE",
-        "show_in_table": field.show_in_table,
-        "show_in_form": field.show_in_form,
-        "show_in_detail": field.show_in_detail,
-        "show_in_query": field.show_in_query,
-        "is_primary_key": field.is_primary_key,
-        "is_required": field.is_required,
-        "is_nullable": field.is_nullable,
+        "show_in_table": field.in_table,
+        "show_in_form": field.in_form,
+        "show_in_detail": field.in_detail,
+        "show_in_query": field.in_query,
+        "is_primary_key": field.primary_key,
+        "is_required": field.required,
+        "is_nullable": field.nullable,
         "max_length": field.max_length,
         "default": schema_default(field),
         "vue_default": vue_default(field),
@@ -368,17 +364,17 @@ def field_context(field: SysCodegenField) -> dict[str, Any]:
 def is_form_field(field: SysCodegenField) -> bool:
     """判断字段是否出现在表单中。"""
     return (
-        field.show_in_form and not field.is_primary_key and field.column_name not in AUDIT_COLUMNS
+        field.in_form and not field.primary_key and field.column_name not in AUDIT_COLUMNS
     )
 
 
 def normalized_py_type(field: SysCodegenField) -> str:
     """归一化 Python 类型表示。"""
-    if field.python_type == "datetime":
+    if field.value_type == "datetime":
         return "datetime"
-    if field.python_type == "dict":
+    if field.value_type == "dict":
         return "dict[str, Any]"
-    return field.python_type
+    return field.value_type
 
 
 def is_json_field(field: SysCodegenField, python_type: str | None = None) -> bool:
@@ -396,7 +392,7 @@ def _wire_schema_type(raw: str) -> str:
 def schema_py_type(field: SysCodegenField) -> str:
     """构造 schema 字段的 Python 类型标注。"""
     raw = _wire_schema_type(normalized_py_type(field))
-    if field.is_nullable and not field.is_primary_key:
+    if field.nullable and not field.primary_key:
         return f"{raw} | None"
     return raw
 
@@ -411,15 +407,15 @@ def query_schema_py_type(field: SysCodegenField) -> str:
 
 def schema_default(field: SysCodegenField) -> str:
     """推断 schema 字段的默认值表达式。"""
-    if field.is_primary_key or field.is_required:
+    if field.primary_key or field.required:
         return ""
-    if field.python_type in {"dict", "dict[str, Any]"}:
+    if field.value_type in {"dict", "dict[str, Any]"}:
         return " = Field(default_factory=dict)"
-    if field.is_nullable:
+    if field.nullable:
         return " = None"
-    if field.python_type in {"int", "float"}:
+    if field.value_type in {"int", "float"}:
         return " = 0"
-    if field.python_type == "bool":
+    if field.value_type == "bool":
         return " = False"
     return ""
 
@@ -448,8 +444,12 @@ def sa_type(field: SysCodegenField) -> str:
 
 def vue_default(field: SysCodegenField | dict[str, Any]) -> str:
     """推断前端表单字段的默认值表达式。"""
-    python_type = field["python_type"] if isinstance(field, dict) else field.python_type
-    form_widget = field["form_widget"] if isinstance(field, dict) else field.form_widget
+    if isinstance(field, dict):
+        python_type = field["python_type"]
+        form_widget = field["form_widget"]
+    else:
+        python_type = normalized_py_type(field)
+        form_widget = field.widget
     if isinstance(field, dict) and "is_json" in field:
         is_json = field["is_json"]
     elif isinstance(field, SysCodegenField):

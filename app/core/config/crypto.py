@@ -16,8 +16,15 @@ _storage_sensitive_columns = {
 
 
 def is_sensitive(config_key: str) -> bool:
-    """判断配置键是否属于敏感键集合。"""
-    return config_key in SENSITIVE_CONFIG_KEYS
+    """判断配置键是否属于敏感键集合（对齐 hei-boot ConfigServiceImpl.isSensitive）。"""
+    if not config_key or not str(config_key).strip():
+        return False
+    key = str(config_key).strip()
+    if key in SENSITIVE_CONFIG_KEYS:
+        return True
+    return key.startswith("AUTH_OAUTH_") and (
+        key.endswith("_CLIENT_SECRET") or key.endswith("_APP_SECRET")
+    )
 
 
 def encrypt_config_value(config_key: str, value: str | None) -> str | None:

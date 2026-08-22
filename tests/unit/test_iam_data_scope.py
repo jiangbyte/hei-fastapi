@@ -43,7 +43,7 @@ async def _admin_account(
         )
     )
     db_session.add(
-        ProfileUserAdmin(account_id=account_id, name=account_name, created_at=now, updated_at=now)
+        ProfileUserAdmin(account_id=account_id, created_at=now, updated_at=now)
     )
     db_session.add(account_dept(account_id, dept_id, created_at=now, updated_at=now))
     await db_session.flush()

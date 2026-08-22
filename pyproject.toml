@@ -13,6 +13,7 @@ dependencies = [
   "alibabacloud-dm20151123>=1.0.0",
   "alibabacloud-dysmsapi20170525>=1.0.0",
   "alibabacloud-tea-openapi>=0.3.0",
+  "authlib>=1.3.0",
   "bcrypt>=5.0.0",
   "blinker>=1.9.0",
   "boto3>=1.39.0",

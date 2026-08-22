@@ -25,7 +25,6 @@ from app.modules.iam.resource.schema import (
     ResourceModuleAdminPageQuery,
     ResourceModuleCreateRequest,
     ResourceModuleSelectorOption,
-    ResourceModuleSelectorQuery,
     ResourceModuleUpdateRequest,
     ResourcePermissionBindRequest,
     ResourceTreeNode,
@@ -333,10 +332,9 @@ async def resource_module_page(
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:resourcemodule:page")),
     ],
-    response_model=ApiResponse[list[ResourceModuleSelectorOption]],
+    response_model=ApiResponse[list[SysResourceModuleSchema]],
 )
 async def resource_module_selector(
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    query: Annotated[ResourceModuleSelectorQuery, Depends()],
-) -> ApiResponse[list[ResourceModuleSelectorOption]]:
-    return success(await ResourceModuleService(db).selector(query))
+) -> ApiResponse[list[SysResourceModuleSchema]]:
+    return success(await ResourceModuleService(db).selector())

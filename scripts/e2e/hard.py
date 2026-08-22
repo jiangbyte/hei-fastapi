@@ -17,7 +17,9 @@ def hard_checks() -> list[HardCheck]:
     return [
         HardCheck("health_live", "GET", "/api/v1/internal/health/live"),
         HardCheck("health_ready", "GET", "/api/v1/internal/health/ready"),
-        HardCheck("dashboard_overview", "GET", "/api/v1/admin/dashboard/overview"),
+        HardCheck("workspace_overview", "GET", "/api/v1/admin/workspace/overview"),
+        HardCheck("site_footer", "GET", "/api/v1/public/site-footer"),
+        HardCheck("audit_my_page", "GET", "/api/v1/admin/sys/audit/my-page?current=1&size=5"),
         HardCheck("roles_page_ilike", "GET", "/api/v1/admin/sys/roles/page?current=1&size=5&name=admin"),
         HardCheck("banners_page_json", "GET", "/api/v1/admin/sys/banners/page?current=1&size=5&position=HOME_TOP"),
         HardCheck("banners_list", "GET", "/api/v1/admin/sys/banners/list?position=HOME_TOP"),

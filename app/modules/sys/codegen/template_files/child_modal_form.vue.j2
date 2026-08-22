@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
-import { {{ plan.main_entity_name | ts_api_name }} } from '@/api'
+import { {{ plan.entity_name | ts_api_name }} } from '@/api'
 {% if target.has_form_bool or target.has_form_int or target.has_form_float %}
 import { {{ [
   'wireBool' if target.has_form_bool else none,
@@ -80,7 +80,7 @@ async function openModal(id?: string, defaults: Partial<typeof defaultFormData> 
 async function fetchDetail(id: string) {
   state.loading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.childDetail({ id })
+    const response = await {{ plan.entity_name | ts_api_name }}.childDetail({ id })
     state.formModel = normalizeFormData(response.data ?? {})
   } finally {
     state.loading = false
@@ -171,10 +171,10 @@ async function submitForm() {
   try {
     const payload = {{ "normalizeSubmitData(state.formModel)" if target.needs_submit_normalize else "state.formModel" }}
     if (state.dataId) {
-      await {{ plan.main_entity_name | ts_api_name }}.childUpdate({ ...payload, {{ target.pk_name }}: state.dataId })
+      await {{ plan.entity_name | ts_api_name }}.childUpdate({ ...payload, {{ target.pk_name }}: state.dataId })
       window.$message.success('更新成功')
     } else {
-      await {{ plan.main_entity_name | ts_api_name }}.childCreate(payload)
+      await {{ plan.entity_name | ts_api_name }}.childCreate(payload)
       window.$message.success('创建成功')
     }
     emit('saved')

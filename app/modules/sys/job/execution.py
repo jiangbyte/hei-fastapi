@@ -32,7 +32,7 @@ LOCK_EXPIRE_SECONDS = 30 * 60
 LOCK_ACQUIRE_TIMEOUT_SECONDS = 1
 # 调度触发的执行人标识（对齐 hei-boot EXECUTOR_SYSTEM）。
 EXECUTOR_SYSTEM = "system"
-# sys_job.last_execute_result 最大长度（对齐 varchar(500)）。
+# sys_job.last_result 最大长度（对齐 varchar(500)）。
 MAX_RESULT_LENGTH = 500
 
 
@@ -113,40 +113,38 @@ async def _run_locked(job_id: str, *, force: bool, executor: str) -> None:
         if not force and job.next_run_time > now:
             return
 
-        handler = resolve(job.execute_class)
-        execute_time = datetime.now(UTC)
+        handler = resolve(job.handler)
+        started_at = datetime.now(UTC)
         if handler is None:
             await _record_run(
                 session,
                 job,
                 executor=executor,
                 success=False,
-                execute_result=f"执行失败: 未找到任务处理器: {job.execute_class}",
-                execute_time=execute_time,
-                execute_duration_ms=0,
+                result=f"执行失败: 未找到任务处理器: {job.handler}",
+                started_at=started_at,
+                duration_ms=0,
             )
             return
 
-        param = dict(job.execute_param) if job.execute_param else None
+        param = dict(job.params) if job.params else None
         try:
-            result = await handler(param)
-            execute_result = str(result)
+            run_result = await handler(param)
+            result = str(run_result)
             success = True
         except Exception as exc:
             logger.exception("Job %s execution failed", job_id)
-            execute_result = f"执行失败: {exc}"
+            result = f"执行失败: {exc}"
             success = False
-        execute_duration_ms = max(
-            0, int((datetime.now(UTC) - execute_time).total_seconds() * 1000)
-        )
+        duration_ms = max(0, int((datetime.now(UTC) - started_at).total_seconds() * 1000))
         await _record_run(
             session,
             job,
             executor=executor,
             success=success,
-            execute_result=execute_result,
-            execute_time=execute_time,
-            execute_duration_ms=execute_duration_ms,
+            result=result,
+            started_at=started_at,
+            duration_ms=duration_ms,
         )
 
 
@@ -156,27 +154,26 @@ async def _record_run(
     *,
     executor: str,
     success: bool,
-    execute_result: str,
-    execute_time: datetime,
-    execute_duration_ms: int,
+    result: str,
+    started_at: datetime,
+    duration_ms: int,
 ) -> None:
     """事务内原子更新任务执行状态（下次执行时间/结果）并写入执行日志。"""
     next_run_time = cron_util.compute_next_run_time(
-        job.execute_type, job.trigger_config, execute_time
+        job.trigger_type, job.trigger_config, started_at
     )
     async with transactional(session):
-        job.last_run_time = execute_time
+        job.last_run_time = started_at
         job.next_run_time = next_run_time
-        job.last_execute_result = (execute_result or "")[:MAX_RESULT_LENGTH] or None
+        job.last_result = (result or "")[:MAX_RESULT_LENGTH] or None
         await JobLogRepository(session).create(
             SysJobLog(
                 job_id=job.id,
-                job_name=job.job_name,
-                execute_param=job.execute_param,
-                execute_time=execute_time,
-                execute_duration_ms=execute_duration_ms,
+                params=job.params,
+                started_at=started_at,
+                duration_ms=duration_ms,
                 success=success,
-                execute_result=execute_result,
+                result=result,
                 executor=executor,
                 ip=INSTANCE_IP,
                 process_id=INSTANCE_PROCESS_ID,

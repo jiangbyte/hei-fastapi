@@ -2,7 +2,7 @@
 
 OAuth 客户端门面：构建授权 URL、用授权码换取用户资料，以及微信小程序登录。
 
-参考 hei-boot OauthClientFacade（JustAuth），按各平台官方文档手写实现，
+参考 hei-boot OauthClientFacade（JustAuth）；GitHub/Gitee token 交换使用 Authlib，其余平台保留 httpx。
 凭据统一从 sys_config（AUTH_OAUTH_{TYPE}_{PROVIDER}_*）读取。
 """
 import json
@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 import httpx
+from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from app.core.config.enums import AccountType
 from app.core.config.reader import config_reader
@@ -159,16 +160,17 @@ class OauthClientFacade:
     async def _login_github(
         self, client_id: str, client_secret: str, code: str, redirect_uri: str
     ) -> OauthUserProfile:
-        token = await self._post_form_json(
-            self._TOKEN[OauthProvider.GITHUB],
-            {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "code": code,
-                "redirect_uri": redirect_uri,
-            },
-            headers={"Accept": "application/json"},
-        )
+        token_url = self._TOKEN[OauthProvider.GITHUB]
+        client = AsyncOAuth2Client(client_id=client_id, client_secret=client_secret)
+        try:
+            token = await client.fetch_token(
+                token_url,
+                code=code,
+                redirect_uri=redirect_uri,
+                headers={"Accept": "application/json"},
+            )
+        except Exception as exc:
+            raise BusinessError("GitHub 授权失败: token 交换错误") from exc
         access_token = str(token.get("access_token") or "")
         if not access_token:
             raise BusinessError("GitHub 授权失败: 未返回 access_token")
@@ -188,16 +190,17 @@ class OauthClientFacade:
     async def _login_gitee(
         self, client_id: str, client_secret: str, code: str, redirect_uri: str
     ) -> OauthUserProfile:
-        token = await self._post_form_json(
-            self._TOKEN[OauthProvider.GITEE],
-            {
-                "grant_type": "authorization_code",
-                "code": code,
-                "client_id": client_id,
-                "redirect_uri": redirect_uri,
-                "client_secret": client_secret,
-            },
-        )
+        token_url = self._TOKEN[OauthProvider.GITEE]
+        client = AsyncOAuth2Client(client_id=client_id, client_secret=client_secret)
+        try:
+            token = await client.fetch_token(
+                token_url,
+                code=code,
+                redirect_uri=redirect_uri,
+                grant_type="authorization_code",
+            )
+        except Exception as exc:
+            raise BusinessError("Gitee 授权失败: token 交换错误") from exc
         access_token = str(token.get("access_token") or "")
         if not access_token:
             raise BusinessError("Gitee 授权失败: 未返回 access_token")

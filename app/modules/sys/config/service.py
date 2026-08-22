@@ -70,16 +70,16 @@ class ConfigService:
 
     async def list_by_category(self, query: CategoryQuery) -> list[SysConfigSchema]:
         """按分类/作用域查询，敏感值不回显。"""
-        items = await self.repo.list_by_category(query.category, query.scope)
+        items = await self.repo.list_by_category(query.category)
         schemas = to_schema_list(SysConfigSchema, items)
-        for s in schemas:
-            if is_sensitive(s.config_key) and s.config_key.startswith("STORAGE_"):
-                # 不向浏览器回显存储密钥；is_set 供表单「已配置，留空不修改」
-                has_value = bool(s.config_value)
+        for entity, s in zip(items, schemas, strict=True):
+            plain = decrypt_config_value(s.config_key, entity.config_value) or ""
+            if is_sensitive(s.config_key):
                 s.config_value = ""
-                s.ext_json = {**(s.ext_json or {}), "is_set": has_value}
+                if entity.config_value:
+                    s.ext_json = {**(s.ext_json or {}), "is_set": True}
             else:
-                s.config_value = decrypt_config_value(s.config_key, s.config_value) or ""
+                s.config_value = plain
         return schemas
 
     async def batch_save(self, payload: ConfigBatchSaveRequest) -> None:
@@ -101,7 +101,10 @@ class ConfigService:
         """后台分页查询，敏感值置空。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysConfigSchema, items)
-        for s in schemas:
-            if is_sensitive(s.config_key):
-                s.config_value = ""
+        for schema in schemas:
+            if is_sensitive(schema.config_key):
+                schema.config_value = ""
+                entity = next(e for e in items if e.id == schema.id)
+                if entity.config_value:
+                    schema.ext_json = {**(schema.ext_json or {}), "is_set": True}
         return build_page(query, total, schemas)

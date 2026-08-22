@@ -95,6 +95,8 @@ class NoticeReadRequest(ApiSchema):
 class MyNoticePageQuery(PageQuery):
     """当前用户消息分页查询条件。"""
 
+    title: str | None = None
+    status: str | None = None
     kind: str | None = None
 
 
@@ -140,4 +142,4 @@ class SysNoticeSchema(ApiSchema):
     updated_by: str | None = None
     created_name: str | None = None
     updated_name: str | None = None
-    is_read: WireBool = False
+    is_read: WireBool | None = None

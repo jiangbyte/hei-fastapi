@@ -31,10 +31,17 @@ class DeptTreeRecord(TypedDict):
     parent_id: str | None
     status: str
     sort: int
+    weight: int
     is_virtual: bool
     master_id: str | None
     deputy_master_id: str | None
-    updated_at: str
+    master_name: str | None
+    deputy_master_name: str | None
+    extra: dict
+    created_at: datetime
+    created_by: str | None
+    updated_at: datetime
+    updated_by: str | None
     children: list["DeptTreeRecord"]
 
 
@@ -133,7 +140,7 @@ class DeptRepository:
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[SysDept]:
         """列出部门，可按数据范围过滤。"""
-        stmt = select(SysDept).order_by(SysDept.sort.asc(), SysDept.id.asc())
+        stmt = select(SysDept).order_by(SysDept.sort.asc())
         if data_scope_filter is not None:
             stmt = stmt.where(data_scope_filter)
         return list((await self.db.execute(stmt)).scalars().all())
@@ -150,8 +157,9 @@ class DeptRepository:
         self,
         data_scope_filter: ColumnElement[bool] | None = None,
     ) -> list[DeptTreeRecord]:
-        """将部门列表组装为树结构（按 parent_id 挂载）。"""
+        """将部门列表组装为树结构（按 parent_id 挂载，对齐 hei-boot TreeUtil）。"""
         depts = await self.list_depts(data_scope_filter)
+        ids = {dept.id for dept in depts}
         node_map: dict[str, DeptTreeRecord] = {
             dept.id: {
                 "id": dept.id,
@@ -160,18 +168,26 @@ class DeptRepository:
                 "parent_id": dept.parent_id,
                 "status": dept.status,
                 "sort": dept.sort,
+                "weight": dept.sort or 0,
                 "is_virtual": dept.is_virtual,
                 "master_id": dept.master_id,
                 "deputy_master_id": dept.deputy_master_id,
-                "updated_at": str(dept.updated_at),
+                "master_name": None,
+                "deputy_master_name": None,
+                "extra": dept.extra or {},
+                "created_at": dept.created_at,
+                "created_by": dept.created_by,
+                "updated_at": dept.updated_at,
+                "updated_by": dept.updated_by,
                 "children": [],
             }
             for dept in depts
         }
         roots: list[DeptTreeRecord] = []
         for dept in depts:
-            if dept.parent_id and dept.parent_id in node_map:
-                node_map[dept.parent_id]["children"].append(node_map[dept.id])
+            parent_id = dept.parent_id
+            if parent_id and parent_id in ids:
+                node_map[parent_id]["children"].append(node_map[dept.id])
             else:
                 roots.append(node_map[dept.id])
         return roots

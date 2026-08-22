@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, field_serializer
 
 from app.core.config.enums import StatusEnum
 from app.core.response.pagination import PageQuery
@@ -64,20 +64,33 @@ class SysDeptSchema(ApiSchema):
     updated_at: datetime
     updated_by: str | None = None
     updated_name: str | None = None
+    children: list["SysDeptSchema"] = Field(default_factory=list)
+    children: list["SysDeptSchema"] = Field(default_factory=list)
 
 
 class DeptTreeNode(ApiSchema):
-    """部门树节点结构。"""
+    """部门树节点结构（对齐 hei-boot TreeUtil + trans）。"""
 
     id: str
     name: str
     category: str
     parent_id: str | None = None
+    master_id: str | None = None
+    master_name: str | None = None
+    deputy_master_id: str | None = None
+    deputy_master_name: str | None = None
     status: str
     sort: WireInt = 99
     weight: WireInt = 99
     is_virtual: WireBool = False
-    master_name: str | None = None
-    deputy_master_name: str | None = None
+    extra: dict = Field(default_factory=dict)
+    created_at: datetime
+    created_by: str | None = None
     updated_at: datetime | None = None
-    children: list["DeptTreeNode"] = Field(default_factory=list)
+    updated_by: str | None = None
+    children: list["DeptTreeNode"] | None = Field(default=None)
+
+    @field_serializer("children", when_used="json")
+    def _omit_empty_children(self, value: list["DeptTreeNode"] | None):
+        """空列表序列化为 None，使叶子节点省略 children 键。"""
+        return value or None

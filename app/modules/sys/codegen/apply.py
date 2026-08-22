@@ -8,9 +8,13 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from app.modules.sys.codegen.paths import frontend_api_index_rel
 from app.modules.sys.codegen.schema import CodegenPreviewFile
 
-API_INDEX_REL = Path("web/admin/src/api/index.ts")
+
+def api_index_rel() -> Path:
+    """hei-admin src/api/index.ts 相对 fastapi 项目根的路径。"""
+    return frontend_api_index_rel()
 _EXPORT_AS_RE = re.compile(r"export\s+\*\s+as\s+(\w+)\s+from\s+")
 
 
@@ -82,23 +86,23 @@ def apply_preview_files(
 ) -> ApplyResult:
     """在 ``root`` 下物化预览文件。
 
-    ``*.index.ts.append``（或 ``web/admin/src/api/index.ts.append``）幂等合并
-    到 ``web/admin/src/api/index.ts``，而非写入独立文件。
+    ``*.index.ts.append`` 幂等合并到 hei-admin ``src/api/index.ts``，而非写入独立文件。
     """
     result = ApplyResult()
     root = root.resolve()
     for item in files:
         rel = item.path.replace("\\", "/")
         if is_api_index_append(rel):
-            index_path = root / API_INDEX_REL
+            index_rel = api_index_rel()
+            index_path = root / index_rel
             current = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
             merged, changed = merge_api_index_export(current, item.content)
             if changed:
                 index_path.parent.mkdir(parents=True, exist_ok=True)
                 index_path.write_text(merged, encoding="utf-8", newline="\n")
-                result.merged.append(str(API_INDEX_REL.as_posix()))
+                result.merged.append(str(index_rel.as_posix()))
             else:
-                result.skipped.append(str(API_INDEX_REL.as_posix()))
+                result.skipped.append(str(index_rel.as_posix()))
             continue
 
         if skip_menu_sql and rel.endswith("_menu_permission.sql"):

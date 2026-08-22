@@ -1,11 +1,11 @@
 """ Author: Charlie
 
-操作审计日志模型：记录每次敏感操作的前后数据与请求上下文。
+操作审计日志模型：记录每次敏感操作的前后数据与请求上下文（对齐 hei-boot）。
 """
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Index, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db.base import Base
@@ -37,7 +37,7 @@ class SysOperationAuditLog(Base):
     resource_type: Mapped[str | None] = mapped_column(String(128), comment="资源类型")
     resource_id: Mapped[str | None] = mapped_column(String(128), comment="资源ID")
     action: Mapped[str] = mapped_column(String(64), nullable=False, comment="操作")
-    summary: Mapped[str | None] = mapped_column(String(255), comment="摘要")
+    summary: Mapped[str | None] = mapped_column(String(2000), comment="摘要")
     before_data: Mapped[dict | None] = mapped_column(JSON, comment="变更前数据")
     after_data: Mapped[dict | None] = mapped_column(JSON, comment="变更后数据")
     account_id: Mapped[str | None] = mapped_column(String(64), comment="操作账号ID")
@@ -47,6 +47,11 @@ class SysOperationAuditLog(Base):
     user_agent: Mapped[str | None] = mapped_column(String(512), comment="User-Agent")
     success: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, comment="是否成功")
     error_message: Mapped[str | None] = mapped_column(Text, comment="错误信息")
+    operator_name: Mapped[str | None] = mapped_column(String(128), comment="操作人昵称快照")
+    action_name: Mapped[str | None] = mapped_column(String(128), comment="操作名")
+    action_type: Mapped[str | None] = mapped_column(String(32), comment="操作类型")
+    module_label: Mapped[str | None] = mapped_column(String(128), comment="操作模块展示名")
+    duration_ms: Mapped[int | None] = mapped_column(Integer, comment="执行时长（毫秒）")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

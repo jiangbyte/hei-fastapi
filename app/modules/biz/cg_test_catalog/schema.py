@@ -7,7 +7,7 @@ Author: Charlie
 from datetime import datetime
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_serializer
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
@@ -50,7 +50,6 @@ class CgTestCatalogSchema(ApiSchema):
     icon: str | None = None
     description: str | None = None
     extra: dict[str, Any]
-    parent_id_name: str | None = None
     created_at: datetime
     created_by: str | None = None
     created_name: str | None = None
@@ -58,7 +57,19 @@ class CgTestCatalogSchema(ApiSchema):
     updated_at: datetime
     updated_by: str | None = None
     updated_name: str | None = None
+    children: list["CgTestCatalogTreeNode"] = Field(default_factory=list)
+
+
+class CgTestCatalogDetailSchema(CgTestCatalogSchema):
+    parent_id_name: str | None = None
 
 
 class CgTestCatalogTreeNode(CgTestCatalogSchema):
-    children: list["CgTestCatalogTreeNode"] = Field(default_factory=list)
+    """树节点（对齐 hei-boot TreeUtil：weight + 叶子省略 children）。"""
+
+    weight: WireInt | None = None
+    children: list["CgTestCatalogTreeNode"] | None = Field(default=None)
+
+    @field_serializer("children", when_used="json")
+    def _omit_empty_children(self, value: list["CgTestCatalogTreeNode"] | None):
+        return value or None

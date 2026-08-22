@@ -3,6 +3,7 @@
 资源应用服务：资源树/模块 CRUD、权限绑定与授权模块渲染。
 """
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
@@ -217,10 +218,18 @@ class ResourceService:
             [resource.module_id for resource in resources if resource.module_id]
         )
         schemas = to_schema_list(SysResourceSchema, resources)
+        parent_ids = {schema.parent_id for schema in schemas if schema.parent_id}
+        parent_name_map: dict[str, str] = {}
+        if parent_ids:
+            stmt = select(SysResource.id, SysResource.name).where(SysResource.id.in_(parent_ids))
+            rows = (await self.db.execute(stmt)).all()
+            parent_name_map = {row[0]: row[1] for row in rows}
         for schema in schemas:
             module_name, module_client = module_meta_map.get(schema.module_id or "", ("", None))
             schema.module_id_name = module_name
             schema.module_client = module_client
+            if schema.parent_id:
+                schema.parent_id_name = parent_name_map.get(schema.parent_id)
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return schemas
 
@@ -400,32 +409,33 @@ class ResourceModuleService:
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
-    async def selector(
-        self,
-        query: ResourceModuleSelectorQuery,
-    ) -> list[ResourceModuleSelectorOption]:
-        """返回启用的资源模块下拉选项。"""
-        return to_schema_list(
-            ResourceModuleSelectorOption,
-            await self.repo.list_enabled_modules(query.client),
-        )
+    async def selector(self) -> list[SysResourceModuleSchema]:
+        """返回启用的资源模块（对齐 hei-boot 全字段 selector）。"""
+        items = await self.repo.list_enabled_modules(None)
+        schemas = to_schema_list(SysResourceModuleSchema, items)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
+        return schemas
 
 
 def _build_resource_tree_nodes(
     resources: list[SysResource],
     module_meta_map: dict[str, tuple[str, str]],
 ) -> list[ResourceTreeNode]:
-    """将扁平资源列表组装为带模块元信息的树节点。"""
+    """将扁平资源列表组装为带模块元信息的树节点（对齐 hei-boot TreeUtil）。"""
+    ids = {resource.id for resource in resources}
     node_map = {resource.id: to_schema(ResourceTreeNode, resource) for resource in resources}
     for node in node_map.values():
         module_name, module_client = module_meta_map.get(node.module_id or "", ("", None))
         node.module_id_name = module_name
         node.module_client = module_client
+        node.weight = node.sort or 0
     roots: list[ResourceTreeNode] = []
     for resource in resources:
         node = node_map[resource.id]
-        if resource.parent_id and resource.parent_id in node_map:
-            parent_node = node_map[resource.parent_id]
+        parent_id = resource.parent_id
+        if parent_id and parent_id in ids:
+            parent_node = node_map[parent_id]
+            node.parent_id_name = parent_node.name
             if parent_node.children is None:
                 parent_node.children = []
             parent_node.children.append(node)

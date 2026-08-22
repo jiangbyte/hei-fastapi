@@ -59,12 +59,15 @@ async def get_me(
     force_bind_email, force_bind_phone = await AuthService(db)._force_bind_flags(
         account_entity, AccountType.ADMIN
     )
+    auth_service = AuthService(db)
+    from app.modules.profile.identity.service import ProfileIdentityService
+
+    identity = await ProfileIdentityService(db).get_user_status_for_account(session.account_id)
     return success(
         AdminMeResponse(
             account_id=session.account_id,
             account=account.account,
             account_type=AccountType(str(session.account_type)),
-            name=account.name,
             nickname=account.nickname,
             avatar=avatar,
             role_ids=session.role_ids,
@@ -77,9 +80,12 @@ async def get_me(
             password_expired=await is_password_expired(db, session.account_id),
             force_bind_email=force_bind_email,
             force_bind_phone=force_bind_phone,
+            force_bind_identity=await auth_service.force_bind_identity_flag(
+                session.account_id, AccountType.ADMIN
+            ),
+            identity=identity,
             profile=ProfileUserAdminResponse(
                 account_id=session.account_id,
-                name=account.name,
                 nickname=account.nickname,
                 avatar=avatar,
                 signature=account.signature,

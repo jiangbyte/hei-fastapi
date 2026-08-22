@@ -76,8 +76,12 @@ class CgTestOrderRepository:
         stmt: Select[tuple[CgTestOrder]] = select(CgTestOrder)
         count_stmt = select(func.count(CgTestOrder.id))
         filters = []
+        if query.order_no:
+            filters.append(ci_like(CgTestOrder.order_no, f"%{query.order_no}%"))
         if query.name:
             filters.append(ci_like(CgTestOrder.name, f"%{query.name}%"))
+        if query.customer_name:
+            filters.append(ci_like(CgTestOrder.customer_name, f"%{query.customer_name}%"))
         if query.status is not None:
             filters.append(CgTestOrder.status == query.status)
         if query.type:
@@ -87,7 +91,7 @@ class CgTestOrderRepository:
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
-        stmt = stmt.order_by(CgTestOrder.id.desc()).offset(query.offset).limit(query.size)
+        stmt = stmt.order_by(CgTestOrder.created_at.desc()).offset(query.offset).limit(query.size)
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
         return items, total
@@ -137,14 +141,14 @@ class CgTestOrderItemRepository:
             filters.append(CgTestOrderItem.order_id == query.order_id)
         if query.name:
             filters.append(ci_like(CgTestOrderItem.name, f"%{query.name}%"))
-        if query.category:
-            filters.append(ci_like(CgTestOrderItem.category, f"%{query.category}%"))
+        if query.sku_code:
+            filters.append(ci_like(CgTestOrderItem.sku_code, f"%{query.sku_code}%"))
         if query.status is not None:
             filters.append(CgTestOrderItem.status == query.status)
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
-        stmt = stmt.order_by(CgTestOrderItem.id.desc()).offset(query.offset).limit(query.size)
+        stmt = stmt.order_by(CgTestOrderItem.created_at.desc()).offset(query.offset).limit(query.size)
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
         return items, total

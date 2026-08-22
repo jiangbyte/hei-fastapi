@@ -16,7 +16,6 @@ class ProfileUserAdmin(Base, TimestampMixin):
     __tablename__ = "profile_user_admin"
 
     account_id: Mapped[str] = mapped_column(String(64), primary_key=True, comment="账户ID")
-    name: Mapped[str | None] = mapped_column(String(64), comment="姓名")
     nickname: Mapped[str | None] = mapped_column(String(64), comment="昵称")
     avatar: Mapped[str | None] = mapped_column(Text, comment="头像")
     signature: Mapped[str | None] = mapped_column(Text, comment="个性签名")

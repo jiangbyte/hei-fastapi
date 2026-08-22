@@ -10,7 +10,6 @@ from datetime import datetime
 
 from pydantic import Field
 
-from app.core.config.enums import AccountType
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireInt
@@ -37,16 +36,15 @@ class SysFeedbackUpdateRequest(ApiSchema):
 class SysFeedbackAdminPageQuery(PageQuery):
     """管理端反馈分页查询条件。"""
 
-    title: str | None = None
     category: str | None = None
     status: str | None = None
-    submitter_account_type: AccountType | None = None
 
 
 class MyFeedbackPageQuery(PageQuery):
-    """「我的反馈」分页查询条件（无额外过滤）。"""
+    """「我的反馈」分页查询条件。"""
 
-    pass
+    category: str | None = None
+    status: str | None = None
 
 
 class SysFeedbackAttachmentSchema(ApiSchema):

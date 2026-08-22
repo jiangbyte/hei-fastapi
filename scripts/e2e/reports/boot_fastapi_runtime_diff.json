@@ -1,0 +1,1203 @@
+{
+  "generated_at": "2026-08-22T22:22:01",
+  "boot_base": "http://127.0.0.1:8000",
+  "fastapi_base": "http://127.0.0.1:8100",
+  "skip_dynamic": true,
+  "audit_snapshots": {
+    "before_sweep": {
+      "sys_operation_audit_log": {
+        "count": 62,
+        "max_id": "7496934498047803392"
+      },
+      "sys_operation_audit_outbox": {
+        "count": 22
+      }
+    },
+    "after_sweep": {
+      "sys_operation_audit_log": {
+        "count": 64,
+        "max_id": "7496934683691892736"
+      },
+      "sys_operation_audit_outbox": {
+        "count": 22
+      }
+    },
+    "audit_log_delta": 2
+  },
+  "summary": {
+    "ops_in_openapi": 307,
+    "get_compared": 111,
+    "get_skipped": 28,
+    "dynamic_skipped": 14,
+    "mismatch_count": 68,
+    "match_count": 43
+  },
+  "mismatches": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/notices/detail",
+      "url": "/api/v1/admin/sys/notices/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/jobs/page",
+      "url": "/api/v1/admin/sys/jobs/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/jobs/detail",
+      "url": "/api/v1/admin/sys/jobs/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/job-logs/page",
+      "url": "/api/v1/admin/sys/job-logs/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/identity/page",
+      "url": "/api/v1/admin/sys/identity/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/groups/page",
+      "url": "/api/v1/admin/sys/groups/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/groups/own-user",
+      "url": "/api/v1/admin/sys/groups/own-user?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/groups/own-role",
+      "url": "/api/v1/admin/sys/groups/own-role?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/groups/own-resource",
+      "url": "/api/v1/admin/sys/groups/own-resource?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/groups/own-client-resource",
+      "url": "/api/v1/admin/sys/groups/own-client-resource?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/groups/detail",
+      "url": "/api/v1/admin/sys/groups/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/file/page",
+      "url": "/api/v1/admin/sys/file/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/file/detail",
+      "url": "/api/v1/admin/sys/file/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/feedbacks/page",
+      "url": "/api/v1/admin/sys/feedbacks/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/feedbacks/my-page",
+      "url": "/api/v1/admin/sys/feedbacks/my-page?param=%7B%7D",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/feedbacks/my-detail",
+      "url": "/api/v1/admin/sys/feedbacks/my-detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/feedbacks/detail",
+      "url": "/api/v1/admin/sys/feedbacks/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/dicts/tree",
+      "url": "/api/v1/admin/sys/dicts/tree?current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/dicts/page",
+      "url": "/api/v1/admin/sys/dicts/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/dicts/detail",
+      "url": "/api/v1/admin/sys/dicts/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/depts/tree",
+      "url": "/api/v1/admin/sys/depts/tree?current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/depts/page",
+      "url": "/api/v1/admin/sys/depts/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/depts/detail",
+      "url": "/api/v1/admin/sys/depts/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/config/page",
+      "url": "/api/v1/admin/sys/config/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/config/list",
+      "url": "/api/v1/admin/sys/config/list?current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/config/detail",
+      "url": "/api/v1/admin/sys/config/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/tables",
+      "url": "/api/v1/admin/sys/codegen/tables",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/table-columns",
+      "url": "/api/v1/admin/sys/codegen/table-columns?table_name=x",
+      "boot_status": 404,
+      "fast_status": 429,
+      "boot_code": 404,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/preview",
+      "url": "/api/v1/admin/sys/codegen/preview?id=x",
+      "boot_status": 404,
+      "fast_status": 429,
+      "boot_code": 404,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/parent-resources",
+      "url": "/api/v1/admin/sys/codegen/parent-resources",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/page",
+      "url": "/api/v1/admin/sys/codegen/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/fields",
+      "url": "/api/v1/admin/sys/codegen/fields?plan_id=x",
+      "boot_status": 404,
+      "fast_status": 429,
+      "boot_code": 404,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/detail",
+      "url": "/api/v1/admin/sys/codegen/detail?id=x",
+      "boot_status": 404,
+      "fast_status": 429,
+      "boot_code": 404,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/client-resources/tree",
+      "url": "/api/v1/admin/sys/client-resources/tree?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/client-resources/page",
+      "url": "/api/v1/admin/sys/client-resources/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/client-resources/detail",
+      "url": "/api/v1/admin/sys/client-resources/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/client-modules/selector",
+      "url": "/api/v1/admin/sys/client-modules/selector",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/client-modules/page",
+      "url": "/api/v1/admin/sys/client-modules/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/client-modules/detail",
+      "url": "/api/v1/admin/sys/client-modules/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/banners/page",
+      "url": "/api/v1/admin/sys/banners/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/banners/list",
+      "url": "/api/v1/admin/sys/banners/list?position=x&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/banners/detail",
+      "url": "/api/v1/admin/sys/banners/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/page",
+      "url": "/api/v1/admin/sys/accounts/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/own-role",
+      "url": "/api/v1/admin/sys/accounts/own-role?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/own-resource",
+      "url": "/api/v1/admin/sys/accounts/own-resource?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/own-group",
+      "url": "/api/v1/admin/sys/accounts/own-group?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/own-dept",
+      "url": "/api/v1/admin/sys/accounts/own-dept?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/own-client-resource",
+      "url": "/api/v1/admin/sys/accounts/own-client-resource?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/accounts/detail",
+      "url": "/api/v1/admin/sys/accounts/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/real-name/case/options",
+      "url": "/api/v1/admin/real-name/case/options",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/real-name/case/my-page",
+      "url": "/api/v1/admin/real-name/case/my-page?param=%7B%7D",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/public/auth-options",
+      "url": "/api/v1/admin/public/auth-options",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/profile/org-info",
+      "url": "/api/v1/admin/profile/org-info",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/profile/identity/status",
+      "url": "/api/v1/admin/profile/identity/status",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-order/page",
+      "url": "/api/v1/admin/biz/cg-test-order/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-order/detail",
+      "url": "/api/v1/admin/biz/cg-test-order/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-order/children/page",
+      "url": "/api/v1/admin/biz/cg-test-order/children/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-order/children/detail",
+      "url": "/api/v1/admin/biz/cg-test-order/children/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-knowledge-category/tree",
+      "url": "/api/v1/admin/biz/cg-test-knowledge-category/tree?current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-knowledge-category/page",
+      "url": "/api/v1/admin/biz/cg-test-knowledge-category/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-knowledge-category/detail",
+      "url": "/api/v1/admin/biz/cg-test-knowledge-category/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-knowledge-category/children/page",
+      "url": "/api/v1/admin/biz/cg-test-knowledge-category/children/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-knowledge-category/children/detail",
+      "url": "/api/v1/admin/biz/cg-test-knowledge-category/children/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-catalog/tree",
+      "url": "/api/v1/admin/biz/cg-test-catalog/tree?current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=list fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-catalog/page",
+      "url": "/api/v1/admin/biz/cg-test-catalog/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-catalog/detail",
+      "url": "/api/v1/admin/biz/cg-test-catalog/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-activity/page",
+      "url": "/api/v1/admin/biz/cg-test-activity/page?param=%7B%7D&current=1&size=5",
+      "boot_status": 200,
+      "fast_status": 429,
+      "boot_code": 200,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [
+        "data: type boot=dict fast=NoneType"
+      ],
+      "data_diff_count": 1,
+      "error": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/biz/cg-test-activity/detail",
+      "url": "/api/v1/admin/biz/cg-test-activity/detail?param=%7B%7D",
+      "boot_status": 422,
+      "fast_status": 429,
+      "boot_code": 422,
+      "fast_code": 429,
+      "status_mismatch": true,
+      "code_mismatch": true,
+      "data_diffs": [],
+      "data_diff_count": 0,
+      "error": null
+    }
+  ],
+  "skipped": [
+    {
+      "method": "GET",
+      "path": "/easyTrans/proxy/{targetClass}/findById/{id}",
+      "reason": "easyTrans"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/sys/file/download",
+      "reason": "storage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/sys/audit/my-page",
+      "reason": "dynamic:/sys/audit/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/sys/audit/my-detail",
+      "reason": "dynamic:/sys/audit/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/password-key",
+      "reason": "auth-bootstrap"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/oauth/{provider}/callback",
+      "reason": "oauth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/oauth/{provider}/authorize",
+      "reason": "oauth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/oauth/bindings",
+      "reason": "oauth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/me",
+      "reason": "dynamic:/api/v1/portal/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/portal/captcha",
+      "reason": "auth-bootstrap"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/workspace/overview",
+      "reason": "dynamic:/workspace/overview"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/file/download",
+      "reason": "storage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/codegen/download",
+      "reason": "storage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/audit/page",
+      "reason": "dynamic:/sys/audit/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/audit/my-page",
+      "reason": "dynamic:/sys/audit/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/audit/my-detail",
+      "reason": "dynamic:/sys/audit/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/sys/audit/detail",
+      "reason": "dynamic:/sys/audit/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/permission-registry",
+      "reason": "dynamic:/permission-registry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/password-key",
+      "reason": "auth-bootstrap"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/oauth/{provider}/callback",
+      "reason": "oauth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/oauth/{provider}/authorize",
+      "reason": "oauth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/oauth/bindings",
+      "reason": "oauth"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/me",
+      "reason": "dynamic:/api/v1/admin/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/captcha",
+      "reason": "auth-bootstrap"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/auth/sessions/tokens",
+      "reason": "dynamic:/auth/sessions/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/auth/sessions/page",
+      "reason": "dynamic:/auth/sessions/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/auth/sessions/analysis",
+      "reason": "dynamic:/auth/sessions/"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "reason": "dynamic:/"
+    }
+  ]
+}

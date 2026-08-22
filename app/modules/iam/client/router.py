@@ -120,12 +120,12 @@ async def client_module_page(
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:clientmodule:page")),
     ],
-    response_model=ApiResponse[list[ClientModuleSelectorOption]],
+    response_model=ApiResponse[list[SysClientModuleSchema]],
 )
 async def client_module_selector(
     query: Annotated[ClientModuleSelectorQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-) -> ApiResponse[list[ClientModuleSelectorOption]]:
+) -> ApiResponse[list[SysClientModuleSchema]]:
     return success(await ClientModuleService(db).selector(query))
 
 

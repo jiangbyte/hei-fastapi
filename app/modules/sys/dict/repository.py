@@ -34,6 +34,8 @@ class DictTreeRecord(TypedDict):
     status: str
     sort: int
     weight: int
+    created_at: object
+    updated_at: object
     children: list["DictTreeRecord"]
 
 
@@ -104,7 +106,7 @@ class DictRepository:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysDict.sort.asc(), SysDict.id.desc())
+            stmt.order_by(SysDict.sort.asc(), SysDict.created_at.desc())
             .offset(query.offset)
             .limit(query.size)
         )
@@ -125,37 +127,51 @@ class DictRepository:
         stmt = select(SysDict)
         if query.category:
             stmt = stmt.where(SysDict.category == query.category)
-        stmt = stmt.order_by(SysDict.sort.asc(), SysDict.id.desc())
+        stmt = stmt.order_by(SysDict.sort.asc())
         items = list((await self.db.execute(stmt)).scalars().all())
         return _build_tree(items)
 
 
+def _entity_to_record(item: SysDict) -> DictTreeRecord:
+    """将字典实体转为树节点记录（含 Boot 树线字段）。"""
+    sort = item.sort or 0
+    return {
+        "id": item.id,
+        "code": item.code,
+        "label": item.label,
+        "name": item.label,
+        "value": item.value,
+        "color": item.color,
+        "category": item.category,
+        "parent_id": item.parent_id,
+        "parent_id_name": None,
+        "status": item.status,
+        "sort": sort,
+        "weight": sort,
+        "created_at": item.created_at,
+        "updated_at": item.updated_at,
+        "children": [],
+    }
+
+
 def _build_tree(items: list[SysDict]) -> list[DictTreeRecord]:
-    """将扁平字典列表组装为父子树形结构。"""
+    """将扁平字典列表组装为父子树（对齐 hei-boot TreeUtil.build）。"""
+    if not items:
+        return []
+    ids = {item.id for item in items}
     node_map: dict[str, DictTreeRecord] = {
-        item.id: {
-            "id": item.id,
-            "code": item.code,
-            "label": item.label,
-            "name": item.label,
-            "value": item.value,
-            "color": item.color,
-            "category": item.category,
-            "parent_id": item.parent_id,
-            "parent_id_name": None,
-            "status": item.status,
-            "sort": item.sort,
-            "weight": item.sort,
-            "children": [],
-        }
-        for item in items
+        item.id: _entity_to_record(item) for item in items
     }
     roots: list[DictTreeRecord] = []
     for item in items:
-        if item.parent_id and item.parent_id in node_map:
-            parent = node_map[item.parent_id]
-            node_map[item.id]["parent_id_name"] = parent["label"] or parent["code"]
-            node_map[item.parent_id]["children"].append(node_map[item.id])
+        parent_id = item.parent_id
+        if not parent_id or parent_id not in ids:
+            parent_id = None
+        node = node_map[item.id]
+        if parent_id:
+            parent = node_map[parent_id]
+            node["parent_id_name"] = parent["label"] or parent["code"]
+            parent["children"].append(node)
         else:
-            roots.append(node_map[item.id])
+            roots.append(node)
     return roots

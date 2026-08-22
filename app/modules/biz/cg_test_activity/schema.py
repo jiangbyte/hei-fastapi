@@ -11,7 +11,7 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
-from app.core.schema.wire import WireBool, WireFloat, WireInt
+from app.core.schema.wire import WireBool, WireFloat, WireInt, WireMoney
 
 
 class CgTestActivityCreateRequest(ApiSchema):
@@ -25,7 +25,7 @@ class CgTestActivityCreateRequest(ApiSchema):
     start_at: datetime
     end_at: datetime | None = None
     max_participants: WireInt
-    price: WireFloat
+    price: WireMoney
     is_public: WireBool
     need_approval: WireBool
     rule_config: dict[str, Any]
@@ -56,7 +56,7 @@ class CgTestActivitySchema(ApiSchema):
     start_at: datetime
     end_at: datetime | None = None
     max_participants: WireInt
-    price: WireFloat
+    price: WireMoney
     is_public: WireBool
     need_approval: WireBool
     rule_config: dict[str, Any]

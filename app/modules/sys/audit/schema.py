@@ -9,11 +9,11 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
-from app.core.schema.wire import WireBool
+from app.core.schema.wire import WireBool, WireInt
 
 
 class OperationAuditRecord(ApiSchema):
-    """操作审计日志响应记录。"""
+    """操作审计日志响应记录（对齐 hei-boot SysOperationAuditLog）。"""
 
     id: str
     module: str
@@ -30,6 +30,11 @@ class OperationAuditRecord(ApiSchema):
     user_agent: str | None = None
     success: WireBool
     error_message: str | None = None
+    operator_name: str | None = None
+    action_name: str | None = None
+    action_type: str | None = None
+    module_label: str | None = None
+    duration_ms: WireInt | None = None
     created_at: datetime
 
 
@@ -50,6 +55,11 @@ class OperationAuditCreate(ApiSchema):
     user_agent: str | None = None
     success: WireBool = True
     error_message: str | None = None
+    operator_name: str | None = None
+    action_name: str | None = None
+    action_type: str | None = None
+    module_label: str | None = None
+    duration_ms: WireInt | None = None
 
 
 class OperationAuditPageQuery(PageQuery):
@@ -57,5 +67,6 @@ class OperationAuditPageQuery(PageQuery):
 
     module: str | None = Field(default=None, max_length=64)
     action: str | None = Field(default=None, max_length=64)
+    exclude_action: str | None = Field(default=None, max_length=64)
     account_id: str | None = Field(default=None, max_length=64)
     success: WireBool | None = None

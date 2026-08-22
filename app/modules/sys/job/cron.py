@@ -15,27 +15,27 @@ TYPE_FIXED = "FIXED"
 _FIXED_MIN_INTERVAL_SECONDS = 1
 
 
-def validate(execute_type: str, trigger_config: str) -> None:
+def validate(trigger_type: str, trigger_config: str) -> None:
     """校验触发配置合法，非法时抛出 BusinessError。"""
-    execute_type = execute_type.upper()
+    trigger_type = trigger_type.upper()
     trigger_config = (trigger_config or "").strip()
-    if execute_type == TYPE_FIXED:
+    if trigger_type == TYPE_FIXED:
         if not trigger_config.isdigit() or int(trigger_config) < _FIXED_MIN_INTERVAL_SECONDS:
             raise BusinessError("FIXED 触发配置必须为正整数秒数")
         return
-    if execute_type == TYPE_CRON:
+    if trigger_type == TYPE_CRON:
         _validate_cron(trigger_config)
         return
-    raise BusinessError(f"不支持的触发类型: {execute_type}")
+    raise BusinessError(f"不支持的触发类型: {trigger_type}")
 
 
 def compute_next_run_time(
-    execute_type: str, trigger_config: str, from_time: datetime
+    trigger_type: str, trigger_config: str, from_time: datetime
 ) -> datetime:
     """计算 from_time 之后的下一次执行时间。"""
-    execute_type = execute_type.upper()
+    trigger_type = trigger_type.upper()
     trigger_config = (trigger_config or "").strip()
-    if execute_type == TYPE_FIXED:
+    if trigger_type == TYPE_FIXED:
         return from_time + timedelta(seconds=int(trigger_config))
     return _next_cron(trigger_config, from_time)
 

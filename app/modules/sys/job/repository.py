@@ -59,10 +59,10 @@ class JobRepository:
         stmt: Select[tuple[SysJob]] = select(SysJob)
         count_stmt = select(func.count(SysJob.id))
         filters = []
-        if query.job_name:
-            filters.append(ci_like(SysJob.job_name, f"%{query.job_name}%"))
-        if query.execute_type:
-            filters.append(SysJob.execute_type == str(query.execute_type))
+        if query.name:
+            filters.append(ci_like(SysJob.name, f"%{query.name}%"))
+        if query.trigger_type:
+            filters.append(SysJob.trigger_type == str(query.trigger_type))
         if query.enabled is not None:
             filters.append(SysJob.enabled == bool(query.enabled))
         if filters:
@@ -113,7 +113,7 @@ class JobLogRepository:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysJobLog.execute_time.desc())
+            stmt.order_by(SysJobLog.started_at.desc())
             .offset(query.offset)
             .limit(query.size)
         )
@@ -122,15 +122,15 @@ class JobLogRepository:
         return items, total
 
     async def cleanup_expired(self, *, before: datetime, batch_size: int) -> int:
-        """按 execute_time 分批删除过期日志，返回累计删除行数。"""
+        """按 started_at 分批删除过期日志，返回累计删除行数。"""
         limit = max(1, batch_size)
         total_deleted = 0
         max_rounds = 1000
         for _ in range(max_rounds):
             ids_stmt = (
                 select(SysJobLog.id)
-                .where(SysJobLog.execute_time < before)
-                .order_by(SysJobLog.execute_time.asc())
+                .where(SysJobLog.started_at < before)
+                .order_by(SysJobLog.started_at.asc())
                 .limit(limit)
             )
             ids = list((await self.db.execute(ids_stmt)).scalars().all())

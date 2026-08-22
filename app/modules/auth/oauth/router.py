@@ -59,7 +59,7 @@ async def admin_oauth_authorize(
     return success(OauthAuthorizeResult(**result))
 
 
-@admin_router.get("/v1/admin/oauth/{provider}/callback", include_in_schema=False)
+@admin_router.get("/v1/admin/oauth/{provider}/callback")
 async def admin_oauth_callback(
     provider: str,
     service: ServiceDep,
@@ -161,7 +161,7 @@ async def portal_oauth_authorize(
     return success(OauthAuthorizeResult(**result))
 
 
-@portal_router.get("/v1/portal/oauth/{provider}/callback", include_in_schema=False)
+@portal_router.get("/v1/portal/oauth/{provider}/callback")
 async def portal_oauth_callback(
     provider: str,
     service: ServiceDep,

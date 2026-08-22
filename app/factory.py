@@ -16,6 +16,7 @@ from app.core.exceptions.handlers import (
 )
 from app.core.logger.setup import setup_logging
 from app.core.observability.manager import setup_observability
+from app.core.response.schema import ApiResponse, success
 from app.core.schema.health import RootHealthResponse
 from app.lifespan import lifespan
 from app.middleware.asgi_core import (
@@ -82,11 +83,12 @@ def create_app() -> FastAPI:
     customize_openapi_error_responses(app)
     setup_observability(app, engine=engine)
 
-    @app.get("/", tags=["health"], response_model=RootHealthResponse)
-    async def root() -> RootHealthResponse:
-        return RootHealthResponse(status="ok", service=settings.app.name)
+    @app.get("/", tags=["health"], response_model=ApiResponse[RootHealthResponse])
+    async def root() -> ApiResponse[RootHealthResponse]:
+        return success(RootHealthResponse(name=settings.app.name))
 
     app.include_router(api_router)
+
     logger.info("Application created with %d routes", len(app.routes))
 
     return app

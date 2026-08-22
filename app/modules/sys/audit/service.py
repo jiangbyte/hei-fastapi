@@ -16,9 +16,17 @@ from app.core.observability.context import (
     user_agent_ctx,
 )
 from app.core.observability.metrics import record_operation_audit
+from app.core.exceptions.business import NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, to_schema, to_schema_list
 from app.core.security.masking import mask_identifier
+from app.modules.sys.audit.labels import (
+    action_name as audit_action_name,
+    action_type as audit_action_type,
+    build_content,
+    module_label as audit_module_label,
+    normalize_account_type,
+)
 from app.modules.sys.audit.repository import OperationAuditRepository
 from app.modules.sys.audit.schema import (
     OperationAuditCreate,
@@ -54,24 +62,52 @@ class OperationAuditService:
         request_id: str | None = None,
         ip: str | None = None,
         user_agent: str | None = None,
+        operator_name: str | None = None,
+        action_name: str | None = None,
+        action_type: str | None = None,
+        module_label: str | None = None,
+        duration_ms: int | None = None,
     ) -> None:
         """构造并写入一条审计日志；参数未显式提供时回退到请求上下文。"""
+        resolved_account_type = account_type if account_type is not None else account_type_ctx.get()
+        resolved_account_type = normalize_account_type(resolved_account_type)
+        label_resource = resource_type or module
+        resolved_action_name = action_name or audit_action_name(label_resource, action)
+        resolved_action_type = action_type or audit_action_type(action)
+        resolved_module_label = module_label or audit_module_label(label_resource)
+        subject = operator_name or resource_id or account_id or account_id_ctx.get()
+        resolved_summary = summary
+        if resolved_summary is None:
+            resolved_summary = build_content(
+                action=action,
+                resource_type=label_resource,
+                action_name_text=resolved_action_name,
+                subject=subject,
+                success=success,
+                before_data=before_data,
+                after_data=after_data,
+            )
         payload = OperationAuditCreate(
             module=module,
             resource_type=resource_type,
             # 对资源 ID 与摘要脱敏后再落库，避免日志泄漏敏感标识。
             resource_id=mask_identifier(resource_id) if resource_id else None,
             action=action,
-            summary=mask_identifier(summary) if summary else None,
+            summary=mask_identifier(resolved_summary) if resolved_summary else None,
             before_data=before_data,
             after_data=after_data,
             account_id=account_id if account_id is not None else account_id_ctx.get(),
-            account_type=account_type if account_type is not None else account_type_ctx.get(),
+            account_type=resolved_account_type,
             request_id=request_id if request_id is not None else request_id_ctx.get(),
             ip=ip if ip is not None else client_ip_ctx.get(),
             user_agent=user_agent if user_agent is not None else user_agent_ctx.get(),
             success=success,
             error_message=error_message,
+            operator_name=operator_name,
+            action_name=resolved_action_name,
+            action_type=resolved_action_type,
+            module_label=resolved_module_label,
+            duration_ms=duration_ms,
         )
         try:
             async with transactional(self.db):
@@ -92,3 +128,19 @@ class OperationAuditService:
             total,
             to_schema_list(OperationAuditRecord, items),
         )
+
+    async def my_page(
+        self, query: OperationAuditPageQuery, account_id: str
+    ) -> PageData[OperationAuditRecord]:
+        """当前用户本人审计日志分页。"""
+        scoped = OperationAuditPageQuery(
+            **{**query.model_dump(), "account_id": account_id}
+        )
+        return await self.page_admin(scoped)
+
+    async def my_detail(self, audit_id: str, account_id: str) -> OperationAuditRecord:
+        """当前用户本人审计详情。"""
+        record = await self.detail(IdQuery(id=audit_id))
+        if record.account_id != account_id:
+            raise NotFoundError("Operation audit log not found")
+        return record

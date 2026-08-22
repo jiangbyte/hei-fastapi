@@ -4,7 +4,7 @@ API 路由装配：显式挂载全部业务模块路由（对齐 hei-boot "expli
 
 完整路径写在各路由装饰器上（``/v1/admin/...``），这里统一挂 ``/api`` 前缀并保留
 OpenAPI tags（admin / portal / internal / public）。挂载顺序为历史注册顺序：
-dashboard → auth → 其余按模块名字母序。
+workspace → auth → 其余按模块名字母序。
 """
 
 from functools import cache
@@ -12,6 +12,7 @@ from functools import cache
 from fastapi import APIRouter
 
 from app.core.paths import API_ROOT_PREFIX
+from app.core.router import enable_response_exclude_none
 from app.modules.auth.oauth.router import admin_router as oauth_admin_router
 from app.modules.auth.oauth.router import portal_router as oauth_portal_router
 from app.modules.auth.router import admin_router as auth_admin_router
@@ -21,7 +22,7 @@ from app.modules.biz.cg_test_activity.router import router as cg_test_activity_r
 from app.modules.biz.cg_test_catalog.router import router as cg_test_catalog_router
 from app.modules.biz.cg_test_knowledge_category.router import router as cg_test_knowledge_router
 from app.modules.biz.cg_test_order.router import router as cg_test_order_router
-from app.modules.dashboard.router import router as dashboard_router
+from app.modules.workspace.router import router as workspace_router
 from app.modules.iam.account.router import router as iam_account_router
 from app.modules.iam.client.router import router as iam_client_router
 from app.modules.iam.dept.router import router as iam_dept_router
@@ -32,7 +33,11 @@ from app.modules.iam.resource.router import router as iam_resource_router
 from app.modules.iam.role.router import router as iam_role_router
 from app.modules.internal.health.router import router as internal_health_router
 from app.modules.profile.admin.router import router as profile_admin_router
+from app.modules.profile.identity.router import admin_manage_router as profile_identity_manage_router
+from app.modules.profile.identity.router import admin_user_router as profile_identity_admin_router
+from app.modules.profile.identity.router import portal_user_router as profile_identity_portal_router
 from app.modules.profile.portal.router import router as profile_portal_router
+from app.modules.sys.audit.portal_router import router as sys_audit_portal_router
 from app.modules.sys.audit.router import router as sys_audit_router
 from app.modules.sys.banner.portal.router import router as banner_portal_router
 from app.modules.sys.banner.router import router as banner_router
@@ -45,13 +50,14 @@ from app.modules.sys.feedback.router import portal_router as feedback_portal_rou
 from app.modules.sys.file.portal.router import router as file_portal_router
 from app.modules.sys.file.router import router as sys_file_router
 from app.modules.sys.job.router import router as sys_job_router
+from app.modules.sys.public.router import router as sys_public_router
 from app.modules.sys.notice.router import admin_router as notice_admin_router
 from app.modules.sys.notice.router import portal_router as notice_portal_router
 from app.modules.sys.weak_password.router import router as weak_password_router
 
 # (tags, router) 挂载清单，顺序与历史注册顺序一致。
 _ROUTERS: list[tuple[str, APIRouter]] = [
-    ("admin", dashboard_router),
+    ("admin", workspace_router),
     ("admin", auth_admin_router),
     ("portal", auth_portal_router),
     ("admin", auth_session_admin_router),
@@ -75,6 +81,8 @@ _ROUTERS: list[tuple[str, APIRouter]] = [
     ("admin", notice_admin_router),
     ("portal", notice_portal_router),
     ("admin", sys_audit_router),
+    ("portal", sys_audit_portal_router),
+    ("public", sys_public_router),
     ("admin", banner_router),
     ("portal", banner_portal_router),
     ("admin", sys_codegen_router),
@@ -86,6 +94,9 @@ _ROUTERS: list[tuple[str, APIRouter]] = [
     ("admin", sys_job_router),
     ("admin", weak_password_router),
     ("admin", profile_admin_router),
+    ("admin", profile_identity_admin_router),
+    ("admin", profile_identity_manage_router),
+    ("portal", profile_identity_portal_router),
     ("portal", profile_portal_router),
 ]
 
@@ -96,4 +107,5 @@ def get_api_router() -> APIRouter:
     api_router = APIRouter()
     for tags, router in _ROUTERS:
         api_router.include_router(router, prefix=API_ROOT_PREFIX, tags=[tags])
+    enable_response_exclude_none(api_router)
     return api_router

@@ -1,7 +1,7 @@
 """ Author: Charlie
 
 任务处理器注册表：业务模块通过 @job_handler(key) 注册处理器，
-调度引擎按 sys_job.execute_class 解析并执行（对齐 hei-boot common-job JobHandler SPI）。
+调度引擎按 sys_job.handler 解析并执行（对齐 hei-boot common-job JobHandler SPI）。
 """
 
 from __future__ import annotations
@@ -12,10 +12,21 @@ from typing import TypeAlias
 
 logger = logging.getLogger(__name__)
 
-# 处理器签名：接收 execute_param（dict 或 None），返回结果摘要字符串。
+# 处理器签名：接收 params（dict 或 None），返回结果摘要字符串。
 JobHandlerType: TypeAlias = Callable[[dict | None], Awaitable[str]]
 
 HANDLERS: dict[str, JobHandlerType] = {}
+
+# hei-boot 种子数据使用 Java JobHandler 全限定类名；映射到 Python 注册 key。
+BOOT_HANDLER_ALIASES: dict[str, str] = {
+    "github.jiangbyte.io.sys.modules.job.sample.SysJobSample": "sys_job_sample",
+    "github.jiangbyte.io.sys.modules.banner.job.BannerStatusJob": "sys_banner_status_sync",
+    "github.jiangbyte.io.sys.modules.banner.job.BannerStatusSyncJob": "sys_banner_status_sync",
+    "github.jiangbyte.io.sys.modules.banner.job.BannerFlushInteractionsJob": "sys_banner_flush_interactions",
+    "github.jiangbyte.io.sys.modules.audit.job.AuditAlertJob": "sys_audit_alert",
+    "github.jiangbyte.io.iam.modules.account.job.AccountPurgeCancelledJob": "iam_account_purge_cancelled",
+    "github.jiangbyte.io.sys.modules.job.cleanup.SysJobLogCleanupJob": "sys_job_log_cleanup",
+}
 
 _handlers_loaded = False
 
@@ -52,4 +63,15 @@ def load_handlers() -> None:
 def resolve(name: str) -> JobHandlerType | None:
     """按标识解析处理器，未注册返回 None（首次调用前兜底加载处理器）。"""
     load_handlers()
-    return HANDLERS.get(name)
+    key = BOOT_HANDLER_ALIASES.get(name, name)
+    return HANDLERS.get(key)
+
+
+def boot_handler_display(handler: str) -> str:
+    """API 回显对齐 hei-boot：注册 key 映射为 Java JobHandler 全限定类名。"""
+    if handler in BOOT_HANDLER_ALIASES:
+        return handler
+    for fqcn, key in BOOT_HANDLER_ALIASES.items():
+        if key == handler:
+            return fqcn
+    return handler

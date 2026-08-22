@@ -5,7 +5,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from app.core.response.schema import ApiResponse, success
 from app.core.schema.base import ApiSchema, IdQuery, IdsRequest
 from app.deps.auth import require_account_type, require_permission
 from app.deps.db import get_db_session
+from app.modules.sys.audit.alert import send_test_webhook
 from app.modules.sys.config.schema import (
     CategoryQuery,
     ConfigAdminPageQuery,
@@ -157,12 +158,9 @@ async def batch_save(
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
 )
 async def test_audit_alert_webhook(
-    payload: TestWebhookRequest | None = None,
+    payload: Annotated[TestWebhookRequest, Body()] = TestWebhookRequest(),
 ) -> ApiResponse[dict]:
     """发送审计告警测试 Webhook（请求体可省略，对齐 hei-boot），失败时抛出业务错误。"""
-    from app.modules.sys.audit.alert import send_test_webhook
-
-    payload = payload or TestWebhookRequest()
     err = await send_test_webhook(payload.webhook_url, payload.webhook_secret)
     if err:
         from app.core.exceptions.business import BusinessError

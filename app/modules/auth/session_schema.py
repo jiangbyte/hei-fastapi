@@ -27,7 +27,7 @@ class SessionAnalysisResponse(ApiSchema):
 class SessionPageQuery(PageQuery):
     """会话分页查询参数。"""
 
-    account_type: AccountType | None = None
+    account_type: AccountType | None = Field(default=None, alias="accountType")
     account_id: str | None = Field(default=None, max_length=64)
     account: str | None = Field(default=None, max_length=128)
     ip: str | None = Field(default=None, max_length=64)
@@ -71,8 +71,8 @@ class SessionAccountItem(ApiSchema):
 class SessionTokensQuery(ApiSchema):
     """按账户类型与账户 ID 定位会话（account_type 缺省按 ADMIN 处理，对齐 hei-boot）。"""
 
-    account_type: AccountType | None = None
-    account_id: str = Field(min_length=1, max_length=64)
+    account_type: AccountType | None = Field(default=None, alias="accountType")
+    account_id: str = Field(min_length=1, max_length=64, alias="accountId")
 
 
 class SessionExitRequest(ApiSchema):

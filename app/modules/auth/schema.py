@@ -45,6 +45,7 @@ class LoginRequest(CaptchaMixin):
     login_mode: Literal["PASSWORD", "OTP"] = "PASSWORD"
     otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
     remember_me: WireBool = True
+    account_type: AccountType = AccountType.ADMIN
 
 
 class LoginPayload(ApiSchema):
@@ -82,6 +83,17 @@ class SendLoginCodeRequest(CaptchaMixin):
     channel: Literal["EMAIL", "PHONE"]
 
 
+class SiteFooterResponse(ApiSchema):
+    """站点页脚公开信息（对齐 SiteFooterResult）。"""
+
+    copyright_text: str = ""
+    copyright_url: str = ""
+    icp_number: str = ""
+    icp_url: str = ""
+    psb_number: str = ""
+    psb_url: str = ""
+
+
 class AuthOptionsResponse(ApiSchema):
     """登录/注册策略选项响应。"""
 
@@ -101,6 +113,7 @@ class AuthOptionsResponse(ApiSchema):
     password_change_verify_method: str = "OLD_PASSWORD"
     copyright_text: str = ""
     copyright_url: str = ""
+    site_footer: SiteFooterResponse = Field(default_factory=SiteFooterResponse)
     oauth_providers: list[OauthProviderOptionSchema] = Field(default_factory=list)
 
 
@@ -110,8 +123,6 @@ class RegisterRequest(CaptchaMixin, PasswordKeyMixin):
     register_channel: Literal["ACCOUNT", "EMAIL", "PHONE"]
     account: str | None = Field(default=None, min_length=3, max_length=64)
     password: str = Field(min_length=1, max_length=512)
-    name: str | None = Field(default=None, max_length=64)
-    nickname: str | None = Field(default=None, max_length=64)
     email: str | None = Field(default=None, max_length=128)
     phone: str | None = Field(default=None, max_length=32)
     otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
@@ -126,6 +137,20 @@ class SendRegisterCodeRequest(ApiSchema):
     captcha_value: str = Field(min_length=1, max_length=64)
 
 
+class ForgotPasswordByPhoneRequest(CaptchaMixin):
+    """通过手机找回密码：校验图形验证码后向绑定手机发送重置 OTP。"""
+
+    phone: str = Field(min_length=3, max_length=32)
+
+
+class ResetPasswordByPhoneRequest(CaptchaMixin, PasswordKeyMixin):
+    """通过手机 OTP 重置密码。"""
+
+    phone: str = Field(min_length=3, max_length=32)
+    otp_code: str = Field(min_length=4, max_length=16)
+    password: str = Field(min_length=1, max_length=512)
+
+
 class ForgotPasswordRequest(CaptchaMixin):
     """忘记密码请求：通过邮箱触发重置。"""
 
@@ -135,6 +160,7 @@ class ForgotPasswordRequest(CaptchaMixin):
 class ResetPasswordRequest(CaptchaMixin, PasswordKeyMixin):
     """重置密码请求：携带重置 token 与新密码。"""
 
+    email: OptionalStr = Field(default=None, min_length=3, max_length=128)
     token: str = Field(min_length=16, max_length=256)
     password: str = Field(min_length=1, max_length=512)
 

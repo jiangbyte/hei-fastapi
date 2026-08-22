@@ -84,7 +84,6 @@ class ConfigBatchSaveRequest(ApiSchema):
 
 
 class CategoryQuery(ApiSchema):
-    """按分类/作用域查询配置的参数。"""
+    """按分类查询配置的参数。"""
 
     category: str | None = Field(default=None, max_length=255)
-    scope: str | None = Field(default=None, max_length=32)

@@ -218,9 +218,10 @@ class AccountQueryService:
 
 
 def _identity_login_enabled(identity) -> bool:
-    """判断登录标识是否已启用：存在、有标识且处于绑定状态（对齐 hei-boot，不看 verified）。"""
+    """判断登录标识是否已启用：存在、已验证且处于绑定状态（对齐 hei-boot）。"""
     return bool(
         identity
         and identity.identifier
+        and identity.verified
         and identity.bind_status == AccountIdentityBindStatus.BOUND.value
     )

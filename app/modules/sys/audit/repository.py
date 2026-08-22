@@ -44,6 +44,8 @@ class OperationAuditRepository:
             filters.append(SysOperationAuditLog.module == query.module)
         if query.action:
             filters.append(SysOperationAuditLog.action == query.action)
+        elif query.exclude_action:
+            filters.append(SysOperationAuditLog.action != query.exclude_action)
         if query.account_id:
             filters.append(SysOperationAuditLog.account_id == query.account_id)
         if query.success is not None:

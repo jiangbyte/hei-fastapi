@@ -175,8 +175,6 @@ class SessionAdminService:
                     account_type=account_type,
                     account=getattr(schema, "account", None) or "",
                     name=getattr(schema, "name", None),
-                    nickname=getattr(schema, "nickname", None),
-                    avatar=getattr(schema, "avatar", None),
                     latest_login_ip=getattr(account, "latest_login_ip", None),
                     latest_login_time=getattr(account, "latest_login_time", None),
                     client_ip=newest.client_ip if newest else None,

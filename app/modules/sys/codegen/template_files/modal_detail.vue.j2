@@ -6,7 +6,7 @@
 -->
 
 <script setup lang="ts">
-import { {{ plan.main_entity_name | ts_api_name }} } from '@/api'
+import { {{ plan.entity_name | ts_api_name }} } from '@/api'
 import { {% if target.has_detail_dict %}createTagColor, dictTypeColor, dictTypeData, {% endif %}displayValue, formatDateTime } from '@/utils'
 import { reactive } from 'vue'
 
@@ -25,7 +25,7 @@ async function openModal(id: string) {
 async function fetchDetail(id: string) {
   state.loading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.detail({ id })
+    const response = await {{ plan.entity_name | ts_api_name }}.detail({ id })
     state.detail = response.data ?? {}
   } finally {
     state.loading = false
@@ -54,7 +54,7 @@ defineExpose({
 </script>
 
 <template>
-  <NModal v-model:show="state.showModal" preset="card" draggable :mask-closable="false" title="{{ plan.main_business_name }}详情" style="width: 680px">
+  <NModal v-model:show="state.showModal" preset="card" draggable :mask-closable="false" title="详情" style="width: 680px">
     <NScrollbar class="max-h-[min(620px,calc(100vh-300px))] pr-16px">
       <NSpin :show="state.loading">
         <NDescriptions label-placement="left" bordered :column="1">

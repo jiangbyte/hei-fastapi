@@ -32,6 +32,9 @@ from {{ ctx.module_import }}.repository import (
 from {{ ctx.module_import }}.schema import (
     {{ main.entity_name }}AdminPageQuery,
     {{ main.entity_name }}CreateRequest,
+{% if has_tree %}
+    {{ main.entity_name }}DetailSchema,
+{% endif %}
     {{ main.entity_name }}Schema,
 {% if has_tree %}
     {{ main.entity_name }}TreeNode,
@@ -67,7 +70,7 @@ class {{ main.entity_name }}Service:
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
-    async def detail(self, query: IdQuery) -> {{ main.entity_name }}Schema:
+    async def detail(self, query: IdQuery) -> {% if has_tree %}{{ main.entity_name }}DetailSchema{% else %}{{ main.entity_name }}Schema{% endif %}:
 {% if has_tree %}
         schema = await self._to_schema_with_parent_name(await self.repo.get_required(query.id))
 {% else %}
@@ -92,7 +95,7 @@ class {{ main.entity_name }}Service:
             )
         items, total = await self.repo.page_admin(query, data_scope_filter)
 {% if has_tree %}
-        records = await self._attach_parent_names(to_schema_list({{ main.entity_name }}Schema, items))
+        records = to_schema_list({{ main.entity_name }}Schema, items)
 {% else %}
         records = to_schema_list({{ main.entity_name }}Schema, items)
 {% endif %}
@@ -100,11 +103,11 @@ class {{ main.entity_name }}Service:
         return build_page(query, total, records)
 {% if has_tree %}
 
-    async def _to_schema_with_parent_name(self, item: object) -> {{ main.entity_name }}Schema:
-        schemas = await self._attach_parent_names([to_schema({{ main.entity_name }}Schema, item)])
+    async def _to_schema_with_parent_name(self, item: object) -> {{ main.entity_name }}DetailSchema:
+        schemas = await self._attach_parent_names([to_schema({{ main.entity_name }}DetailSchema, item)])
         return schemas[0]
 
-    async def _attach_parent_names(self, items: list[{{ main.entity_name }}Schema]) -> list[{{ main.entity_name }}Schema]:
+    async def _attach_parent_names(self, items: list[{{ main.entity_name }}DetailSchema]) -> list[{{ main.entity_name }}DetailSchema]:
         parent_ids = {item.{{ plan.tree_parent_field }} for item in items if item.{{ plan.tree_parent_field }}}
         parent_name_map = await self.repo.get_parent_name_map(parent_ids)
         for item in items:
@@ -130,14 +133,20 @@ class {{ main.entity_name }}Service:
 
 
 def _build_{{ main.entity_name | snake }}_tree(items) -> list[{{ main.entity_name }}TreeNode]:
+    ids = {item.{{ main.pk_name }} for item in items}
     node_map = {item.{{ main.pk_name }}: to_schema({{ main.entity_name }}TreeNode, item) for item in items}
+    for node in node_map.values():
+        node.weight = 0
+        node.children = None
     roots: list[{{ main.entity_name }}TreeNode] = []
     for item in items:
         node = node_map[item.{{ main.pk_name }}]
         parent_id = getattr(item, "{{ plan.tree_parent_field }}", None)
-        if parent_id and parent_id in node_map:
-            node.{{ plan.tree_parent_field }}_name = getattr(node_map[parent_id], "{{ plan.tree_label_field }}", None)
-            node_map[parent_id].children.append(node)
+        if parent_id and parent_id in ids:
+            parent = node_map[parent_id]
+            if parent.children is None:
+                parent.children = []
+            parent.children.append(node)
         else:
             roots.append(node)
     return roots

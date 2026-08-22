@@ -27,26 +27,26 @@ class SysJob(Base, TimestampMixin):
         default=generate_snowflake_id,
         comment="主键",
     )
-    job_name: Mapped[str] = mapped_column(String(128), nullable=False, comment="任务名称")
-    execute_class: Mapped[str] = mapped_column(
+    name: Mapped[str] = mapped_column(String(128), nullable=False, comment="任务名称")
+    handler: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
-        comment="任务处理器标识（JobHandler 注册 key）",
+        comment="处理器标识（Boot 为 JobHandler 全限定类名，其他栈为注册 key）",
     )
-    execute_type: Mapped[str] = mapped_column(
+    trigger_type: Mapped[str] = mapped_column(
         String(16),
         nullable=False,
-        comment="触发类型：CRON 表达式 / FIXED 固定间隔",
+        comment="触发类型：CRON（表达式）/ FIXED（固定间隔）",
     )
     trigger_config: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
         comment="触发配置：CRON 表达式或固定间隔秒数",
     )
-    execute_param: Mapped[dict | None] = mapped_column(
+    params: Mapped[dict | None] = mapped_column(
         JSON,
         nullable=True,
-        comment="执行参数（JSON 对象）",
+        comment="执行参数（JSON）",
     )
     last_run_time: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
@@ -58,7 +58,7 @@ class SysJob(Base, TimestampMixin):
         nullable=False,
         comment="下次执行时间",
     )
-    last_execute_result: Mapped[str | None] = mapped_column(
+    last_result: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         comment="上次执行结果摘要",
@@ -88,28 +88,23 @@ class SysJobLog(Base, TimestampMixin):
         comment="主键",
     )
     job_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="任务 ID")
-    job_name: Mapped[str] = mapped_column(
-        String(128),
-        nullable=False,
-        comment="任务名称（冗余便于展示）",
-    )
-    execute_param: Mapped[dict | None] = mapped_column(
+    params: Mapped[dict | None] = mapped_column(
         JSON,
         nullable=True,
         comment="执行参数快照（JSON）",
     )
-    execute_time: Mapped[datetime] = mapped_column(
+    started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         comment="执行开始时间",
     )
-    execute_duration_ms: Mapped[int | None] = mapped_column(
+    duration_ms: Mapped[int | None] = mapped_column(
         BigInteger,
         nullable=True,
         comment="执行用时（毫秒）",
     )
     success: Mapped[bool] = mapped_column(Boolean, nullable=False, comment="执行结果：是否成功")
-    execute_result: Mapped[str | None] = mapped_column(Text, comment="执行结果摘要 / 错误信息")
+    result: Mapped[str | None] = mapped_column(Text, comment="执行结果摘要 / 错误信息")
     executor: Mapped[str | None] = mapped_column(
         String(64),
         comment="执行人（人工触发为账号 id，调度触发为 system）",

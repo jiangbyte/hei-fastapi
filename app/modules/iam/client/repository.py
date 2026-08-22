@@ -119,7 +119,7 @@ class ClientModuleRepository:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysClientModule.sort.asc(), SysClientModule.id.desc())
+            stmt.order_by(SysClientModule.sort.asc())
             .offset(query.offset)
             .limit(query.size)
         )
@@ -135,7 +135,7 @@ class ClientModuleRepository:
         stmt = (
             select(SysClientModule)
             .where(SysClientModule.status == StatusEnum.ENABLED.value)
-            .order_by(SysClientModule.sort.asc(), SysClientModule.id.asc())
+            .order_by(SysClientModule.sort.asc())
         )
         if account_type:
             stmt = stmt.where(SysClientModule.account_type == account_type.value)
@@ -238,7 +238,7 @@ class ClientResourceRepository:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysClientResource.sort.asc(), SysClientResource.id.desc())
+            stmt.order_by(SysClientResource.sort.asc())
             .offset(query.offset)
             .limit(query.size)
         )

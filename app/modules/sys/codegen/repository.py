@@ -33,7 +33,10 @@ class CodegenRepository:
     async def create(self, payload: CodegenPlanCreateRequest) -> SysCodegenPlan:
         """校验方案名唯一后创建方案。"""
         await self._ensure_plan_name_unique(payload.name)
-        entity = SysCodegenPlan(**payload.model_dump())
+        data = payload.model_dump(exclude_none=True)
+        if not data.get("id"):
+            data.pop("id", None)
+        entity = SysCodegenPlan(**data)
         self.db.add(entity)
         await self.db.flush()
         return entity
@@ -76,8 +79,8 @@ class CodegenRepository:
         filters = []
         if query.name:
             filters.append(ci_like(SysCodegenPlan.name, f"%{query.name}%"))
-        if query.main_table:
-            filters.append(ci_like(SysCodegenPlan.main_table, f"%{query.main_table}%"))
+        if query.table_name:
+            filters.append(ci_like(SysCodegenPlan.table_name, f"%{query.table_name}%"))
         if query.gen_type:
             filters.append(SysCodegenPlan.gen_type == query.gen_type)
         if filters:
@@ -134,11 +137,11 @@ class CodegenRepository:
             for key, value in data.items():
                 # 跳过显示开关与查询控件等可编辑项，避免覆盖用户调整。
                 if key in {
-                    "show_in_table",
-                    "show_in_form",
-                    "show_in_detail",
-                    "show_in_query",
-                    "form_widget",
+                    "in_table",
+                    "in_form",
+                    "in_detail",
+                    "in_query",
+                    "widget",
                     "dict_code",
                     "query_operator",
                 }:

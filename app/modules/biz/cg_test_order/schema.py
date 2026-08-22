@@ -11,7 +11,7 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
-from app.core.schema.wire import WireBool, WireFloat, WireInt
+from app.core.schema.wire import WireBool, WireFloat, WireInt, WireMoney
 
 
 class CgTestOrderCreateRequest(ApiSchema):
@@ -23,7 +23,7 @@ class CgTestOrderCreateRequest(ApiSchema):
     type: str
     ordered_at: datetime
     paid_at: datetime | None = None
-    total_amount: WireFloat
+    total_amount: WireMoney
     item_count: WireInt
     need_invoice: WireBool
     invoice_config: dict[str, Any]
@@ -36,7 +36,9 @@ class CgTestOrderUpdateRequest(CgTestOrderCreateRequest):
 
 
 class CgTestOrderAdminPageQuery(PageQuery):
+    order_no: str | None = None
     name: str | None = None
+    customer_name: str | None = None
     status: str | None = None
     type: str | None = None
 
@@ -51,7 +53,7 @@ class CgTestOrderSchema(ApiSchema):
     type: str
     ordered_at: datetime
     paid_at: datetime | None = None
-    total_amount: WireFloat
+    total_amount: WireMoney
     item_count: WireInt
     need_invoice: WireBool
     invoice_config: dict[str, Any]
@@ -73,7 +75,7 @@ class CgTestOrderItemCreateRequest(ApiSchema):
     category: str | None = None
     status: str
     quantity: WireInt
-    unit_price: WireFloat
+    unit_price: WireMoney
     shipped_at: datetime | None = None
     is_gift: WireBool
     item_config: dict[str, Any]
@@ -87,8 +89,8 @@ class CgTestOrderItemUpdateRequest(CgTestOrderItemCreateRequest):
 
 class CgTestOrderItemAdminPageQuery(PageQuery):
     order_id: str | None = Field(default=None, max_length=64)
+    sku_code: str | None = None
     name: str | None = None
-    category: str | None = None
     status: str | None = None
 
 
@@ -100,7 +102,7 @@ class CgTestOrderItemSchema(ApiSchema):
     category: str | None = None
     status: str
     quantity: WireInt
-    unit_price: WireFloat
+    unit_price: WireMoney
     shipped_at: datetime | None = None
     is_gift: WireBool
     item_config: dict[str, Any]

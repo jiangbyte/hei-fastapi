@@ -88,11 +88,13 @@ def _build_tree_nodes(
         raw_item: Mapping[str, object] = (
             item.model_dump() if isinstance(item, SysDictTreeNode) else item
         )
+        children_raw = raw_item.get("children", [])
         nodes.append(
             SysDictTreeNode(
                 id=str(raw_item["id"]),
                 code=str(raw_item["code"]),
                 label=raw_item.get("label"),  # type: ignore[arg-type]
+                name=raw_item.get("name"),  # type: ignore[arg-type]
                 value=raw_item.get("value"),  # type: ignore[arg-type]
                 color=raw_item.get("color"),  # type: ignore[arg-type]
                 category=raw_item.get("category"),  # type: ignore[arg-type]
@@ -100,7 +102,10 @@ def _build_tree_nodes(
                 parent_id_name=raw_item.get("parent_id_name"),  # type: ignore[arg-type]
                 status=str(raw_item["status"]),
                 sort=int(raw_item["sort"]),
-                children=_build_tree_nodes(raw_item.get("children", [])),  # type: ignore[arg-type]
+                weight=int(raw_item.get("weight", raw_item["sort"])),
+                created_at=raw_item.get("created_at"),  # type: ignore[arg-type]
+                updated_at=raw_item.get("updated_at"),  # type: ignore[arg-type]
+                children=_build_tree_nodes(children_raw),  # type: ignore[arg-type]
             )
         )
     return nodes

@@ -51,8 +51,6 @@ class ResourceAdminPageQuery(PageQuery):
     name: str | None = Field(default=None, max_length=64)
     resource_type: ResourceType | None = None
     module_id: str | None = Field(default=None, max_length=64)
-    module_client: AccountType | None = None
-    parent_id: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=32)
 
 
@@ -70,6 +68,7 @@ class SysResourceSchema(ApiSchema):
 
     id: str
     parent_id: str | None = None
+    parent_id_name: str | None = None
     code: str
     name: str
     resource_type: ResourceType
@@ -162,6 +161,8 @@ class ResourceButtonSchema(SysResourceSchema):
 class ResourceTreeNode(SysResourceSchema):
     """资源树节点结构（空 children 不出现在 JSON 中，对齐 hei-boot NON_EMPTY）。"""
 
+    weight: WireInt | None = None
+    parent_id_name: str | None = None
     children: list["ResourceTreeNode"] | None = Field(default=None)
 
     @field_serializer("children", when_used="json")
@@ -204,11 +205,12 @@ class ResourceModuleUpdateRequest(ResourceModuleCreateRequest):
 
 
 class ResourceModuleAdminPageQuery(PageQuery):
-    """资源模块管理端分页查询条件。"""
+    """资源模块管理端分页查询条件（对齐 hei-boot SysResourcePageParam）。"""
 
-    name: str | None = Field(default=None, max_length=64)
     code: str | None = Field(default=None, max_length=64)
-    client: AccountType | None = None
+    name: str | None = Field(default=None, max_length=64)
+    resource_type: ResourceType | None = None
+    module_id: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=32)
 
 

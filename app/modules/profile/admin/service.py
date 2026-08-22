@@ -103,7 +103,6 @@ class ProfileUserAdminService:
             await self.repo.upsert(
                 ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
-                    name=payload.name,
                     nickname=payload.nickname,
                     avatar=avatar,
                     signature=payload.signature,
@@ -202,7 +201,6 @@ class ProfileUserAdminService:
             await self.repo.upsert(
                 ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
-                    name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
                     avatar=profile.avatar if profile else None,
                     signature=profile.signature if profile else None,
@@ -238,7 +236,6 @@ class ProfileUserAdminService:
             await self.repo.upsert(
                 ProfileUserAdminUpsertPayload(
                     account_id=session.account_id,
-                    name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
                     avatar=profile.avatar if profile else None,
                     signature=profile.signature if profile else None,

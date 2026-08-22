@@ -53,7 +53,7 @@ RATE_LIMIT_EXEMPT: list[re.Pattern[str]] = [
 ]
 
 # 需要审计的写操作 HTTP 方法。
-AUDIT_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+AUDIT_METHODS = {"POST"}
 # 解析审计目标路径的正则：捕获账户类型、模块路径与动作。
 AUDIT_PATH_RE = re.compile(
     rf"^/api/v\d+/(?P<account_type>{_ACCOUNT_TYPE_PATH_ALTS})/"
@@ -91,6 +91,25 @@ SECURITY_HEADERS = {
     b"permissions-policy": (b"camera=(), microphone=(), geolocation=(), interest-cohort=()"),
 }
 
+# Swagger UI / ReDoc 需加载 CDN 静态资源，单独放宽 CSP（仅文档页）。
+SWAGGER_SECURITY_HEADERS = {
+    **SECURITY_HEADERS,
+    b"content-security-policy": (
+        b"default-src 'self'; "
+        b"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        b"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        b"object-src 'none'; "
+        b"img-src 'self' data: blob: https://cdn.jsdelivr.net; "
+        b"font-src 'self' data: https://cdn.jsdelivr.net; "
+        b"connect-src 'self'; "
+        b"frame-ancestors 'none'"
+    ),
+}
+
+
+def _is_swagger_doc_path(path: str) -> bool:
+    return path == "/openapi.json" or path == "/redoc" or path.startswith("/docs")
+
 
 class SecurityHeadersMiddleware:
     """安全响应头中间件：为 HTTP 响应补充缺失的安全头。"""
@@ -108,7 +127,11 @@ class SecurityHeadersMiddleware:
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers") or [])
                 existing = {name.lower() for name, _ in headers}
-                for name, value in SECURITY_HEADERS.items():
+                path = scope.get("path") or ""
+                header_set = (
+                    SWAGGER_SECURITY_HEADERS if _is_swagger_doc_path(path) else SECURITY_HEADERS
+                )
+                for name, value in header_set.items():
                     if name not in existing:
                         headers.append((name, value))
                 message = {**message, "headers": headers}

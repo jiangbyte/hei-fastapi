@@ -16,6 +16,7 @@ from app.core.cache.keys import (
     login_otp_key,
     password_reset_token_key,
     register_otp_key,
+    reset_password_otp_key,
 )
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountStatusEnum, AccountType
@@ -37,11 +38,13 @@ from app.modules.auth.policy import (
 from app.modules.auth.protection import login_protection_service
 from app.modules.auth.schema import (
     CancelAccountRequest,
+    ForgotPasswordByPhoneRequest,
     ForgotPasswordRequest,
     LoginPayload,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordByPhoneRequest,
     ResetPasswordRequest,
 )
 from app.modules.auth.session_service import AccountSessionService
@@ -126,12 +129,12 @@ class AuthService:
             await OperationAuditService(self.db).record(
                 module="auth",
                 action="login",
-                resource_type="account",
+                resource_type="auth",
                 resource_id=payload.account,
-                summary=f"{payload.account_type.value} login failed",
                 success=False,
                 error_message="Invalid or locked login attempt",
                 account_type=payload.account_type.value,
+                operator_name=payload.account,
                 ip=payload.client_ip,
                 user_agent=payload.user_agent,
             )
@@ -426,12 +429,12 @@ class AuthService:
         await OperationAuditService(self.db).record(
             module="auth",
             action="login",
-            resource_type="account",
+            resource_type="auth",
             resource_id=account.id,
-            summary=f"{payload.account_type.value} login succeeded",
             success=True,
             account_id=account.id,
-            account_type=account.account_type,
+            account_type=payload.account_type.value,
+            operator_name=payload.account,
             ip=payload.client_ip,
             user_agent=payload.user_agent,
         )
@@ -509,6 +512,17 @@ class AuthService:
             f"AUTH_FORCE_BIND_{type_name}_PHONE", False
         ) and not await self.account_repo.has_identity(account.id, AccountIdentityType.PHONE)
         return bool(force_email), bool(force_phone)
+
+    async def force_bind_identity_flag(
+        self, account_id: str, account_type: AccountType
+    ) -> bool:
+        """按 AUTH_FORCE_BIND_{TYPE}_IDENTITY 与实名状态计算强制实名标记。"""
+        type_name = account_type.value
+        if not config_reader.get_bool(f"AUTH_FORCE_BIND_{type_name}_IDENTITY", False):
+            return False
+        from app.modules.profile.identity.service import ProfileIdentityService
+
+        return not await ProfileIdentityService(self.db).is_verified(account_id)
 
     async def refresh_session(
         self, token: str, account_type: AccountType
@@ -590,14 +604,13 @@ class AuthService:
         else:
             raise BusinessError("不支持的注册通道")
         assert account_name
-        nickname = (payload.nickname or "").strip() or f"user-{uuid4().hex[:8]}"
+        nickname = f"user-{uuid4().hex[:8]}"
         async with transactional(self.db):
             account_payload = AccountCreateRequest(
                 account=account_name,
                 password=payload.password,
                 account_type=AccountType.PORTAL,
                 account_status=AccountStatusEnum.ENABLED,
-                name=payload.name,
                 nickname=nickname,
                 email=email,
                 phone=phone,
@@ -624,7 +637,6 @@ class AuthService:
             await ProfileUserPortalRepository(self.db).upsert(
                 ProfileUserPortalUpsertPayload(
                     account_id=account.id,
-                    name=payload.name,
                     nickname=nickname,
                     phone=phone,
                     email=email,
@@ -802,6 +814,99 @@ class AuthService:
             resource_type="account",
             resource_id=account.id,
             summary=f"{account_type.value} password reset",
+            success=True,
+            account_id=account.id,
+            account_type=account.account_type,
+            ip=client_ip,
+            user_agent=user_agent,
+        )
+
+    async def forgot_password_by_phone(
+        self,
+        payload: ForgotPasswordByPhoneRequest,
+        account_type: AccountType,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> None:
+        """通过手机找回密码：校验账户后发送重置 OTP。"""
+        phone = payload.phone.strip()
+        account = await self.account_repo.get_account_by_identifier(
+            phone, [AccountIdentityType.PHONE]
+        )
+        if account is None or account.account_type != account_type.value:
+            return
+        try:
+            self._validate_account_status(account, account_type)
+        except AuthenticationError:
+            return
+
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        redis = self._required_redis("Redis is required for password reset")
+        ttl = settings.auth.password_reset_token_ttl_seconds
+        await redis.setex(reset_password_otp_key(account_type.value, phone), ttl, code)
+        variables = {
+            "app_name": settings.app.name,
+            "code": code,
+            "expire_minutes": max(1, ttl // 60),
+        }
+        await send_templated_sms("RESET_PASSWORD_CODE", phone, variables)
+        await OperationAuditService(self.db).record(
+            module="auth",
+            action="forgot_password",
+            resource_type="account",
+            resource_id=account.id,
+            summary=f"{account_type.value} password reset OTP sent",
+            success=True,
+            account_id=account.id,
+            account_type=account.account_type,
+            ip=client_ip,
+            user_agent=user_agent,
+        )
+
+    async def reset_password_by_phone(
+        self,
+        payload: ResetPasswordByPhoneRequest,
+        account_type: AccountType,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> None:
+        """校验手机 OTP 并更新账户密码。"""
+        phone = payload.phone.strip()
+        otp = (payload.otp_code or "").strip()
+        redis = self._required_redis("Redis is required for password reset")
+        key = reset_password_otp_key(account_type.value, phone)
+        stored = await redis.get(key)
+        stored_text = stored.decode("utf-8") if isinstance(stored, bytes) else stored
+        if not stored_text or stored_text != otp:
+            raise AuthenticationError("Invalid or expired verification code")
+
+        account = await self.account_repo.get_account_by_identifier(
+            phone, [AccountIdentityType.PHONE]
+        )
+        if account is None or account.account_type != account_type.value:
+            raise AuthenticationError("Account not found")
+        self._validate_account_status(account, account_type)
+
+        async with transactional(self.db):
+            await validate_and_record_password(
+                self.db,
+                account.id,
+                payload.password,
+                changed_by=account.id,
+                change_reason="self_reset_phone",
+                account=account,
+            )
+            await self.account_repo.update_password_hash(
+                account.id, hash_password(payload.password)
+            )
+        await redis.delete(key)
+        await self.session_service.delete_account_sessions(account.account_type, account.id)
+        await OperationAuditService(self.db).record(
+            module="auth",
+            action="reset_password",
+            resource_type="account",
+            resource_id=account.id,
+            summary=f"{account_type.value} password reset by phone",
             success=True,
             account_id=account.id,
             account_type=account.account_type,

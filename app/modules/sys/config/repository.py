@@ -85,7 +85,7 @@ class ConfigRepository:
         scope: str | None = None,
     ) -> list[SysConfig]:
         """按分类与作用域查询配置，按排序码与 ID 排序。"""
-        stmt = select(SysConfig).order_by(SysConfig.sort_code.asc(), SysConfig.id.desc())
+        stmt = select(SysConfig).order_by(SysConfig.sort_code.asc())
         if category:
             stmt = stmt.where(SysConfig.category == category)
         if scope:
@@ -157,7 +157,7 @@ class ConfigRepository:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysConfig.sort_code.asc(), SysConfig.id.desc())
+            stmt.order_by(SysConfig.sort_code.asc(), SysConfig.created_at.desc())
             .offset(query.offset)
             .limit(query.size)
         )

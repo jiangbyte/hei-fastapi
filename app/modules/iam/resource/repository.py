@@ -187,22 +187,13 @@ class ResourceRepository:
             filters.append(SysResource.resource_type == query.resource_type.value)
         if query.module_id:
             filters.append(SysResource.module_id == query.module_id)
-        if query.module_client:
-            stmt = stmt.join(SysResourceModule, SysResource.module_id == SysResourceModule.id)
-            count_stmt = count_stmt.join(
-                SysResourceModule,
-                SysResource.module_id == SysResourceModule.id,
-            )
-            filters.append(SysResourceModule.client == query.module_client.value)
-        if query.parent_id:
-            filters.append(SysResource.parent_id == query.parent_id)
         if query.status:
             filters.append(SysResource.status == query.status)
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysResource.sort.asc(), SysResource.id.desc())
+            stmt.order_by(SysResource.sort.asc())
             .offset(query.offset)
             .limit(query.size)
         )
@@ -549,15 +540,13 @@ class ResourceModuleRepository:
             filters.append(SysResourceModule.name.contains(query.name))
         if query.code:
             filters.append(SysResourceModule.code.contains(query.code))
-        if query.client:
-            filters.append(SysResourceModule.client == query.client.value)
         if query.status:
             filters.append(SysResourceModule.status == query.status)
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysResourceModule.sort.asc(), SysResourceModule.id.desc())
+            stmt.order_by(SysResourceModule.sort.asc())
             .offset(query.offset)
             .limit(query.size)
         )
@@ -573,7 +562,7 @@ class ResourceModuleRepository:
         stmt = (
             select(SysResourceModule)
             .where(SysResourceModule.status == StatusEnum.ENABLED.value)
-            .order_by(SysResourceModule.sort.asc(), SysResourceModule.id.asc())
+            .order_by(SysResourceModule.sort.asc())
         )
         if client:
             stmt = stmt.where(SysResourceModule.client == client.value)

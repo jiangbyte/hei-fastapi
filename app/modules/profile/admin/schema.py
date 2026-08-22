@@ -18,7 +18,6 @@ class ProfileUserAdminResponse(ApiSchema):
     """管理端账户扩展资料响应模型。"""
 
     account_id: str
-    name: str | None = None
     nickname: str | None = None
     avatar: str | None = None
     signature: str | None = None
@@ -35,7 +34,6 @@ class ProfileUserAdminUpsertPayload(ApiSchema):
     """管理端账户资料写入载荷。"""
 
     account_id: str
-    name: str | None = None
     nickname: str | None = None
     avatar: str | None = None
     signature: str | None = None
@@ -47,7 +45,6 @@ class ProfileUserAdminUpsertPayload(ApiSchema):
 class AdminUserCenterProfileUpdateRequest(ApiSchema):
     """当前管理员个人资料更新请求。"""
 
-    name: str | None = Field(default=None, max_length=64)
     nickname: str | None = Field(default=None, max_length=64)
     avatar: str | None = None
     signature: str | None = None

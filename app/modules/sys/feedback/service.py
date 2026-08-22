@@ -111,7 +111,7 @@ class SysFeedbackService:
             session.account_id,
         )
         schemas = to_schema_list(SysFeedbackSchema, items)
-        return build_page(query, total, await self._enrich_attachments_many(schemas))
+        return build_page(query, total, await self._batch_enrich_profiles(schemas))
 
     async def _normalize_attach_object_names(self, values: list[str]) -> list[str]:
         """规范化附件名并校验其对应文件真实存在。"""

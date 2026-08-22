@@ -82,6 +82,9 @@ def serialize_wire_scalar(value: Any) -> Any:
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
+        rounded = round(value, 2)
+        if abs(value - rounded) < 1e-9:
+            return f"{rounded:.2f}"
         return str(value)
     return value
 
@@ -110,6 +113,11 @@ def _serialize_float(value: float) -> str:
     return str(value)
 
 
+def _serialize_money(value: float) -> str:
+    """金额字段固定两位小数。"""
+    return f"{value:.2f}"
+
+
 # JSON Schema 元数据：标量在 wire 层均以字符串呈现。
 _STRING_SCHEMA = WithJsonSchema({"type": "string"})
 _BOOL_STRING_SCHEMA = WithJsonSchema({"type": "string", "enum": ["true", "false"]})
@@ -135,5 +143,13 @@ WireFloat = Annotated[
     float,
     BeforeValidator(parse_wire_float),
     PlainSerializer(_serialize_float, return_type=str, when_used="json"),
+    _STRING_SCHEMA,
+]
+
+# 金额字段：固定两位小数字符串（对齐 Boot BigDecimal JSON）。
+WireMoney = Annotated[
+    float,
+    BeforeValidator(parse_wire_float),
+    PlainSerializer(_serialize_money, return_type=str, when_used="json"),
     _STRING_SCHEMA,
 ]

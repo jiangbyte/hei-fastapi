@@ -7,7 +7,7 @@
 
 <script setup lang="ts">
 import type { FormInst, FormRules } from 'naive-ui'
-import { {{ plan.main_entity_name | ts_api_name }} } from '@/api'
+import { {{ plan.entity_name | ts_api_name }} } from '@/api'
 {% if target.has_form_bool or target.has_form_int or target.has_form_float %}
 import { {{ [
   'wireBool' if target.has_form_bool else none,
@@ -46,7 +46,7 @@ const state = reactive({
 {% endif %}
 })
 
-const modalTitle = computed(() => state.dataId ? '编辑{{ plan.main_business_name }}' : '新增{{ plan.main_business_name }}')
+const modalTitle = computed(() => state.dataId ? '编辑' : '新增')
 {% if has_tree_parent_form %}
 const parentTreeOptions = computed(() =>
   buildParentTreeOptions(state.treeRows, state.dataId),
@@ -99,7 +99,7 @@ async function openModal(id?: string, defaults: Partial<typeof defaultFormData> 
 async function fetchTreeRows() {
   state.treeLoading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.tree()
+    const response = await {{ plan.entity_name | ts_api_name }}.tree()
     state.treeRows = response.data ?? []
   } finally {
     state.treeLoading = false
@@ -110,7 +110,7 @@ async function fetchTreeRows() {
 async function fetchDetail(id: string) {
   state.loading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.detail({ id })
+    const response = await {{ plan.entity_name | ts_api_name }}.detail({ id })
     state.formModel = normalizeFormData(response.data ?? {})
   } finally {
     state.loading = false
@@ -219,10 +219,10 @@ async function submitForm() {
   try {
     const payload = {{ "normalizeSubmitData(state.formModel)" if target.needs_submit_normalize or has_tree_parent_form else "state.formModel" }}
     if (state.dataId) {
-      await {{ plan.main_entity_name | ts_api_name }}.update({ ...payload, {{ target.pk_name }}: state.dataId })
+      await {{ plan.entity_name | ts_api_name }}.update({ ...payload, {{ target.pk_name }}: state.dataId })
       window.$message.success('更新成功')
     } else {
-      await {{ plan.main_entity_name | ts_api_name }}.create(payload)
+      await {{ plan.entity_name | ts_api_name }}.create(payload)
       window.$message.success('创建成功')
     }
     emit('saved')

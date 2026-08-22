@@ -5,7 +5,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi import APIRouter, Body, Depends, Header, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config.enums import AccountType
@@ -36,6 +36,7 @@ from app.modules.auth.schema import (
     CancelAccountRequest,
     CancelAccountResponse,
     CaptchaFormatQuery,
+    ForgotPasswordByPhoneRequest,
     ForgotPasswordRequest,
     LoginApiResponse,
     LoginPayload,
@@ -45,11 +46,13 @@ from app.modules.auth.schema import (
     LogoutResponse,
     RegisterApiResponse,
     RegisterRequest,
+    ResetPasswordByPhoneRequest,
     ResetPasswordRequest,
     SendLoginCodeRequest,
     SendRegisterCodeRequest,
 )
 from app.modules.auth.service import AuthService, session_expires_in
+from app.modules.sys.public.site_footer import resolve_site_footer
 
 admin_router = APIRouter()
 portal_router = APIRouter()
@@ -89,6 +92,7 @@ def _auth_options_response(account_type: AccountType) -> AuthOptionsResponse:
         password_change_verify_method=opts.password_change_verify_method,
         copyright_text=opts.copyright_text,
         copyright_url=opts.copyright_url,
+        site_footer=resolve_site_footer(),
         oauth_providers=[
             OauthProviderOptionSchema(**item) for item in opts.oauth_providers
         ],
@@ -304,6 +308,41 @@ async def admin_reset_password(
     return success()
 
 
+@admin_router.post("/v1/admin/forgot-password/phone", response_model=ApiResponse[None])
+async def admin_forgot_password_by_phone(
+    payload: ForgotPasswordByPhoneRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """管理端通过手机找回密码，发送重置 OTP。"""
+    await verify_captcha(payload.captcha_id, payload.captcha_value)
+    await AuthService(db).forgot_password_by_phone(
+        payload,
+        AccountType.ADMIN,
+        client_ip=get_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return success()
+
+
+@admin_router.post("/v1/admin/reset-password/phone", response_model=ApiResponse[None])
+async def admin_reset_password_by_phone(
+    payload: ResetPasswordByPhoneRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """管理端通过手机 OTP 重置密码。"""
+    await verify_captcha(payload.captcha_id, payload.captcha_value)
+    password = await decrypt_password(payload.password_key_id, payload.password)
+    await AuthService(db).reset_password_by_phone(
+        payload.model_copy(update={"password": password or ""}),
+        AccountType.ADMIN,
+        client_ip=get_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return success()
+
+
 @portal_router.post("/v1/portal/forgot-password", response_model=ApiResponse[None])
 async def portal_forgot_password(
     payload: ForgotPasswordRequest,
@@ -331,6 +370,41 @@ async def portal_reset_password(
     await verify_captcha(payload.captcha_id, payload.captcha_value)
     password = await decrypt_password(payload.password_key_id, payload.password)
     await AuthService(db).reset_password(
+        payload.model_copy(update={"password": password or ""}),
+        AccountType.PORTAL,
+        client_ip=get_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return success()
+
+
+@portal_router.post("/v1/portal/forgot-password/phone", response_model=ApiResponse[None])
+async def portal_forgot_password_by_phone(
+    payload: ForgotPasswordByPhoneRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """门户端通过手机找回密码，发送重置 OTP。"""
+    await verify_captcha(payload.captcha_id, payload.captcha_value)
+    await AuthService(db).forgot_password_by_phone(
+        payload,
+        AccountType.PORTAL,
+        client_ip=get_client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    return success()
+
+
+@portal_router.post("/v1/portal/reset-password/phone", response_model=ApiResponse[None])
+async def portal_reset_password_by_phone(
+    payload: ResetPasswordByPhoneRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[None]:
+    """门户端通过手机 OTP 重置密码。"""
+    await verify_captcha(payload.captcha_id, payload.captcha_value)
+    password = await decrypt_password(payload.password_key_id, payload.password)
+    await AuthService(db).reset_password_by_phone(
         payload.model_copy(update={"password": password or ""}),
         AccountType.PORTAL,
         client_ip=get_client_ip(request),
@@ -386,13 +460,13 @@ def _device_label(user_agent: str | None) -> str | None:
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
 )
 async def cancel_account(
-    payload: CancelAccountRequest | None,
     request: Request,
     response: Response,
     session: Annotated[SessionPayload, Depends(get_current_session)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
+    payload: Annotated[CancelAccountRequest, Body()] = CancelAccountRequest(),
 ) -> CancelAccountApiResponse:
     """统一账号注销接口，只注销当前登录账号（请求体可省略）。"""
-    await AuthService(db).cancel_current_account(payload or CancelAccountRequest(), session)
+    await AuthService(db).cancel_current_account(payload, session)
     clear_session_cookie(response, request=request)
     return success(CancelAccountResponse(success=True))

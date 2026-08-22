@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import Field, field_serializer
 
 from app.core.config.enums import StatusEnum, SysBizCategory
 from app.core.response.pagination import PageQuery
@@ -80,6 +80,7 @@ class SysDictSchema(ApiSchema):
     updated_at: datetime
     updated_by: str | None = None
     updated_name: str | None = None
+    children: list["SysDictTreeNode"] = Field(default_factory=list)
 
 
 class SysDictTreeNode(ApiSchema):
@@ -97,4 +98,11 @@ class SysDictTreeNode(ApiSchema):
     status: StatusEnum | str
     sort: WireInt
     weight: WireInt = 0
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
     children: list["SysDictTreeNode"] = Field(default_factory=list)
+
+    @field_serializer("children", when_used="json")
+    def serialize_children(self, children: list["SysDictTreeNode"]) -> list | None:
+        """空 children 不出现在 JSON（对齐 hei-boot Hutool Tree）。"""
+        return children if children else None

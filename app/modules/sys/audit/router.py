@@ -12,7 +12,8 @@ from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData
 from app.core.response.schema import ApiResponse, success
 from app.core.schema.base import IdQuery
-from app.deps.auth import require_account_type, require_permission
+from app.core.security.session import SessionPayload
+from app.deps.auth import get_current_session, require_account_type, require_permission
 from app.deps.db import get_db_session
 from app.modules.sys.audit.schema import OperationAuditPageQuery, OperationAuditRecord
 from app.modules.sys.audit.service import OperationAuditService
@@ -27,6 +28,7 @@ router = APIRouter()
         Depends(require_permission("sys:audit:page")),
     ],
     response_model=ApiResponse[PageData[OperationAuditRecord]],
+    response_model_exclude_none=False,
 )
 async def page(
     query: Annotated[OperationAuditPageQuery, Depends()],
@@ -43,6 +45,7 @@ async def page(
         Depends(require_permission("sys:audit:detail")),
     ],
     response_model=ApiResponse[OperationAuditRecord],
+    response_model_exclude_none=False,
 )
 async def detail(
     query: Annotated[IdQuery, Depends()],
@@ -50,3 +53,37 @@ async def detail(
 ) -> ApiResponse[OperationAuditRecord]:
     """按主键查询单条操作审计日志详情。"""
     return success(await OperationAuditService(db).detail(query))
+
+
+@router.get(
+    "/v1/admin/sys/audit/my-page",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[PageData[OperationAuditRecord]],
+    response_model_exclude_none=False,
+)
+async def my_page(
+    query: Annotated[OperationAuditPageQuery, Depends()],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[PageData[OperationAuditRecord]]:
+    """当前管理员本人审计日志分页（无需审计管理权限）。"""
+    return success(
+        await OperationAuditService(db).my_page(query, session.account_id)
+    )
+
+
+@router.get(
+    "/v1/admin/sys/audit/my-detail",
+    dependencies=[Depends(require_account_type(AccountType.ADMIN))],
+    response_model=ApiResponse[OperationAuditRecord],
+    response_model_exclude_none=False,
+)
+async def my_detail(
+    query: Annotated[IdQuery, Depends()],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+) -> ApiResponse[OperationAuditRecord]:
+    """当前管理员本人审计详情。"""
+    return success(
+        await OperationAuditService(db).my_detail(query.id, session.account_id)
+    )

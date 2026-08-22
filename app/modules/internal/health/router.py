@@ -10,79 +10,68 @@ from app.core.cache.redis import get_redis
 from app.core.config.settings import settings
 from app.core.config.sync import get_config_sync_state
 from app.core.db.session import get_session_factory
-from app.core.schema.health import (
-    HealthCheckItem,
-    LiveHealthResponse,
-    ReadyChecksResponse,
-    ReadyHealthResponse,
-)
 from app.core.storage.manager import get_storage
 
 router = APIRouter()
 
 
-@router.get("/v1/internal/health/live", response_model=LiveHealthResponse)
-async def live() -> LiveHealthResponse:
-    """存活探针，仅表示应用进程仍在运行。"""
-    return LiveHealthResponse(status="live")
+@router.get("/v1/internal/health/live")
+async def live() -> dict[str, str]:
+    """存活探针，仅表示应用进程仍在运行（OpenAPI 对齐 hei-boot Map 返回）。"""
+    return {"status": "live"}
 
 
-@router.get("/v1/internal/health/ready", response_model=ReadyHealthResponse)
-async def ready(response: Response) -> ReadyHealthResponse:
+@router.get("/v1/internal/health/ready")
+async def ready(response: Response) -> dict[str, object]:
     """就绪探针，聚合数据库、Redis、消息队列和存储配置的可用性检查。"""
-    checks = ReadyChecksResponse(
-        database=HealthCheckItem(enabled=True, ok=False, detail=None),
-        redis=HealthCheckItem(enabled=True, ok=False, detail=None),
-        config_sync=HealthCheckItem(enabled=False, ok=False, detail=None),
-        storage=HealthCheckItem(enabled=True, ok=False, detail=None),
-    )
+    checks: dict[str, dict[str, object]] = {
+        "database": {"enabled": True, "ok": False, "detail": None},
+        "redis": {"enabled": True, "ok": False, "detail": None},
+        "config_sync": {"enabled": False, "ok": False, "detail": None},
+        "storage": {"enabled": True, "ok": False, "detail": None},
+    }
     try:
         async with get_session_factory()() as session:
             await session.execute(text("SELECT 1"))
-        checks.database.ok = True
-        checks.database.detail = "connection ok"
+        checks["database"]["ok"] = True
+        checks["database"]["detail"] = "connection ok"
     except Exception as exc:
-        checks.database.detail = _safe_detail(exc)
+        checks["database"]["detail"] = _safe_detail(exc)
     redis = get_redis()
     if redis is None:
-        checks.redis.detail = "redis not initialized"
+        checks["redis"]["detail"] = "redis not initialized"
     else:
         try:
             await redis.ping()
-            checks.redis.ok = True
-            checks.redis.detail = "connection ok"
+            checks["redis"]["ok"] = True
+            checks["redis"]["detail"] = "connection ok"
         except Exception as exc:
-            checks.redis.detail = _safe_detail(exc)
+            checks["redis"]["detail"] = _safe_detail(exc)
     sync_state = get_config_sync_state()
-    checks.config_sync.enabled = sync_state.enabled
-    checks.config_sync.ok = not sync_state.enabled or sync_state.running
-    checks.config_sync.detail = (
+    checks["config_sync"]["enabled"] = sync_state.enabled
+    checks["config_sync"]["ok"] = not sync_state.enabled or sync_state.running
+    checks["config_sync"]["detail"] = (
         f"channel={sync_state.channel}, last_event_at={sync_state.last_event_at}"
         if sync_state.running
         else sync_state.last_error or "listener not running"
     )
     try:
         storage = get_storage()
-        checks.storage.ok = True
-        checks.storage.detail = f"{storage.__class__.__name__} configured"
+        checks["storage"]["ok"] = True
+        checks["storage"]["detail"] = f"{storage.__class__.__name__} configured"
     except Exception as exc:
-        checks.storage.detail = _safe_detail(exc)
+        checks["storage"]["detail"] = _safe_detail(exc)
     overall = all(
-        component.ok
-        for component in [
-            checks.database,
-            checks.redis,
-            checks.config_sync,
-            checks.storage,
-        ]
-        if component.enabled
+        component["ok"]
+        for component in checks.values()
+        if component["enabled"]
     )
     if not overall:
         response.status_code = 503
-    return ReadyHealthResponse(
-        status="ready" if overall else "not_ready",
-        checks=checks,
-    )
+    return {
+        "status": "ready" if overall else "not_ready",
+        "checks": checks,
+    }
 
 
 def _safe_detail(exc: Exception) -> str:

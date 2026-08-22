@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any
 {% endif %}
 
-from pydantic import Field
+from pydantic import Field{% if has_tree %}, field_serializer{% endif %}
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
@@ -46,9 +46,6 @@ class {{ main.entity_name }}Schema(ApiSchema):
 {% for field in main.detail_fields %}
     {{ field.name }}: {{ field.schema_type }}{{ field.default }}
 {% endfor %}
-{% if has_tree %}
-    {{ plan.tree_parent_field }}_name: str | None = None
-{% endif %}
     created_at: datetime
     created_by: str | None = None
     created_name: str | None = None
@@ -57,10 +54,20 @@ class {{ main.entity_name }}Schema(ApiSchema):
     updated_by: str | None = None
     updated_name: str | None = None
 {% if has_tree %}
+    children: list["{{ main.entity_name }}TreeNode"] = Field(default_factory=list)
+
+
+class {{ main.entity_name }}DetailSchema({{ main.entity_name }}Schema):
+    {{ plan.tree_parent_field }}_name: str | None = None
 
 
 class {{ main.entity_name }}TreeNode({{ main.entity_name }}Schema):
-    children: list["{{ main.entity_name }}TreeNode"] = Field(default_factory=list)
+    weight: WireInt | None = None
+    children: list["{{ main.entity_name }}TreeNode"] | None = Field(default=None)
+
+    @field_serializer("children", when_used="json")
+    def _omit_empty_children(self, value: list["{{ main.entity_name }}TreeNode"] | None):
+        return value or None
 {% endif %}
 {% if has_sub and sub %}
 

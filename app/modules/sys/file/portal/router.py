@@ -5,7 +5,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +38,7 @@ portal_dependencies = [Depends(require_account_type(AccountType.PORTAL))]
 async def upload(
     file: Annotated[UploadFile, File(...)],
     db: Annotated[AsyncSession, Depends(get_db_session)],
-    storage_provider: Annotated[StorageProvider | None, Form()] = None,
+    storage_provider: Annotated[StorageProvider | None, Query()] = None,
 ) -> ApiResponse[SysFileSchema]:
     """上传文件并返回元数据。"""
     content = await file.read(settings.storage.upload_max_bytes + 1)

@@ -29,7 +29,7 @@ async def _seed_session_admin(client, token: str, permissions: list[str]) -> Sys
                 bind_status=AccountIdentityBindStatus.BOUND.value,
             )
         )
-        session.add(ProfileUserAdmin(account_id=account.id, name="Admin"))
+        session.add(ProfileUserAdmin(account_id=account.id))
         await session_store.set(
             SessionPayload(
                 token=token,

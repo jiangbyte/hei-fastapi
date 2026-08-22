@@ -1,0 +1,4 @@
+--- boot/src/api/index.ts.append
++++ fastapi/src/api/index.ts.append
+@@ -1 +1 @@
+-export * as cgTestCatalogApi from './biz/cg-test-catalog'+export * as cgTestCatalogApi from './src/api/biz/cg-test-catalog'

@@ -38,17 +38,17 @@ class JobService:
         self.log_repo = JobLogRepository(db)
 
     @staticmethod
-    def _ensure_handler(execute_class: str) -> None:
-        """校验 execute_class 已注册为处理器。"""
-        if job_registry.resolve(execute_class) is None:
-            raise BusinessError(f"未找到任务处理器: {execute_class}")
+    def _ensure_handler(handler: str) -> None:
+        """校验 handler 已注册为处理器。"""
+        if job_registry.resolve(handler) is None:
+            raise BusinessError(f"未找到任务处理器: {handler}")
 
     async def create(self, payload: JobCreateRequest) -> None:
         """事务内创建任务：校验触发配置并计算首次下次执行时间。"""
-        cron_util.validate(payload.execute_type, payload.trigger_config)
-        self._ensure_handler(payload.execute_class)
+        cron_util.validate(payload.trigger_type, payload.trigger_config)
+        self._ensure_handler(payload.handler)
         next_run_time = cron_util.compute_next_run_time(
-            payload.execute_type, payload.trigger_config, datetime.now(UTC)
+            payload.trigger_type, payload.trigger_config, datetime.now(UTC)
         )
         async with transactional(self.db):
             await self.repo.create(payload, next_run_time=next_run_time)
@@ -58,15 +58,15 @@ class JobService:
         async with transactional(self.db):
             entity = await self.repo.get_required(payload.id)
             config_changed = (
-                entity.execute_type != str(payload.execute_type)
+                entity.trigger_type != str(payload.trigger_type)
                 or entity.trigger_config != str(payload.trigger_config)
             )
-            cron_util.validate(payload.execute_type, payload.trigger_config)
-            self._ensure_handler(payload.execute_class)
+            cron_util.validate(payload.trigger_type, payload.trigger_config)
+            self._ensure_handler(payload.handler)
             await self.repo.update(payload)
             if config_changed:
                 entity.next_run_time = cron_util.compute_next_run_time(
-                    payload.execute_type, payload.trigger_config, datetime.now(UTC)
+                    payload.trigger_type, payload.trigger_config, datetime.now(UTC)
                 )
 
     async def delete(self, payload: IdsRequest) -> None:
@@ -78,6 +78,7 @@ class JobService:
         """查询任务详情并填充审计人昵称。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysJobSchema, entity)
+        schema.handler = job_registry.boot_handler_display(schema.handler)
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
@@ -85,6 +86,8 @@ class JobService:
         """管理端分页查询任务并填充审计人昵称。"""
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysJobSchema, entities)
+        for schema in schemas:
+            schema.handler = job_registry.boot_handler_display(schema.handler)
         await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
@@ -95,7 +98,7 @@ class JobService:
             entity.enabled = bool(payload.enabled)
             if entity.enabled:
                 entity.next_run_time = cron_util.compute_next_run_time(
-                    entity.execute_type, entity.trigger_config, datetime.now(UTC)
+                    entity.trigger_type, entity.trigger_config, datetime.now(UTC)
                 )
 
     async def run_now(self, payload: IdQuery, *, executor: str | None) -> None:

@@ -136,9 +136,6 @@ class CorsSettings(BaseSettings):
     allow_methods: list[str] = [
         "GET",
         "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
         "OPTIONS",
     ]
     allow_headers: list[str] = [
@@ -270,6 +267,19 @@ class AuditAlertSettings(BaseSettings):
     ip_anomaly_threshold: int = 3
 
 
+class ProfileIdentitySettings(BaseSettings):
+    """实名认证（profile identity）设置。"""
+
+    model_config = SettingsConfigDict(extra="ignore")
+
+    # 可选覆盖 APP__CONFIG_CRYPTO_KEY；为空时回退全局 config_crypto_key
+    crypto_key: str = ""
+    third_party_init_url: str = ""
+    third_party_callback_url: str = ""
+    third_party_api_key: str = ""
+    third_party_timeout_seconds: float = 30.0
+
+
 class PasswordPolicySettings(BaseSettings):
     """密码策略设置：强度、过期、历史检查。"""
 
@@ -310,6 +320,7 @@ class Settings(BaseSettings):
     job: JobSettings = Field(default_factory=JobSettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     password_policy: PasswordPolicySettings = Field(default_factory=PasswordPolicySettings)
+    profile_identity: ProfileIdentitySettings = Field(default_factory=ProfileIdentitySettings)
     audit_alert: AuditAlertSettings = Field(default_factory=AuditAlertSettings)
     id_generator: IdGeneratorSettings = Field(default_factory=IdGeneratorSettings)
     swagger: SwaggerSettings = Field(default_factory=SwaggerSettings)

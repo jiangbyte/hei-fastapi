@@ -93,7 +93,7 @@ class FileRepository:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
         stmt = (
-            stmt.order_by(SysFile.created_at.desc(), SysFile.id.desc())
+            stmt.order_by(SysFile.created_at.desc())
             .offset(query.offset)
             .limit(query.size)
         )

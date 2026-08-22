@@ -11,9 +11,11 @@ import type { PaginationProps } from 'naive-ui'
 {% endif %}
 import type { ProDataTableColumns, ProSearchFormColumns } from 'pro-naive-ui'
 import { Icon } from '@iconify/vue/offline'
-import { {{ plan.main_entity_name | ts_api_name }} } from '@/api'
+import { {{ plan.entity_name | ts_api_name }} } from '@/api'
+{% if plan.gen_type != "TREE" %}
 import { readPageMeta } from '@/utils/wire'
-import { {% if main.has_table_dict or (sub and sub.has_table_dict) %}createTagColor, dictTypeColor, dictTypeData, displayValue, {% endif %}formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
+{% endif %}
+import { {% if main.has_query_dict or (sub and sub.has_query_dict) %}dictList, {% endif %}{% if main.has_table_dict or (sub and sub.has_table_dict) %}createTagColor, dictTypeColor, dictTypeData, displayValue, {% endif %}formatDateTime, hasPermission, normalizeSearchValues, renderButtonIcon } from '@/utils'
 import { NButton, NFlex, NIcon{% if plan.gen_type == "LEFT_TREE_TABLE" %}, NInput, NInputGroup{% endif %}{% if main.has_table_tag or (sub and sub.has_table_tag) %}, NTag{% endif %} } from 'naive-ui'
 import { createProSearchForm, ProCard, ProDataTable, ProSearchForm } from 'pro-naive-ui'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -21,26 +23,28 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import ChildModalDetail from './components/children/ChildModalDetail.vue'
 import ChildModalForm from './components/children/ChildModalForm.vue'
 {% endif %}
+{% if plan.gen_type != "LEFT_TREE_TABLE" %}
 import ModalDetail from './components/ModalDetail.vue'
 import ModalForm from './components/ModalForm.vue'
 
 const formModalRef = ref<any>(null)
 const detailModalRef = ref<any>(null)
+{% endif %}
 {% if has_sub and sub %}
 const childFormModalRef = ref<any>(null)
 const childDetailModalRef = ref<any>(null)
 {% endif %}
 const state = reactive({
-{% if plan.gen_type != "TREE" %}
+{% if plan.gen_type != "TREE" and plan.gen_type != "LEFT_TREE_TABLE" %}
   rows: [] as any[],
   total: 0,
   loading: false,
-{% endif %}
-  searchValues: {} as any,
-  checkedRowKeys: [] as string[],
-{% if plan.gen_type != "TREE" %}
   page: 1,
   pageSize: 20,
+{% endif %}
+{% if plan.gen_type != "LEFT_TREE_TABLE" %}
+  searchValues: {} as any,
+  checkedRowKeys: [] as string[],
 {% endif %}
 {% if has_tree %}
   treeRows: [] as any[],
@@ -65,7 +69,9 @@ const state = reactive({
 {% endif %}
 })
 
+{% if plan.gen_type != "LEFT_TREE_TABLE" %}
 const hasCheckedRows = computed(() => state.checkedRowKeys.length > 0)
+{% endif %}
 {% if plan.gen_type == "LEFT_TREE_TABLE" %}
 const treeData = computed(() => buildTreeNodes(state.treeRows))
 {% elif plan.gen_type == "TREE" %}
@@ -76,6 +82,7 @@ const hasChildCheckedRows = computed(() => state.childCheckedRowKeys.length > 0)
 const canCreateChild = computed(() => Boolean(state.selectedMasterId))
 {% endif %}
 
+{% if plan.gen_type != "LEFT_TREE_TABLE" %}
 const searchForm = createProSearchForm<any>({
   defaultCollapsed: true,
   onSubmit(values) {
@@ -95,17 +102,31 @@ const searchForm = createProSearchForm<any>({
     fetchPage()
   },
 {% endif %}
+{% endif %}
 })
 
+{% if plan.gen_type != "LEFT_TREE_TABLE" %}
 const searchColumns = computed<ProSearchFormColumns<any>>(() => [
 {% for field in main.query_fields %}
+{% if field.dict_code %}
+  {
+    title: '{{ field.label }}',
+    path: '{{ field.name }}',
+    field: 'select',
+    fieldProps: {
+      options: dictList('{{ field.dict_code }}'),
+    },
+  },
+{% else %}
   { title: '{{ field.label }}', path: '{{ field.name }}', field: 'input' },
+{% endif %}
 {% else %}
   { title: '关键词', path: 'keyword', field: 'input' },
 {% endfor %}
 ])
+{% endif %}
 
-{% if plan.gen_type != "TREE" %}
+{% if plan.gen_type != "TREE" and plan.gen_type != "LEFT_TREE_TABLE" %}
 const pagination = computed<PaginationProps>(() => ({
   page: state.page,
   pageSize: state.pageSize,
@@ -310,7 +331,7 @@ onMounted(() => {
 async function fetchPage() {
   state.loading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.page({ current: state.page, size: state.pageSize, ...state.searchValues })
+    const response = await {{ plan.entity_name | ts_api_name }}.page({ current: state.page, size: state.pageSize, ...state.searchValues })
     const data = response.data ?? {}
     state.rows = data.records ?? []
     const pageMeta = readPageMeta(data, { current: state.page, size: state.pageSize })
@@ -328,7 +349,7 @@ async function fetchPage() {
 async function fetchTree() {
   state.treeLoading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.tree({% if plan.gen_type == "LEFT_TREE_TABLE" %}{ keyword: state.treeKeyword || undefined }{% endif %})
+    const response = await {{ plan.entity_name | ts_api_name }}.tree({% if plan.gen_type == "LEFT_TREE_TABLE" %}{ keyword: state.treeKeyword || undefined }{% endif %})
     state.treeRows = response.data ?? []
   } finally {
     state.treeLoading = false
@@ -429,7 +450,7 @@ async function selectMaster(id: string) {
 async function fetchChildPage() {
   state.childLoading = true
   try {
-    const response = await {{ plan.main_entity_name | ts_api_name }}.childPage({
+    const response = await {{ plan.entity_name | ts_api_name }}.childPage({
       current: state.childPage,
       size: state.childPageSize,
       {{ plan.sub_foreign_key }}: state.selectedMasterId,
@@ -499,7 +520,7 @@ function confirmDelete(value: string | string[]) {
 }
 
 async function deleteRows(ids: string[]) {
-  await {{ plan.main_entity_name | ts_api_name }}.remove({ ids })
+  await {{ plan.entity_name | ts_api_name }}.remove({ ids })
   state.checkedRowKeys = state.checkedRowKeys.filter(key => !ids.includes(key))
 {% if plan.gen_type == "MASTER_DETAIL" and sub %}
   if (state.selectedMasterId && ids.includes(state.selectedMasterId)) {
@@ -534,7 +555,7 @@ function confirmChildDelete(value: string | string[]) {
 }
 
 async function deleteChildRows(ids: string[]) {
-  await {{ plan.main_entity_name | ts_api_name }}.childRemove({ ids })
+  await {{ plan.entity_name | ts_api_name }}.childRemove({ ids })
   state.childCheckedRowKeys = state.childCheckedRowKeys.filter(key => !ids.includes(key))
   window.$message.success('删除成功')
   await fetchChildPage()
@@ -551,7 +572,7 @@ async function deleteChildRows(ids: string[]) {
           <NInput
             v-model:value="state.treeKeyword"
             clearable
-            placeholder="搜索{{ plan.main_business_name }}"
+            placeholder="搜索"
             @keyup.enter="searchTree"
           />
           <NButton type="primary" :loading="state.treeLoading" title="搜索" @click="searchTree">

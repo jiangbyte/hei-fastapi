@@ -33,7 +33,7 @@ def test_merge_api_index_export_appends_missing_alias():
 
 
 def test_apply_preview_files_merges_append_and_writes_others(tmp_path: Path):
-    api_index = tmp_path / "web/admin/src/api/index.ts"
+    api_index = tmp_path / "src/api/index.ts"
     api_index.parent.mkdir(parents=True)
     api_index.write_text("export * as authApi from './auth'\n", encoding="utf-8")
 
@@ -44,21 +44,30 @@ def test_apply_preview_files_merges_append_and_writes_others(tmp_path: Path):
             content="router = None\n",
         ),
         CodegenPreviewFile(
-            path="web/admin/src/api/index.ts.append",
+            path="src/api/index.ts.append",
             language="typescript",
             content="export * as demoApi from './biz/demo'\n",
         ),
         CodegenPreviewFile(
-            path="web/admin/src/api/index.ts.append",
+            path="src/api/index.ts.append",
             language="typescript",
             content="export * as demoApi from './biz/demo'\n",
         ),
     ]
+    import os
+
+    os.environ["CODEGEN_FRONTEND_ROOT"] = str(tmp_path)
+    from app.modules.sys.codegen.paths import get_codegen_frontend_root
+
+    get_codegen_frontend_root.cache_clear()
+
     result = apply_preview_files(files, tmp_path)
     assert (tmp_path / "app/modules/biz/demo/router.py").read_text(
         encoding="utf-8"
     ) == "router = None\n"
     text = api_index.read_text(encoding="utf-8")
     assert text.count("demoApi") == 1
-    assert "web/admin/src/api/index.ts" in result.merged
+    assert "src/api/index.ts" in result.merged
     assert result.skipped  # 第二次 append 因已存在而跳过
+    get_codegen_frontend_root.cache_clear()
+    os.environ.pop("CODEGEN_FRONTEND_ROOT", None)

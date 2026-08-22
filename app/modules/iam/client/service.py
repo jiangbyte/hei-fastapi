@@ -74,12 +74,12 @@ class ClientModuleService:
     async def selector(
         self,
         query: ClientModuleSelectorQuery,
-    ) -> list[ClientModuleSelectorOption]:
-        """返回启用的客户端模块下拉选项。"""
-        return to_schema_list(
-            ClientModuleSelectorOption,
-            await self.repo.list_enabled(query.account_type),
-        )
+    ) -> list[SysClientModuleSchema]:
+        """返回启用的客户端模块（对齐 hei-boot 全字段 selector）。"""
+        items = await self.repo.list_enabled(query.account_type)
+        schemas = to_schema_list(SysClientModuleSchema, items)
+        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
+        return schemas
 
 
 class ClientResourceService:
@@ -108,7 +108,7 @@ class ClientResourceService:
         """查询客户端资源详情，填充模块元信息与创建人昵称。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysClientResourceSchema, entity)
-        await self._fill_module_meta([schema])
+        await self._fill_module_meta([schema], include_account_type=True)
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
@@ -166,15 +166,21 @@ class ClientResourceService:
         """返回授权页所需的客户端资源模块树。"""
         return await self.repo.list_all_client_resource_grant_modules(account_type=account_type)
 
-    async def _fill_module_meta(self, schemas: list[SysClientResourceSchema]) -> None:
-        """批量填充模块名称与账户体系到资源 Schema。"""
+    async def _fill_module_meta(
+        self,
+        schemas: list[SysClientResourceSchema],
+        *,
+        include_account_type: bool = False,
+    ) -> None:
+        """批量填充模块名称；account_type 仅详情/树需要（对齐 hei-boot 分页）。"""
         meta = await self.repo.list_module_meta_map(
             [item.module_id for item in schemas if item.module_id]
         )
         for schema in schemas:
             name, account_type = meta.get(schema.module_id or "", ("", None))
             schema.module_id_name = name
-            schema.account_type = AccountType(account_type) if account_type else None
+            if include_account_type:
+                schema.account_type = AccountType(account_type) if account_type else None
 
     async def _build_tree_nodes(
         self,
@@ -184,6 +190,7 @@ class ClientResourceService:
         meta = await self.repo.list_module_meta_map(
             [resource.module_id for resource in resources if resource.module_id]
         )
+        ids = {resource.id for resource in resources}
         node_map = {
             resource.id: to_schema(ClientResourceTreeNode, resource) for resource in resources
         }
@@ -191,11 +198,14 @@ class ClientResourceService:
             name, account_type = meta.get(node.module_id or "", ("", None))
             node.module_id_name = name
             node.account_type = AccountType(account_type) if account_type else None
+            node.weight = node.sort or 0
         roots: list[ClientResourceTreeNode] = []
         for resource in resources:
             node = node_map[resource.id]
-            if resource.parent_id and resource.parent_id in node_map:
-                parent_node = node_map[resource.parent_id]
+            parent_id = resource.parent_id
+            if parent_id and parent_id in ids:
+                parent_node = node_map[parent_id]
+                node.parent_id_name = parent_node.name
                 if parent_node.children is None:
                     parent_node.children = []
                 parent_node.children.append(node)

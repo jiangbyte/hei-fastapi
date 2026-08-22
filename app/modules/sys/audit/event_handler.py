@@ -25,7 +25,6 @@ async def _persist_audit_event(event: OperationAuditEvent) -> None:
             module=_build_module(event.resource_type),
             resource_type=event.resource_type,
             action=event.action,
-            summary=f"{event.method} {event.path}",
             success=event.status_code < 400,
             error_message=None if event.status_code < 400 else str(event.status_code),
             account_id=event.account_id,
@@ -33,6 +32,7 @@ async def _persist_audit_event(event: OperationAuditEvent) -> None:
             request_id=event.request_id,
             ip=event.ip,
             user_agent=event.user_agent,
+            operator_name=event.account_id,
         )
 
 

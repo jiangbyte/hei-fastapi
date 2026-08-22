@@ -25,6 +25,7 @@ from app.modules.biz.cg_test_catalog.repository import (
 from app.modules.biz.cg_test_catalog.schema import (
     CgTestCatalogAdminPageQuery,
     CgTestCatalogCreateRequest,
+    CgTestCatalogDetailSchema,
     CgTestCatalogSchema,
     CgTestCatalogTreeNode,
     CgTestCatalogUpdateRequest,
@@ -53,7 +54,7 @@ class CgTestCatalogService:
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
-    async def detail(self, query: IdQuery) -> CgTestCatalogSchema:
+    async def detail(self, query: IdQuery) -> CgTestCatalogDetailSchema:
         schema = await self._to_schema_with_parent_name(await self.repo.get_required(query.id))
         await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
@@ -73,15 +74,15 @@ class CgTestCatalogService:
                 dept_column=getattr(CgTestCatalog, "owner_dept_id", None),
             )
         items, total = await self.repo.page_admin(query, data_scope_filter)
-        records = await self._attach_parent_names(to_schema_list(CgTestCatalogSchema, items))
+        records = to_schema_list(CgTestCatalogSchema, items)
         await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)
 
-    async def _to_schema_with_parent_name(self, item: object) -> CgTestCatalogSchema:
-        schemas = await self._attach_parent_names([to_schema(CgTestCatalogSchema, item)])
+    async def _to_schema_with_parent_name(self, item: object) -> CgTestCatalogDetailSchema:
+        schemas = await self._attach_parent_names([to_schema(CgTestCatalogDetailSchema, item)])
         return schemas[0]
 
-    async def _attach_parent_names(self, items: list[CgTestCatalogSchema]) -> list[CgTestCatalogSchema]:
+    async def _attach_parent_names(self, items: list[CgTestCatalogDetailSchema]) -> list[CgTestCatalogDetailSchema]:
         parent_ids = {item.parent_id for item in items if item.parent_id}
         parent_name_map = await self.repo.get_parent_name_map(parent_ids)
         for item in items:
@@ -107,14 +108,20 @@ class CgTestCatalogService:
 
 
 def _build_cg_test_catalog_tree(items) -> list[CgTestCatalogTreeNode]:
+    ids = {item.id for item in items}
     node_map = {item.id: to_schema(CgTestCatalogTreeNode, item) for item in items}
+    for node in node_map.values():
+        node.weight = 0
+        node.children = None
     roots: list[CgTestCatalogTreeNode] = []
     for item in items:
         node = node_map[item.id]
         parent_id = getattr(item, "parent_id", None)
-        if parent_id and parent_id in node_map:
-            node.parent_id_name = getattr(node_map[parent_id], "name", None)
-            node_map[parent_id].children.append(node)
+        if parent_id and parent_id in ids:
+            parent = node_map[parent_id]
+            if parent.children is None:
+                parent.children = []
+            parent.children.append(node)
         else:
             roots.append(node)
     return roots

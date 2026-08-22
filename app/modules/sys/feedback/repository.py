@@ -74,16 +74,10 @@ class SysFeedbackRepository:
         stmt: Select[tuple[SysFeedback]] = select(SysFeedback)
         count_stmt = select(func.count(SysFeedback.id))
         filters = []
-        if query.title:
-            filters.append(ci_like(SysFeedback.title, f"%{query.title}%"))
         if query.category:
             filters.append(SysFeedback.category == query.category)
         if query.status:
             filters.append(SysFeedback.status == query.status)
-        if query.submitter_account_type is not None:
-            filters.append(
-                SysFeedback.submitter_account_type == query.submitter_account_type.value
-            )
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
@@ -111,6 +105,14 @@ class SysFeedbackRepository:
             SysFeedback.submitter_account_type == account_type,
             SysFeedback.submitter_account_id == account_id,
         )
+        filters = []
+        if query.category:
+            filters.append(SysFeedback.category == query.category)
+        if query.status:
+            filters.append(SysFeedback.status == query.status)
+        if filters:
+            stmt = stmt.where(*filters)
+            count_stmt = count_stmt.where(*filters)
         stmt = (
             stmt.order_by(SysFeedback.id.desc())
             .offset(query.offset)

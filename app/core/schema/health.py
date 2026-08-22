@@ -8,10 +8,9 @@ from app.core.schema.wire import WireBool
 
 
 class RootHealthResponse(ApiSchema):
-    """根健康检查响应结构。"""
+    """根健康检查响应结构（对齐 hei-boot RootController data.name）。"""
 
-    status: str
-    service: str
+    name: str
 
 
 class LiveHealthResponse(ApiSchema):

@@ -29,7 +29,6 @@ class ProfileUserAdminRepository:
         if profile is None:
             profile = ProfileUserAdmin(account_id=payload.account_id)
             self.db.add(profile)
-        profile.name = payload.name
         profile.nickname = payload.nickname
         profile.avatar = payload.avatar
         profile.signature = payload.signature

@@ -85,7 +85,7 @@ class CgTestCatalogRepository:
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
-        stmt = stmt.order_by(CgTestCatalog.id.desc()).offset(query.offset).limit(query.size)
+        stmt = stmt.order_by(CgTestCatalog.created_at.desc()).offset(query.offset).limit(query.size)
         items = list((await self.db.execute(stmt)).scalars().all())
         total = (await self.db.execute(count_stmt)).scalar_one()
         return items, total

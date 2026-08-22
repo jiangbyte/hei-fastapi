@@ -41,6 +41,11 @@ def login_lock_ip_key(account_type: str, ip: str) -> str:
     return f"login:lock:ip:{account_type}:{ip}"
 
 
+def reset_password_otp_key(account_type: str, phone: str) -> str:
+    """通过手机找回密码时的一次性验证码键（对齐 hei-boot reset password OTP）。"""
+    return f"password:reset:otp:{account_type}:PHONE:{phone}"
+
+
 def password_reset_token_key(token: str) -> str:
     """密码重置 token 键。"""
     return f"password:reset:{token}"

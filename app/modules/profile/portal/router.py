@@ -59,9 +59,6 @@ async def get_me(
     from app.modules.iam.account.password_helper import is_password_expired
 
     account_entity = await account_repo.get_required(session.account_id)
-    force_bind_email, force_bind_phone = await AuthService(db)._force_bind_flags(
-        account_entity, AccountType.PORTAL
-    )
     role_id_names, dept_id_names, group_id_names = (
         await ProfileUserPortalService(db).get_id_name_groups(
             session.role_ids,
@@ -69,12 +66,18 @@ async def get_me(
             session.group_ids,
         )
     )
+    force_bind_email, force_bind_phone = await AuthService(db)._force_bind_flags(
+        account_entity, AccountType.PORTAL
+    )
+    auth_service = AuthService(db)
+    from app.modules.profile.identity.service import ProfileIdentityService
+
+    identity = await ProfileIdentityService(db).get_user_status_for_account(session.account_id)
     return success(
         PortalMeResponse(
             account_id=session.account_id,
             account=getattr(primary_identity, "identifier", ""),
             account_type=AccountType(str(session.account_type)),
-            name=profile.name if profile else None,
             nickname=profile.nickname if profile else None,
             avatar=avatar,
             role_ids=session.role_ids,
@@ -87,9 +90,12 @@ async def get_me(
             password_expired=await is_password_expired(db, session.account_id),
             force_bind_email=force_bind_email,
             force_bind_phone=force_bind_phone,
+            force_bind_identity=await auth_service.force_bind_identity_flag(
+                session.account_id, AccountType.PORTAL
+            ),
+            identity=identity,
             profile=ProfileUserPortalResponse(
                 account_id=session.account_id,
-                name=profile.name if profile else None,
                 nickname=profile.nickname if profile else None,
                 avatar=avatar,
                 signature=profile.signature if profile else None,

@@ -99,7 +99,6 @@ class ProfileUserPortalService:
             raise NotFoundError("Profile not found")
         return PortalPublicProfileResponse(
             account_id=account_id,
-            name=profile.name,
             nickname=profile.nickname,
             avatar=await FileService(self.db).resolve_access_url(profile.avatar),
             signature=profile.signature,
@@ -121,7 +120,6 @@ class ProfileUserPortalService:
             await self.repo.upsert(
                 ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
-                    name=payload.name,
                     nickname=payload.nickname,
                     avatar=avatar,
                     signature=payload.signature,
@@ -219,7 +217,6 @@ class ProfileUserPortalService:
             await self.repo.upsert(
                 ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
-                    name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
                     avatar=profile.avatar if profile else None,
                     signature=profile.signature if profile else None,
@@ -254,7 +251,6 @@ class ProfileUserPortalService:
             await self.repo.upsert(
                 ProfileUserPortalUpsertPayload(
                     account_id=session.account_id,
-                    name=profile.name if profile else None,
                     nickname=profile.nickname if profile else None,
                     avatar=profile.avatar if profile else None,
                     signature=profile.signature if profile else None,
