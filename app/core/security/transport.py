@@ -22,7 +22,7 @@ from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
 from app.core.response.schema import ApiResponse
 from app.core.schema.base import ApiSchema
-from app.core.security.password import hash_password, verify_password
+from app.core.security.password import hash_password_async, verify_password_async
 
 
 class CaptchaResponse(ApiSchema):
@@ -68,7 +68,7 @@ async def create_captcha(image_format: str = "svg") -> CaptchaResponse:
     await redis.setex(
         captcha_key(captcha_id),
         settings.auth.captcha_ttl_seconds,
-        hash_password(value.lower()),
+        await hash_password_async(value.lower()),
     )
     if image_format == "png":
         return CaptchaResponse(
@@ -86,7 +86,7 @@ async def verify_captcha(captcha_id: str, captcha_value: str) -> None:
     raw = await redis.get(key)
     await redis.delete(key)
     raw_text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
-    if not raw_text or not verify_password(captcha_value.strip().lower(), str(raw_text)):
+    if not raw_text or not await verify_password_async(captcha_value.strip().lower(), str(raw_text)):
         raise BusinessError("Invalid or expired captcha")
 
 

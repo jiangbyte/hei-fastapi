@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
 from app.core.id_generator.snowflake import generate_snowflake_id
-from app.core.security.password import hash_password, verify_password
+from app.core.security.password import hash_password_async, verify_password_async
 from app.core.security.password_policy import is_weak_password, validate_password_strength
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.password_history import SysAccountPasswordHistory
@@ -103,7 +103,7 @@ async def validate_and_record_password(
         SysAccountPasswordHistory(
             id=generate_snowflake_id(),
             account_id=account_id,
-            password_hash=hash_password(plain_password),
+            password_hash=await hash_password_async(plain_password),
             changed_by=changed_by or account_id,
             change_reason=change_reason or "unknown",
         )
@@ -125,7 +125,7 @@ async def _check_password_reuse(db: AsyncSession, account_id: str, new_password:
     rows = (await db.execute(stmt)).scalars().all()
 
     for old_hash in rows:
-        if verify_password(new_password, old_hash):
+        if await verify_password_async(new_password, old_hash):
             raise BusinessError(f"新密码不能与最近 {count} 次使用过的密码相同")
 
 

@@ -14,7 +14,7 @@ from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthenticationError, BusinessError, NotFoundError
 from app.core.schema.common_schema import IdNameResponse
-from app.core.security.password import hash_password, verify_password
+from app.core.security.password import hash_password_async, verify_password_async
 from app.core.security.session import SessionPayload
 from app.core.storage.url import is_external_url, normalize_object_name
 from app.modules.auth.session_service import AccountSessionService
@@ -196,7 +196,7 @@ class ProfileUserPortalService:
             )
             await self.account_repo.update_password_hash(
                 session.account_id,
-                hash_password(payload.new_password),
+                await hash_password_async(payload.new_password),
             )
         updated_profile = await self.repo.get_by_account_id(session.account_id)
         if updated_profile is not None:
@@ -210,7 +210,7 @@ class ProfileUserPortalService:
     ) -> None:
         """校验密码（绑定/换绑时另需 OTP）后更新当前门户用户手机号绑定。"""
         account = await self.account_repo.get_required(session.account_id)
-        self._ensure_password(account.password_hash, payload.password)
+        await self._ensure_password(account.password_hash, payload.password)
         phone_value = str(payload.phone or "").strip()
         if phone_value:
             await self._consume_bind_code(
@@ -244,7 +244,7 @@ class ProfileUserPortalService:
     ) -> None:
         """校验密码（绑定/换绑时另需 OTP）后更新当前门户用户邮箱绑定。"""
         account = await self.account_repo.get_required(session.account_id)
-        self._ensure_password(account.password_hash, payload.password)
+        await self._ensure_password(account.password_hash, payload.password)
         email_value = str(payload.email or "").strip()
         if email_value:
             await self._consume_bind_code(
@@ -290,9 +290,9 @@ class ProfileUserPortalService:
             code=otp_code,
         )
 
-    def _ensure_password(self, password_hash: str, password: str) -> None:
+    async def _ensure_password(self, password_hash: str, password: str) -> None:
         """校验明文密码与哈希是否匹配，失败抛出 AuthenticationError。"""
-        if not verify_password(password, password_hash):
+        if not await verify_password_async(password, password_hash):
             raise AuthenticationError("Invalid account or password")
 
     def _normalize_avatar_content_type(self, content_type: str) -> str:

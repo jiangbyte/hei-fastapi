@@ -13,7 +13,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.config.enums import AccountStatusEnum
 from app.core.exceptions.business import BusinessError, ConflictError, NotFoundError
-from app.core.security.password import hash_password
+from app.core.security.password import hash_password_async
 from app.modules.iam.account.model import SysAccount, SysAccountIdentity
 from app.modules.iam.account.password_history import SysAccountPasswordHistory
 from app.modules.iam.account.schema import (
@@ -435,7 +435,7 @@ class AccountRepository:
         entity.cancel_reason = payload.cancel_reason
         entity.cancel_notify_email = notify_email
         entity.cancel_notify_phone = notify_phone
-        entity.password_hash = hash_password(f"cancelled:{secrets.token_urlsafe(32)}")
+        entity.password_hash = await hash_password_async(f"cancelled:{secrets.token_urlsafe(32)}")
         entity.last_login_ip = None
         entity.last_login_address = None
         entity.last_login_device = None

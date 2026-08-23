@@ -23,7 +23,7 @@ from app.core.security.data_scope import (
     build_data_scope_filter,
     resolve_data_scope_dept_ids,
 )
-from app.core.security.password import hash_password
+from app.core.security.password import hash_password_async
 from app.core.security.session import SessionPayload
 from app.core.security.transport import decrypt_password
 from app.modules.auth.session_service import AccountSessionService
@@ -60,12 +60,12 @@ from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
 from app.modules.iam.support import audit as iam_audit
-from app.modules.sys.audit.support import resolve_account_login
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
 from app.modules.profile.admin.schema import ProfileUserAdminUpsertPayload
+from app.modules.profile.identity.service import ProfileIdentityService
 from app.modules.profile.portal.repository import ProfileUserPortalRepository
 from app.modules.profile.portal.schema import ProfileUserPortalUpsertPayload
-from app.modules.profile.identity.service import ProfileIdentityService
+from app.modules.sys.audit.support import resolve_account_login
 
 
 class AccountService:
@@ -87,7 +87,7 @@ class AccountService:
         async with transactional(self.db):
             account = await self.repo.create(
                 payload,
-                password_hash=hash_password(password),
+                password_hash=await hash_password_async(password),
             )
             match payload.account_type:
                 case AccountType.ADMIN:
@@ -119,7 +119,7 @@ class AccountService:
         existing = await self.repo.get_required(payload.id)
         audit_snapshots.before_entity(existing)
         async with transactional(self.db):
-            password_hash = hash_password(password) if password else None
+            password_hash = await hash_password_async(password) if password else None
             await self.repo.update(payload, password_hash)
             account = await self.repo.get_required(payload.id)
             match account.account_type:

@@ -16,7 +16,7 @@ from app.core.config.reader import config_reader
 from app.core.config.settings import settings
 from app.core.email.sender import send_templated_mail
 from app.core.exceptions.business import BusinessError
-from app.core.security.password import verify_password
+from app.core.security.password import verify_password_async
 from app.core.sms.sender import send_templated_sms
 from app.modules.iam.account.model import SysAccount
 from app.modules.iam.account.repository import AccountRepository
@@ -81,7 +81,7 @@ async def verify_change_password(
     """根据配置的验证方式校验旧密码或验证码。"""
     method = change_verify_method()
     if method == "OLD_PASSWORD":
-        if not old_password or not verify_password(old_password, account.password_hash):
+        if not old_password or not await verify_password_async(old_password, account.password_hash):
             raise BusinessError("Old password is incorrect")
         return
     if method in {"EMAIL_CODE", "PHONE_CODE"}:

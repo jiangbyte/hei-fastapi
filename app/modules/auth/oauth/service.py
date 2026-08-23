@@ -19,7 +19,7 @@ from app.core.config.reader import config_reader
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
 from app.core.schema.datetime import normalize_orm_datetimes
-from app.core.security.password import hash_password
+from app.core.security.password import hash_password_async
 from app.modules.auth.oauth.client import OauthClientFacade
 from app.modules.auth.oauth.provider import WECHAT_FAMILY, OauthProvider, OauthUserProfile
 from app.modules.auth.oauth.repository import AccountOauthBindingRepository
@@ -299,7 +299,7 @@ class AuthOauthService:
                     account_status=AccountStatusEnum.ENABLED,
                     nickname=nickname,
                 ),
-                password_hash=hash_password(raw_password),
+                password_hash=await hash_password_async(raw_password),
             )
             await validate_and_record_password(
                 self.db,
