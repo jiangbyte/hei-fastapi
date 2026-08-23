@@ -17,7 +17,7 @@ from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
 from app.core.storage.url import normalize_object_name
-from app.modules.profile.utils.profile import enrich_audit_names, get_profile, get_profiles_batch
+from app.modules.profile.utils.profile import get_profile, get_profiles_batch
 from app.modules.sys.feedback.repository import SysFeedbackRepository
 from app.modules.sys.feedback.schema import (
     MyFeedbackPageQuery,

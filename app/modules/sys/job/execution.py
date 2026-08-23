@@ -17,6 +17,7 @@ from pathlib import Path
 from app.core.cache.keys import job_run_lock_key
 from app.core.cache.redis import get_redis
 from app.core.config.settings import settings
+from app.core.schema.datetime import ensure_utc_datetime
 from app.core.db.session import get_session_factory
 from app.core.db.transaction import transactional
 from app.modules.sys.job import cron as cron_util
@@ -110,7 +111,7 @@ async def _run_locked(job_id: str, *, force: bool, executor: str) -> None:
         if job is None or not job.enabled:
             return
         now = datetime.now(UTC)
-        if not force and job.next_run_time > now:
+        if not force and ensure_utc_datetime(job.next_run_time) > now:
             return
 
         handler = resolve(job.handler)
