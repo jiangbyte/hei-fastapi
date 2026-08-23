@@ -3,8 +3,10 @@
 职位应用服务：职位 CRUD、数据范围可见性校验与名称回显。
 """
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
@@ -44,6 +46,18 @@ class PositionService:
             )
         async with transactional(self.db):
             await self.repo.create(payload)
+        stmt = (
+            select(SysPosition)
+            .where(
+                SysPosition.name == payload.name,
+                SysPosition.category == payload.category,
+                SysPosition.owner_dept_id == payload.owner_dept_id,
+            )
+            .order_by(SysPosition.created_at.desc())
+            .limit(1)
+        )
+        entity = (await self.db.execute(stmt)).scalar_one()
+        audit_snapshots.created_entity(entity)
 
     async def update(
         self, payload: PositionUpdateRequest, session: SessionPayload | None = None
@@ -55,13 +69,28 @@ class PositionService:
                 await self._ensure_depts_visible(
                     session, "iam:position:update", [payload.owner_dept_id]
                 )
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         """删除职位，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:delete", payload.ids)
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = list(
+            (
+                await self.db.execute(
+                    select(SysPosition).where(SysPosition.id.in_(unique_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 

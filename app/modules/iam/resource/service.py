@@ -6,6 +6,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, ConflictError
@@ -19,8 +20,9 @@ from app.core.security.permission_registry import (
 from app.core.security.session import SessionPayload
 from app.modules.iam.enums import ResourceType
 from app.modules.iam.relation.repository import IamRelationRepository
-from app.modules.iam.resource.model import SysResource
+from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.iam.resource.repository import ResourceModuleRepository, ResourceRepository
+from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.resource.schema import (
     ResourceAdminPageQuery,
     ResourceButtonCreateRequest,
@@ -53,16 +55,34 @@ class ResourceService:
 
     async def create(self, payload: ResourceCreateRequest) -> None:
         """创建资源。"""
+        entity: SysResource | None = None
         async with transactional(self.db):
-            await self.repo.create(payload)
+            entity = await self.repo.create(payload)
+        if entity is not None:
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: ResourceUpdateRequest) -> None:
         """更新资源。"""
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除资源。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = list(
+            (
+                await self.db.execute(
+                    select(SysResource).where(SysResource.id.in_(unique_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
@@ -94,11 +114,40 @@ class ResourceService:
                 payload.custom_scope_dept_ids,
             )
         await ensure_registered_permission_key(payload.permission_key)
-        async with transactional(self.db):
-            return to_schema(
-                SysResourcePermissionRelSchema,
-                await self.repo.bind_resource_permission(payload),
+        resource = await self.repo.get_required(payload.resource_id)
+        audit_snapshots.subject(resource.name)
+        audit_snapshots.resource_id(resource.id)
+        permission_map = await self.repo.list_permissions_by_resource_ids([payload.resource_id])
+        old_permissions = permission_map.get(payload.resource_id, [])
+        old = next(
+            (
+                item
+                for item in old_permissions
+                if item.target_key == payload.permission_key
+                and item.account_type == payload.account_type.value
+            ),
+            None,
+        )
+        audit_snapshots.before(
+            iam_audit.permission_bind_field(
+                old.target_key if old else None,
+                old.account_type if old else None,
+                old.data_scope if old else None,
             )
+        )
+        async with transactional(self.db):
+            relation = await self.repo.bind_resource_permission(payload)
+        audit_snapshots.after(
+            iam_audit.permission_bind_field(
+                payload.permission_key,
+                payload.account_type.value,
+                payload.data_scope.value,
+            )
+        )
+        return to_schema(
+            SysResourcePermissionRelSchema,
+            relation,
+        )
 
     async def create_button(
         self,
@@ -107,12 +156,15 @@ class ResourceService:
     ) -> ResourceButtonSchema:
         """创建按钮资源并绑定权限。"""
         parent = await self._prepare_button_permission(payload, session)
+        button: SysResource | None = None
         async with transactional(self.db):
             button = await self.repo.create(self._build_button_resource_payload(payload, parent))
             await self.repo.replace_resource_permission(
                 self._build_button_permission_payload(button.id, payload)
             )
-            return (await self._build_button_schemas([button]))[0]
+        if button is not None:
+            audit_snapshots.created_entity(button)
+        return (await self._build_button_schemas([button]))[0]
 
     async def update_button(
         self,
@@ -124,6 +176,7 @@ class ResourceService:
         if button.resource_type != ResourceType.BUTTON.value:
             raise ConflictError("Resource is not a button")
         parent = await self._prepare_button_permission(payload, session)
+        audit_snapshots.before_entity(button)
         async with transactional(self.db):
             await self.repo.update(
                 ResourceUpdateRequest(
@@ -134,10 +187,23 @@ class ResourceService:
             await self.repo.replace_resource_permission(
                 self._build_button_permission_payload(payload.id, payload)
             )
-            return (await self._build_button_schemas([await self.repo.get_required(payload.id)]))[0]
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
+        return (await self._build_button_schemas([updated]))[0]
 
     async def delete_button(self, payload: IdsRequest) -> None:
         """批量删除按钮资源（单次批量 DELETE，避免逐条 N+1）。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = list(
+            (
+                await self.db.execute(
+                    select(SysResource).where(SysResource.id.in_(unique_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_buttons(payload.ids)
 
@@ -380,14 +446,35 @@ class ResourceModuleService:
         """创建资源模块。"""
         async with transactional(self.db):
             await self.repo.create(payload)
+        entity = (
+            await self.db.execute(
+                select(SysResourceModule).where(SysResourceModule.code == payload.code).limit(1)
+            )
+        ).scalar_one()
+        audit_snapshots.created_entity(entity)
 
     async def update(self, payload: ResourceModuleUpdateRequest) -> None:
         """更新资源模块。"""
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除资源模块。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = list(
+            (
+                await self.db.execute(
+                    select(SysResourceModule).where(SysResourceModule.id.in_(unique_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 

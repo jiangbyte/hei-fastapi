@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.config.reader import config_reader
 from app.core.config.settings import settings
@@ -44,6 +45,7 @@ from app.modules.iam.account.schema import (
     AccountOwnResourceResponse,
     AccountOwnRoleResponse,
     AccountResourceGrantInfo,
+    AccountUpdateLoginIdentityRequest,
     AccountUpdateRequest,
     SysAccountListSchema,
     SysAccountSchema,
@@ -57,6 +59,7 @@ from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
+from app.modules.iam.support import audit as iam_audit
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
 from app.modules.profile.admin.schema import ProfileUserAdminUpsertPayload
 from app.modules.profile.portal.repository import ProfileUserPortalRepository
@@ -96,6 +99,7 @@ class AccountService:
                     )
                 case _:
                     raise BusinessError(f"Unsupported account type: {payload.account_type}")
+        audit_snapshots.created_entity(account)
 
     async def update(
         self,
@@ -111,6 +115,8 @@ class AccountService:
             if payload.password
             else None
         )
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             password_hash = hash_password(password) if password else None
             await self.repo.update(payload, password_hash)
@@ -126,6 +132,8 @@ class AccountService:
                     )
                 case _:
                     raise BusinessError(f"Unsupported account type: {account.account_type}")
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def update_login_identity(
         self,
@@ -142,6 +150,7 @@ class AccountService:
             raise BusinessError("Email login requires an email")
         if payload.phone_login_enabled and not str(payload.phone or "").strip():
             raise BusinessError("Phone login requires a phone")
+        audit_snapshots.before_entity(account)
         async with transactional(self.db):
             await self.repo.replace_secondary_login_identities(
                 payload.id,
@@ -150,6 +159,8 @@ class AccountService:
                 phone_login_enabled=bool(payload.phone_login_enabled),
                 phone=payload.phone,
             )
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         """删除账户，并在事务外清理对应在线会话。"""
@@ -157,6 +168,7 @@ class AccountService:
             await self._ensure_accounts_visible(session, "iam:account:delete", payload.ids)
         accounts = await self.repo.list_accounts_by_ids(payload.ids)
         session_targets = [(account.account_type, account.id) for account in accounts]
+        audit_snapshots.deleted_all(accounts)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
         if session_targets:
@@ -268,6 +280,15 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantresource", [payload.id])
         account = await self.repo.get_required(payload.id)
+        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        audit_snapshots.subject(subject or payload.id)
+        audit_snapshots.resource_id(payload.id)
+        old_grants = await self.relation_repo.list_subject_resource_grants(
+            GrantSubjectType.ACCOUNT,
+            payload.id,
+            account_type=account.account_type,
+        )
+        audit_snapshots.before(await iam_audit.grant_resource_field(self.db, "资源", old_grants))
         async with transactional(self.db):
             await self.relation_repo.replace_subject_resource_grant_infos(
                 GrantSubjectType.ACCOUNT,
@@ -275,6 +296,12 @@ class AccountService:
                 payload.grant_info_list,
                 account_type=account.account_type,
             )
+        new_grants = await self.relation_repo.list_subject_resource_grants(
+            GrantSubjectType.ACCOUNT,
+            payload.id,
+            account_type=account.account_type,
+        )
+        audit_snapshots.after(await iam_audit.grant_resource_field(self.db, "资源", new_grants))
         await self._refresh_accounts([payload.id])
 
     async def own_client_resource(
@@ -313,6 +340,17 @@ class AccountService:
                 session, "iam:account:grantclientresource", [payload.id]
             )
         account = await self.repo.get_required(payload.id)
+        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        audit_snapshots.subject(subject or payload.id)
+        audit_snapshots.resource_id(payload.id)
+        old_grants = await self.relation_repo.list_subject_client_resource_grants(
+            GrantSubjectType.ACCOUNT,
+            payload.id,
+            account_type=account.account_type,
+        )
+        audit_snapshots.before(
+            await iam_audit.grant_client_resource_field(self.db, "客户端资源", old_grants)
+        )
         async with transactional(self.db):
             await self.relation_repo.replace_subject_client_resource_grant_infos(
                 GrantSubjectType.ACCOUNT,
@@ -320,6 +358,14 @@ class AccountService:
                 payload.grant_info_list,
                 account_type=account.account_type,
             )
+        new_grants = await self.relation_repo.list_subject_client_resource_grants(
+            GrantSubjectType.ACCOUNT,
+            payload.id,
+            account_type=account.account_type,
+        )
+        audit_snapshots.after(
+            await iam_audit.grant_client_resource_field(self.db, "客户端资源", new_grants)
+        )
         await self._refresh_accounts([payload.id])
 
     async def own_role(
@@ -351,8 +397,14 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantrole", [payload.id])
             await self._ensure_roles_visible(session, "iam:account:grantrole", payload.role_ids)
+        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        audit_snapshots.subject(subject or payload.id)
+        audit_snapshots.resource_id(payload.id)
+        old_role_ids = await self.repo.list_account_direct_role_ids(payload.id)
+        audit_snapshots.before(await iam_audit.role_ids_field(self.db, old_role_ids))
         async with transactional(self.db):
             await self.repo.replace_account_roles(payload)
+        audit_snapshots.after(await iam_audit.role_ids_field(self.db, payload.role_ids))
         await self._refresh_accounts([payload.id])
 
     async def own_group(
@@ -384,8 +436,14 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantgroup", [payload.id])
             await self._ensure_groups_visible(session, "iam:account:grantgroup", payload.group_ids)
+        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        audit_snapshots.subject(subject or payload.id)
+        audit_snapshots.resource_id(payload.id)
+        old_group_ids = await self.repo.list_account_direct_group_ids(payload.id)
+        audit_snapshots.before(await iam_audit.group_ids_field(self.db, old_group_ids))
         async with transactional(self.db):
             await self.repo.replace_account_groups(payload)
+        audit_snapshots.after(await iam_audit.group_ids_field(self.db, payload.group_ids))
         await self._refresh_accounts([payload.id])
 
     async def own_dept(
@@ -419,8 +477,14 @@ class AccountService:
                 "iam:account:grantdept",
                 [item.dept_id for item in payload.grant_info_list],
             )
+        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        audit_snapshots.subject(subject or payload.id)
+        audit_snapshots.resource_id(payload.id)
+        old_grants = await self.repo.list_account_dept_grants(payload.id)
+        audit_snapshots.before(await iam_audit.dept_grant_field(self.db, old_grants))
         async with transactional(self.db):
             await self.repo.replace_account_depts(payload)
+        audit_snapshots.after(await iam_audit.dept_grant_field(self.db, payload.grant_info_list))
         await self._refresh_accounts([payload.id])
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:

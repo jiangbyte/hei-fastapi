@@ -6,9 +6,12 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
+from app.core.db.models.sys_weak_password import SysWeakPassword
 from app.core.response.pagination import PageData, build_page
 from app.core.response.schema import ApiResponse, success
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
@@ -39,7 +42,13 @@ async def create(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """新增弱密码。"""
-    await WeakPasswordRepository(db).create(payload)
+    repo = WeakPasswordRepository(db)
+    password = payload.password.strip()
+    await repo.create(payload)
+    entity = (
+        await db.execute(select(SysWeakPassword).where(SysWeakPassword.password == password).limit(1))
+    ).scalar_one()
+    audit_snapshots.created_entity(entity)
     return success()
 
 
@@ -56,7 +65,12 @@ async def update(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """更新弱密码。"""
-    await WeakPasswordRepository(db).update(payload)
+    repo = WeakPasswordRepository(db)
+    entity = await repo.get_required(payload.id)
+    audit_snapshots.before_entity(entity)
+    await repo.update(payload)
+    await db.refresh(entity)
+    audit_snapshots.after_entity(entity)
     return success()
 
 
@@ -73,7 +87,15 @@ async def delete(
     db: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> ApiResponse[None]:
     """批量删除弱密码。"""
-    await WeakPasswordRepository(db).delete_many(payload.ids)
+    repo = WeakPasswordRepository(db)
+    unique_ids = list(dict.fromkeys(payload.ids))
+    entities = [
+        entity
+        for entity_id in unique_ids
+        if (entity := await repo.get_by_id(entity_id)) is not None
+    ]
+    audit_snapshots.deleted_all(entities)
+    await repo.delete_many(payload.ids)
     return success()
 
 

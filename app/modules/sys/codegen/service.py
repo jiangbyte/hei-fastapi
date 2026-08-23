@@ -8,6 +8,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import ConflictError
 from app.core.response.pagination import PageData, build_page
@@ -47,19 +48,30 @@ class CodegenService:
         async with transactional(self.db):
             plan = await self.repo.create(payload)
             await self._sync_reflected_fields(plan)
+            audit_snapshots.created_entity(plan)
 
     async def update(self, payload: CodegenPlanUpdateRequest) -> None:
         """校验表结构后更新方案并重新同步反射字段。"""
         await self._validate_plan_tables(payload)
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
             await self.repo.update(payload)
             plan = await self.repo.get_required(payload.id)
             await self._sync_reflected_fields(plan)
+            audit_snapshots.after_entity(plan)
 
     async def delete(self, payload: IdsRequest) -> None:
         """事务内批量删除方案。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [
+            entity
+            for entity_id in unique_ids
+            if (entity := await self.repo.get_by_id(entity_id)) is not None
+        ]
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            audit_snapshots.deleted_all(entities)
+            await self.repo.delete_many(unique_ids)
 
     async def detail(self, query: IdQuery) -> SysCodegenPlanSchema:
         """查询方案详情。"""
@@ -89,8 +101,12 @@ class CodegenService:
 
     async def update_fields_batch(self, payload: CodegenFieldsUpdateBatchRequest) -> None:
         """事务内整体替换方案的字段配置。"""
+        plan = await self.repo.get_required(payload.plan_id)
+        audit_snapshots.before_entity(plan)
         async with transactional(self.db):
             await self.repo.replace_fields(payload.plan_id, payload.fields)
+            await self.db.refresh(plan)
+            audit_snapshots.after_entity(plan)
 
     async def parent_resources(
         self, query: CodegenParentResourcesQuery

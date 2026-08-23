@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
 from app.core.security.session import SessionPayload
@@ -110,8 +111,10 @@ class WorkspaceService:
                 )
             )
             sort += 1
+        audit_snapshots.subject(session.account_id)
         async with transactional(self.db):
             await self.shortcut_repo.replace_for_account(session.account_id, entities)
+        audit_snapshots.after({"resourceIds": normalized})
         return await self.list_shortcuts(session)
 
     async def _load_menus(self, resource_ids: list[str]) -> dict[str, SysResource]:

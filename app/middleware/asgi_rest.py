@@ -10,12 +10,18 @@ import re
 import time
 import uuid
 from http import HTTPStatus
+from typing import Any
 
+import orjson
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.audit.context import clear as clear_audit_context
+from app.core.audit.context import get_after, get_before, get_resource_id, get_subject
+from app.core.audit.path_catalog import resolve_audit_target
 from app.core.audit.queue import OperationAuditEvent, operation_audit_queue
 from app.core.audit.skip_catalog import should_skip_audit
+from app.core.audit.field_filter import to_safe_map
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType, account_type_url_segment
 from app.core.exceptions.business import AuthenticationError
@@ -70,11 +76,13 @@ SKIP_AUDIT_PATH_PATTERNS = (
     "/captcha",
     "/password-key",
     "/login",
+    "/logout",
     "/register",
     "/forgot-password",
     "/reset-password",
     "/cancel",
     "/me",
+    "/send-code",
 )
 
 # 注入到响应中的安全头。
@@ -317,6 +325,17 @@ class OperationAuditMiddleware:
         status_code = 500
         response_started = False
         started_at = time.perf_counter()
+        body_chunks: list[bytes] = []
+
+        async def receive_wrapper() -> Message:
+            message = await receive()
+            if message["type"] == "http.request":
+                chunk = message.get("body", b"")
+                if chunk:
+                    body_chunks.append(chunk)
+                if not message.get("more_body", False):
+                    scope["_audit_request_body"] = b"".join(body_chunks)
+            return message
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status_code, response_started
@@ -326,14 +345,15 @@ class OperationAuditMiddleware:
             await send(message)
 
         try:
-            await self.app(scope, receive, send_wrapper)
+            await self.app(scope, receive_wrapper, send_wrapper)
         finally:
             try:
                 if response_started:
                     request = Request(scope, receive)
                     audit_info = _match_audit_target(request)
                     if audit_info is not None:
-                        resource_type, action = audit_info
+                        module_path, raw_action = audit_info
+                        resource_type, action = resolve_audit_target(module_path, raw_action)
                         if not should_skip_audit(resource_type, action):
                             from app.core.observability.context import (
                                 request_id_ctx,
@@ -345,6 +365,18 @@ class OperationAuditMiddleware:
                             error_message = None
                             if not success:
                                 error_message = HTTPStatus(status_code).phrase or str(status_code)
+
+                            before_data = get_before()
+                            after_data = dict(get_after())
+                            if not after_data:
+                                after_data = _payload_from_request_body(
+                                    scope.get("_audit_request_body", b""),
+                                    action,
+                                )
+
+                            resource_id = get_resource_id() or _extract_resource_id(
+                                request.url.path
+                            )
                             operation_audit_queue.enqueue(
                                 OperationAuditEvent(
                                     resource_type=resource_type,
@@ -357,15 +389,19 @@ class OperationAuditMiddleware:
                                     request_id=request_id_ctx.get(),
                                     ip=client_ip_ctx.get(),
                                     user_agent=user_agent_ctx.get(),
-                                    resource_id=_extract_resource_id(request.url.path),
+                                    resource_id=resource_id,
                                     duration_ms=duration_ms,
-                                    summary=f"{request.method} {request.url.path}",
+                                    subject=get_subject(),
+                                    before_data=before_data or None,
+                                    after_data=after_data or None,
                                     success=success,
                                     error_message=error_message,
                                 )
                             )
             except Exception:
                 pass
+            finally:
+                clear_audit_context()
 
 
 def _extract_resource_id(path: str) -> str | None:
@@ -389,11 +425,29 @@ def _should_skip_path(path: str) -> bool:
 
 
 def _extract_resource_type(module_path: str) -> str:
-    """从模块路径推导资源类型，剔除 UUID 段。"""
-    parts = module_path.strip("/").split("/")
-    resource = parts[-1] if parts else module_path
-    resource = re.sub(r"[0-9a-f]{8,}", "", resource).strip("-_")
-    return resource if resource else module_path.replace("/", "_")
+    """从模块路径推导资源类型（兼容旧调用，优先走 path_catalog）。"""
+    resource_type, _ = resolve_audit_target(module_path, "unknown")
+    return resource_type
+
+
+def _payload_from_request_body(body: bytes, action: str) -> dict[str, Any]:
+    if not body:
+        return {}
+    try:
+        parsed = orjson.loads(body)
+    except orjson.JSONDecodeError:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    payload = to_safe_map(parsed)
+    if _is_delete_like(action):
+        return {}
+    return payload
+
+
+def _is_delete_like(action: str) -> bool:
+    act = action.strip().lower().replace("-", "_")
+    return act in {"delete", "cancel"}
 
 
 def _extract_action(action_str: str | None, method: str) -> str:
@@ -405,20 +459,21 @@ def _extract_action(action_str: str | None, method: str) -> str:
 
 
 def _match_audit_target(request: Request) -> tuple[str, str] | None:
-    """匹配请求的审计目标（资源类型, 动作），不匹配返回 None。"""
+    """匹配请求的审计目标（模块路径, 动作），不匹配返回 None。"""
     if request.method.upper() not in AUDIT_METHODS:
         return None
     path = request.url.path
     if _should_skip_path(path):
         return None
+    if path.rstrip("/").endswith("/logout"):
+        return ("auth", "logout")
     match = AUDIT_PATH_RE.match(path)
     if not match:
         if any(seg in path.split("/") for seg in ("logout",)):
-            return ("account", "logout")
+            return ("auth", "logout")
         return None
 
     module_path = match.group("module_path")
     action_str = match.group("action")
-    resource_type = _extract_resource_type(module_path)
     action = _extract_action(action_str, request.method)
-    return resource_type, action
+    return module_path, action

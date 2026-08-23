@@ -7,6 +7,8 @@ from collections.abc import Mapping, Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
+
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
@@ -36,16 +38,30 @@ class DictService:
         """事务内新增字典。"""
         async with transactional(self.db):
             await self.repo.create(payload)
+            entity = await self.repo.get_by_code(payload.code)
+            if entity is not None:
+                audit_snapshots.created_entity(entity)
 
     async def update(self, payload: DictUpdateRequest) -> None:
         """事务内更新字典。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
             await self.repo.update(payload)
+            await self.db.refresh(entity)
+            audit_snapshots.after_entity(entity)
 
     async def delete(self, payload: DictIdsRequest) -> None:
         """事务内批量删除字典。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [
+            entity
+            for entity_id in unique_ids
+            if (entity := await self.repo.get_by_id(entity_id)) is not None
+        ]
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            audit_snapshots.deleted_all(entities)
+            await self.repo.delete_many(unique_ids)
 
     async def get(self, query: DictIdQuery) -> SysDictSchema:
         """查询字典详情并填充父级名称与昵称。"""

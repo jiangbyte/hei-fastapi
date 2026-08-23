@@ -60,7 +60,10 @@ class OperationAuditEvent:
     resource_id: str | None = None
     duration_ms: int | None = None
     summary: str | None = None
+    subject: str | None = None
     operator_name: str | None = None
+    before_data: dict | None = None
+    after_data: dict | None = None
     success: bool = True
     error_message: str | None = None
 

@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
@@ -52,17 +53,19 @@ class SysFeedbackService:
             normalized_payload.attach_object_names
         )
         async with transactional(self.db):
-            await self.repo.create(
+            entity = await self.repo.create(
                 normalized_payload,
                 submitter_account_type=str(session.account_type),
                 submitter_account_id=session.account_id,
                 attach_object_names=attach_object_names,
             )
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: SysFeedbackUpdateRequest, session: SessionPayload) -> None:
         """处理反馈：仅在提供 status 时更新状态，回复时记录回复人与时间（对齐 hei-boot）。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
-            entity = await self.repo.get_required(payload.id)
             if payload.status is not None:
                 entity.status = payload.status
             if payload.reply is not None:
@@ -70,11 +73,19 @@ class SysFeedbackService:
                 entity.replied_by = session.account_id
                 entity.replied_at = datetime.now(UTC)
             await self.db.flush()
+            audit_snapshots.after_entity(entity)
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除反馈。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [
+            entity
+            for entity_id in unique_ids
+            if (entity := await self.repo.get_by_id(entity_id)) is not None
+        ]
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            audit_snapshots.deleted_all(entities)
+            await self.repo.delete_many(unique_ids)
 
     async def detail(self, query: IdQuery) -> SysFeedbackSchema:
         """管理端查询反馈详情，并补充附件与提交者资料。"""

@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db.transaction import transactional
+from app.core.audit import snapshots as audit_snapshots
 from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.security.session import SessionPayload
@@ -50,6 +51,7 @@ from app.modules.profile.identity.schema import (
     RealNameBusinessOptionResponse,
 )
 from app.modules.profile.identity.support import sanitize_status, sanitize_summary
+from app.modules.sys.audit.support import resolve_account_login
 from app.modules.sys.file.repository import FileRepository
 from app.modules.sys.file.service import FileService
 
@@ -99,9 +101,12 @@ class ProfileIdentityService:
 
     async def upsert_on_approve(self, case: RealNameCase, reviewer_id: str) -> None:
         identity = await self.repo.get_by_account_id(case.account_id or "")
+        is_new = identity is None
         if identity is None:
             identity = ProfileIdentity(account_id=case.account_id or "")
             self.db.add(identity)
+        else:
+            audit_snapshots.before_entity(identity)
         identity.status = IdentitySnapshotStatus.VERIFIED.value
         identity.document_type = case.document_type
         identity.real_name_cipher = case.real_name_cipher
@@ -115,15 +120,23 @@ class ProfileIdentityService:
         identity.revoked_at = None
         identity.revoked_by = None
         await self.db.flush()
+        if is_new:
+            audit_snapshots.created_entity(identity)
+        else:
+            audit_snapshots.after_entity(identity)
 
     async def revoke(self, payload: IdentityRevokeRequest, operator_id: str) -> None:
         identity = await self.repo.get_by_account_id(payload.account_id)
         if identity is None or identity.status != IdentitySnapshotStatus.VERIFIED.value:
             raise NotFoundError("Verified identity not found")
+        subject = await resolve_account_login(self.db, payload.account_id) or payload.account_id
+        audit_snapshots.subject(subject)
+        audit_snapshots.before_entity(identity)
         identity.status = IdentitySnapshotStatus.REVOKED.value
         identity.revoked_at = datetime.now(UTC)
         identity.revoked_by = operator_id
         await self.db.flush()
+        audit_snapshots.after_entity(identity)
 
     async def page(self, query: IdentityPageQuery) -> PageData[IdentityPageResponse]:
         items, total = await self.repo.page(query)
@@ -204,6 +217,7 @@ class RealNameCaseService:
                 status_after=entity.status,
                 operator_id=session.account_id,
             )
+        audit_snapshots.created_entity(entity)
 
     async def init_third_party(
         self, payload: RealNameCaseInitThirdPartyRequest, session: SessionPayload
@@ -251,6 +265,7 @@ class RealNameCaseService:
                 status_after=entity.status,
                 operator_id=session.account_id,
             )
+            audit_snapshots.created_entity(entity)
             return init_result
 
     async def callback(self, payload: RealNameCaseCallbackRequest) -> None:
@@ -283,6 +298,7 @@ class RealNameCaseService:
                     operator_id="SYSTEM",
                     remark=payload.message,
                 )
+                audit_snapshots.after_entity(entity)
                 return
 
             entity.status = RealNameCaseStatus.REJECTED.value
@@ -304,6 +320,7 @@ class RealNameCaseService:
                 operator_id="SYSTEM",
                 remark=entity.reject_reason,
             )
+            audit_snapshots.after_entity(entity)
 
     async def my_page(
         self, query: RealNameCaseMyPageQuery, session: SessionPayload
@@ -335,6 +352,11 @@ class RealNameCaseService:
         entity = await self.case_repo.get_required(payload.case_id)
         if entity.status != RealNameCaseStatus.PENDING.value:
             raise BusinessError("Case is not pending")
+        subject = await resolve_account_login(self.db, entity.account_id or "") or (
+            entity.account_id or ""
+        )
+        audit_snapshots.subject(subject)
+        audit_snapshots.before_entity(entity)
         before = entity.status
         async with transactional(self.db):
             entity.status = RealNameCaseStatus.APPROVED.value
@@ -352,6 +374,7 @@ class RealNameCaseService:
                 operator_id=session.account_id,
                 remark=payload.remark,
             )
+        audit_snapshots.after_entity(entity)
 
     async def reject(
         self, payload: RealNameCaseRejectRequest, session: SessionPayload
@@ -359,8 +382,13 @@ class RealNameCaseService:
         entity = await self.case_repo.get_required(payload.case_id)
         if entity.status != RealNameCaseStatus.PENDING.value:
             raise BusinessError("Case is not pending")
-        before = entity.status
+        subject = await resolve_account_login(self.db, entity.account_id or "") or (
+            entity.account_id or ""
+        )
         reject_reason = payload.reject_reason.strip()
+        audit_snapshots.subject(subject)
+        audit_snapshots.before_entity(entity)
+        before = entity.status
         async with transactional(self.db):
             entity.status = RealNameCaseStatus.REJECTED.value
             entity.reviewer_id = session.account_id
@@ -378,6 +406,7 @@ class RealNameCaseService:
                 operator_id=session.account_id,
                 remark=reject_reason,
             )
+        audit_snapshots.after_entity(entity)
 
     async def _resolve_attachments(
         self, attachment_ids: list[str]

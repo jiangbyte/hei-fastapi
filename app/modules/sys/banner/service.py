@@ -6,7 +6,10 @@
 from datetime import UTC, datetime
 
 from redis.asyncio import Redis
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.audit import snapshots as audit_snapshots
 
 from app.core.cache.keys import banner_interaction_delta_key
 from app.core.cache.redis import get_redis
@@ -16,6 +19,7 @@ from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.storage.url import normalize_object_name
+from app.modules.sys.banner.model import SysBanner
 from app.modules.sys.banner.repository import BannerRepository
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -42,19 +46,41 @@ class BannerService:
         )
         async with transactional(self.db):
             await self.repo.create(normalized)
+            stmt = (
+                select(SysBanner)
+                .where(
+                    SysBanner.title == normalized.title,
+                    SysBanner.image == normalized.image,
+                )
+                .order_by(SysBanner.id.desc())
+                .limit(1)
+            )
+            entity = (await self.db.execute(stmt)).scalar_one()
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: BannerUpdateRequest) -> None:
         """事务内更新展示图（image 对象名归一化，对齐 hei-boot）。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         normalized = payload.model_copy(
             update={"image": normalize_object_name(payload.image) or payload.image}
         )
         async with transactional(self.db):
             await self.repo.update(normalized)
+            await self.db.refresh(entity)
+            audit_snapshots.after_entity(entity)
 
     async def delete(self, payload: IdsRequest) -> None:
         """事务内批量删除展示图。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [
+            entity
+            for entity_id in unique_ids
+            if (entity := await self.repo.get_by_id(entity_id)) is not None
+        ]
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            audit_snapshots.deleted_all(entities)
+            await self.repo.delete_many(unique_ids)
 
     async def detail(self, query: IdQuery) -> SysBannerSchema:
         """查询展示图详情并解析图片 URL 与昵称。"""

@@ -6,6 +6,7 @@ Author: Charlie
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
@@ -43,15 +44,27 @@ class CgTestCatalogService:
         session: SessionPayload | None = None,
     ) -> None:
         async with transactional(self.db):
-            await self.repo.create(payload, owner_dept_id=default_owner_dept_id(session))
+            entity = await self.repo.create(
+                payload, owner_dept_id=default_owner_dept_id(session)
+            )
+        audit_snapshots.created_entity(entity)
 
     async def update(self, payload: CgTestCatalogUpdateRequest) -> None:
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+            updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest) -> None:
+        unique_ids = list(dict.fromkeys(payload.ids))
+        if not unique_ids:
+            return
+        entities = [await self.repo.get_required(entity_id) for entity_id in unique_ids]
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            await self.repo.delete_many(unique_ids)
 
     async def detail(self, query: IdQuery) -> CgTestCatalogDetailSchema:
         schema = await self._to_schema_with_parent_name(await self.repo.get_required(query.id))

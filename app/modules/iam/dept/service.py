@@ -5,8 +5,10 @@
 
 from collections.abc import Mapping, Sequence
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
@@ -45,6 +47,14 @@ class DeptService:
             await self._ensure_dept_ids_visible(session, "iam:dept:create", [payload.parent_id])
         async with transactional(self.db):
             await self.repo.create(payload)
+        stmt = (
+            select(SysDept)
+            .where(SysDept.name == payload.name, SysDept.parent_id == payload.parent_id)
+            .order_by(SysDept.created_at.desc())
+            .limit(1)
+        )
+        entity = (await self.db.execute(stmt)).scalar_one()
+        audit_snapshots.created_entity(entity)
 
     async def update(
         self, payload: DeptUpdateRequest, session: SessionPayload | None = None
@@ -56,13 +66,19 @@ class DeptService:
                 await self._ensure_dept_records_visible(
                     session, "iam:dept:update", [payload.parent_id]
                 )
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         """删除部门，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_dept_records_visible(session, "iam:dept:delete", payload.ids)
+        entities = await self.repo.list_by_ids(payload.ids)
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 

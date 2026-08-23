@@ -5,6 +5,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.crypto import decrypt_config_value, encrypt_config_value, is_sensitive
 from app.core.config.sync import reload_and_publish
 from app.core.db.transaction import transactional
@@ -30,16 +31,25 @@ class ConfigService:
         self.db = db
         self.repo = ConfigRepository(db)
 
+    async def _commit_and_reload(self, reason: str) -> None:
+        """提交当前请求事务后再重载配置，避免 savepoint 写入对外部会话不可见。"""
+        await self.db.commit()
+        await reload_and_publish(reason)
+
     async def create(self, payload: ConfigCreateRequest) -> None:
         """加密敏感值后创建配置并重新加载发布。"""
         payload.config_value = encrypt_config_value(payload.config_key, payload.config_value)
         async with transactional(self.db):
             await self.repo.create(payload)
-        await reload_and_publish("sys_config.create")
+            entity = await self.repo.get_by_key(payload.config_key)
+            if entity is not None:
+                audit_snapshots.created_entity(entity)
+        await self._commit_and_reload("sys_config.create")
 
     async def update(self, payload: ConfigUpdateRequest) -> None:
         """校验内置配置约束，加密敏感值后更新并重新加载发布。"""
         entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         if entity.is_builtin and payload.scene and payload.scene != entity.scene:
             raise BusinessError("内置配置不可修改场景编码")
         if entity.is_builtin:
@@ -49,7 +59,9 @@ class ConfigService:
         payload.config_value = encrypt_config_value(payload.config_key, payload.config_value)
         async with transactional(self.db):
             await self.repo.update(payload)
-        await reload_and_publish("sys_config.update")
+            await self.db.refresh(entity)
+            audit_snapshots.after_entity(entity)
+        await self._commit_and_reload("sys_config.update")
 
     async def delete(self, payload: IdsRequest) -> None:
         """拒绝删除内置配置，删除后重新加载发布。"""
@@ -59,8 +71,9 @@ class ConfigService:
             builtin = [e.config_key for e in entities if e.is_builtin]
             if builtin:
                 raise BusinessError(f"内置配置不可删除: {', '.join(builtin)}")
+            audit_snapshots.deleted_all(entities)
             await self.repo.delete_many(unique_ids)
-        await reload_and_publish("sys_config.delete")
+        await self._commit_and_reload("sys_config.delete")
 
     async def detail(self, query: IdQuery) -> SysConfigSchema:
         """查询配置详情并解密敏感值。"""
@@ -93,9 +106,17 @@ class ConfigService:
             items_to_save.append(item)
         if not items_to_save:
             return
+        first_key = items_to_save[0].config_key
+        before_entity = await self.repo.get_by_key(first_key)
         async with transactional(self.db):
             await self.repo.batch_save(items_to_save)
-        await reload_and_publish("sys_config.batch_save")
+            after_entity = await self.repo.get_by_key(first_key)
+            if before_entity is not None and after_entity is not None:
+                audit_snapshots.before_entity(before_entity)
+                audit_snapshots.after_entity(after_entity)
+            elif after_entity is not None:
+                audit_snapshots.created_entity(after_entity)
+        await self._commit_and_reload("sys_config.batch_save")
 
     async def page_admin(self, query: ConfigAdminPageQuery) -> PageData[SysConfigSchema]:
         """后台分页查询，敏感值置空。"""

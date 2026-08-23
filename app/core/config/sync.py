@@ -47,7 +47,11 @@ class ConfigSyncState:
 
 
 async def reload_and_publish(reason: str) -> bool:
-    """重载本进程并向其他实例发布尽力而为的配置失效事件。"""
+    """重载本进程并向其他实例发布尽力而为的配置失效事件。
+
+    调用方须先提交写入事务（请求级 session 在鉴权查询后可能已 autobegin，
+    业务 savepoint 在未 commit 前对其他连接不可见）。
+    """
     await config_reader.reload()
     return await publish_config_changed(reason)
 

@@ -5,6 +5,7 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.batch import chunked
 from app.core.db.transaction import transactional
@@ -28,6 +29,7 @@ from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
+from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
@@ -68,6 +70,9 @@ class RoleService:
             await self._ensure_depts_visible(session, "iam:role:create", [payload.owner_dept_id])
         async with transactional(self.db):
             await self.repo.create(payload)
+        entity = await self.repo.get_by_code(payload.code)
+        if entity is not None:
+            audit_snapshots.created_entity(entity)
 
     async def update(
         self,
@@ -88,14 +93,19 @@ class RoleService:
         duplicate = await self.repo.get_by_code(payload.code)
         if duplicate is not None and duplicate.id != payload.id:
             raise BusinessError("Role code already exists")
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         """删除角色，传入 session 时校验可见性并阻止删除内置角色。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:delete", payload.ids)
         await self._ensure_roles_deletable(payload.ids)
+        entities = await self.repo.list_by_ids(payload.ids)
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
@@ -148,9 +158,17 @@ class RoleService:
         """全量替换角色资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:grantresource", [payload.id])
+        role = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(role.name)
+        audit_snapshots.resource_id(role.id)
+        account_type = payload.account_type.value
+        old_grants = await self.repo.list_resource_grants(payload.id, account_type=account_type)
+        audit_snapshots.before(await iam_audit.grant_resource_field(self.db, "资源", old_grants))
         async with transactional(self.db):
             old_account_ids = await self.repo.list_account_ids_by_role(payload.id)
             await self.repo.replace_resource_grants(payload)
+        new_grants = await self.repo.list_resource_grants(payload.id, account_type=account_type)
+        audit_snapshots.after(await iam_audit.grant_resource_field(self.db, "资源", new_grants))
         await self._refresh_accounts(old_account_ids)
 
     async def own_client_resource(
@@ -180,14 +198,35 @@ class RoleService:
         """全量替换角色客户端资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:grantclientresource", [payload.id])
+        role = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(role.name)
+        audit_snapshots.resource_id(role.id)
+        account_type = payload.account_type.value
+        relation_repo = IamRelationRepository(self.db)
+        old_grants = await relation_repo.list_subject_client_resource_grants(
+            GrantSubjectType.ROLE,
+            payload.id,
+            account_type=account_type,
+        )
+        audit_snapshots.before(
+            await iam_audit.grant_client_resource_field(self.db, "客户端资源", old_grants)
+        )
         async with transactional(self.db):
             old_account_ids = await self.repo.list_account_ids_by_role(payload.id)
-            await IamRelationRepository(self.db).replace_subject_client_resource_grant_infos(
+            await relation_repo.replace_subject_client_resource_grant_infos(
                 GrantSubjectType.ROLE,
                 payload.id,
                 payload.grant_info_list,
                 account_type=payload.account_type,
             )
+        new_grants = await relation_repo.list_subject_client_resource_grants(
+            GrantSubjectType.ROLE,
+            payload.id,
+            account_type=account_type,
+        )
+        audit_snapshots.after(
+            await iam_audit.grant_client_resource_field(self.db, "客户端资源", new_grants)
+        )
         await self._refresh_accounts(old_account_ids)
 
     async def own_user(
@@ -220,9 +259,14 @@ class RoleService:
         if session is not None:
             await self._ensure_roles_visible(session, "iam:role:grantuser", [payload.id])
             await self._ensure_accounts_visible(session, "iam:role:grantuser", payload.account_ids)
+        role = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(role.name)
+        audit_snapshots.resource_id(role.id)
+        old_account_ids = await self.repo.list_account_ids_by_role(payload.id)
+        audit_snapshots.before(await iam_audit.account_ids_field(self.db, old_account_ids))
         async with transactional(self.db):
-            old_account_ids = await self.repo.list_account_ids_by_role(payload.id)
             await self.repo.replace_role_accounts(payload)
+        audit_snapshots.after(await iam_audit.account_ids_field(self.db, payload.account_ids))
         await self._refresh_accounts(sorted(set(old_account_ids + payload.account_ids)))
 
     async def _resolve_names(self, dtos: list[SysRoleSchema]) -> None:

@@ -13,6 +13,7 @@ from uuid import uuid4
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.config.settings import settings
 from app.core.db.transaction import transactional
@@ -103,6 +104,7 @@ class FileService:
                         url=object_name,
                     )
                 )
+                audit_snapshots.created_entity(entity)
             return self._with_resolved_url(to_schema(SysFileSchema, entity))
         except Exception:
             # 补偿：元数据提交失败时避免孤立对象。
@@ -118,8 +120,12 @@ class FileService:
 
     async def update(self, payload: FileUpdateRequest) -> None:
         """事务内更新文件信息。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
             await self.repo.update(payload)
+            await self.db.refresh(entity)
+            audit_snapshots.after_entity(entity)
 
     async def delete(self, payload: IdsRequest) -> None:
         """按文件 ID 批量删除对象存储文件和文件元数据（对齐 hei-boot）。
@@ -130,6 +136,7 @@ class FileService:
         entities = await self.repo.list_by_ids(unique_ids)
         if not entities:
             return
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             # 对象存储删除为外部 I/O，有界并发避免逐文件串行等待。
             semaphore = asyncio.Semaphore(8)
@@ -166,6 +173,7 @@ class FileService:
         entity = await self.repo.get_by_object_name(normalized)
         if entity is None:
             return
+        audit_snapshots.deleted_entity(entity)
         storage = self._get_storage(self._resolve_entity_storage_config(entity))
         async with transactional(self.db):
             try:

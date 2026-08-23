@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.config.reader import config_reader
 from app.core.db.transaction import transactional
@@ -146,6 +147,14 @@ class AuthOauthService:
     async def login_wechat_mp(self, account_type: AccountType, code: str | None) -> dict[str, Any]:
         """微信小程序 code2session 登录并签发会话。"""
         profile = await self.client.login_wechat_mp(account_type, code)
+        label = profile.nickname or _mask_open_id(profile.open_id)
+        audit_snapshots.subject(label)
+        audit_snapshots.after(
+            {
+                "提供商": "微信小程序",
+                "OpenID": _mask_open_id(profile.open_id),
+            }
+        )
         return await self._login_or_create(account_type, profile)
 
     async def list_current_bindings(self, account_id: str) -> list[OauthBindingResult]:
@@ -178,6 +187,12 @@ class AuthOauthService:
         session_payload: Any,
     ) -> dict[str, str]:
         """发起绑定授权。"""
+        provider = self._provider(provider_raw)
+        account_label = await self._account_identifier(
+            session_payload.account_id, AccountIdentityType.ACCOUNT
+        ) or session_payload.account_id
+        audit_snapshots.subject(account_label)
+        audit_snapshots.after({"提供商": provider.label})
         return await self.authorize(
             account_type, provider_raw, "BIND", None, session_payload
         )
@@ -186,6 +201,17 @@ class AuthOauthService:
         """解绑当前账号指定提供商。"""
         provider = self._provider(provider_raw)
         await self._assert_can_unbind(account_id, provider.value)
+        binding = next(
+            (
+                item
+                for item in await self.binding_repo.list_by_account(account_id)
+                if item.provider == provider.value
+            ),
+            None,
+        )
+        if binding is not None:
+            audit_snapshots.deleted_entity(binding)
+        audit_snapshots.subject(account_id)
         async with transactional(self.db):
             await self.binding_repo.unbind(account_id, provider.value)
 
@@ -195,6 +221,17 @@ class AuthOauthService:
             raise BusinessError("账号 ID 不能为空")
         provider = self._provider(provider_raw)
         await self._assert_can_unbind(account_id, provider.value)
+        binding = next(
+            (
+                item
+                for item in await self.binding_repo.list_by_account(account_id)
+                if item.provider == provider.value
+            ),
+            None,
+        )
+        if binding is not None:
+            audit_snapshots.deleted_entity(binding)
+        audit_snapshots.subject(account_id)
         async with transactional(self.db):
             await self.binding_repo.unbind(account_id, provider.value)
 

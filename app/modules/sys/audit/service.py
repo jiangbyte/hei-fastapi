@@ -24,6 +24,7 @@ from app.modules.sys.audit.labels import (
     action_name as audit_action_name,
     action_type as audit_action_type,
     build_content,
+    is_path_summary,
     module_label as audit_module_label,
     normalize_account_type,
 )
@@ -63,6 +64,7 @@ class OperationAuditService:
         ip: str | None = None,
         user_agent: str | None = None,
         operator_name: str | None = None,
+        subject: str | None = None,
         action_name: str | None = None,
         action_type: str | None = None,
         module_label: str | None = None,
@@ -75,14 +77,22 @@ class OperationAuditService:
         resolved_action_name = action_name or audit_action_name(label_resource, action)
         resolved_action_type = action_type or audit_action_type(action)
         resolved_module_label = module_label or audit_module_label(label_resource)
-        subject = operator_name or resource_id or account_id or account_id_ctx.get()
+        narrative_subject = (
+            subject
+            or operator_name
+            or resource_id
+            or account_id
+            or account_id_ctx.get()
+        )
         resolved_summary = summary
+        if is_path_summary(resolved_summary):
+            resolved_summary = None
         if resolved_summary is None:
             resolved_summary = build_content(
                 action=action,
                 resource_type=label_resource,
                 action_name_text=resolved_action_name,
-                subject=subject,
+                subject=narrative_subject,
                 success=success,
                 before_data=before_data,
                 after_data=after_data,

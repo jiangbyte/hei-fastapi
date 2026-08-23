@@ -8,34 +8,26 @@ from collections.abc import AsyncIterator
 import pytest
 from fastapi import APIRouter
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 import app.db_models  # noqa: F401 — 注册全部 ORM 元数据
 from app.core.config.settings import settings
 from app.core.db.base import Base
-from app.core.db.compat import dialect_name_from_url
 from app.core.db.session import close_engine
 from app.deps.db import get_db_session
 from app.factory import create_app
+from tests.db_support import resolve_test_db_url
 
 
 def _test_db_url() -> str:
-    """测试库 URL：优先环境变量 DB__URL，默认本地 PostgreSQL。"""
-    url = (settings.db.url or "").strip()
-    dialect_name_from_url(url)
-    return url
+    """测试库 URL：默认与 DB__URL 相同。"""
+    return resolve_test_db_url()
 
 
-async def _prepare_schema(engine) -> None:
-    """重建测试表结构，保证用例隔离。"""
+async def _ensure_schema(engine) -> None:
+    """仅补齐缺失表，不 drop、不 truncate 已有数据。"""
     async with engine.begin() as conn:
-        if engine.dialect.name == "mysql":
-            await conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))
-        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        if engine.dialect.name == "mysql":
-            await conn.execute(text("SET FOREIGN_KEY_CHECKS=1"))
 
 
 class FakeRedis:
@@ -237,10 +229,15 @@ def event_loop():
 @pytest.fixture
 async def db_session() -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(_test_db_url())
-    await _prepare_schema(engine)
+    await _ensure_schema(engine)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     async with session_factory() as session:
-        yield session
+        await session.begin()
+        try:
+            yield session
+        finally:
+            if session.in_transaction():
+                await session.rollback()
     await engine.dispose()
 
 
@@ -258,21 +255,20 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
 
     app.include_router(test_router)
     engine = create_async_engine(_test_db_url())
-    await _prepare_schema(engine)
+    await _ensure_schema(engine)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     from app.modules.internal.health import router as health_router
 
     monkeypatch.setattr(health_router, "get_session_factory", lambda: session_factory)
 
     async def override_get_db_session() -> AsyncIterator[AsyncSession]:
-        # 与生产 get_db_session 一致：成功提交，否则外层 autobegin + savepoint 写入会回滚。
         async with session_factory() as session:
+            await session.begin()
             try:
                 yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
+            finally:
+                if session.in_transaction():
+                    await session.rollback()
 
     app.dependency_overrides[get_db_session] = override_get_db_session
     async with AsyncClient(

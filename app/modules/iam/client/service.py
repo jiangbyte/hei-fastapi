@@ -3,16 +3,25 @@
 客户端模块/资源应用服务：CRUD、树组装与授权模块渲染。
 """
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.permission_registry import ensure_registered_permission_key
 from app.core.security.session import SessionPayload
-from app.modules.iam.client.model import SysClientResource
+from app.modules.iam.client.model import SysClientModule, SysClientResource
 from app.modules.iam.client.repository import ClientModuleRepository, ClientResourceRepository
+from app.modules.iam.enums import (
+    IamRelationSubjectType,
+    IamRelationTargetType,
+    IamRelationType,
+)
+from app.modules.iam.relation.model import SysIamRelation
+from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.client.schema import (
     ClientModuleAdminPageQuery,
     ClientModuleCreateRequest,
@@ -41,16 +50,34 @@ class ClientModuleService:
 
     async def create(self, payload: ClientModuleCreateRequest) -> None:
         """创建客户端模块。"""
+        entity: SysClientModule | None = None
         async with transactional(self.db):
-            await self.repo.create(payload)
+            entity = await self.repo.create(payload)
+        if entity is not None:
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: ClientModuleUpdateRequest) -> None:
         """更新客户端模块。"""
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除客户端模块。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = list(
+            (
+                await self.db.execute(
+                    select(SysClientModule).where(SysClientModule.id.in_(unique_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
@@ -87,16 +114,34 @@ class ClientResourceService:
 
     async def create(self, payload: ClientResourceCreateRequest) -> None:
         """创建客户端资源。"""
+        entity: SysClientResource | None = None
         async with transactional(self.db):
-            await self.repo.create(payload)
+            entity = await self.repo.create(payload)
+        if entity is not None:
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: ClientResourceUpdateRequest) -> None:
         """更新客户端资源。"""
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除客户端资源。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = list(
+            (
+                await self.db.execute(
+                    select(SysClientResource).where(SysClientResource.id.in_(unique_ids))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
@@ -136,8 +181,37 @@ class ClientResourceService:
     ) -> SysClientResourcePermissionRelSchema:
         """校验权限码后绑定客户端资源权限。"""
         await ensure_registered_permission_key(payload.permission_key)
+        resource = await self.repo.get_required(payload.resource_id)
+        audit_snapshots.subject(resource.name)
+        audit_snapshots.resource_id(resource.id)
+        old_stmt = select(SysIamRelation).where(
+            SysIamRelation.subject_type == IamRelationSubjectType.CLIENT_RESOURCE.value,
+            SysIamRelation.subject_id == payload.resource_id,
+            SysIamRelation.relation_type == IamRelationType.CLIENT_RESOURCE_PERMISSION.value,
+            SysIamRelation.target_type == IamRelationTargetType.PERMISSION.value,
+            SysIamRelation.account_type == payload.account_type.value,
+        )
+        old_permissions = list((await self.db.execute(old_stmt)).scalars().all())
+        old = next(
+            (item for item in old_permissions if item.target_key == payload.permission_key),
+            None,
+        )
+        audit_snapshots.before(
+            iam_audit.permission_bind_field(
+                old.target_key if old else None,
+                old.account_type if old else None,
+                old.data_scope if old else None,
+            )
+        )
         async with transactional(self.db):
             relation = await self.repo.bind_permission(payload)
+        audit_snapshots.after(
+            iam_audit.permission_bind_field(
+                payload.permission_key,
+                payload.account_type.value,
+                payload.data_scope.value,
+            )
+        )
         return SysClientResourcePermissionRelSchema(
             id=relation.id,
             resource_id=relation.subject_id,

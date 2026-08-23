@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthenticationError, BusinessError, NotFoundError
@@ -116,6 +117,8 @@ class ProfileUserPortalService:
             if payload.avatar
             else (profile.avatar if profile else None)
         )
+        if profile is not None:
+            audit_snapshots.before_entity(profile)
         async with transactional(self.db):
             await self.repo.upsert(
                 ProfileUserPortalUpsertPayload(
@@ -127,6 +130,9 @@ class ProfileUserPortalService:
                     email=profile.email if profile else None,
                 )
             )
+        updated = await self.repo.get_by_account_id(session.account_id)
+        if updated is not None:
+            audit_snapshots.after_entity(updated)
 
     async def update_current_avatar(
         self,
@@ -169,6 +175,9 @@ class ProfileUserPortalService:
         from app.modules.iam.account.password_helper import validate_and_record_password
 
         account = await self.account_repo.get_required(session.account_id)
+        profile = await self.repo.get_by_account_id(session.account_id)
+        if profile is not None:
+            audit_snapshots.before_entity(profile)
         await verify_change_password(
             self.db,
             account=account,
@@ -189,6 +198,9 @@ class ProfileUserPortalService:
                 session.account_id,
                 hash_password(payload.new_password),
             )
+        updated_profile = await self.repo.get_by_account_id(session.account_id)
+        if updated_profile is not None:
+            audit_snapshots.after_entity(updated_profile)
         await AccountSessionService(self.db).refresh_account_sessions(session.account_id)
 
     async def update_current_phone(

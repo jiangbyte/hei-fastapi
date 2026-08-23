@@ -8,7 +8,8 @@ from app.core.audit.queue import OperationAuditEvent
 from app.core.db.session import get_session_factory
 from app.core.events import subscribe
 from app.modules.profile.utils.profile import get_profile
-from app.modules.sys.audit.labels import build_content
+from app.modules.sys.audit.labels import action_name, build_content, is_path_summary
+from app.modules.sys.audit.support import resolve_account_login
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,20 @@ async def _resolve_operator_name(account_id: str | None, account_type: str | Non
     return None
 
 
+async def _resolve_subject(event: OperationAuditEvent, operator_name: str | None) -> str | None:
+    if event.subject and str(event.subject).strip():
+        return str(event.subject).strip()
+    if event.account_id:
+        try:
+            async with get_session_factory()() as session:
+                login = await resolve_account_login(session, event.account_id)
+                if login:
+                    return login
+        except Exception:
+            logger.debug("resolve audit subject failed for %s", event.account_id, exc_info=True)
+    return operator_name or event.account_id
+
+
 async def _persist_audit_event(event: OperationAuditEvent) -> None:
     """将收到的审计事件写入 sys_operation_audit 表。"""
     from app.modules.sys.audit.service import OperationAuditService
@@ -48,17 +63,20 @@ async def _persist_audit_event(event: OperationAuditEvent) -> None:
     if operator_name is None:
         operator_name = event.operator_name or event.account_id
 
+    subject = await _resolve_subject(event, operator_name)
+    action_name_text = action_name(event.resource_type, event.action)
     summary = event.summary
-    if summary is None:
+    if is_path_summary(summary) or summary is None:
         summary = build_content(
             event.action,
             event.resource_type,
-            None,
-            operator_name,
+            action_name_text,
+            subject,
             event.success,
-            None,
-            None,
+            event.before_data,
+            event.after_data,
         )
+
     async with get_session_factory()() as session:
         await OperationAuditService(session).record(
             module=_build_module(event.resource_type),
@@ -66,6 +84,8 @@ async def _persist_audit_event(event: OperationAuditEvent) -> None:
             action=event.action,
             resource_id=event.resource_id,
             summary=summary,
+            before_data=event.before_data,
+            after_data=event.after_data,
             success=event.success,
             error_message=event.error_message,
             account_id=event.account_id,
@@ -74,6 +94,7 @@ async def _persist_audit_event(event: OperationAuditEvent) -> None:
             ip=event.ip,
             user_agent=event.user_agent,
             operator_name=operator_name,
+            subject=subject,
             duration_ms=event.duration_ms,
         )
 

@@ -98,3 +98,28 @@ async def test_session_admin_lists_and_exits_tokens(client):
     )
     assert exit_response.status_code == 200
     assert await session_store.get("second-token") is None
+
+
+async def test_session_page_filters_by_account_type_query_param(client):
+    token = "session-filter-token"
+    await _seed_session_admin(
+        client,
+        token,
+        ["auth:session:page"],
+    )
+
+    admin_page = await client.get(
+        "/api/v1/admin/auth/sessions/page",
+        headers={"Authorization": token},
+        params={"current": 1, "size": 20, "account_type": "ADMIN"},
+    )
+    assert admin_page.status_code == 200
+    assert len(admin_page.json()["data"]["records"]) == 1
+
+    portal_page = await client.get(
+        "/api/v1/admin/auth/sessions/page",
+        headers={"Authorization": token},
+        params={"current": 1, "size": 20, "account_type": "PORTAL"},
+    )
+    assert portal_page.status_code == 200
+    assert portal_page.json()["data"]["records"] == []

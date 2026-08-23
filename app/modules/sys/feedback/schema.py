@@ -36,8 +36,10 @@ class SysFeedbackUpdateRequest(ApiSchema):
 class SysFeedbackAdminPageQuery(PageQuery):
     """管理端反馈分页查询条件。"""
 
+    title: str | None = None
     category: str | None = None
     status: str | None = None
+    submitter_account_type: str | None = None
 
 
 class MyFeedbackPageQuery(PageQuery):

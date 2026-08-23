@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError, NotFoundError
@@ -51,10 +52,13 @@ class SysNoticeService:
             data["status"] = status
             if status == NoticeStatus.PUBLISHED.value and not data.get("publish_at"):
                 data["publish_at"] = datetime.now(UTC)
-            await self.repo.create(SysNoticeCreateRequest(**data))
+            entity = await self.repo.create(SysNoticeCreateRequest(**data))
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: SysNoticeUpdateRequest) -> None:
         """更新消息：归一状态并在发布时回填发布时间（对齐 hei-boot）。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
             data = payload.model_dump(
                 exclude={
@@ -78,11 +82,20 @@ class SysNoticeService:
             if status == NoticeStatus.PUBLISHED.value and not data.get("publish_at"):
                 data["publish_at"] = datetime.now(UTC)
             await self.repo.update(SysNoticeUpdateRequest(id=payload.id, **data))
+            await self.db.refresh(entity)
+            audit_snapshots.after_entity(entity)
 
     async def delete(self, payload: IdsRequest) -> None:
         """批量删除消息。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [
+            entity
+            for entity_id in unique_ids
+            if (entity := await self.repo.get_by_id(entity_id)) is not None
+        ]
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            audit_snapshots.deleted_all(entities)
+            await self.repo.delete_many(unique_ids)
 
     async def detail(self, query: IdQuery) -> SysNoticeSchema:
         """管理端查询消息详情，并补充审计人姓名。"""
@@ -98,6 +111,10 @@ class SysNoticeService:
 
     async def publish(self, payload: IdsRequest, session: SessionPayload) -> None:
         """发布消息，记录发布时间与发送者（批量单条 UPDATE）。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [await self.repo.get_required(entity_id) for entity_id in unique_ids]
+        if entities:
+            audit_snapshots.before_entity(entities[0])
         async with transactional(self.db):
             await self.repo.publish_many(
                 payload.ids,
@@ -105,21 +122,35 @@ class SysNoticeService:
                 sender_account_type=str(session.account_type),
                 sender_account_id=session.account_id,
             )
+        for entity in entities:
+            await self.db.refresh(entity)
+        if entities:
+            audit_snapshots.after_entity(entities[0])
 
     async def revoke(self, payload: IdsRequest) -> None:
         """撤回消息，记录撤回时间（批量单条 UPDATE）。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [await self.repo.get_required(entity_id) for entity_id in unique_ids]
+        if entities:
+            audit_snapshots.before_entity(entities[0])
         async with transactional(self.db):
             await self.repo.revoke_many(payload.ids, now=datetime.now(UTC))
+        for entity in entities:
+            await self.db.refresh(entity)
+        if entities:
+            audit_snapshots.after_entity(entities[0])
 
     async def pin(self, payload: PinNoticeRequest) -> None:
         """置顶/取消置顶公告（仅公告支持置顶）。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
-            entity = await self.repo.get_required(payload.id)
             if entity.kind != NoticeKind.ANNOUNCEMENT.value:
                 raise BusinessError("仅公告支持置顶")
             entity.is_pinned = payload.is_pinned
             entity.pinned_until = payload.pinned_until
             await self.db.flush()
+            audit_snapshots.after_entity(entity)
 
     async def page_my(
         self,

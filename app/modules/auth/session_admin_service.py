@@ -9,6 +9,7 @@ from time import monotonic
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.response.pagination import PageData, build_page
 from app.core.security.session import SessionPayload, session_store
@@ -24,6 +25,16 @@ from app.modules.iam.account.repository import AccountRepository
 
 _ANALYSIS_CACHE_TTL_SECONDS = 30.0
 _analysis_cache: tuple[float, SessionAnalysisResponse] | None = None
+
+
+def _mask_token(token: str | None) -> str:
+    """token 脱敏：前 4 后 4，中间 ****。"""
+    if not token or not str(token).strip():
+        return ""
+    value = str(token).strip()
+    if len(value) <= 8:
+        return "****"
+    return value[:4] + "****" + value[-4:]
 
 
 class SessionAdminService:
@@ -93,15 +104,22 @@ class SessionAdminService:
 
     async def exit_sessions(self, targets: list[SessionTokensQuery]) -> None:
         """批量删除指定账户的全部会话（account_type 缺省按 ADMIN）。"""
-        pairs = [
-            ((target.account_type or AccountType.ADMIN).value, target.account_id)
-            for target in targets
-        ]
+        labels: list[str] = []
+        pairs: list[tuple[str, str]] = []
+        for target in targets:
+            account_type = target.account_type or AccountType.ADMIN
+            account_id = target.account_id
+            pairs.append((account_type.value, account_id))
+            labels.append(f"{account_id}（{account_type.value}）")
+        audit_snapshots.after({"账号": labels})
         await session_store.delete_accounts_sessions(pairs)
 
     async def exit_tokens(self, tokens: list[str]) -> None:
         """批量删除指定 token 的会话（去重后逐个删除）。"""
-        for token in list(dict.fromkeys(tokens)):
+        unique_tokens = list(dict.fromkeys(tokens))
+        masked_tokens = [_mask_token(token) for token in unique_tokens if token and str(token).strip()]
+        audit_snapshots.after({"会话": masked_tokens})
+        for token in unique_tokens:
             await session_store.delete(token)
 
     async def _group_online_sessions(self) -> dict[tuple[str, str], list[SessionPayload]]:

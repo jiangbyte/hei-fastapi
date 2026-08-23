@@ -3,8 +3,10 @@
 账户组应用服务：账户组 CRUD、成员/角色/资源授权与数据范围可见性校验。
 """
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
@@ -48,6 +50,7 @@ from app.modules.iam.group.schema import (
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
+from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
 
@@ -70,6 +73,10 @@ class GroupService:
             await self._ensure_depts_visible(session, "iam:group:create", [payload.owner_dept_id])
         async with transactional(self.db):
             await self.repo.create(payload)
+        entity = (
+            await self.db.execute(select(SysGroup).where(SysGroup.name == payload.name).limit(1))
+        ).scalar_one()
+        audit_snapshots.created_entity(entity)
 
     async def update(
         self,
@@ -85,13 +92,19 @@ class GroupService:
                     "iam:group:update",
                     [payload.owner_dept_id],
                 )
+        existing = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(existing)
         async with transactional(self.db):
             await self.repo.update(payload)
+        updated = await self.repo.get_required(payload.id)
+        audit_snapshots.after_entity(updated)
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         """删除账户组，传入 session 时先校验可见性。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:delete", payload.ids)
+        entities = await self.repo.list_by_ids(payload.ids)
+        audit_snapshots.deleted_all(entities)
         async with transactional(self.db):
             await self.repo.delete_many(payload.ids)
 
@@ -147,9 +160,14 @@ class GroupService:
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantuser", [payload.id])
             await self._ensure_accounts_visible(session, "iam:group:grantuser", payload.account_ids)
+        group = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(group.name)
+        audit_snapshots.resource_id(group.id)
+        old_account_ids = await self.repo.list_account_ids_by_group(payload.id)
+        audit_snapshots.before(await iam_audit.account_ids_field(self.db, old_account_ids))
         async with transactional(self.db):
-            old_account_ids = await self.repo.list_account_ids_by_group(payload.id)
             await self.repo.replace_group_accounts(payload)
+        audit_snapshots.after(await iam_audit.account_ids_field(self.db, payload.account_ids))
         await self._refresh_accounts(sorted(set(old_account_ids + payload.account_ids)))
 
     async def own_role(
@@ -185,9 +203,16 @@ class GroupService:
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantrole", [payload.id])
             await self._ensure_roles_visible(session, "iam:group:grantrole", payload.role_ids)
+        group = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(group.name)
+        audit_snapshots.resource_id(group.id)
+        account_type = payload.account_type.value
+        old_role_ids = await self.repo.list_group_role_ids(payload.id, account_type=account_type)
+        audit_snapshots.before(await iam_audit.role_ids_field(self.db, old_role_ids))
         async with transactional(self.db):
             account_ids = await self.repo.list_account_ids_by_group(payload.id)
             await self.repo.replace_group_roles(payload)
+        audit_snapshots.after(await iam_audit.role_ids_field(self.db, payload.role_ids))
         await self._refresh_accounts(account_ids)
 
     async def own_resource(
@@ -221,6 +246,15 @@ class GroupService:
         """全量替换账户组资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantresource", [payload.id])
+        group = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(group.name)
+        audit_snapshots.resource_id(group.id)
+        old_grants = await self.relation_repo.list_subject_resource_grants(
+            GrantSubjectType.GROUP,
+            payload.id,
+            account_type=payload.account_type,
+        )
+        audit_snapshots.before(await iam_audit.grant_resource_field(self.db, "资源", old_grants))
         async with transactional(self.db):
             account_ids = await self.repo.list_account_ids_by_group(payload.id)
             await self.relation_repo.replace_subject_resource_grant_infos(
@@ -229,6 +263,12 @@ class GroupService:
                 payload.grant_info_list,
                 account_type=payload.account_type,
             )
+        new_grants = await self.relation_repo.list_subject_resource_grants(
+            GrantSubjectType.GROUP,
+            payload.id,
+            account_type=payload.account_type,
+        )
+        audit_snapshots.after(await iam_audit.grant_resource_field(self.db, "资源", new_grants))
         await self._refresh_accounts(account_ids)
 
     async def own_client_resource(
@@ -260,6 +300,17 @@ class GroupService:
         """全量替换账户组客户端资源授权，并刷新成员账户会话。"""
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:grantclientresource", [payload.id])
+        group = await self.repo.get_required(payload.id)
+        audit_snapshots.subject(group.name)
+        audit_snapshots.resource_id(group.id)
+        old_grants = await self.relation_repo.list_subject_client_resource_grants(
+            GrantSubjectType.GROUP,
+            payload.id,
+            account_type=payload.account_type,
+        )
+        audit_snapshots.before(
+            await iam_audit.grant_client_resource_field(self.db, "客户端资源", old_grants)
+        )
         async with transactional(self.db):
             account_ids = await self.repo.list_account_ids_by_group(payload.id)
             await self.relation_repo.replace_subject_client_resource_grant_infos(
@@ -268,6 +319,14 @@ class GroupService:
                 payload.grant_info_list,
                 account_type=payload.account_type,
             )
+        new_grants = await self.relation_repo.list_subject_client_resource_grants(
+            GrantSubjectType.GROUP,
+            payload.id,
+            account_type=payload.account_type,
+        )
+        audit_snapshots.after(
+            await iam_audit.grant_client_resource_field(self.db, "客户端资源", new_grants)
+        )
         await self._refresh_accounts(account_ids)
 
     async def _refresh_accounts(self, account_ids: list[str]) -> None:

@@ -29,7 +29,7 @@ class SessionPageQuery(PageQuery):
 
     size: WireInt = Field(default=20, ge=1, le=200)
 
-    account_type: AccountType | None = Field(default=None, alias="accountType")
+    account_type: AccountType | None = None
     account_id: str | None = Field(default=None, max_length=64)
     account: str | None = Field(default=None, max_length=128)
     ip: str | None = Field(default=None, max_length=64)
@@ -73,8 +73,8 @@ class SessionAccountItem(ApiSchema):
 class SessionTokensQuery(ApiSchema):
     """按账户类型与账户 ID 定位会话（account_type 缺省按 ADMIN 处理，对齐 hei-boot）。"""
 
-    account_type: AccountType | None = Field(default=None, alias="accountType")
-    account_id: str = Field(min_length=1, max_length=64, alias="accountId")
+    account_type: AccountType | None = None
+    account_id: str = Field(min_length=1, max_length=64)
 
 
 class SessionExitRequest(ApiSchema):

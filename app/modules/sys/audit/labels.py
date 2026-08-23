@@ -117,6 +117,14 @@ FIELD_LABELS: dict[str, str] = {
     "provider_code": "认证渠道",
 }
 
+_PATH_SUMMARY_RE = re.compile(r"^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+/", re.IGNORECASE)
+
+
+def is_path_summary(summary: str | None) -> bool:
+    """是否为中间件自动填充的 METHOD path 摘要。"""
+    return bool(summary and _PATH_SUMMARY_RE.match(str(summary).strip()))
+
+
 IDENTITY_ENUM_LABELS: dict[str, str] = {
     "ID_CARD": "身份证",
     "PASSPORT": "护照",
@@ -220,8 +228,11 @@ def action_name(
         "callback": "第三方实名回调",
         "batch_save": f"批量保存{short}",
         "forgot_password": "忘记密码",
+        "forgot_password_phone": "手机找回密码",
         "reset_password": "重置密码",
+        "reset_password_phone": "手机重置密码",
         "update_password": "修改密码",
+        "update_login_identity": "更新登录标识",
         "update_profile": "更新资料",
         "upload_avatar": "上传头像",
         "update_phone": "绑定手机号",
@@ -281,6 +292,7 @@ def action_type(action: str | None, explicit: str | None = None) -> str:
         "grant_resource",
         "grant_user",
         "grant_client_resource",
+        "update_login_identity",
     }:
         return "UPDATE"
     if act in {"delete", "cancel"}:

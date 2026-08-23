@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import snapshots as audit_snapshots
 from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
@@ -50,12 +51,14 @@ class JobService:
             payload.trigger_type, payload.trigger_config, datetime.now(UTC)
         )
         async with transactional(self.db):
-            await self.repo.create(payload, next_run_time=next_run_time)
+            entity = await self.repo.create(payload, next_run_time=next_run_time)
+            audit_snapshots.created_entity(entity)
 
     async def update(self, payload: JobUpdateRequest) -> None:
         """事务内更新任务：触发类型或配置变更时重置下次执行时间（对齐 hei-boot）。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
-            entity = await self.repo.get_required(payload.id)
             config_changed = (
                 entity.trigger_type != str(payload.trigger_type)
                 or entity.trigger_config != str(payload.trigger_config)
@@ -67,11 +70,20 @@ class JobService:
                 entity.next_run_time = cron_util.compute_next_run_time(
                     payload.trigger_type, payload.trigger_config, datetime.now(UTC)
                 )
+            await self.db.flush()
+            audit_snapshots.after_entity(entity)
 
     async def delete(self, payload: IdsRequest) -> None:
         """事务内批量删除任务。"""
+        unique_ids = list(dict.fromkeys(payload.ids))
+        entities = [
+            entity
+            for entity_id in unique_ids
+            if (entity := await self.repo.get_by_id(entity_id)) is not None
+        ]
         async with transactional(self.db):
-            await self.repo.delete_many(payload.ids)
+            audit_snapshots.deleted_all(entities)
+            await self.repo.delete_many(unique_ids)
 
     async def detail(self, query: IdQuery) -> SysJobSchema:
         """查询任务详情并填充审计人昵称。"""
@@ -87,13 +99,16 @@ class JobService:
 
     async def update_enabled(self, payload: JobEnabledRequest) -> None:
         """启停任务：重新启用时按当前时间重置下次执行时间，避免立即触发过期任务。"""
+        entity = await self.repo.get_required(payload.id)
+        audit_snapshots.before_entity(entity)
         async with transactional(self.db):
-            entity = await self.repo.get_required(payload.id)
             entity.enabled = bool(payload.enabled)
             if entity.enabled:
                 entity.next_run_time = cron_util.compute_next_run_time(
                     entity.trigger_type, entity.trigger_config, datetime.now(UTC)
                 )
+            await self.db.flush()
+            audit_snapshots.after_entity(entity)
 
     async def run_now(self, payload: IdQuery, *, executor: str | None) -> None:
         """立即执行：校验任务存在且已启用后异步提交（force=true），接口立即返回。"""
