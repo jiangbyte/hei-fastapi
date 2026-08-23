@@ -31,9 +31,6 @@ BOOT_PAGE_EXTRA_PROPS = frozenset(
 # 实体内部字段，不作为对外契约。
 IGNORE_PROPS = frozenset({"trans_map", "transMap"})
 
-# FastAPI 虚拟展示字段（boot 无对应列，前端可用）。
-FASTAPI_RESPONSE_EXTRA_OK = frozenset({"created_name", "updated_name"})
-
 HTTP_METHODS = frozenset({"GET", "POST", "PUT", "DELETE", "PATCH"})
 
 
@@ -220,12 +217,17 @@ class OpContract:
     response: set[str] = field(default_factory=set)
 
 
-def collect_contracts(doc: dict[str, Any]) -> dict[tuple[str, str], OpContract]:
+def collect_contracts(doc: dict[str, Any], *, module: str = "") -> dict[tuple[str, str], OpContract]:
     out: dict[tuple[str, str], OpContract] = {}
+    module_key = module.strip().lower().replace("_", "-")
     for path, item in (doc.get("paths") or {}).items():
         if not isinstance(item, dict):
             continue
+        if "easyTrans" in path:
+            continue
         norm = normalize_path(path)
+        if module_key and module_key not in norm.lower():
+            continue
         for method, op in item.items():
             m = method.upper()
             if m not in HTTP_METHODS or not isinstance(op, dict):
@@ -263,8 +265,6 @@ def diff_fields(
     response: bool = False,
 ) -> FieldDiff | None:
     extra = fast - boot
-    if response:
-        extra = {x for x in extra if x not in FASTAPI_RESPONSE_EXTRA_OK}
     missing = sorted(boot - fast)
     extra_sorted = sorted(extra)
     if not missing and not extra_sorted:
@@ -377,6 +377,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Full OpenAPI contract diff boot vs fastapi")
     parser.add_argument("--boot", default="http://127.0.0.1:8000", help="hei-boot base URL")
     parser.add_argument("--fastapi", default="", help="fastapi URL (omit = generate from code)")
+    parser.add_argument("--module", default="", help="filter paths containing token (e.g. sys/audit)")
     parser.add_argument("--output", default="", help="write JSON report path")
     parser.add_argument("--json", action="store_true", help="print JSON only")
     args = parser.parse_args(argv)
@@ -384,8 +385,8 @@ def main(argv: list[str] | None = None) -> int:
     boot_doc = fetch_boot_openapi(args.boot)
     fast_doc = fetch_fastapi_openapi(args.fastapi or None)
 
-    boot_contracts = collect_contracts(boot_doc)
-    fast_contracts = collect_contracts(fast_doc)
+    boot_contracts = collect_contracts(boot_doc, module=args.module)
+    fast_contracts = collect_contracts(fast_doc, module=args.module)
     report = compare_contracts(boot_contracts, fast_contracts)
 
     if args.output:

@@ -11,7 +11,6 @@ from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import to_schema, to_schema_list
-from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.dict.repository import DictRepository, DictTreeRecord
 from app.modules.sys.dict.schema import (
     DictAdminPageQuery,
@@ -51,14 +50,12 @@ class DictService:
     async def get(self, query: DictIdQuery) -> SysDictSchema:
         """查询字典详情并填充父级名称与昵称。"""
         schema = await self._to_schema_with_parent_name(await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: DictAdminPageQuery) -> PageData[SysDictSchema]:
         """分页查询字典并填充父级名称与昵称。"""
         items, total = await self.repo.page_admin(query)
         records = await self._attach_parent_names(to_schema_list(SysDictSchema, items))
-        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)
 
     async def list_tree(self, query: DictTreeQuery) -> list[SysDictTreeNode]:

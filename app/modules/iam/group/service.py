@@ -10,7 +10,14 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
+from app.core.security.data_scope import (
+    IAM_ACCOUNT_PAGE,
+    IAM_DEPT_PAGE,
+    IAM_GROUP_PAGE,
+    IAM_ROLE_PAGE,
+    build_data_scope_filter,
+    resolve_data_scope_dept_ids,
+)
 from app.core.security.session import SessionPayload
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
@@ -43,7 +50,6 @@ from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class GroupService:
@@ -94,7 +100,6 @@ class GroupService:
         if session is not None:
             await self._ensure_groups_visible(session, "iam:group:detail", [query.id])
         schema = to_schema(SysGroupSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -110,7 +115,6 @@ class GroupService:
         )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         schemas = to_schema_list(SysGroupSchema, items)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def own_user(
@@ -307,10 +311,11 @@ class GroupService:
         group_ids: list[str],
     ) -> None:
         """校验目标账户组均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(group_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._group_scope_filter(session, permission_key)
+        data_scope_filter = await self._group_scope_filter(session, IAM_GROUP_PAGE)
         if await self.repo.count_groups_in_scope(unique_ids, data_scope_filter) != len(unique_ids):
             raise AuthorizationError("Group is outside current data scope")
 
@@ -321,10 +326,11 @@ class GroupService:
         role_ids: list[str],
     ) -> None:
         """校验目标角色均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._role_scope_filter(session, permission_key)
+        data_scope_filter = await self._role_scope_filter(session, IAM_ROLE_PAGE)
         count = await RoleRepository(self.db).count_roles_in_scope(unique_ids, data_scope_filter)
         if count != len(unique_ids):
             raise AuthorizationError("Role is outside current data scope")
@@ -336,10 +342,11 @@ class GroupService:
         account_ids: list[str],
     ) -> None:
         """校验目标账户均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._account_scope_filter(session, permission_key)
+        data_scope_filter = await self._account_scope_filter(session, IAM_ACCOUNT_PAGE)
         count = await AccountRepository(self.db).count_accounts_in_scope(
             unique_ids,
             data_scope_filter,
@@ -354,10 +361,11 @@ class GroupService:
         dept_ids: list[str],
     ) -> None:
         """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
-        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, permission_key)
+        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, IAM_DEPT_PAGE)
         if visible_dept_ids is None:
             return
         allowed_ids = set(visible_dept_ids)

@@ -201,7 +201,7 @@ class DeptRepository:
         from app.modules.profile.admin.model import ProfileUserAdmin
 
         stmt = (
-            select(SysAccount.id, ProfileUserAdmin.name)
+            select(SysAccount.id, ProfileUserAdmin.nickname)
             .outerjoin(ProfileUserAdmin, ProfileUserAdmin.account_id == SysAccount.id)
             .where(SysAccount.id.in_(unique_ids))
         )

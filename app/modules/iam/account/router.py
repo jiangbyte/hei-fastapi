@@ -28,7 +28,9 @@ from app.modules.iam.account.schema import (
     AccountOwnGroupResponse,
     AccountOwnResourceResponse,
     AccountOwnRoleResponse,
+    AccountUpdateLoginIdentityRequest,
     AccountUpdateRequest,
+    SysAccountListSchema,
     SysAccountSchema,
 )
 from app.modules.iam.account.service import AccountService
@@ -66,6 +68,23 @@ async def update(
     session: Annotated[SessionPayload, Depends(get_current_session)],
 ) -> ApiResponse[None]:
     await AccountService(db).update(payload, session)
+    return success()
+
+
+@router.post(
+    "/v1/admin/sys/accounts/update-login-identity",
+    dependencies=[
+        Depends(require_account_type(AccountType.ADMIN)),
+        Depends(require_permission("iam:account:update")),
+    ],
+    response_model=ApiResponse[None],
+)
+async def update_login_identity(
+    payload: AccountUpdateLoginIdentityRequest,
+    db: Annotated[AsyncSession, Depends(get_db_session)],
+    session: Annotated[SessionPayload, Depends(get_current_session)],
+) -> ApiResponse[None]:
+    await AccountService(db).update_login_identity(payload, session)
     return success()
 
 
@@ -108,13 +127,13 @@ async def detail(
         Depends(require_account_type(AccountType.ADMIN)),
         Depends(require_permission("iam:account:page")),
     ],
-    response_model=ApiResponse[PageData[SysAccountSchema]],
+    response_model=ApiResponse[PageData[SysAccountListSchema]],
 )
 async def page(
     query: Annotated[AccountAdminPageQuery, Depends()],
     db: Annotated[AsyncSession, Depends(get_db_session)],
     session: Annotated[SessionPayload, Depends(get_current_session)],
-) -> ApiResponse[PageData[SysAccountSchema]]:
+) -> ApiResponse[PageData[SysAccountListSchema]]:
     return success(await AccountService(db).page_admin(query, session))
 
 

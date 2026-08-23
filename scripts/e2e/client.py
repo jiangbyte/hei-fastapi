@@ -21,6 +21,7 @@ def do_raw(
     """Perform HTTP call; returns (status, raw_body, parsed envelope)."""
     data = body.encode("utf-8") if body else None
     req = Request(url, data=data, method=method.upper())
+    req.add_header("X-E2E-Disable-Rate-Limit", "1")
     if body:
         req.add_header("Content-Type", "application/json")
     if token:

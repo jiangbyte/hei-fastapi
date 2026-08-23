@@ -32,7 +32,6 @@ from app.modules.biz.cg_test_order.schema import (
     CgTestOrderSchema,
     CgTestOrderUpdateRequest,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestOrderService:
@@ -58,7 +57,6 @@ class CgTestOrderService:
 
     async def detail(self, query: IdQuery) -> CgTestOrderSchema:
         schema = to_schema(CgTestOrderSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -77,7 +75,6 @@ class CgTestOrderService:
             )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         records = to_schema_list(CgTestOrderSchema, items)
-        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)
 
 
@@ -100,11 +97,9 @@ class CgTestOrderItemService:
 
     async def detail(self, query: IdQuery) -> CgTestOrderItemSchema:
         schema = to_schema(CgTestOrderItemSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: CgTestOrderItemAdminPageQuery) -> PageData[CgTestOrderItemSchema]:
         items, total = await self.repo.page_admin(query)
         records = to_schema_list(CgTestOrderItemSchema, items)
-        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)

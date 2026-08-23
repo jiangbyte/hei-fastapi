@@ -27,7 +27,6 @@ from app.modules.biz.cg_test_activity.schema import (
     CgTestActivitySchema,
     CgTestActivityUpdateRequest,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestActivityService:
@@ -53,7 +52,6 @@ class CgTestActivityService:
 
     async def detail(self, query: IdQuery) -> CgTestActivitySchema:
         schema = to_schema(CgTestActivitySchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -72,5 +70,4 @@ class CgTestActivityService:
             )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         records = to_schema_list(CgTestActivitySchema, items)
-        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)

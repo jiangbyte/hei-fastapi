@@ -48,12 +48,9 @@ class {{ main.entity_name }}Schema(ApiSchema):
 {% endfor %}
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     owner_dept_id: str | None = None
     updated_at: datetime
-    updated_by: str | None = None
-    updated_name: str | None = None
-{% if has_tree %}
+    updated_by: str | None = None{% if has_tree %}
     children: list["{{ main.entity_name }}TreeNode"] = Field(default_factory=list)
 
 
@@ -97,8 +94,5 @@ class {{ sub.entity_name }}Schema(ApiSchema):
 {% endfor %}
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
-    updated_by: str | None = None
-    updated_name: str | None = None
-{% endif %}
+    updated_by: str | None = None{% endif %}

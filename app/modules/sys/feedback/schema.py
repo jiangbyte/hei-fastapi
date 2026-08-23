@@ -78,7 +78,5 @@ class SysFeedbackSchema(ApiSchema):
     created_by: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    created_name: str | None = None
-    updated_name: str | None = None
     submitter_avatar: str | None = None
     submitter_nickname: str | None = None

@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import re
 import sys
 import time
@@ -44,12 +45,8 @@ from app.core.security.password import hash_password  # noqa: E402
 
 IGNORE_JSON_KEYS = frozenset(
     {
-        "created_name",
-        "updated_name",
         "trans_map",
         "transMap",
-        "createdName",
-        "updatedName",
         "latest_login_time",
         "last_login_time",
     }
@@ -315,10 +312,18 @@ def compare_get(
     return rd
 
 
+def path_matches_module(path: str, module: str) -> bool:
+    if not module:
+        return True
+    token = module.strip().lower().replace("_", "-")
+    return token in path.lower()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Runtime JSON diff boot vs fastapi")
     parser.add_argument("--boot", default="http://127.0.0.1:8000")
     parser.add_argument("--fastapi", default="http://127.0.0.1:8100")
+    parser.add_argument("--module", default="", help="filter paths containing token (e.g. sys/audit)")
     parser.add_argument("--redis", default="redis://:123456@127.0.0.1:6379/3", help="fastapi redis")
     parser.add_argument("--redis-boot", default="redis://:123456@127.0.0.1:6379/0", help="boot redis")
     parser.add_argument("--admin-account", default="superadmin")
@@ -337,6 +342,13 @@ def main(argv: list[str] | None = None) -> int:
         help="只读 PostgreSQL URL，记录 sweep 前后审计表快照（默认读 .env DB__URL）",
     )
     args = parser.parse_args(argv)
+
+    if os.environ.get("E2E_DISABLE_RATE_LIMIT") != "1":
+        print(
+            "NOTE: e2e client sends X-E2E-Disable-Rate-Limit:1; "
+            "or start hei-fastapi with E2E_DISABLE_RATE_LIMIT=1",
+            file=sys.stderr,
+        )
 
     boot_root = args.boot.rstrip("/")
     fast_root = args.fastapi.rstrip("/")
@@ -387,6 +399,9 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if "easyTrans" in path:
             results.append(RuntimeDiff(method=method, path=path, url=path, skip_reason="easyTrans"))
+            skipped += 1
+            continue
+        if not path_matches_module(path, args.module):
             skipped += 1
             continue
         if args.skip_dynamic:
@@ -446,6 +461,7 @@ def main(argv: list[str] | None = None) -> int:
         "boot_base": boot_root,
         "fastapi_base": fast_root,
         "skip_dynamic": args.skip_dynamic,
+        "module_filter": args.module or None,
         "audit_snapshots": audit_snapshots,
         "summary": {
             "ops_in_openapi": len(ops),

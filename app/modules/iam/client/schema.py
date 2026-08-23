@@ -64,11 +64,8 @@ class SysClientModuleSchema(ApiSchema):
     extra: dict
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
-
 
 class ClientModuleSelectorOption(ApiSchema):
     """客户端模块下拉选项结构。"""
@@ -157,10 +154,8 @@ class SysClientResourceSchema(ApiSchema):
     extra: dict
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
     children: list["SysClientResourceSchema"] = Field(default_factory=list)
 
 
@@ -202,7 +197,5 @@ class SysClientResourcePermissionRelSchema(ApiSchema):
     description: str | None = None
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None

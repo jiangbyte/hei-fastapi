@@ -29,6 +29,25 @@ class AccountIdentitySchema(ApiSchema):
     updated_by: str | None = None
 
 
+from app.modules.profile.identity.schema import IdentityStatusResponse
+
+
+class SysAccountListSchema(ApiSchema):
+    """账号分页列表响应：仅 sys_account 与 profile 展示字段。"""
+
+    id: str
+    account: str
+    account_type: AccountType
+    account_status: AccountStatusEnum
+    nickname: str | None = None
+    avatar: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    remark: str | None = None
+    latest_login_time: datetime | None = None
+    updated_at: datetime = Field(examples=["2026-06-18T12:00:00Z"])
+
+
 class SysAccountSchema(ApiSchema):
     """系统账户响应结构，聚合账户主体、登录标识与登录轨迹信息。"""
 
@@ -52,6 +71,7 @@ class SysAccountSchema(ApiSchema):
     phone_identity_bind_status: AccountIdentityBindStatus | None = None
     identities: list[AccountIdentitySchema] = Field(default_factory=list)
     oauth_bindings: list["AccountOauthBindingSchema"] = Field(default_factory=list)
+    identity_status: IdentityStatusResponse | None = None
     bio: str | None = None
     level: str | None = None
     remark: str | None = None

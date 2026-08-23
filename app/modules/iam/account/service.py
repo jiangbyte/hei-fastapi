@@ -14,7 +14,14 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest
-from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
+from app.core.security.data_scope import (
+    IAM_ACCOUNT_PAGE,
+    IAM_DEPT_PAGE,
+    IAM_GROUP_PAGE,
+    IAM_ROLE_PAGE,
+    build_data_scope_filter,
+    resolve_data_scope_dept_ids,
+)
 from app.core.security.password import hash_password
 from app.core.security.session import SessionPayload
 from app.core.security.transport import decrypt_password
@@ -38,6 +45,7 @@ from app.modules.iam.account.schema import (
     AccountOwnRoleResponse,
     AccountResourceGrantInfo,
     AccountUpdateRequest,
+    SysAccountListSchema,
     SysAccountSchema,
 )
 from app.modules.iam.client.service import ClientResourceService
@@ -53,6 +61,7 @@ from app.modules.profile.admin.repository import ProfileUserAdminRepository
 from app.modules.profile.admin.schema import ProfileUserAdminUpsertPayload
 from app.modules.profile.portal.repository import ProfileUserPortalRepository
 from app.modules.profile.portal.schema import ProfileUserPortalUpsertPayload
+from app.modules.profile.identity.service import ProfileIdentityService
 
 
 class AccountService:
@@ -66,7 +75,6 @@ class AccountService:
     async def create(self, payload: AccountCreateRequest) -> None:
         """创建账户并同步写入对应端的用户资料。"""
         self._ensure_status_not_cancelled(payload)
-        self._ensure_login_contact_payload(payload)
         password = await self._resolve_password(payload.password, payload.password_key_id)
         if not password:
             password = (settings.auth.default_password or "").strip()
@@ -98,7 +106,6 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:update", [payload.id])
         self._ensure_status_not_cancelled(payload)
-        self._ensure_login_contact_payload(payload)
         password = (
             await self._resolve_password(payload.password, payload.password_key_id)
             if payload.password
@@ -119,6 +126,30 @@ class AccountService:
                     )
                 case _:
                     raise BusinessError(f"Unsupported account type: {account.account_type}")
+
+    async def update_login_identity(
+        self,
+        payload: AccountUpdateLoginIdentityRequest,
+        session: SessionPayload | None = None,
+    ) -> None:
+        """更新邮箱/手机号登录身份。"""
+        if session is not None:
+            await self._ensure_accounts_visible(session, "iam:account:update", [payload.id])
+        account = await self.repo.get_required(payload.id)
+        if account.account_status == AccountStatusEnum.CANCELLED.value:
+            raise BusinessError("已注销账号不允许通过管理端修改")
+        if payload.email_login_enabled and not str(payload.email or "").strip():
+            raise BusinessError("Email login requires an email")
+        if payload.phone_login_enabled and not str(payload.phone or "").strip():
+            raise BusinessError("Phone login requires a phone")
+        async with transactional(self.db):
+            await self.repo.replace_secondary_login_identities(
+                payload.id,
+                email_login_enabled=bool(payload.email_login_enabled),
+                email=payload.email,
+                phone_login_enabled=bool(payload.phone_login_enabled),
+                phone=payload.phone,
+            )
 
     async def delete(self, payload: IdsRequest, session: SessionPayload | None = None) -> None:
         """删除账户，并在事务外清理对应在线会话。"""
@@ -181,13 +212,18 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:detail", [query.id])
         accounts = [await self.repo.get_required(query.id)]
-        return (await AccountQueryService(self.db).build_account_schemas(accounts))[0]
+        item = (await AccountQueryService(self.db).build_account_schemas(accounts))[0]
+        identity_status = await ProfileIdentityService(self.db).get_status_for_account(query.id)
+        item.identity_status = identity_status
+        if identity_status.real_name_masked:
+            item.name = identity_status.real_name_masked
+        return item
 
     async def page_admin(
         self,
         query: AccountAdminPageQuery,
         session: SessionPayload | None = None,
-    ) -> PageData[SysAccountSchema]:
+    ) -> PageData[SysAccountListSchema]:
         """分页查询账户，叠加当前会话的数据范围过滤。"""
         data_scope_filter = (
             await self._account_scope_filter(session, "iam:account:page")
@@ -195,7 +231,7 @@ class AccountService:
             else None
         )
         accounts, total = await self.repo.page_admin(query, data_scope_filter)
-        items = await AccountQueryService(self.db).build_account_schemas(accounts)
+        items = await AccountQueryService(self.db).build_account_list_schemas(accounts)
         return build_page(query, total, items)
 
     async def own_resource(
@@ -428,10 +464,11 @@ class AccountService:
         account_ids: list[str],
     ) -> None:
         """校验目标账户均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._account_scope_filter(session, permission_key)
+        data_scope_filter = await self._account_scope_filter(session, IAM_ACCOUNT_PAGE)
         count = await self.repo.count_accounts_in_scope(unique_ids, data_scope_filter)
         if count != len(unique_ids):
             raise AuthorizationError("Account is outside current data scope")
@@ -443,10 +480,11 @@ class AccountService:
         role_ids: list[str],
     ) -> None:
         """校验目标角色均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._role_scope_filter(session, permission_key)
+        data_scope_filter = await self._role_scope_filter(session, IAM_ROLE_PAGE)
         count = await RoleRepository(self.db).count_roles_in_scope(unique_ids, data_scope_filter)
         if count != len(unique_ids):
             raise AuthorizationError("Role is outside current data scope")
@@ -458,10 +496,11 @@ class AccountService:
         group_ids: list[str],
     ) -> None:
         """校验目标账户组均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(group_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._group_scope_filter(session, permission_key)
+        data_scope_filter = await self._group_scope_filter(session, IAM_GROUP_PAGE)
         count = await GroupRepository(self.db).count_groups_in_scope(unique_ids, data_scope_filter)
         if count != len(unique_ids):
             raise AuthorizationError("Group is outside current data scope")
@@ -473,10 +512,11 @@ class AccountService:
         dept_ids: list[str],
     ) -> None:
         """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
-        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, permission_key)
+        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, IAM_DEPT_PAGE)
         if visible_dept_ids is None:
             return
         if any(dept_id not in set(visible_dept_ids) for dept_id in unique_ids):
@@ -490,7 +530,6 @@ class AccountService:
         """从账户请求构造管理端用户资料载荷。"""
         return ProfileUserAdminUpsertPayload(
             account_id=account_id,
-            name=payload.name,
             nickname=payload.nickname,
             avatar=payload.avatar,
             signature=payload.signature,
@@ -507,7 +546,6 @@ class AccountService:
         """从账户请求构造门户端用户资料载荷。"""
         return ProfileUserPortalUpsertPayload(
             account_id=account_id,
-            name=payload.name,
             nickname=payload.nickname,
             avatar=payload.avatar,
             signature=payload.signature,

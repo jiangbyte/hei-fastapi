@@ -434,7 +434,7 @@ async def logout(
     token = extract_session_token(request, authorization) or session.token
     await AuthService(db).logout(token)
     clear_session_cookie(response, request=request)
-    return success(LogoutResponse(success=True))
+    return success()
 
 
 def _device_label(user_agent: str | None) -> str | None:
@@ -469,4 +469,4 @@ async def cancel_account(
     """统一账号注销接口，只注销当前登录账号（请求体可省略）。"""
     await AuthService(db).cancel_current_account(payload, session)
     clear_session_cookie(response, request=request)
-    return success(CancelAccountResponse(success=True))
+    return success()

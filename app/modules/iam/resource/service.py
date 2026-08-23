@@ -42,7 +42,6 @@ from app.modules.iam.resource.schema import (
     SysResourceSchema,
 )
 from app.modules.iam.schema import PermissionRegistryItem, ResourceGrantModuleOption
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class ResourceService:
@@ -230,7 +229,6 @@ class ResourceService:
             schema.module_client = module_client
             if schema.parent_id:
                 schema.parent_id_name = parent_name_map.get(schema.parent_id)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return schemas
 
     async def _build_button_schemas(
@@ -396,7 +394,6 @@ class ResourceModuleService:
     async def detail(self, query: IdQuery) -> SysResourceModuleSchema:
         """查询资源模块详情并回显创建人昵称。"""
         schema = to_schema(SysResourceModuleSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -406,14 +403,12 @@ class ResourceModuleService:
         """分页查询资源模块。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysResourceModuleSchema, items)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def selector(self) -> list[SysResourceModuleSchema]:
         """返回启用的资源模块（对齐 hei-boot 全字段 selector）。"""
         items = await self.repo.list_enabled_modules(None)
         schemas = to_schema_list(SysResourceModuleSchema, items)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return schemas
 
 

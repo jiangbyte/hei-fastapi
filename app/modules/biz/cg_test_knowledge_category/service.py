@@ -35,7 +35,6 @@ from app.modules.biz.cg_test_knowledge_category.schema import (
     CgTestKnowledgeDocSchema,
     CgTestKnowledgeDocUpdateRequest,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class CgTestKnowledgeCategoryService:
@@ -61,7 +60,6 @@ class CgTestKnowledgeCategoryService:
 
     async def detail(self, query: IdQuery) -> CgTestKnowledgeCategoryDetailSchema:
         schema = await self._to_schema_with_parent_name(await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -80,7 +78,6 @@ class CgTestKnowledgeCategoryService:
             )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         records = to_schema_list(CgTestKnowledgeCategorySchema, items)
-        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)
 
     async def _to_schema_with_parent_name(self, item: object) -> CgTestKnowledgeCategoryDetailSchema:
@@ -153,11 +150,9 @@ class CgTestKnowledgeDocService:
 
     async def detail(self, query: IdQuery) -> CgTestKnowledgeDocSchema:
         schema = to_schema(CgTestKnowledgeDocSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: CgTestKnowledgeDocAdminPageQuery) -> PageData[CgTestKnowledgeDocSchema]:
         items, total = await self.repo.page_admin(query)
         records = to_schema_list(CgTestKnowledgeDocSchema, items)
-        await enrich_audit_names(self.db, records, account_type=AccountType.ADMIN)
         return build_page(query, total, records)

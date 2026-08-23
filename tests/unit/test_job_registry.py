@@ -8,6 +8,7 @@ EXPECTED_HANDLERS = {
     "sys_banner_status_sync",
     "sys_banner_flush_interactions",
     "sys_audit_alert",
+    "sys_audit_log_cleanup",
     "iam_account_purge_cancelled",
 }
 

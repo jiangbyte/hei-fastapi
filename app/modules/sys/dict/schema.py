@@ -76,10 +76,8 @@ class SysDictSchema(ApiSchema):
     sort: WireInt
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
     children: list["SysDictTreeNode"] = Field(default_factory=list)
 
 

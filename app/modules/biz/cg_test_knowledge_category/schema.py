@@ -47,11 +47,9 @@ class CgTestKnowledgeCategorySchema(ApiSchema):
     extra: dict[str, Any]
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     owner_dept_id: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
     children: list["CgTestKnowledgeCategoryTreeNode"] = Field(default_factory=list)
 
 
@@ -117,7 +115,5 @@ class CgTestKnowledgeDocSchema(ApiSchema):
     extra: dict[str, Any] | None = Field(default_factory=dict)
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None

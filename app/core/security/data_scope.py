@@ -16,6 +16,13 @@ from sqlalchemy.sql.elements import ColumnElement
 from app.core.config.enums import DataScope
 from app.core.security.session import PermissionGrantPayload, SessionPayload
 
+# 写操作数据范围断言统一使用 :page 权限键（对齐 hei-boot DataScopeResolver）。
+IAM_ACCOUNT_PAGE = "iam:account:page"
+IAM_ROLE_PAGE = "iam:role:page"
+IAM_GROUP_PAGE = "iam:group:page"
+IAM_POSITION_PAGE = "iam:position:page"
+IAM_DEPT_PAGE = "iam:dept:page"
+
 
 @dataclass(frozen=True, slots=True)
 class DataScopeColumns:

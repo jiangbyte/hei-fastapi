@@ -30,7 +30,6 @@ from app.modules.iam.client.schema import (
     SysClientResourceSchema,
 )
 from app.modules.iam.schema import ResourceGrantModuleOption
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class ClientModuleService:
@@ -58,7 +57,6 @@ class ClientModuleService:
     async def detail(self, query: IdQuery) -> SysClientModuleSchema:
         """查询客户端模块详情并回显创建人/更新人昵称。"""
         schema = to_schema(SysClientModuleSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -68,7 +66,6 @@ class ClientModuleService:
         """分页查询客户端模块。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysClientModuleSchema, items)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def selector(
@@ -78,7 +75,6 @@ class ClientModuleService:
         """返回启用的客户端模块（对齐 hei-boot 全字段 selector）。"""
         items = await self.repo.list_enabled(query.account_type)
         schemas = to_schema_list(SysClientModuleSchema, items)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return schemas
 
 
@@ -109,7 +105,6 @@ class ClientResourceService:
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysClientResourceSchema, entity)
         await self._fill_module_meta([schema], include_account_type=True)
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -120,7 +115,6 @@ class ClientResourceService:
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysClientResourceSchema, items)
         await self._fill_module_meta(schemas)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def list_tree(

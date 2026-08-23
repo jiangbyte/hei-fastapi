@@ -14,7 +14,6 @@ from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.security.session import SessionPayload
-from app.modules.profile.utils.profile import enrich_audit_name, enrich_audit_names
 from app.modules.sys.notice.enums import NoticeKind, NoticeStatus
 from app.modules.sys.notice.model import SysNoticeRead
 from app.modules.sys.notice.repository import SysNoticeRepository
@@ -89,13 +88,12 @@ class SysNoticeService:
         """管理端查询消息详情，并补充审计人姓名。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysNoticeSchema, entity)
-        return await enrich_audit_name(self.db, schema, account_type=AccountType.ADMIN)
+        return schema
 
     async def page_admin(self, query: SysNoticeAdminPageQuery) -> PageData[SysNoticeSchema]:
         """管理端分页查询消息。"""
         items, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysNoticeSchema, items)
-        schemas = await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def publish(self, payload: IdsRequest, session: SessionPayload) -> None:

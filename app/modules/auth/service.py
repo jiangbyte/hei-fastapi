@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache.keys import (
     bind_otp_key,
     login_otp_key,
+    password_expiry_notify_key,
     password_reset_token_key,
     register_otp_key,
     reset_password_otp_key,
@@ -63,6 +64,7 @@ from app.modules.iam.account.schema import (
     AccountRoleAssignRequest,
 )
 from app.modules.iam.enums import AccountIdentityType
+from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.profile.portal.repository import ProfileUserPortalRepository
 from app.modules.profile.portal.schema import ProfileUserPortalUpsertPayload
 from app.modules.sys.audit.service import OperationAuditService
@@ -94,6 +96,7 @@ class AuthService:
         self.db = db
         self.account_repo = AccountRepository(db)
         self.session_service = AccountSessionService(db)
+        self.relation_repo = IamRelationRepository(db)
 
     async def login(self, payload: LoginPayload) -> SessionPayload:
         """执行登录流程并签发会话。"""
@@ -276,6 +279,11 @@ class AuthService:
 
     async def send_register_code(self, *, channel: str, target: str) -> None:
         """发送门户注册通道（邮箱/手机）验证码。"""
+        from app.modules.auth.policy import get_register_policy
+
+        policy = get_register_policy(AccountType.PORTAL)
+        if not policy.enabled:
+            raise BusinessError("门户注册已关闭")
         channel_u = channel.strip().upper()
         if channel_u not in {"EMAIL", "PHONE"}:
             raise BusinessError("Unsupported register channel")
@@ -405,11 +413,7 @@ class AuthService:
             user_agent=payload.user_agent,
             device_label=payload.device_label,
         )
-        ttl = (
-            settings.auth.token_ttl_seconds
-            if payload.remember_me
-            else settings.auth.token_ttl_short_seconds
-        )
+        ttl = settings.auth.token_ttl_seconds
         force_bind_email, force_bind_phone = await self._force_bind_flags(
             account, payload.account_type
         )
@@ -439,6 +443,7 @@ class AuthService:
             ip=payload.client_ip,
             user_agent=payload.user_agent,
         )
+        await self._maybe_notify_password_expiring(account.id)
         return session_payload
 
     async def issue_oauth_session(
@@ -488,6 +493,7 @@ class AuthService:
             ip=client_ip,
             user_agent=user_agent,
         )
+        await self._maybe_notify_password_expiring(account.id)
         return LoginResponse(
             token=session_payload.token,
             account_id=account.id,
@@ -528,29 +534,97 @@ class AuthService:
     async def refresh_session(
         self, token: str, account_type: AccountType
     ) -> LoginResponse:
-        """刷新当前会话（滑动 TTL）并返回最新登录结果，会话失效时抛错。"""
+        """刷新当前会话（滑动 TTL、重算授权）并返回最新登录结果，会话失效时抛错。"""
         session = await session_store.get(token)
         if session is None:
             raise AuthenticationError("Session expired or invalid")
         if str(session.account_type) != account_type.value:
             raise BusinessError("账号类型不匹配")
-        await session_store.touch(token)
         account = await self.account_repo.get_required(session.account_id)
+        authorization = await self.relation_repo.get_account_authorization(account.id)
+        password_expired_ = await is_password_expired(self.db, account.id)
+        session_payload = self.session_service._build_session_payload_from_authorization(
+            account,
+            token,
+            authorization,
+            remember_me=session.remember_me,
+            password_expired=password_expired_,
+            client_ip=session.client_ip,
+            user_agent=session.user_agent,
+            device_label=session.device_label,
+        )
         force_bind_email, force_bind_phone = await self._force_bind_flags(
             account, account_type
         )
+        session_payload.force_bind_email = force_bind_email
+        session_payload.force_bind_phone = force_bind_phone
+        await session_store.set(
+            session_payload, ttl_seconds=settings.auth.token_ttl_seconds
+        )
+        await self._maybe_notify_password_expiring(account.id)
         return LoginResponse(
-            token=session.token,
-            account_id=session.account_id,
+            token=session_payload.token,
+            account_id=session_payload.account_id,
             account_type=account_type,
-            password_expired=session.password_expired,
+            password_expired=session_payload.password_expired,
             password_expiry_warning_days=await self.password_expiry_warning_days(
                 session.account_id
             ),
-            expires_in=session_expires_in(session),
+            expires_in=session_expires_in(session_payload),
             force_bind_email=force_bind_email,
             force_bind_phone=force_bind_phone,
         )
+
+    async def _maybe_notify_password_expiring(self, account_id: str) -> None:
+        """密码临近过期时发送邮件/短信提醒（24h 内仅一次，对齐 hei-boot）。"""
+        warning_days = await self.password_expiry_warning_days(account_id)
+        if not warning_days:
+            return
+        if not await self._try_mark_password_expiry_notified(account_id):
+            return
+        account_name = account_id
+        email_ident: str | None = None
+        phone_ident: str | None = None
+        for item in await self.account_repo.list_identities_by_account_ids([account_id]):
+            if (
+                item.identity_type == AccountIdentityType.ACCOUNT.value
+                and item.bind_status == "BOUND"
+                and item.identifier
+            ):
+                account_name = item.identifier
+            elif (
+                item.identity_type == AccountIdentityType.EMAIL.value
+                and item.bind_status == "BOUND"
+                and item.identifier
+            ):
+                email_ident = item.identifier
+            elif (
+                item.identity_type == AccountIdentityType.PHONE.value
+                and item.bind_status == "BOUND"
+                and item.identifier
+            ):
+                phone_ident = item.identifier
+        variables = {
+            "app_name": settings.app.name,
+            "account": account_name,
+            "remaining_days": str(warning_days),
+        }
+        if email_ident:
+            await send_templated_mail("PASSWORD_EXPIRING", email_ident, variables)
+        if phone_ident:
+            await send_templated_sms("PASSWORD_EXPIRING", phone_ident, variables)
+
+    async def _try_mark_password_expiry_notified(self, account_id: str) -> bool:
+        """24h 内仅通知一次密码即将过期。"""
+        redis = get_redis()
+        if redis is None:
+            return True
+        try:
+            return bool(
+                await redis.set(password_expiry_notify_key(account_id), "1", nx=True, ex=86400)
+            )
+        except Exception:
+            return True
 
     async def register_portal(self, payload: RegisterRequest) -> RegisterResponse:
         """执行门户注册（ACCOUNT/EMAIL/PHONE 通道）：创建账户、资料、默认角色/部门。"""

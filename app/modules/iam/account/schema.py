@@ -37,6 +37,16 @@ class AccountIdentityUpsertPayload(ApiSchema):
     bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
 
 
+class AccountUpdateLoginIdentityRequest(ApiSchema):
+    """更新账户邮箱/手机号登录身份请求。"""
+
+    id: str = Field(min_length=1, max_length=64)
+    email_login_enabled: WireBool = False
+    email: str | None = None
+    phone_login_enabled: WireBool = False
+    phone: str | None = None
+
+
 class AccountCreateRequest(ApiSchema):
     """创建账户请求。"""
 
@@ -51,20 +61,11 @@ class AccountCreateRequest(ApiSchema):
     password_key_id: str | None = Field(default=None, max_length=64)
     account_type: AccountType
     account_status: AccountStatusEnum = AccountStatusEnum.ENABLED
-    name: str | None = Field(default=None, max_length=64)
     nickname: str | None = Field(default=None, max_length=64)
     avatar: str | None = None
     signature: str | None = None
     phone: str | None = None
     email: str | None = None
-    email_login_enabled: WireBool = False
-    phone_login_enabled: WireBool = False
-    email_identity: str | None = Field(default=None, max_length=128)
-    phone_identity: str | None = Field(default=None, max_length=32)
-    email_identity_verified: WireBool = False
-    phone_identity_verified: WireBool = False
-    email_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
-    phone_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     remark: str | None = None
 
 
@@ -83,20 +84,11 @@ class AccountUpdateRequest(ApiSchema):
     password_key_id: str | None = Field(default=None, max_length=64)
     account_type: AccountType
     account_status: AccountStatusEnum = AccountStatusEnum.ENABLED
-    name: str | None = Field(default=None, max_length=64)
     nickname: str | None = Field(default=None, max_length=64)
     avatar: str | None = None
     signature: str | None = None
     phone: str | None = None
     email: str | None = None
-    email_login_enabled: WireBool = False
-    phone_login_enabled: WireBool = False
-    email_identity: str | None = Field(default=None, max_length=128)
-    phone_identity: str | None = Field(default=None, max_length=32)
-    email_identity_verified: WireBool = False
-    phone_identity_verified: WireBool = False
-    email_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
-    phone_identity_bind_status: AccountIdentityBindStatus = AccountIdentityBindStatus.BOUND
     remark: str | None = None
 
 

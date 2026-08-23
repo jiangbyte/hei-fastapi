@@ -61,12 +61,9 @@ class CgTestOrderSchema(ApiSchema):
     extra: dict[str, Any] | None = Field(default_factory=dict)
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     owner_dept_id: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
-
 
 class CgTestOrderItemCreateRequest(ApiSchema):
     order_id: str
@@ -110,7 +107,5 @@ class CgTestOrderItemSchema(ApiSchema):
     extra: dict[str, Any] | None = Field(default_factory=dict)
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None

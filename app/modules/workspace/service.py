@@ -13,6 +13,8 @@ from app.core.exceptions.business import BusinessError
 from app.core.security.session import SessionPayload
 from app.core.schema.base import to_schema_list
 from app.modules.iam.resource.model import SysResource
+from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
+from app.modules.iam.role.model import SysRole
 from app.modules.sys.audit.model import SysOperationAuditLog
 from app.modules.workspace.model import SysWorkspaceShortcut
 from app.modules.workspace.repository import WorkspaceShortcutRepository
@@ -55,7 +57,7 @@ class WorkspaceService:
             return []
         resource_ids = list(dict.fromkeys(r.resource_id for r in rows if r.resource_id))
         menus = await self._load_menus(resource_ids)
-        granted = self._resolve_granted_resource_ids(session)
+        granted = await self._resolve_granted_resource_ids(session)
         results: list[WorkspaceShortcutResult] = []
         for row in rows:
             menu = menus.get(row.resource_id)
@@ -82,7 +84,7 @@ class WorkspaceService:
         normalized = self._normalize_resource_ids(payload.resource_ids)
         if len(normalized) > MAX_SHORTCUTS:
             raise BusinessError(f"快捷应用最多 {MAX_SHORTCUTS} 个")
-        granted = self._resolve_granted_resource_ids(session)
+        granted = await self._resolve_granted_resource_ids(session)
         now = datetime.now(UTC)
         entities: list[SysWorkspaceShortcut] = []
         sort = 1
@@ -123,15 +125,23 @@ class WorkspaceService:
         items = list((await self.db.execute(stmt)).scalars().all())
         return {item.id: item for item in items}
 
-    def _resolve_granted_resource_ids(self, session: SessionPayload) -> set[str] | None:
-        if self._is_full_access(session):
+    async def _resolve_granted_resource_ids(self, session: SessionPayload) -> set[str] | None:
+        if await self._is_full_access(session):
             return None
         return set(session.resource_ids or [])
 
-    @staticmethod
-    def _is_full_access(session: SessionPayload) -> bool:
-        keys = set(session.permission_keys or [])
-        return "*:*:*" in keys
+    async def _is_full_access(self, session: SessionPayload) -> bool:
+        if "*:*:*" in set(session.permission_keys or []):
+            return True
+        role_ids = list(session.role_ids or [])
+        if not role_ids:
+            return False
+        stmt = (
+            select(SysRole.id)
+            .where(SysRole.id.in_(role_ids), SysRole.code == SUPER_ADMIN_ROLE_CODE)
+            .limit(1)
+        )
+        return (await self.db.execute(stmt)).scalar_one_or_none() is not None
 
     @staticmethod
     def _normalize_resource_ids(resource_ids: list[str] | None) -> list[str]:

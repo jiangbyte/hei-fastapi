@@ -286,6 +286,7 @@ def entity_context(
         "has_table_bool": any(field["is_bool"] for field in table_fields),
         "has_table_tag": any(field["dict_code"] or field["is_bool"] for field in table_fields),
         "has_detail_dict": any(field["dict_code"] for field in detail_fields),
+        "has_detail_bool": any(field["is_bool"] for field in detail_fields),
         "needs_form_normalize": any(
             field["is_datetime"] or field["is_json"] for field in form_fields
         ),

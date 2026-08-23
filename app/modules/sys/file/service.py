@@ -30,7 +30,6 @@ from app.core.storage.url import (
     normalize_object_name,
     to_object_key,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.file.content_disposition import content_disposition_attachment
 from app.modules.sys.file.model import SysFile
 from app.modules.sys.file.repository import FileRepository
@@ -191,7 +190,6 @@ class FileService:
         if session is not None:
             self.assert_owned_by_current(entity, session)
         schema = self._with_resolved_url(to_schema(SysFileSchema, entity))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def list_by_ids(
@@ -382,7 +380,6 @@ class FileService:
         schemas = [
             self._with_resolved_url(schema) for schema in to_schema_list(SysFileSchema, items)
         ]
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(page_query, total, schemas)
 
     def assert_owned_by_current(

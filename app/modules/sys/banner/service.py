@@ -16,7 +16,6 @@ from app.core.exceptions.business import BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
 from app.core.storage.url import normalize_object_name
-from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.banner.repository import BannerRepository
 from app.modules.sys.banner.schema import (
     BannerAdminPageQuery,
@@ -62,7 +61,6 @@ class BannerService:
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysBannerSchema, entity)
         await self._resolve_image_urls([schema])
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: BannerAdminPageQuery) -> PageData[SysBannerSchema]:
@@ -70,7 +68,6 @@ class BannerService:
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysBannerSchema, entities)
         await self._resolve_image_urls(schemas)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def list_visible(

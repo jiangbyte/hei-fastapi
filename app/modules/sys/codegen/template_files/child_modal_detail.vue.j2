@@ -7,6 +7,9 @@
 
 <script setup lang="ts">
 import { {{ plan.entity_name | ts_api_name }} } from '@/api'
+{% if target.has_detail_bool %}
+import { wireBool } from '@/utils/wire'
+{% endif %}
 import { {% if target.has_detail_dict %}createTagColor, dictTypeColor, dictTypeData, {% endif %}displayValue, formatDateTime } from '@/utils'
 import { reactive } from 'vue'
 
@@ -66,6 +69,8 @@ defineExpose({
             </NTag>
 {% elif field.python_type == "datetime" %}
             {{ "{{" }} formatDateTime(state.detail.{{ field.name }}) {{ "}}" }}
+{% elif field.is_bool %}
+            {{ "{{" }} wireBool(state.detail.{{ field.name }}) ? '是' : '否' {{ "}}" }}
 {% elif field.is_json %}
             <NCode :code="formatJsonValue(state.detail.{{ field.name }})" language="json" word-wrap />
 {% else %}

@@ -12,7 +12,11 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
+from app.core.security.data_scope import (
+    IAM_DEPT_PAGE,
+    build_data_scope_filter,
+    resolve_data_scope_dept_ids,
+)
 from app.core.security.session import SessionPayload
 from app.modules.iam.dept.model import SysDept
 from app.modules.iam.dept.repository import DeptRepository, DeptTreeRecord
@@ -134,20 +138,6 @@ class DeptService:
                 account_ids.add(dto.deputy_master_id)
             if dto.parent_id:
                 parent_ids.add(dto.parent_id)
-        # 解析创建人/更新人昵称
-        creator_ids: set[str] = set()
-        for dto in dtos:
-            if dto.created_by:
-                creator_ids.add(dto.created_by)
-            if dto.updated_by:
-                creator_ids.add(dto.updated_by)
-        if creator_ids:
-            profiles = await get_profiles_batch(self.db, AccountType.ADMIN, list(creator_ids))
-            for dto in dtos:
-                if dto.created_by and dto.created_by in profiles:
-                    dto.created_name = getattr(profiles[dto.created_by], "nickname", None)
-                if dto.updated_by and dto.updated_by in profiles:
-                    dto.updated_name = getattr(profiles[dto.updated_by], "nickname", None)
         if account_ids:
             name_map = await self.repo.resolve_account_names(list(account_ids))
             for dto in dtos:
@@ -178,10 +168,11 @@ class DeptService:
         dept_ids: list[str],
     ) -> None:
         """校验目标部门均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._dept_scope_filter(session, permission_key)
+        data_scope_filter = await self._dept_scope_filter(session, IAM_DEPT_PAGE)
         if await self.repo.count_depts_in_scope(unique_ids, data_scope_filter) != len(unique_ids):
             raise AuthorizationError("Dept is outside current data scope")
 
@@ -192,10 +183,11 @@ class DeptService:
         dept_ids: list[str],
     ) -> None:
         """按解析出的可见部门 ID 校验目标部门可见性。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
-        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, permission_key)
+        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, IAM_DEPT_PAGE)
         if visible_dept_ids is None:
             return
         allowed_ids = set(visible_dept_ids)

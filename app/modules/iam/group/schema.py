@@ -51,11 +51,8 @@ class SysGroupSchema(ApiSchema):
     extra: dict
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
-
 
 class GroupRoleAssignRequest(ApiSchema):
     """为账户组追加单个角色的请求。"""

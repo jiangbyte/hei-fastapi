@@ -131,7 +131,7 @@ class SessionAdminService:
             result = {
                 key: sessions
                 for key, sessions in result.items()
-                if query.account_id in key[1]
+                if key[1] == query.account_id
             }
         if query.ip:
             result = {
@@ -209,8 +209,6 @@ class SessionAdminService:
                 item
                 for item in result
                 if keyword in item.account.lower()
-                or keyword in str(item.name or "").lower()
-                or keyword in str(item.nickname or "").lower()
                 or keyword in item.account_id.lower()
             ]
         return result

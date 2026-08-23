@@ -184,7 +184,6 @@ class SysFeedbackService:
     async def _enrich_profiles(self, schema: SysFeedbackSchema) -> SysFeedbackSchema:
         """为单条反馈补充审计人姓名与提交者头像昵称。"""
         await self._enrich_attachments(schema)
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         if schema.submitter_account_id:
             try:
                 at = AccountType(schema.submitter_account_type)
@@ -203,7 +202,6 @@ class SysFeedbackService:
     ) -> list[SysFeedbackSchema]:
         """批量补充反馈的审计人姓名与提交者头像昵称。"""
         await self._enrich_attachments_many(schemas)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
 
         groups: dict[str, list[str]] = {}
         schema_map: list[tuple[SysFeedbackSchema, str]] = []

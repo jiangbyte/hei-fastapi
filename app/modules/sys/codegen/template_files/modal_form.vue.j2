@@ -9,11 +9,7 @@
 import type { FormInst, FormRules } from 'naive-ui'
 import { {{ plan.entity_name | ts_api_name }} } from '@/api'
 {% if target.has_form_bool or target.has_form_int or target.has_form_float %}
-import { {{ [
-  'wireBool' if target.has_form_bool else none,
-  'wireInt' if target.has_form_int else none,
-  'wireFloat' if target.has_form_float else none,
-] | reject('none') | join(', ') }} } from '@/utils/wire'
+import { wireFields } from '@/utils/wire'
 {% endif %}
 import { createRequiredRule{{ ", toApiDateTime, toFormDateTime" if target.has_form_datetime else "" }} } from '@/utils'
 import { computed, reactive, ref } from 'vue'
@@ -121,15 +117,19 @@ function normalizeFormData(data: Record<string, any> = {}): Record<string, any> 
   return {
     ...defaultFormData,
     ...data,
-{% for field in target.form_fields if field.is_bool %}
-    {{ field.name }}: data.{{ field.name }} == null || data.{{ field.name }} === '' ? defaultFormData.{{ field.name }} : wireBool(String(data.{{ field.name }})),
+{% if target.has_form_bool or target.has_form_int or target.has_form_float %}
+    ...wireFields(data, {
+{% for field in target.form_fields %}
+{% if field.is_bool %}
+      {{ field.name }}: 'bool',
+{% elif field.python_type == "int" %}
+      {{ field.name }}: 'int',
+{% elif field.python_type == "float" %}
+      {{ field.name }}: 'float',
+{% endif %}
 {% endfor %}
-{% for field in target.form_fields if field.python_type == "int" %}
-    {{ field.name }}: data.{{ field.name }} == null || data.{{ field.name }} === '' ? defaultFormData.{{ field.name }} : wireInt(String(data.{{ field.name }})),
-{% endfor %}
-{% for field in target.form_fields if field.python_type == "float" %}
-    {{ field.name }}: data.{{ field.name }} == null || data.{{ field.name }} === '' ? defaultFormData.{{ field.name }} : wireFloat(String(data.{{ field.name }})),
-{% endfor %}
+    }, defaultFormData),
+{% endif %}
 {% for field in target.form_fields if field.is_datetime %}
     {{ field.name }}: toFormDateTime(data.{{ field.name }}),
 {% endfor %}

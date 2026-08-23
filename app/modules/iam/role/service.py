@@ -11,7 +11,13 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, BusinessError, NotFoundError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
+from app.core.security.data_scope import (
+    IAM_ACCOUNT_PAGE,
+    IAM_DEPT_PAGE,
+    IAM_ROLE_PAGE,
+    build_data_scope_filter,
+    resolve_data_scope_dept_ids,
+)
 from app.core.security.session import SessionPayload
 from app.modules.auth.session_service import AccountSessionService
 from app.modules.iam.account.model import SysAccount
@@ -303,10 +309,11 @@ class RoleService:
         role_ids: list[str],
     ) -> None:
         """校验目标角色均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(role_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._role_scope_filter(session, permission_key)
+        data_scope_filter = await self._role_scope_filter(session, IAM_ROLE_PAGE)
         if await self.repo.count_roles_in_scope(unique_ids, data_scope_filter) != len(unique_ids):
             raise AuthorizationError("Role is outside current data scope")
 
@@ -317,10 +324,11 @@ class RoleService:
         account_ids: list[str],
     ) -> None:
         """校验目标账户均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(account_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._account_scope_filter(session, permission_key)
+        data_scope_filter = await self._account_scope_filter(session, IAM_ACCOUNT_PAGE)
         count = await AccountRepository(self.db).count_accounts_in_scope(
             unique_ids,
             data_scope_filter,
@@ -335,10 +343,11 @@ class RoleService:
         dept_ids: list[str],
     ) -> None:
         """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
-        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, permission_key)
+        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, IAM_DEPT_PAGE)
         if visible_dept_ids is None:
             return
         allowed_ids = set(visible_dept_ids)

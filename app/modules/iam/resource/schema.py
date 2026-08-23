@@ -91,11 +91,8 @@ class SysResourceSchema(ApiSchema):
     extra: dict
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
-
 
 class ResourcePermissionBindRequest(ApiSchema):
     """资源权限绑定请求。"""
@@ -103,7 +100,7 @@ class ResourcePermissionBindRequest(ApiSchema):
     resource_id: str
     permission_key: str
     account_type: AccountType = AccountType.ADMIN
-    data_scope: DataScope = DataScope.SELF
+    data_scope: DataScope = DataScope.ALL
     custom_scope_dept_ids: list[str] = Field(default_factory=list)
     sort: WireInt = 99
     description: str | None = None
@@ -116,7 +113,7 @@ class ResourceButtonCreateRequest(ApiSchema):
     code: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=64)
     permission_key: str = Field(min_length=1, max_length=128)
-    data_scope: DataScope = DataScope.SELF
+    data_scope: DataScope = DataScope.ALL
     custom_scope_dept_ids: list[str] = Field(default_factory=list)
     sort: WireInt = 99
     status: StatusEnum = StatusEnum.ENABLED
@@ -142,11 +139,8 @@ class SysResourcePermissionRelSchema(ApiSchema):
     description: str | None = None
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
-
 
 class ResourceButtonSchema(SysResourceSchema):
     """按钮资源响应结构，附权限挂载信息。"""
@@ -229,11 +223,8 @@ class SysResourceModuleSchema(ApiSchema):
     extra: dict
     created_at: datetime
     created_by: str | None = None
-    created_name: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    updated_name: str | None = None
-
 
 class ResourceModuleSelectorOption(ApiSchema):
     """资源模块下拉选项结构。"""

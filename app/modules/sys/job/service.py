@@ -12,7 +12,6 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.modules.profile.utils.profile import enrich_audit_names
 from app.modules.sys.job import cron as cron_util
 from app.modules.sys.job import registry as job_registry
 from app.modules.sys.job.execution import EXECUTOR_SYSTEM, submit_run
@@ -78,17 +77,12 @@ class JobService:
         """查询任务详情并填充审计人昵称。"""
         entity = await self.repo.get_required(query.id)
         schema = to_schema(SysJobSchema, entity)
-        schema.handler = job_registry.boot_handler_display(schema.handler)
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(self, query: JobAdminPageQuery) -> PageData[SysJobSchema]:
         """管理端分页查询任务并填充审计人昵称。"""
         entities, total = await self.repo.page_admin(query)
         schemas = to_schema_list(SysJobSchema, entities)
-        for schema in schemas:
-            schema.handler = job_registry.boot_handler_display(schema.handler)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def update_enabled(self, payload: JobEnabledRequest) -> None:

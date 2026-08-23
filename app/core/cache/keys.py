@@ -76,6 +76,11 @@ def register_otp_key(channel: str, target: str) -> str:
     return f"user:register:otp:{channel}:{target}"
 
 
+def password_expiry_notify_key(account_id: str) -> str:
+    """密码即将过期通知去重键（24h，对齐 hei-boot auth:notify:password-expiring）。"""
+    return f"auth:notify:password-expiring:{account_id}"
+
+
 def captcha_key(captcha_id: str) -> str:
     """图形验证码键。"""
     return f"captcha:{captcha_id}"

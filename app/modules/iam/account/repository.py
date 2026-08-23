@@ -142,11 +142,11 @@ class AccountRepository:
         )
         self.db.add(account)
         await self.db.flush()
-        await self.replace_account_identities(account.id, payload)
+        await self.replace_account_login_identity(account.id, payload.account)
         return account
 
     async def update(self, payload: AccountUpdateRequest, password_hash: str | None = None) -> None:
-        """更新账户主体与登录标识；账号被其他账户占用时抛冲突错误。"""
+        """更新账户主体与主登录标识；账号被其他账户占用时抛冲突错误。"""
         entity = await self.get_required(payload.id)
         existing = await self.get_account_by_account(payload.account)
         if existing and existing.id != payload.id:
@@ -155,7 +155,106 @@ class AccountRepository:
         entity.account_status = payload.account_status.value
         if password_hash:
             entity.password_hash = password_hash
-        await self.replace_account_identities(payload.id, payload)
+        await self.replace_account_login_identity(payload.id, payload.account)
+        await self.db.flush()
+
+    async def replace_account_login_identity(self, account_id: str, account: str) -> None:
+        """仅重建 ACCOUNT 类型登录标识。"""
+        conflict = await self.db.execute(
+            select(SysAccountIdentity.id)
+            .where(
+                SysAccountIdentity.account_id != account_id,
+                SysAccountIdentity.identity_type == AccountIdentityType.ACCOUNT.value,
+                SysAccountIdentity.identifier == account,
+            )
+            .limit(1)
+        )
+        if conflict.scalar_one_or_none():
+            raise ConflictError("Account identity already exists")
+        await self.db.execute(
+            delete(SysAccountIdentity).where(
+                SysAccountIdentity.account_id == account_id,
+                SysAccountIdentity.identity_type == AccountIdentityType.ACCOUNT.value,
+            )
+        )
+        self.db.add(
+            SysAccountIdentity(
+                account_id=account_id,
+                identity_type=AccountIdentityType.ACCOUNT.value,
+                identifier=account,
+                verified=True,
+                is_primary=True,
+                bind_status=AccountIdentityBindStatus.BOUND.value,
+            )
+        )
+        await self.db.flush()
+
+    async def replace_secondary_login_identities(
+        self,
+        account_id: str,
+        *,
+        email_login_enabled: bool,
+        email: str | None,
+        phone_login_enabled: bool,
+        phone: str | None,
+    ) -> None:
+        """仅重建 EMAIL/PHONE 登录标识。"""
+        identities: list[AccountIdentityUpsertPayload] = []
+        if email_login_enabled and str(email or "").strip():
+            identities.append(
+                AccountIdentityUpsertPayload(
+                    account_id=account_id,
+                    identity_type=AccountIdentityType.EMAIL,
+                    identifier=str(email).strip(),
+                    verified=True,
+                    bind_status=AccountIdentityBindStatus.BOUND,
+                )
+            )
+        if phone_login_enabled and str(phone or "").strip():
+            identities.append(
+                AccountIdentityUpsertPayload(
+                    account_id=account_id,
+                    identity_type=AccountIdentityType.PHONE,
+                    identifier=str(phone).strip(),
+                    verified=True,
+                    bind_status=AccountIdentityBindStatus.BOUND,
+                )
+            )
+        if identities:
+            conflict_conditions = [
+                (SysAccountIdentity.identity_type == item.identity_type.value)
+                & (SysAccountIdentity.identifier == item.identifier)
+                for item in identities
+            ]
+            stmt = (
+                select(SysAccountIdentity.id)
+                .where(
+                    SysAccountIdentity.account_id != account_id,
+                    or_(*conflict_conditions),
+                )
+                .limit(1)
+            )
+            if (await self.db.execute(stmt)).scalar_one_or_none():
+                raise ConflictError("Account identity already exists")
+        await self.db.execute(
+            delete(SysAccountIdentity).where(
+                SysAccountIdentity.account_id == account_id,
+                SysAccountIdentity.identity_type.in_(
+                    [AccountIdentityType.EMAIL.value, AccountIdentityType.PHONE.value]
+                ),
+            )
+        )
+        for item in identities:
+            self.db.add(
+                SysAccountIdentity(
+                    account_id=item.account_id,
+                    identity_type=item.identity_type.value,
+                    identifier=item.identifier,
+                    verified=item.verified,
+                    is_primary=item.is_primary,
+                    bind_status=item.bind_status.value,
+                )
+            )
         await self.db.flush()
 
     async def update_password_hash(self, account_id: str, password_hash: str) -> None:
@@ -503,8 +602,8 @@ class AccountRepository:
         if query.name:
             filters.append(
                 or_(
-                    ProfileUserAdmin.name.contains(query.name),
-                    ProfileUserPortal.name.contains(query.name),
+                    ProfileUserAdmin.nickname.contains(query.name),
+                    ProfileUserPortal.nickname.contains(query.name),
                 )
             )
         if query.phone:

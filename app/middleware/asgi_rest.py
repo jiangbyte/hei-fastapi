@@ -9,11 +9,13 @@ import os
 import re
 import time
 import uuid
+from http import HTTPStatus
 
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.audit.queue import OperationAuditEvent, operation_audit_queue
+from app.core.audit.skip_catalog import should_skip_audit
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType, account_type_url_segment
 from app.core.exceptions.business import AuthenticationError
@@ -30,19 +32,22 @@ logger = logging.getLogger(__name__)
 # 与 permission_registry 一致：路径段随 AccountType 枚举自动扩展
 _ACCOUNT_TYPE_PATH_ALTS = "|".join(account_type_url_segment(item) for item in AccountType)
 
-# 限流规则：(路径正则, 次数上限, 时间窗秒, 作用域)。
+# 限流规则：(路径正则, 次数上限, 时间窗秒, 作用域)。对齐 hei-boot @RateLimit。
 RATE_LIMIT_RULES: list[tuple[re.Pattern[str], int, int, str]] = [
-    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/login"), 10, 60, "ip"),
-    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/register"), 5, 60, "ip"),
-    (
-        re.compile(
-            rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/(forgot-password|reset-password)"
-        ),
-        5,
-        60,
-        "ip",
-    ),
-    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/captcha"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/login$"), 20, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/register$"), 10, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/register/send-code$"), 10, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/send-login-code$"), 10, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/password-key$"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/forgot-password$"), 5, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/forgot-password/phone$"), 5, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/reset-password$"), 10, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/reset-password/phone$"), 10, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/captcha$"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/oauth/[^/]+/authorize$"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/oauth/[^/]+/callback$"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/oauth/exchange$"), 30, 60, "ip"),
+    (re.compile(rf"^/api/v\d+/portal/oauth/wechat-mp/login$"), 30, 60, "ip"),
     (re.compile(r"^/api/v\d+/"), 120, 60, "mix"),
 ]
 
@@ -192,6 +197,11 @@ class RateLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
+        headers = dict(scope.get("headers") or [])
+        if headers.get(b"x-e2e-disable-rate-limit") == b"1":
+            await self.app(scope, receive, send)
+            return
+
         method = scope.get("method") or ""
         if method == "OPTIONS":
             await self.app(scope, receive, send)
@@ -306,6 +316,7 @@ class OperationAuditMiddleware:
 
         status_code = 500
         response_started = False
+        started_at = time.perf_counter()
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status_code, response_started
@@ -318,31 +329,54 @@ class OperationAuditMiddleware:
             await self.app(scope, receive, send_wrapper)
         finally:
             try:
-                request = Request(scope, receive)
-                audit_info = _match_audit_target(request)
-                if audit_info is not None:
-                    resource_type, action = audit_info
-                    from app.core.observability.context import (
-                        request_id_ctx,
-                        user_agent_ctx,
-                    )
+                if response_started:
+                    request = Request(scope, receive)
+                    audit_info = _match_audit_target(request)
+                    if audit_info is not None:
+                        resource_type, action = audit_info
+                        if not should_skip_audit(resource_type, action):
+                            from app.core.observability.context import (
+                                request_id_ctx,
+                                user_agent_ctx,
+                            )
 
-                    operation_audit_queue.enqueue(
-                        OperationAuditEvent(
-                            resource_type=resource_type,
-                            action=action,
-                            method=request.method,
-                            path=request.url.path,
-                            status_code=status_code if response_started else 500,
-                            account_id=account_id_ctx.get(),
-                            account_type=account_type_ctx.get(),
-                            request_id=request_id_ctx.get(),
-                            ip=client_ip_ctx.get(),
-                            user_agent=user_agent_ctx.get(),
-                        )
-                    )
+                            duration_ms = max(0, int((time.perf_counter() - started_at) * 1000))
+                            success = status_code < 400
+                            error_message = None
+                            if not success:
+                                error_message = HTTPStatus(status_code).phrase or str(status_code)
+                            operation_audit_queue.enqueue(
+                                OperationAuditEvent(
+                                    resource_type=resource_type,
+                                    action=action,
+                                    method=request.method,
+                                    path=request.url.path,
+                                    status_code=status_code,
+                                    account_id=account_id_ctx.get(),
+                                    account_type=account_type_ctx.get(),
+                                    request_id=request_id_ctx.get(),
+                                    ip=client_ip_ctx.get(),
+                                    user_agent=user_agent_ctx.get(),
+                                    resource_id=_extract_resource_id(request.url.path),
+                                    duration_ms=duration_ms,
+                                    summary=f"{request.method} {request.url.path}",
+                                    success=success,
+                                    error_message=error_message,
+                                )
+                            )
             except Exception:
                 pass
+
+
+def _extract_resource_id(path: str) -> str | None:
+    """从路径末段提取资源 ID（UUID/雪花 ID）。"""
+    parts = [p for p in path.strip("/").split("/") if p]
+    if not parts:
+        return None
+    last = parts[-1]
+    if re.fullmatch(r"[0-9a-fA-F]{8,}", last):
+        return last
+    return None
 
 
 def _should_skip_path(path: str) -> bool:

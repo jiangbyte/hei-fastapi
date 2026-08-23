@@ -140,6 +140,4 @@ class SysNoticeSchema(ApiSchema):
     created_by: str | None = None
     updated_at: datetime
     updated_by: str | None = None
-    created_name: str | None = None
-    updated_name: str | None = None
     is_read: WireBool | None = None

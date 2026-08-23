@@ -1,14 +1,12 @@
 """ Author: Charlie
 
-用户资料批量查询与审计字段名 enrichment。
+用户资料批量查询工具。
 """
 from __future__ import annotations
 
-from typing import Any
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config.enums import AccountType, account_types_with_profile
+from app.core.config.enums import AccountType
 from app.core.exceptions.business import BusinessError
 from app.modules.profile.admin.model import ProfileUserAdmin
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
@@ -69,64 +67,3 @@ async def get_profiles_batch(
     repo = pick_profile_repo(db, account_type)
     profiles = await repo.list_by_account_ids(list(dict.fromkeys(account_ids)))
     return {p.account_id: p for p in profiles}
-
-
-def _profile_display_name(profile: object) -> str | None:
-    """提取资料展示名（昵称）。"""
-    nickname = getattr(profile, "nickname", None)
-    return str(nickname) if nickname else None
-
-
-async def enrich_audit_names(
-    db: AsyncSession,
-    schemas: list[Any],
-    *,
-    account_type: AccountType | str | None = None,
-    created_by_attr: str = "created_by",
-    updated_by_attr: str = "updated_by",
-    created_name_attr: str = "created_name",
-    updated_name_attr: str = "updated_name",
-) -> list[Any]:
-    """从各端 profile 填充 schema 的 created_name / updated_name。
-
-    若未指定 account_type，则在具备资料表的端上合并查找（ADMIN + PORTAL）。
-    """
-    if not schemas:
-        return schemas
-    all_ids: set[str] = set()
-    for schema in schemas:
-        created_by = getattr(schema, created_by_attr, None)
-        updated_by = getattr(schema, updated_by_attr, None)
-        if created_by:
-            all_ids.add(str(created_by))
-        if updated_by:
-            all_ids.add(str(updated_by))
-    if not all_ids:
-        return schemas
-
-    profiles: dict[str, object] = {}
-    if account_type is None:
-        for client in account_types_with_profile():
-            profiles.update(await get_profiles_batch(db, client, list(all_ids)))
-    else:
-        profiles = await get_profiles_batch(db, account_type, list(all_ids))
-
-    for schema in schemas:
-        created_by = getattr(schema, created_by_attr, None)
-        updated_by = getattr(schema, updated_by_attr, None)
-        if created_by and str(created_by) in profiles:
-            setattr(schema, created_name_attr, _profile_display_name(profiles[str(created_by)]))
-        if updated_by and str(updated_by) in profiles:
-            setattr(schema, updated_name_attr, _profile_display_name(profiles[str(updated_by)]))
-    return schemas
-
-
-async def enrich_audit_name(
-    db: AsyncSession,
-    schema: Any,
-    *,
-    account_type: AccountType | str | None = None,
-) -> Any:
-    """为单条 schema 补充 created_name / updated_name。"""
-    await enrich_audit_names(db, [schema], account_type=account_type)
-    return schema

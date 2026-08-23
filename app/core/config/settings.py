@@ -35,7 +35,7 @@ class AppSettings(BaseSettings):
 class DatabaseSettings(BaseSettings):
     """数据库连接池设置（SQLAlchemy async）。"""
 
-    url: str = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/hei_fastapi"
+    url: str = "mysql+aiomysql://root:123456@127.0.0.1:3306/hei_fastapi?charset=utf8mb4"
     echo: bool = False
     pool_size: int = 10
     max_overflow: int = 20
@@ -45,10 +45,13 @@ class DatabaseSettings(BaseSettings):
 
 
 class AuditSettings(BaseSettings):
-    """操作审计队列设置。"""
+    """操作审计队列与日志保留设置。"""
 
     operation_queue_size: int = 1000
     operation_shutdown_timeout_seconds: float = 5.0
+    login_retention_days: int = 180
+    operation_retention_days: int = 365
+    cleanup_batch_size: int = 1000
 
 
 class RedisSettings(BaseSettings):

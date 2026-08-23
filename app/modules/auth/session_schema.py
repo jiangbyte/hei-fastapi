@@ -27,6 +27,8 @@ class SessionAnalysisResponse(ApiSchema):
 class SessionPageQuery(PageQuery):
     """会话分页查询参数。"""
 
+    size: WireInt = Field(default=20, ge=1, le=200)
+
     account_type: AccountType | None = Field(default=None, alias="accountType")
     account_id: str | None = Field(default=None, max_length=64)
     account: str | None = Field(default=None, max_length=128)

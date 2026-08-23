@@ -57,6 +57,12 @@ class OperationAuditEvent:
     request_id: str | None
     ip: str | None
     user_agent: str | None
+    resource_id: str | None = None
+    duration_ms: int | None = None
+    summary: str | None = None
+    operator_name: str | None = None
+    success: bool = True
+    error_message: str | None = None
 
 
 class OperationAuditQueue:

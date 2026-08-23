@@ -119,7 +119,7 @@ class AccountSessionService:
             role_ids=authorization["role_ids"],
             dept_ids=authorization["dept_ids"],
             group_ids=authorization["group_ids"],
-            resource_ids=authorization["resource_ids"],
+            resource_ids=[],  # 菜单/按钮资源不进会话（对齐 hei-boot issueSession）
             permission_keys=sorted(permission_keys),
             permission_grants=authorization["permission_grants"],
             client_resource_ids=list(authorization.get("client_resource_ids") or []),

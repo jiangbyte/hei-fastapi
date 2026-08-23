@@ -10,7 +10,12 @@ from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
 from app.core.schema.base import IdQuery, IdsRequest, to_schema, to_schema_list
-from app.core.security.data_scope import build_data_scope_filter, resolve_data_scope_dept_ids
+from app.core.security.data_scope import (
+    IAM_DEPT_PAGE,
+    IAM_POSITION_PAGE,
+    build_data_scope_filter,
+    resolve_data_scope_dept_ids,
+)
 from app.core.security.session import SessionPayload
 from app.modules.iam.position.model import SysPosition
 from app.modules.iam.position.repository import PositionRepository
@@ -20,7 +25,6 @@ from app.modules.iam.position.schema import (
     PositionUpdateRequest,
     SysPositionSchema,
 )
-from app.modules.profile.utils.profile import enrich_audit_names
 
 
 class PositionService:
@@ -68,7 +72,6 @@ class PositionService:
         if session is not None:
             await self._ensure_positions_visible(session, "iam:position:detail", [query.id])
         schema = to_schema(SysPositionSchema, await self.repo.get_required(query.id))
-        await enrich_audit_names(self.db, [schema], account_type=AccountType.ADMIN)
         return schema
 
     async def page_admin(
@@ -84,7 +87,6 @@ class PositionService:
         )
         items, total = await self.repo.page_admin(query, data_scope_filter)
         schemas = to_schema_list(SysPositionSchema, items)
-        await enrich_audit_names(self.db, schemas, account_type=AccountType.ADMIN)
         return build_page(query, total, schemas)
 
     async def _position_scope_filter(self, session: SessionPayload, permission_key: str):
@@ -104,10 +106,11 @@ class PositionService:
         position_ids: list[str],
     ) -> None:
         """校验目标职位均在当前数据范围内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(position_ids))
         if not unique_ids:
             return
-        data_scope_filter = await self._position_scope_filter(session, permission_key)
+        data_scope_filter = await self._position_scope_filter(session, IAM_POSITION_PAGE)
         if await self.repo.count_positions_in_scope(unique_ids, data_scope_filter) != len(
             unique_ids
         ):
@@ -120,10 +123,11 @@ class PositionService:
         dept_ids: list[str],
     ) -> None:
         """校验目标部门均在当前可见部门集合内，否则抛授权错误。"""
+        _ = permission_key
         unique_ids = list(dict.fromkeys(dept_ids))
         if not unique_ids:
             return
-        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, permission_key)
+        visible_dept_ids = await resolve_data_scope_dept_ids(self.db, session, IAM_DEPT_PAGE)
         if visible_dept_ids is None:
             return
         allowed_ids = set(visible_dept_ids)

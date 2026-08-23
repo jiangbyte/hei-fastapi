@@ -220,7 +220,7 @@ async def portal_real_name_my_page(
     "/v1/admin/sys/real-name-case/review-page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:realname:review:verify")),
+        Depends(require_permission("sys:realname:verify")),
     ],
     response_model=ApiResponse[PageData[RealNameCaseSummaryResponse]],
 )
@@ -236,7 +236,7 @@ async def real_name_review_page(
     "/v1/admin/sys/real-name-case/detail",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:realname:review:verify")),
+        Depends(require_permission("sys:realname:verify")),
     ],
     response_model=ApiResponse[RealNameCaseDetailResponse],
 )
@@ -252,7 +252,7 @@ async def real_name_detail(
     "/v1/admin/sys/real-name-case/approve",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:realname:review:verify")),
+        Depends(require_permission("sys:realname:verify")),
     ],
     response_model=ApiResponse[None],
 )
@@ -270,7 +270,7 @@ async def real_name_approve(
     "/v1/admin/sys/real-name-case/reject",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:realname:review:verify")),
+        Depends(require_permission("sys:realname:verify")),
     ],
     response_model=ApiResponse[None],
 )
@@ -288,7 +288,7 @@ async def real_name_reject(
     "/v1/admin/sys/identity/page",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:realname:identity:revoke")),
+        Depends(require_permission("sys:realnameidentity:revoke")),
     ],
     response_model=ApiResponse[PageData[IdentityPageResponse]],
 )
@@ -304,7 +304,7 @@ async def identity_page(
     "/v1/admin/sys/identity/revoke",
     dependencies=[
         Depends(require_account_type(AccountType.ADMIN)),
-        Depends(require_permission("sys:realname:identity:revoke")),
+        Depends(require_permission("sys:realnameidentity:revoke")),
     ],
     response_model=ApiResponse[None],
 )

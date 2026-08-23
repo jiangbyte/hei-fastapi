@@ -13,6 +13,7 @@ from app.modules.iam.enums import AccountIdentityBindStatus
 from app.modules.iam.schema import (
     AccountIdentitySchema,
     AccountOauthBindingSchema,
+    SysAccountListSchema,
     SysAccountSchema,
 )
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
@@ -106,7 +107,7 @@ class AccountQueryService:
                     account=getattr(primary_identity, "identifier", ""),
                     account_type=account.account_type,
                     account_status=account.account_status,
-                    name=getattr(profile, "name", None),
+                    name=None,
                     nickname=getattr(profile, "nickname", None),
                     avatar=resolved_avatar,
                     signature=getattr(profile, "signature", None),
@@ -146,6 +147,74 @@ class AccountQueryService:
                     created_by=account.created_by,
                     updated_at=account.updated_at,
                     updated_by=account.updated_by,
+                )
+            )
+        return items
+
+    async def build_account_list_schemas(self, accounts: list) -> list[SysAccountListSchema]:
+        """分页列表：仅组装 account 主表与 profile 展示字段。"""
+        account_ids = [account.id for account in accounts]
+        identities = await self.repo.list_identities_by_account_ids(account_ids)
+        admin_profiles = await ProfileUserAdminRepository(self.db).list_by_account_ids(account_ids)
+        portal_profiles = await ProfileUserPortalRepository(self.db).list_by_account_ids(
+            account_ids
+        )
+        identity_map: dict[str, list] = {}
+        for identity in identities:
+            identity_map.setdefault(identity.account_id, []).append(identity)
+        admin_profile_map = {profile.account_id: profile for profile in admin_profiles}
+        portal_profile_map = {profile.account_id: profile for profile in portal_profiles}
+
+        avatar_raws = []
+        for account in accounts:
+            match account.account_type:
+                case AccountType.ADMIN.value:
+                    profile = admin_profile_map.get(account.id)
+                case AccountType.PORTAL.value:
+                    profile = portal_profile_map.get(account.id)
+                case _:
+                    profile = None
+            avatar_raws.append(getattr(profile, "avatar", None))
+        avatar_urls = await FileService(self.db).resolve_access_urls(avatar_raws)
+
+        items: list[SysAccountListSchema] = []
+        for account, raw_avatar in zip(accounts, avatar_raws, strict=True):
+            account_identities = identity_map.get(account.id, [])
+            primary_identity = next(
+                (
+                    item
+                    for item in account_identities
+                    if item.identity_type == "ACCOUNT" and item.is_primary
+                ),
+                None,
+            ) or next(
+                (item for item in account_identities if item.identity_type == "ACCOUNT"),
+                None,
+            )
+            match account.account_type:
+                case AccountType.ADMIN.value:
+                    profile = admin_profile_map.get(account.id)
+                case AccountType.PORTAL.value:
+                    profile = portal_profile_map.get(account.id)
+                case _:
+                    profile = None
+            normalize_orm_datetimes(account)
+            resolved_avatar = (
+                avatar_urls.get(str(raw_avatar).strip()) if raw_avatar else None
+            )
+            items.append(
+                SysAccountListSchema(
+                    id=account.id,
+                    account=getattr(primary_identity, "identifier", ""),
+                    account_type=account.account_type,
+                    account_status=account.account_status,
+                    nickname=getattr(profile, "nickname", None),
+                    avatar=resolved_avatar,
+                    phone=getattr(profile, "phone", None),
+                    email=getattr(profile, "email", None),
+                    remark=getattr(profile, "remark", None),
+                    latest_login_time=account.latest_login_time,
+                    updated_at=account.updated_at,
                 )
             )
         return items
@@ -207,7 +276,7 @@ class AccountQueryService:
                     account=getattr(primary_identity, "identifier", ""),
                     account_type=account.account_type,
                     account_status=account.account_status,
-                    name=getattr(profile, "name", None),
+                    name=None,
                     nickname=getattr(profile, "nickname", None),
                     avatar=resolved_avatar,
                     created_at=account.created_at,
