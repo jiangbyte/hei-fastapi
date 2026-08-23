@@ -6,6 +6,7 @@
 import logging
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config.settings import settings
 from app.core.db.session import engine
@@ -30,9 +31,24 @@ from app.middleware.asgi_rest import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
 )
-from app.middleware.cors import add_cors
 
 logger = logging.getLogger(__name__)
+
+
+def _add_cors(app: FastAPI) -> None:
+    """安装 CORS 中间件，处理通配 origin 与 credentials 的兼容。"""
+    origins = list(settings.cors.allow_origins)
+    allow_credentials = settings.cors.allow_credentials
+    if "*" in origins:
+        origins = ["*"]
+        allow_credentials = False
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=allow_credentials,
+        allow_methods=settings.cors.allow_methods,
+        allow_headers=settings.cors.allow_headers,
+    )
 
 
 def create_app() -> FastAPI:
@@ -78,7 +94,7 @@ def create_app() -> FastAPI:
     app.add_middleware(AuthContextMiddleware)
     # 最外层应用中间件（位于 CORS 之后）：保证 request_id 贯穿访问日志。
     app.add_middleware(TraceMiddleware)
-    add_cors(app)
+    _add_cors(app)
     register_exception_handlers(app)
     customize_openapi_error_responses(app)
     setup_observability(app, engine=engine)

@@ -14,11 +14,3 @@ def enable_response_exclude_none(router: APIRouter) -> None:
             route.response_model_exclude_none = True
         elif isinstance(route, Mount) and isinstance(route.app, APIRouter):
             enable_response_exclude_none(route.app)
-
-
-class BootAlignedAPIRouter(APIRouter):
-    """默认排除响应中的 null 字段，与 hei-boot JSON 输出更接近。"""
-
-    def add_api_route(self, path: str, endpoint, **kwargs):
-        kwargs.setdefault("response_model_exclude_none", True)
-        return super().add_api_route(path, endpoint, **kwargs)

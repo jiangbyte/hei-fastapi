@@ -6,7 +6,7 @@
 """
 
 from app.core.config.keys import SENSITIVE_CONFIG_KEYS
-from app.core.secrets.backend import decrypt_plaintext, encrypt_plaintext
+from app.core.secrets import decrypt_plaintext, encrypt_plaintext
 
 # 存储配置中需要加密的敏感列（访问密钥与私钥）。
 _storage_sensitive_columns = {

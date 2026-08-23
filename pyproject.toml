@@ -45,7 +45,6 @@ dependencies = [
   "tencentcloud-sdk-python-ses>=3.1.135",
   "tencentcloud-sdk-python-sms>=3.1.153",
   "uvicorn[standard]>=0.35.0",
-  "websockets>=14.0",
 ]
 
 [project.optional-dependencies]

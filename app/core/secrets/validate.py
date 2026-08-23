@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 
 from app.core.config.settings import settings
-from app.core.secrets.backend import clear_secrets_backend_cache, get_secrets_backend
+from app.core.secrets import clear_secrets_backend_cache, get_secrets_backend
 
 logger = logging.getLogger(__name__)
 

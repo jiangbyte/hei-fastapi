@@ -60,6 +60,7 @@ from app.modules.iam.resource.service import ResourceService
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
 from app.modules.iam.support import audit as iam_audit
+from app.modules.sys.audit.support import resolve_account_login
 from app.modules.profile.admin.repository import ProfileUserAdminRepository
 from app.modules.profile.admin.schema import ProfileUserAdminUpsertPayload
 from app.modules.profile.portal.repository import ProfileUserPortalRepository
@@ -280,7 +281,7 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantresource", [payload.id])
         account = await self.repo.get_required(payload.id)
-        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        subject = await resolve_account_login(self.db, payload.id)
         audit_snapshots.subject(subject or payload.id)
         audit_snapshots.resource_id(payload.id)
         old_grants = await self.relation_repo.list_subject_resource_grants(
@@ -340,7 +341,7 @@ class AccountService:
                 session, "iam:account:grantclientresource", [payload.id]
             )
         account = await self.repo.get_required(payload.id)
-        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        subject = await resolve_account_login(self.db, payload.id)
         audit_snapshots.subject(subject or payload.id)
         audit_snapshots.resource_id(payload.id)
         old_grants = await self.relation_repo.list_subject_client_resource_grants(
@@ -397,7 +398,7 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantrole", [payload.id])
             await self._ensure_roles_visible(session, "iam:account:grantrole", payload.role_ids)
-        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        subject = await resolve_account_login(self.db, payload.id)
         audit_snapshots.subject(subject or payload.id)
         audit_snapshots.resource_id(payload.id)
         old_role_ids = await self.repo.list_account_direct_role_ids(payload.id)
@@ -436,7 +437,7 @@ class AccountService:
         if session is not None:
             await self._ensure_accounts_visible(session, "iam:account:grantgroup", [payload.id])
             await self._ensure_groups_visible(session, "iam:account:grantgroup", payload.group_ids)
-        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        subject = await resolve_account_login(self.db, payload.id)
         audit_snapshots.subject(subject or payload.id)
         audit_snapshots.resource_id(payload.id)
         old_group_ids = await self.repo.list_account_direct_group_ids(payload.id)
@@ -477,7 +478,7 @@ class AccountService:
                 "iam:account:grantdept",
                 [item.dept_id for item in payload.grant_info_list],
             )
-        subject = await iam_audit.primary_account_identifier(self.db, payload.id)
+        subject = await resolve_account_login(self.db, payload.id)
         audit_snapshots.subject(subject or payload.id)
         audit_snapshots.resource_id(payload.id)
         old_grants = await self.repo.list_account_dept_grants(payload.id)

@@ -21,7 +21,6 @@ from app.modules.iam.group.repository import GroupRepository
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
-from app.modules.sys.audit.support import resolve_account_login
 
 
 def permission_bind_field(
@@ -82,10 +81,6 @@ async def grant_client_resource_field(
 ) -> dict[str, Any]:
     names = await _load_client_resource_names(db, _grant_resource_ids(grants))
     return {field_key: format_resource_grants(grants, names)}
-
-
-async def primary_account_identifier(db: AsyncSession, account_id: str | None) -> str | None:
-    return await resolve_account_login(db, account_id)
 
 
 def format_resource_grants(

@@ -3,15 +3,12 @@
 文件 URL 工具：对象名编码、规范化与访问 URL 解析（对齐 hei-boot FileAccessUrls）。
 
 可浏览器访问的 URL 请走 ``FileService.resolve_access_url(s)``（按 sys_file.storage_provider）。
-本模块仅提供无 DB 的纯函数规范化；同步 ``resolve_file_url`` 仅作无会话回退，勿用于业务读路径。
+本模块仅提供无 DB 的纯函数规范化。
 """
 
 from __future__ import annotations
 
-import logging
 from urllib.parse import quote, urlparse
-
-logger = logging.getLogger(__name__)
 
 
 def quote_object_name(object_name: str) -> str:
@@ -75,22 +72,3 @@ def to_object_key(value: str | None) -> str | None:
         except Exception:
             return None
     return strip_to_object_key(value)
-
-
-def resolve_file_url(value: str | None) -> str | None:
-    """无 DB 回退：仅用默认存储引擎签发（业务读路径请用 FileService.resolve_access_url）。"""
-    if not value:
-        return None
-    from app.core.storage.manager import get_storage
-
-    if is_external_url(value) and not looks_like_presigned_url(value):
-        return value
-    key = to_object_key(value) if is_external_url(value) else normalize_object_name(value)
-    if not key or is_external_url(key):
-        return value if is_external_url(value) else None
-    try:
-        storage = get_storage()
-        return str(storage.get_object_url(key))
-    except Exception:
-        logger.warning("resolve_file_url fallback failed | key=%s", key, exc_info=True)
-        return None

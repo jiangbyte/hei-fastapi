@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from contextvars import ContextVar
 from typing import Any
 
@@ -39,22 +38,6 @@ def set_before(data: dict[str, Any] | None) -> None:
 
 def set_after(data: dict[str, Any] | None) -> None:
     _after.set(dict(data or {}))
-
-
-def merge_after(data: Mapping[str, Any] | None) -> None:
-    if not data:
-        return
-    current = dict(_after.get() or {})
-    current.update(dict(data))
-    _after.set(current)
-
-
-def merge_before(data: Mapping[str, Any] | None) -> None:
-    if not data:
-        return
-    current = dict(_before.get() or {})
-    current.update(dict(data))
-    _before.set(current)
 
 
 def set_subject(subject: str | None) -> None:

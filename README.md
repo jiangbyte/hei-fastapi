@@ -64,7 +64,7 @@ hei-fastapi/
 ├── app/                      # FastAPI 应用
 │   ├── core/                 # 配置、安全、存储、中间件等
 │   └── modules/              # 业务模块（auth / iam / sys / profile / workspace / biz）
-├── scripts/hei_fastapi.sql   # MySQL 全量建表、种子数据与表/列 COMMENT
+├── scripts/hei_fastapi.sql   # MySQL 建表+种子（无 DROP，可安全重复导入）
 ├── migrations/               # Alembic 增量表结构
 └── tests/                    # 单元 / API 测试
 ```
@@ -73,7 +73,7 @@ hei-fastapi/
 
 | 文件 / 目录 | 用途 |
 | --- | --- |
-| `scripts/hei_fastapi.sql` | MySQL 全量建表、种子数据（`sys_job.handler` 为 FastAPI 原生 key） |
+| `scripts/hei_fastapi.sql` | MySQL 建表+种子（无 DROP；`IF NOT EXISTS` / `INSERT IGNORE`） |
 | `migrations/` | Alembic 增量表结构（PG / MySQL 可移植建表，见 [`migrations/README.md`](migrations/README.md)） |
 
 ## 快速开始
@@ -92,6 +92,8 @@ hei-fastapi/
 mysql -u root -p -e "CREATE DATABASE hei_fastapi DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 mysql -u root -p hei_fastapi < scripts/hei_fastapi.sql
 ```
+
+`scripts/hei_fastapi.sql` **不含 `DROP TABLE`**，使用 `CREATE TABLE IF NOT EXISTS` + `INSERT IGNORE`，重复导入**不会清空**已有库。仅用于空库/补齐种子，不是重置工具。
 
 与 `hei_boot` 表结构对齐；`sys_job.handler` 使用 FastAPI 栈标识（如 `sys_job_sample`），非 Boot 的 Java 全限定类名。
 

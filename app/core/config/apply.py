@@ -38,8 +38,9 @@ def apply_storage_config() -> None:
     engine = config_reader.get("DEFAULT_FILE_ENGINE")
     if not engine:
         raise RuntimeError(
-            "DEFAULT_FILE_ENGINE is missing in sys_config. "
-            "Set a default file engine via admin panel before starting the application."
+            "DEFAULT_FILE_ENGINE is missing in sys_config (table empty or seed not imported). "
+            "Restore seeds with: mysql ... < scripts/hei_fastapi.sql "
+            "(safe re-import: no DROP TABLE). Or set DEFAULT_FILE_ENGINE via admin after seed."
         )
     default = config_reader.get_default_storage()
     if default is None:

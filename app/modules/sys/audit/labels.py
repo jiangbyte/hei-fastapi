@@ -321,12 +321,6 @@ def field_label(key: str | None) -> str:
     return key
 
 
-def build_login_summary(account: str | None, success: bool) -> str:
-    subject = f" 【{account.strip()}】" if account and account.strip() else ""
-    result = "成功" if success else "失败"
-    return f"账号{subject}登录{result}"
-
-
 def build_content(
     action: str | None,
     resource_type: str | None,

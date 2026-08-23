@@ -424,12 +424,6 @@ def _should_skip_path(path: str) -> bool:
     return False
 
 
-def _extract_resource_type(module_path: str) -> str:
-    """从模块路径推导资源类型（兼容旧调用，优先走 path_catalog）。"""
-    resource_type, _ = resolve_audit_target(module_path, "unknown")
-    return resource_type
-
-
 def _payload_from_request_body(body: bytes, action: str) -> dict[str, Any]:
     if not body:
         return {}

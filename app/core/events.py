@@ -2,11 +2,9 @@
 
 框架事件总线 — 基于 blinker 的进程内事件订阅/发布。
 
-预定义事件:
-  - on_config_loaded(config_reader)     -- sys_config 加载完成后
-  - on_storage_configured               -- 存储配置应用后
-  - on_db_ready                         -- 数据库就绪后
-  - on_permissions_synced(app)          -- 权限同步完成后
+当前使用的事件:
+  - on_db_ready                         -- 数据库就绪后（lifespan）
+  - on_audit_event                      -- 操作审计事件（audit queue → event_handler）
 """
 from __future__ import annotations
 
@@ -49,4 +47,3 @@ async def emit(event_name: str, **kwargs: Any) -> None:
                 await result
         except Exception:
             logger.exception("Error in event handler %s for event %s", handler, event_name)
-
