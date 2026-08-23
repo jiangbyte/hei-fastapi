@@ -26,6 +26,7 @@ from app.core.db.transaction import transactional
 from app.core.email.sender import send_templated_mail
 from app.core.exceptions.business import AuthenticationError, BusinessError
 from app.core.observability.metrics import record_login_attempt
+from app.core.security.account_login import require_account_login, sanitize_account_base
 from app.core.security.password import hash_password, verify_password
 from app.core.security.session import SessionPayload, session_store
 from app.core.security.token import generate_token
@@ -563,9 +564,7 @@ class AuthService:
         if channel == "ACCOUNT":
             if not config_reader.get_bool("AUTH_REGISTER_PORTAL_ALLOW_ACCOUNT", True):
                 raise BusinessError("用户名注册已关闭")
-            account_name = (payload.account or "").strip()
-            if not account_name:
-                raise BusinessError("用户名不能为空")
+            account_name = require_account_login((payload.account or "").strip())
             if await self.account_repo.get_account_by_identifier(
                 account_name, [AccountIdentityType.ACCOUNT]
             ) is not None:
@@ -674,9 +673,8 @@ class AuthService:
         return response
 
     async def _allocate_account_from_contact(self, base: str) -> str:
-        """由邮箱/手机号派生唯一账号名（保留字母数字，注入熵降低碰撞）。"""
-        sanitized = "".join(ch for ch in base if ch.isalnum()).lower()[:16]
-        candidate = sanitized or f"user{uuid4().hex[:6]}"
+        """由邮箱/手机号派生唯一账号名（保留字母数字下划线，注入熵降低碰撞）。"""
+        candidate = sanitize_account_base(base)
         if await self.account_repo.get_account_by_identifier(
             candidate, [AccountIdentityType.ACCOUNT]
         ) is None:

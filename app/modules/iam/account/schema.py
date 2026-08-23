@@ -5,12 +5,13 @@
 
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.core.config.enums import AccountStatusEnum, AccountType
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool
+from app.core.security.account_login import require_account_login
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
 from app.modules.iam.group.schema import SysGroupSchema
 from app.modules.iam.role.schema import SysRoleSchema
@@ -40,6 +41,12 @@ class AccountCreateRequest(ApiSchema):
     """创建账户请求。"""
 
     account: str = Field(min_length=3, max_length=64)
+
+    @field_validator("account")
+    @classmethod
+    def validate_account(cls, value: str) -> str:
+        return require_account_login(value)
+
     password: str = Field(min_length=1, max_length=512)
     password_key_id: str | None = Field(default=None, max_length=64)
     account_type: AccountType
@@ -66,6 +73,12 @@ class AccountUpdateRequest(ApiSchema):
 
     id: str = Field(min_length=1, max_length=64)
     account: str = Field(min_length=3, max_length=64)
+
+    @field_validator("account")
+    @classmethod
+    def validate_account(cls, value: str) -> str:
+        return require_account_login(value)
+
     password: str | None = Field(default=None, min_length=1, max_length=512)
     password_key_id: str | None = Field(default=None, max_length=64)
     account_type: AccountType

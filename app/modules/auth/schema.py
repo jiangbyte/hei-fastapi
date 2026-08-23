@@ -5,12 +5,13 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BeforeValidator, Field
+from pydantic import BeforeValidator, Field, model_validator
 
 from app.core.config.enums import AccountType
 from app.core.response.schema import ApiResponse
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool, WireInt
+from app.core.security.account_login import require_account_login
 from app.core.security.transport import CaptchaMixin, PasswordKeyMixin
 from app.modules.auth.oauth.schema import OauthProviderOptionSchema
 from app.modules.iam.enums import AccountIdentityType
@@ -126,6 +127,12 @@ class RegisterRequest(CaptchaMixin, PasswordKeyMixin):
     email: str | None = Field(default=None, max_length=128)
     phone: str | None = Field(default=None, max_length=32)
     otp_code: OptionalStr = Field(default=None, min_length=4, max_length=16)
+
+    @model_validator(mode="after")
+    def validate_account_channel(self) -> "RegisterRequest":
+        if self.register_channel == "ACCOUNT":
+            self.account = require_account_login(self.account or "")
+        return self
 
 
 class SendRegisterCodeRequest(ApiSchema):
