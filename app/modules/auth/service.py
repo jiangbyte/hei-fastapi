@@ -93,7 +93,7 @@ def session_expires_in(session: SessionPayload) -> int | None:
 
 
 def _audit_record_context() -> dict[str, Any]:
-    """将 AuditSnapshots 上下文合并进 OperationAuditService.record 调用。"""
+    """读取 AuditSnapshots 上下文为 record() 关键字参数字典。"""
     kwargs: dict[str, Any] = {}
     if subject := get_subject():
         kwargs["subject"] = subject
@@ -106,6 +106,11 @@ def _audit_record_context() -> dict[str, Any]:
     if after:
         kwargs["after_data"] = after
     return kwargs
+
+
+def _audit_record(**kwargs: Any) -> dict[str, Any]:
+    """合并快照上下文与显式参数；显式参数覆盖同名字段。"""
+    return {**_audit_record_context(), **kwargs}
 
 
 class AuthService:
@@ -152,17 +157,18 @@ class AuthService:
             )
             record_login_attempt(payload.account_type.value, "failure", "invalid_credentials")
             await OperationAuditService(self.db).record(
-                module="auth",
-                action="login",
-                resource_type="auth",
-                resource_id=payload.account,
-                success=False,
-                error_message="Invalid or locked login attempt",
-                account_type=payload.account_type.value,
-                operator_name=payload.account,
-                ip=payload.client_ip,
-                user_agent=payload.user_agent,
-                **_audit_record_context(),
+                **_audit_record(
+                    module="auth",
+                    action="login",
+                    resource_type="auth",
+                    resource_id=payload.account,
+                    success=False,
+                    error_message="Invalid or locked login attempt",
+                    account_type=payload.account_type.value,
+                    operator_name=payload.account,
+                    ip=payload.client_ip,
+                    user_agent=payload.user_agent,
+                )
             )
             raise
         assert account is not None
@@ -455,17 +461,18 @@ class AuthService:
         record_login_attempt(payload.account_type.value, "success")
         audit_snapshots.resource_id(account.id)
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="login",
-            resource_type="auth",
-            resource_id=account.id,
-            success=True,
-            account_id=account.id,
-            account_type=payload.account_type.value,
-            operator_name=payload.account,
-            ip=payload.client_ip,
-            user_agent=payload.user_agent,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="login",
+                resource_type="auth",
+                resource_id=account.id,
+                success=True,
+                account_id=account.id,
+                account_type=payload.account_type.value,
+                operator_name=payload.account,
+                ip=payload.client_ip,
+                user_agent=payload.user_agent,
+            )
         )
         await self._maybe_notify_password_expiring(account.id)
         return session_payload
@@ -761,15 +768,16 @@ class AuthService:
             account_type=AccountType.PORTAL,
         )
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="register",
-            resource_type="auth",
-            resource_id=account.id,
-            success=True,
-            account_id=account.id,
-            account_type=AccountType.PORTAL.value,
-            operator_name=account_name,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="register",
+                resource_type="auth",
+                resource_id=account.id,
+                success=True,
+                account_id=account.id,
+                account_type=AccountType.PORTAL.value,
+                operator_name=account_name,
+            )
         )
         return response
 
@@ -914,16 +922,17 @@ class AuthService:
         await redis.delete(key)
         await self.session_service.delete_account_sessions(account.account_type, account.id)
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="reset_password",
-            resource_type="auth",
-            resource_id=account.id,
-            success=True,
-            account_id=account.id,
-            account_type=account.account_type,
-            ip=client_ip,
-            user_agent=user_agent,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="reset_password",
+                resource_type="auth",
+                resource_id=account.id,
+                success=True,
+                account_id=account.id,
+                account_type=account.account_type,
+                ip=client_ip,
+                user_agent=user_agent,
+            )
         )
 
     async def forgot_password_by_phone(
@@ -957,16 +966,17 @@ class AuthService:
         }
         await send_templated_sms("RESET_PASSWORD_CODE", phone, variables)
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="forgot_password_phone",
-            resource_type="auth",
-            resource_id=account.id,
-            success=True,
-            account_id=account.id,
-            account_type=account.account_type,
-            ip=client_ip,
-            user_agent=user_agent,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="forgot_password_phone",
+                resource_type="auth",
+                resource_id=account.id,
+                success=True,
+                account_id=account.id,
+                account_type=account.account_type,
+                ip=client_ip,
+                user_agent=user_agent,
+            )
         )
 
     async def reset_password_by_phone(
@@ -1013,16 +1023,17 @@ class AuthService:
         await redis.delete(key)
         await self.session_service.delete_account_sessions(account.account_type, account.id)
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="reset_password_phone",
-            resource_type="auth",
-            resource_id=account.id,
-            success=True,
-            account_id=account.id,
-            account_type=account.account_type,
-            ip=client_ip,
-            user_agent=user_agent,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="reset_password_phone",
+                resource_type="auth",
+                resource_id=account.id,
+                success=True,
+                account_id=account.id,
+                account_type=account.account_type,
+                ip=client_ip,
+                user_agent=user_agent,
+            )
         )
 
     async def logout(self, token: str) -> None:
@@ -1059,14 +1070,15 @@ class AuthService:
         audit_snapshots.after_entity(account)
         await self.session_service.delete_account_sessions(account.account_type, account.id)
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="cancel",
-            resource_type="auth",
-            resource_id=account.id,
-            success=True,
-            account_id=account.id,
-            account_type=account.account_type,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="cancel",
+                resource_type="auth",
+                resource_id=account.id,
+                success=True,
+                account_id=account.id,
+                account_type=account.account_type,
+            )
         )
         retention_days = config_reader.get_int("ACCOUNT_CANCEL_RETENTION_DAYS", 15)
         cancelled_at = account.cancelled_at or datetime.now(UTC)
@@ -1144,14 +1156,15 @@ class AuthService:
     ) -> None:
         """记录密码重置请求的审计日志。"""
         await OperationAuditService(self.db).record(
-            module="auth",
-            action="forgot_password",
-            resource_type="auth",
-            resource_id=account_id or email,
-            success=success,
-            account_id=account_id,
-            account_type=account_type.value,
-            ip=client_ip,
-            user_agent=user_agent,
-            **_audit_record_context(),
+            **_audit_record(
+                module="auth",
+                action="forgot_password",
+                resource_type="auth",
+                resource_id=account_id or email,
+                success=success,
+                account_id=account_id,
+                account_type=account_type.value,
+                ip=client_ip,
+                user_agent=user_agent,
+            )
         )
