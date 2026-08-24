@@ -18,7 +18,6 @@ from app.deps.db import get_db_session
 from app.modules.iam.client.schema import (
     ClientModuleAdminPageQuery,
     ClientModuleCreateRequest,
-    ClientModuleSelectorOption,
     ClientModuleSelectorQuery,
     ClientModuleUpdateRequest,
     ClientResourceAdminPageQuery,

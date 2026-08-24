@@ -63,7 +63,7 @@ def frontend_view_path(component_path: str) -> str:
 
 def frontend_api_file_path(plan_component_path: str, entity_name: str) -> str:
     """生成 api 文件预览路径（相对 fastapi 项目根）。"""
-    from app.modules.sys.codegen.templates import camel_case, snake_case
+    from app.modules.sys.codegen.templates import snake_case
 
     component_path = PurePosixPath(plan_component_path.strip("/"))
     parts = component_path.parts

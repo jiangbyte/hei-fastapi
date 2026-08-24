@@ -15,17 +15,9 @@ from app.core.security.permission_registry import ensure_registered_permission_k
 from app.core.security.session import SessionPayload
 from app.modules.iam.client.model import SysClientModule, SysClientResource
 from app.modules.iam.client.repository import ClientModuleRepository, ClientResourceRepository
-from app.modules.iam.enums import (
-    IamRelationSubjectType,
-    IamRelationTargetType,
-    IamRelationType,
-)
-from app.modules.iam.relation.model import SysIamRelation
-from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.client.schema import (
     ClientModuleAdminPageQuery,
     ClientModuleCreateRequest,
-    ClientModuleSelectorOption,
     ClientModuleSelectorQuery,
     ClientModuleUpdateRequest,
     ClientResourceAdminPageQuery,
@@ -38,7 +30,14 @@ from app.modules.iam.client.schema import (
     SysClientResourcePermissionRelSchema,
     SysClientResourceSchema,
 )
+from app.modules.iam.enums import (
+    IamRelationSubjectType,
+    IamRelationTargetType,
+    IamRelationType,
+)
+from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.schema import ResourceGrantModuleOption
+from app.modules.iam.support import audit as iam_audit
 
 
 class ClientModuleService:

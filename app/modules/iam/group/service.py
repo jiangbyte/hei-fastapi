@@ -7,7 +7,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import snapshots as audit_snapshots
-from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError
 from app.core.response.pagination import PageData, build_page
@@ -50,9 +49,9 @@ from app.modules.iam.group.schema import (
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
-from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
+from app.modules.iam.support import audit as iam_audit
 
 
 class GroupService:

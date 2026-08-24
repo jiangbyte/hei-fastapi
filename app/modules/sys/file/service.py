@@ -14,7 +14,6 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import snapshots as audit_snapshots
-from app.core.config.enums import AccountType
 from app.core.config.settings import settings
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import AuthorizationError, BusinessError, NotFoundError

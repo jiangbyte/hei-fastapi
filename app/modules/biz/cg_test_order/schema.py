@@ -11,7 +11,7 @@ from pydantic import Field
 
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
-from app.core.schema.wire import WireBool, WireFloat, WireInt, WireMoney
+from app.core.schema.wire import WireBool, WireInt, WireMoney
 
 
 class CgTestOrderCreateRequest(ApiSchema):

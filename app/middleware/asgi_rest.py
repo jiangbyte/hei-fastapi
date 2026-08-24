@@ -18,10 +18,10 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.audit.context import clear as clear_audit_context
 from app.core.audit.context import get_after, get_before, get_resource_id, get_subject
+from app.core.audit.field_filter import to_safe_map
 from app.core.audit.path_catalog import resolve_audit_target
 from app.core.audit.queue import OperationAuditEvent, operation_audit_queue
 from app.core.audit.skip_catalog import should_skip_audit
-from app.core.audit.field_filter import to_safe_map
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType, account_type_url_segment
 from app.core.exceptions.business import AuthenticationError
@@ -53,7 +53,7 @@ RATE_LIMIT_RULES: list[tuple[re.Pattern[str], int, int, str]] = [
     (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/oauth/[^/]+/authorize$"), 30, 60, "ip"),
     (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/oauth/[^/]+/callback$"), 30, 60, "ip"),
     (re.compile(rf"^/api/v\d+/({_ACCOUNT_TYPE_PATH_ALTS})/oauth/exchange$"), 30, 60, "ip"),
-    (re.compile(rf"^/api/v\d+/portal/oauth/wechat-mp/login$"), 30, 60, "ip"),
+    (re.compile(r"^/api/v\d+/portal/oauth/wechat-mp/login$"), 30, 60, "ip"),
     (re.compile(r"^/api/v\d+/"), 120, 60, "mix"),
 ]
 

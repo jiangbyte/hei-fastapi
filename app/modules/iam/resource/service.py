@@ -22,7 +22,6 @@ from app.modules.iam.enums import ResourceType
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.iam.resource.repository import ResourceModuleRepository, ResourceRepository
-from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.resource.schema import (
     ResourceAdminPageQuery,
     ResourceButtonCreateRequest,
@@ -32,8 +31,6 @@ from app.modules.iam.resource.schema import (
     ResourceCreateRequest,
     ResourceModuleAdminPageQuery,
     ResourceModuleCreateRequest,
-    ResourceModuleSelectorOption,
-    ResourceModuleSelectorQuery,
     ResourceModuleUpdateRequest,
     ResourcePermissionBindRequest,
     ResourceTreeNode,
@@ -44,6 +41,7 @@ from app.modules.iam.resource.schema import (
     SysResourceSchema,
 )
 from app.modules.iam.schema import PermissionRegistryItem, ResourceGrantModuleOption
+from app.modules.iam.support import audit as iam_audit
 
 
 class ResourceService:

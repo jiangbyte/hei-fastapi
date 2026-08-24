@@ -3,7 +3,6 @@
 账户资料公共响应模型：管理端与门户端的「我的信息」响应。
 """
 
-from datetime import datetime
 
 from pydantic import Field
 

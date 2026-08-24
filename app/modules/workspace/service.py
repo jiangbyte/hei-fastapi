@@ -3,16 +3,14 @@
 工作台服务：快捷应用与总览（对齐 hei-boot WorkspaceServiceImpl）。
 """
 
-from datetime import UTC, datetime
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import snapshots as audit_snapshots
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
-from app.core.security.session import SessionPayload
 from app.core.schema.base import to_schema_list
+from app.core.security.session import SessionPayload
 from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
@@ -86,7 +84,6 @@ class WorkspaceService:
         if len(normalized) > MAX_SHORTCUTS:
             raise BusinessError(f"快捷应用最多 {MAX_SHORTCUTS} 个")
         granted = await self._resolve_granted_resource_ids(session)
-        now = datetime.now(UTC)
         entities: list[SysWorkspaceShortcut] = []
         sort = 1
         for resource_id in normalized:

@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import snapshots as audit_snapshots
-from app.core.config.enums import AccountType
 from app.core.db.transaction import transactional
 from app.core.exceptions.business import BusinessError
 from app.core.response.pagination import PageData, build_page

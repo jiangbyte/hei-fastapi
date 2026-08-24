@@ -22,7 +22,6 @@ from app.modules.biz.cg_test_activity.router import router as cg_test_activity_r
 from app.modules.biz.cg_test_catalog.router import router as cg_test_catalog_router
 from app.modules.biz.cg_test_knowledge_category.router import router as cg_test_knowledge_router
 from app.modules.biz.cg_test_order.router import router as cg_test_order_router
-from app.modules.workspace.router import router as workspace_router
 from app.modules.iam.account.router import router as iam_account_router
 from app.modules.iam.client.router import router as iam_client_router
 from app.modules.iam.dept.router import router as iam_dept_router
@@ -33,7 +32,9 @@ from app.modules.iam.resource.router import router as iam_resource_router
 from app.modules.iam.role.router import router as iam_role_router
 from app.modules.internal.health.router import router as internal_health_router
 from app.modules.profile.admin.router import router as profile_admin_router
-from app.modules.profile.identity.router import admin_manage_router as profile_identity_manage_router
+from app.modules.profile.identity.router import (
+    admin_manage_router as profile_identity_manage_router,
+)
 from app.modules.profile.identity.router import admin_user_router as profile_identity_admin_router
 from app.modules.profile.identity.router import portal_user_router as profile_identity_portal_router
 from app.modules.profile.portal.router import router as profile_portal_router
@@ -50,10 +51,11 @@ from app.modules.sys.feedback.router import portal_router as feedback_portal_rou
 from app.modules.sys.file.portal.router import router as file_portal_router
 from app.modules.sys.file.router import router as sys_file_router
 from app.modules.sys.job.router import router as sys_job_router
-from app.modules.sys.public.router import router as sys_public_router
 from app.modules.sys.notice.router import admin_router as notice_admin_router
 from app.modules.sys.notice.router import portal_router as notice_portal_router
+from app.modules.sys.public.router import router as sys_public_router
 from app.modules.sys.weak_password.router import router as weak_password_router
+from app.modules.workspace.router import router as workspace_router
 
 # (tags, router) 挂载清单，顺序与历史注册顺序一致。
 _ROUTERS: list[tuple[str, APIRouter]] = [

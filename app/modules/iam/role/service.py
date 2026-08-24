@@ -29,7 +29,6 @@ from app.modules.iam.enums import GrantSubjectType
 from app.modules.iam.relation.model import SysIamRelation
 from app.modules.iam.relation.repository import IamRelationRepository
 from app.modules.iam.resource.service import ResourceService
-from app.modules.iam.support import audit as iam_audit
 from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
@@ -48,6 +47,7 @@ from app.modules.iam.role.schema import (
     RoleUpdateRequest,
     SysRoleSchema,
 )
+from app.modules.iam.support import audit as iam_audit
 from app.modules.profile.utils.profile import get_profiles_batch
 
 

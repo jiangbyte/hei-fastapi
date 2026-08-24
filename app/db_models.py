@@ -36,6 +36,6 @@ from app.modules.sys.codegen import model as codegen_model  # noqa: F401
 from app.modules.sys.dict import model as dict_model  # noqa: F401
 from app.modules.sys.feedback import model as feedback_model  # noqa: F401
 from app.modules.sys.file import model as file_model  # noqa: F401
-from app.modules.sys.notice import model as notice_model  # noqa: F401
 from app.modules.sys.job import model as job_model  # noqa: F401
+from app.modules.sys.notice import model as notice_model  # noqa: F401
 from app.modules.workspace import model as workspace_model  # noqa: F401

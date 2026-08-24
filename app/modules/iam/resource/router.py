@@ -24,7 +24,6 @@ from app.modules.iam.resource.schema import (
     ResourceCreateRequest,
     ResourceModuleAdminPageQuery,
     ResourceModuleCreateRequest,
-    ResourceModuleSelectorOption,
     ResourceModuleUpdateRequest,
     ResourcePermissionBindRequest,
     ResourceTreeNode,

@@ -19,7 +19,10 @@ from app.modules.profile.identity.enums import (
     RealNameBusinessType,
 )
 from app.modules.profile.identity.model import RealNameCase
-from app.modules.profile.identity.repository import ProfileIdentityRepository, RealNameCaseRepository
+from app.modules.profile.identity.repository import (
+    ProfileIdentityRepository,
+    RealNameCaseRepository,
+)
 from app.modules.profile.identity.schema import RealNameCaseSubmitRequest
 
 

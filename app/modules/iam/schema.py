@@ -11,6 +11,7 @@ from app.core.config.enums import AccountStatusEnum, AccountType, DataScope
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireBool
 from app.modules.iam.enums import AccountIdentityBindStatus, AccountIdentityType
+from app.modules.profile.identity.schema import IdentityStatusResponse
 
 
 class AccountIdentitySchema(ApiSchema):
@@ -27,9 +28,6 @@ class AccountIdentitySchema(ApiSchema):
     created_by: str | None = None
     updated_at: datetime | None = None
     updated_by: str | None = None
-
-
-from app.modules.profile.identity.schema import IdentityStatusResponse
 
 
 class SysAccountListSchema(ApiSchema):

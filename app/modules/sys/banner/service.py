@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import snapshots as audit_snapshots
-
 from app.core.cache.keys import banner_interaction_delta_key
 from app.core.cache.redis import get_redis
 from app.core.config.enums import AccountType

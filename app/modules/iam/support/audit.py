@@ -5,7 +5,7 @@ IAM 审计：将 ID / 授权结构解析为可读展示标签（对齐 hei-boot 
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import select
@@ -14,12 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.iam.account.query_service import AccountQueryService
 from app.modules.iam.account.repository import AccountRepository
 from app.modules.iam.client.model import SysClientResource
-from app.modules.iam.dept.model import SysDept
 from app.modules.iam.dept.repository import DeptRepository
-from app.modules.iam.group.model import SysGroup
 from app.modules.iam.group.repository import GroupRepository
 from app.modules.iam.resource.model import SysResource
-from app.modules.iam.role.model import SysRole
 from app.modules.iam.role.repository import RoleRepository
 
 
