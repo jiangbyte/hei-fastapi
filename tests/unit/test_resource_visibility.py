@@ -1,5 +1,7 @@
 """ Author: Charlie """
 
+import uuid
+
 import pytest
 
 from app.core.config.enums import AccountStatusEnum, AccountType, StatusEnum
@@ -531,18 +533,21 @@ async def test_resource_tree_filters_by_module_id_and_client(db_session):
 
 
 async def test_resource_module_selector_and_page_filter_by_client(db_session):
+    suffix = uuid.uuid4().hex[:8]
+    admin_module_id = f"module_admin_{suffix}"
+    portal_module_id = f"module_portal_{suffix}"
     db_session.add_all(
         [
             SysResourceModule(
-                id="module_admin",
-                code="admin",
+                id=admin_module_id,
+                code=f"admin_{suffix}",
                 name="Admin",
                 client=AccountType.ADMIN.value,
                 sort=1,
             ),
             SysResourceModule(
-                id="module_portal",
-                code="portal",
+                id=portal_module_id,
+                code=f"portal_{suffix}",
                 name="Portal",
                 client=AccountType.PORTAL.value,
                 sort=2,
@@ -560,52 +565,54 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
         )
     )
 
-    assert [item.id for item in portal_selector] == ["module_portal"]
-    assert [item.id for item in page.records] == ["module_portal"]
+    assert [item.id for item in portal_selector] == [portal_module_id]
+    assert [item.id for item in page.records] == [portal_module_id]
 
 
 async def test_grant_modules_group_by_real_parent_without_root(db_session):
+    suffix = uuid.uuid4().hex[:8]
+    module_id = f"module_admin_{suffix}"
     db_session.add_all(
         [
             SysResourceModule(
-                id="module_admin",
-                code="admin",
+                id=module_id,
+                code=f"admin_{suffix}",
                 name="Admin",
                 client=AccountType.ADMIN.value,
                 sort=1,
             ),
             SysResource(
-                id="catalog_sys",
-                code="sys",
+                id=f"catalog_sys_{suffix}",
+                code=f"sys_{suffix}",
                 name="系统",
                 resource_type=ResourceType.CATALOG.value,
-                module_id="module_admin",
+                module_id=module_id,
                 sort=1,
             ),
             SysResource(
-                id="menu_banner",
-                parent_id="catalog_sys",
-                code="sys-banner",
+                id=f"menu_banner_{suffix}",
+                parent_id=f"catalog_sys_{suffix}",
+                code=f"sys-banner_{suffix}",
                 name="展示图管理",
                 resource_type=ResourceType.MENU.value,
-                module_id="module_admin",
+                module_id=module_id,
                 sort=2,
             ),
             SysResource(
-                id="page_banner_create",
-                parent_id="menu_banner",
-                code="sys-banner-create-page",
+                id=f"page_banner_create_{suffix}",
+                parent_id=f"menu_banner_{suffix}",
+                code=f"sys-banner-create-page_{suffix}",
                 name="新增展示图页",
                 resource_type=ResourceType.PAGE.value,
-                module_id="module_admin",
+                module_id=module_id,
                 sort=3,
             ),
             SysResource(
-                id="menu_dashboard",
-                code="dashboard",
+                id=f"menu_dashboard_{suffix}",
+                code=f"dashboard_{suffix}",
                 name="运营工作台",
                 resource_type=ResourceType.MENU.value,
-                module_id="module_admin",
+                module_id=module_id,
                 sort=4,
             ),
         ]
@@ -618,11 +625,14 @@ async def test_grant_modules_group_by_real_parent_without_root(db_session):
     assert len(modules) == 1
     menu_by_id = {item.id: item for item in modules[0].menu}
 
-    assert set(menu_by_id) == {"menu_banner", "page_banner_create", "menu_dashboard"}
-    assert "catalog_sys" not in menu_by_id
-    assert menu_by_id["menu_banner"].parent_id_name == "系统"
-    assert menu_by_id["page_banner_create"].parent_id_name == "展示图管理"
-    assert menu_by_id["menu_dashboard"].parent_id_name == "运营工作台"
+    menu_banner_id = f"menu_banner_{suffix}"
+    page_banner_create_id = f"page_banner_create_{suffix}"
+    menu_dashboard_id = f"menu_dashboard_{suffix}"
+    assert set(menu_by_id) == {menu_banner_id, page_banner_create_id, menu_dashboard_id}
+    assert f"catalog_sys_{suffix}" not in menu_by_id
+    assert menu_by_id[menu_banner_id].parent_id_name == "系统"
+    assert menu_by_id[page_banner_create_id].parent_id_name == "展示图管理"
+    assert menu_by_id[menu_dashboard_id].parent_id_name == "运营工作台"
     assert all(item.parent_id_name != "ROOT" for item in modules[0].menu)
 
     portal_modules = await ResourceService(db_session).list_grant_modules(

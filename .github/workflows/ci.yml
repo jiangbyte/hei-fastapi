@@ -61,7 +61,7 @@ jobs:
           APP__CONFIG_CRYPTO_KEY: "EkFRKxJWiXzKVpHYuMq_hcPvTdQr2ThbA8-J_HYZib4="
           DB__URL: ${{ matrix.db_url }}
           REDIS__URL: "redis://localhost:6379/0"
-        run: pytest tests/unit tests/api -q --tb=short
+        run: pytest tests/api tests/unit -q --tb=short
       - name: Bandit (medium+)
         if: matrix.db == 'postgres'
         run: bandit -q -r app -x app/modules/biz -ll
