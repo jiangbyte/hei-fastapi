@@ -227,17 +227,23 @@ def event_loop():
 
 
 @pytest.fixture
-async def db_session() -> AsyncIterator[AsyncSession]:
+async def db_session(monkeypatch) -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(_test_db_url())
     await _ensure_schema(engine)
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with session_factory() as session:
-        await session.begin()
-        try:
+    async with engine.connect() as conn:
+        await conn.begin()
+        session_factory = async_sessionmaker(
+            bind=conn,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        monkeypatch.setattr(
+            "app.core.config.reader.get_session_factory",
+            lambda: session_factory,
+        )
+        async with session_factory() as session:
             yield session
-        finally:
-            if session.in_transaction():
-                await session.rollback()
+        await conn.rollback()
     await engine.dispose()
 
 
