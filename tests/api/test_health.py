@@ -4,7 +4,8 @@ async def test_root_health(client):
     response = await client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "ok"
+    assert str(data["code"]) == "200"
+    assert data["data"]["name"] == "hei-fastapi"
 
 
 async def test_cors_headers_present_for_frontend_origin(client):

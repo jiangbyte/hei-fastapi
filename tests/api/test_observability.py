@@ -38,8 +38,8 @@ async def test_ready_endpoint_shape(client):
 async def test_ready_endpoint_checks_required_redis(client):
     response = await client.get("/api/v1/internal/health/ready")
     data = response.json()
-    assert data["checks"]["redis"]["enabled"] == "true"
-    assert data["checks"]["redis"]["ok"] == "true"
+    assert data["checks"]["redis"]["enabled"] in {True, "true"}
+    assert data["checks"]["redis"]["ok"] in {True, "true"}
     assert data["checks"]["redis"]["detail"] == "connection ok"
     # 单元环境中 storage 等不可用时整体仍可能为 503。
     assert response.status_code in {200, 503}

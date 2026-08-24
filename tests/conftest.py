@@ -230,14 +230,16 @@ def event_loop():
 async def db_session() -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(_test_db_url())
     await _ensure_schema(engine)
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with session_factory() as session:
-        await session.begin()
-        try:
+    async with engine.connect() as conn:
+        await conn.begin()
+        session_factory = async_sessionmaker(
+            bind=conn,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        async with session_factory() as session:
             yield session
-        finally:
-            if session.in_transaction():
-                await session.rollback()
+        await conn.rollback()
     await engine.dispose()
 
 
@@ -245,6 +247,18 @@ async def db_session() -> AsyncIterator[AsyncSession]:
 async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
     # 契约测试需要 OpenAPI；生产默认关闭 Swagger。
     monkeypatch.setattr(settings.swagger, "enabled", True)
+    monkeypatch.setattr(
+        settings.cors,
+        "allow_origins",
+        [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5163",
+            "http://127.0.0.1:5163",
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+        ],
+    )
     app = create_app()
     test_router = APIRouter()
 
@@ -256,31 +270,33 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
     app.include_router(test_router)
     engine = create_async_engine(_test_db_url())
     await _ensure_schema(engine)
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    from app.modules.internal.health import router as health_router
+    async with engine.connect() as conn:
+        await conn.begin()
+        session_factory = async_sessionmaker(
+            bind=conn,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        from app.modules.internal.health import router as health_router
 
-    monkeypatch.setattr(health_router, "get_session_factory", lambda: session_factory)
+        monkeypatch.setattr(health_router, "get_session_factory", lambda: session_factory)
 
-    async def override_get_db_session() -> AsyncIterator[AsyncSession]:
-        async with session_factory() as session:
-            await session.begin()
-            try:
+        async def override_get_db_session() -> AsyncIterator[AsyncSession]:
+            async with session_factory() as session:
                 yield session
-            finally:
-                if session.in_transaction():
-                    await session.rollback()
 
-    app.dependency_overrides[get_db_session] = override_get_db_session
-    async with AsyncClient(
-        transport=ASGITransport(app=app, raise_app_exceptions=False),
-        base_url="http://testserver",
-    ) as ac:
-        try:
-            yield ac
-        finally:
-            app.dependency_overrides.clear()
-            await close_engine()
-            await engine.dispose()
+        app.dependency_overrides[get_db_session] = override_get_db_session
+        async with AsyncClient(
+            transport=ASGITransport(app=app, raise_app_exceptions=False),
+            base_url="http://testserver",
+        ) as ac:
+            try:
+                yield ac
+            finally:
+                app.dependency_overrides.clear()
+                await close_engine()
+        await conn.rollback()
+    await engine.dispose()
 
 
 @pytest.fixture
