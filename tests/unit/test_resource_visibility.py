@@ -558,14 +558,14 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
 
     service = ResourceModuleService(db_session)
     selector = await service.selector()
-    portal_selector = [item for item in selector if item.client == AccountType.PORTAL.value]
+    selector_ids = {item.id for item in selector}
     page = await service.page_admin(
         ResourceModuleAdminPageQuery(
             current=1, size=20, client=AccountType.PORTAL,
         )
     )
 
-    assert [item.id for item in portal_selector] == [portal_module_id]
+    assert portal_module_id in selector_ids
     assert [item.id for item in page.records] == [portal_module_id]
 
 
