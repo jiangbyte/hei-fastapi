@@ -230,16 +230,14 @@ def event_loop():
 async def db_session() -> AsyncIterator[AsyncSession]:
     engine = create_async_engine(_test_db_url())
     await _ensure_schema(engine)
-    async with engine.connect() as conn:
-        await conn.begin()
-        session_factory = async_sessionmaker(
-            bind=conn,
-            expire_on_commit=False,
-            join_transaction_mode="create_savepoint",
-        )
-        async with session_factory() as session:
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        await session.begin()
+        try:
             yield session
-        await conn.rollback()
+        finally:
+            if session.in_transaction():
+                await session.rollback()
     await engine.dispose()
 
 
@@ -281,20 +279,21 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
 
         monkeypatch.setattr(health_router, "get_session_factory", lambda: session_factory)
 
-        async def override_get_db_session() -> AsyncIterator[AsyncSession]:
-            async with session_factory() as session:
-                yield session
+        async with session_factory() as shared_session:
 
-        app.dependency_overrides[get_db_session] = override_get_db_session
-        async with AsyncClient(
-            transport=ASGITransport(app=app, raise_app_exceptions=False),
-            base_url="http://testserver",
-        ) as ac:
-            try:
-                yield ac
-            finally:
-                app.dependency_overrides.clear()
-                await close_engine()
+            async def override_get_db_session() -> AsyncIterator[AsyncSession]:
+                yield shared_session
+
+            app.dependency_overrides[get_db_session] = override_get_db_session
+            async with AsyncClient(
+                transport=ASGITransport(app=app, raise_app_exceptions=False),
+                base_url="http://testserver",
+            ) as ac:
+                try:
+                    yield ac
+                finally:
+                    app.dependency_overrides.clear()
+                    await close_engine()
         await conn.rollback()
     await engine.dispose()
 

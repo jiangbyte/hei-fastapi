@@ -228,6 +228,7 @@ async def test_admin_forgot_and_reset_password_use_email_link(client, monkeypatc
         "app.core.email.sender.send_templated_mail",
         fake_send_templated_mail,
     )
+    monkeypatch.setattr("app.core.email.sender.is_mail_configured", lambda: True)
 
     override = client._transport.app.dependency_overrides[get_db_session]
     async for session in override():
@@ -304,6 +305,7 @@ async def test_portal_forgot_password_uses_portal_reset_url(client, monkeypatch)
         "app.core.email.sender.send_templated_mail",
         fake_send_templated_mail,
     )
+    monkeypatch.setattr("app.core.email.sender.is_mail_configured", lambda: True)
 
     override = client._transport.app.dependency_overrides[get_db_session]
     async for session in override():

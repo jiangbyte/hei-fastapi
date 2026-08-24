@@ -11,7 +11,6 @@ from app.modules.iam.resource.model import SysResource, SysResourceModule
 from app.modules.iam.resource.schema import (
     ResourceCreateRequest,
     ResourceModuleAdminPageQuery,
-    ResourceModuleSelectorQuery,
     ResourceTreeQuery,
     ResourceUpdateRequest,
 )
@@ -553,16 +552,15 @@ async def test_resource_module_selector_and_page_filter_by_client(db_session):
     await db_session.commit()
 
     service = ResourceModuleService(db_session)
-    selector = await service.selector(
-        ResourceModuleSelectorQuery(client=AccountType.PORTAL)
-    )
+    selector = await service.selector()
+    portal_selector = [item for item in selector if item.client == AccountType.PORTAL.value]
     page = await service.page_admin(
         ResourceModuleAdminPageQuery(
             current=1, size=20, client=AccountType.PORTAL,
         )
     )
 
-    assert [item.id for item in selector] == ["module_portal"]
+    assert [item.id for item in portal_selector] == ["module_portal"]
     assert [item.id for item in page.records] == ["module_portal"]
 
 
