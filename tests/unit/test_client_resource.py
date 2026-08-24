@@ -1,5 +1,7 @@
 """ Author: Charlie """
 
+import uuid
+
 from app.core.config.enums import AccountType, StatusEnum
 from app.modules.iam.client.model import SysClientModule, SysClientResource
 from app.modules.iam.client.schema import ClientModuleSelectorQuery
@@ -87,33 +89,36 @@ async def test_client_resource_grant_isolated_from_resource_ids(db_session):
 
 
 async def test_client_resource_tree_filters_by_account_type(db_session):
+    suffix = uuid.uuid4().hex[:8]
+    admin_module_id = f"m_admin_{suffix}"
+    portal_module_id = f"m_portal_{suffix}"
     db_session.add_all(
         [
             SysClientModule(
-                id="m_admin",
+                id=admin_module_id,
                 name="Admin Mod",
-                code="admin-default",
+                code=f"admin-default-{suffix}",
                 account_type=AccountType.ADMIN.value,
             ),
             SysClientModule(
-                id="m_portal",
+                id=portal_module_id,
                 name="Portal Mod",
-                code="portal-default",
+                code=f"portal-default-{suffix}",
                 account_type=AccountType.PORTAL.value,
             ),
             SysClientResource(
-                id="cr_admin",
+                id=f"cr_admin_{suffix}",
                 code="home",
                 name="Admin Home",
                 resource_type=ResourceType.MENU.value,
-                module_id="m_admin",
+                module_id=admin_module_id,
             ),
             SysClientResource(
-                id="cr_portal",
+                id=f"cr_portal_{suffix}",
                 code="home",
                 name="Portal Home",
                 resource_type=ResourceType.MENU.value,
-                module_id="m_portal",
+                module_id=portal_module_id,
             ),
         ]
     )
@@ -125,4 +130,4 @@ async def test_client_resource_tree_filters_by_account_type(db_session):
         None,
         ClientResourceTreeQuery(account_type=AccountType.PORTAL),
     )
-    assert [node.id for node in tree] == ["cr_portal"]
+    assert [node.id for node in tree] == [f"cr_portal_{suffix}"]

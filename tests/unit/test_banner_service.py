@@ -37,7 +37,7 @@ async def _create_banner(db_session, service: BannerService, **overrides) -> str
     title = overrides.get("title", "Home Banner")
     stmt = select(SysBanner.id).where(SysBanner.title == title)
     banner_id = (await db_session.execute(stmt)).scalar_one()
-    await db_session.rollback()
+    await db_session.commit()
     return banner_id
 
 

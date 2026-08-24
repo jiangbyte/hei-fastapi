@@ -11,9 +11,6 @@ def test_resolve_test_db_url_uses_db_url_by_default(monkeypatch):
         "DB__URL",
         "mysql+aiomysql://root:123456@127.0.0.1:3306/hei_fastapi?charset=utf8mb4",
     )
-    from app.core.config.settings import settings
-
-    settings.db.url = os.environ["DB__URL"]
     assert resolve_test_db_url() == os.environ["DB__URL"]
 
 
