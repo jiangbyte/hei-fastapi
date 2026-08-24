@@ -206,6 +206,7 @@ class ResourceModuleAdminPageQuery(PageQuery):
     resource_type: ResourceType | None = None
     module_id: str | None = Field(default=None, max_length=64)
     status: str | None = Field(default=None, max_length=32)
+    client: AccountType | None = None
 
 
 class SysResourceModuleSchema(ApiSchema):

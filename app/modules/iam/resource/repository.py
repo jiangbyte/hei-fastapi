@@ -542,6 +542,8 @@ class ResourceModuleRepository:
             filters.append(SysResourceModule.code.contains(query.code))
         if query.status:
             filters.append(SysResourceModule.status == query.status)
+        if query.client:
+            filters.append(SysResourceModule.client == query.client.value)
         if filters:
             stmt = stmt.where(*filters)
             count_stmt = count_stmt.where(*filters)
