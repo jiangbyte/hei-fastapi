@@ -39,12 +39,22 @@ def test_json_array_length_compiles() -> None:
 def test_ci_like_and_json_contains_compile() -> None:
     col = column("name", String)
     like_sql = str(
-        select(ci_like(col, "%AbC%")).compile(
+        select(ci_like(col, "AbC")).compile(
             dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
         )
     )
     assert "lower" in like_sql.lower()
     assert "%abc%" in like_sql.lower()
+    assert "ESCAPE" in like_sql.upper()
+
+    # 用户输入中的通配符会被转义，避免被当成 LIKE 模式。
+    escaped_sql = str(
+        select(ci_like(col, "%AbC%")).compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    ).lower()
+    assert "escape" in escaped_sql
+    assert "\\\\%" in escaped_sql or r"\%" in escaped_sql
 
     json_col = column("target_account_types")
     contains_sql = str(
