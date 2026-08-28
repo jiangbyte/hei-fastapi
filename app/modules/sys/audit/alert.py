@@ -12,6 +12,7 @@ from app.core.config.reader import config_reader
 from app.core.config.settings import settings
 from app.core.email.sender import send_mail
 from app.core.id_generator.snowflake import generate_snowflake_id
+from app.core.security.safe_url import UnsafeUrlError, validate_outbound_url
 from app.core.security.signature import sign_feishu
 from app.modules.sys.audit.alert_model import SysAlertLog
 from app.modules.sys.audit.analyzer import AlertEvent
@@ -158,10 +159,13 @@ class AlertDispatcher:
             payload["sign"] = sign
 
         try:
+            validate_outbound_url(url)
             import httpx
 
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
                 await client.post(url, json=payload)
+        except UnsafeUrlError:
+            logger.warning("Blocked unsafe alert webhook url for %s", event.rule_name)
         except Exception:
             logger.exception("Failed to send alert webhook for %s", event.rule_name)
 
@@ -172,7 +176,7 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
         return "Webhook URL 为空"
 
     try:
-        url = webhook_url
+        url = validate_outbound_url(webhook_url)
         payload = {
             "msg_type": "text",
             "content": {
@@ -187,11 +191,13 @@ async def send_test_webhook(webhook_url: str, webhook_secret: str = "") -> str:
 
         import httpx
 
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
             resp = await client.post(url, json=payload)
             if resp.status_code >= 400:
                 return f"HTTP {resp.status_code}: {resp.text[:200]}"
         return ""
+    except UnsafeUrlError as exc:
+        return f"Webhook URL 不安全: {exc}"
     except Exception as exc:
         return f"发送失败: {exc}"
 

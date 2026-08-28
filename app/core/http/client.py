@@ -38,7 +38,7 @@ async def init_http_client() -> None:
     """初始化全局 HTTP 客户端，供应用生命周期内复用连接池。"""
     global http_client
     if http_client is None:
-        http_client = InstrumentedAsyncClient(timeout=10.0)
+        http_client = InstrumentedAsyncClient(timeout=10.0, follow_redirects=False)
 
 
 def get_http_client() -> httpx.AsyncClient:

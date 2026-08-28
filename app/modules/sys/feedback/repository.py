@@ -75,7 +75,7 @@ class SysFeedbackRepository:
         count_stmt = select(func.count(SysFeedback.id))
         filters = []
         if query.title:
-            filters.append(ci_like(SysFeedback.title, f"%{query.title}%"))
+            filters.append(ci_like(SysFeedback.title, query.title))
         if query.category:
             filters.append(SysFeedback.category == query.category)
         if query.status:

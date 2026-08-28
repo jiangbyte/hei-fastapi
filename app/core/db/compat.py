@@ -37,9 +37,10 @@ def json_array_contains(column: ColumnElement, value: str) -> ColumnElement[bool
     return cast(column, String).contains(f'"{value}"')
 
 
-def ci_like(column: ColumnElement, pattern: str) -> ColumnElement[bool]:
-    """大小写不敏感 LIKE：列侧 lower，模式在 Python 侧 lower，保证 PG/MySQL 一致。"""
-    return func.lower(column).like(pattern.lower())
+def ci_like(column: ColumnElement, value: str) -> ColumnElement[bool]:
+    """大小写不敏感模糊包含：自动转义 LIKE 通配符，保证 PG/MySQL 一致。"""
+    pattern = f"%{escape_like(value or '')}%"
+    return func.lower(column).like(pattern.lower(), escape="\\")
 
 
 def escape_like(value: str) -> str:

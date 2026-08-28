@@ -60,7 +60,7 @@ class JobRepository:
         count_stmt = select(func.count(SysJob.id))
         filters = []
         if query.name:
-            filters.append(ci_like(SysJob.name, f"%{query.name}%"))
+            filters.append(ci_like(SysJob.name, query.name))
         if query.trigger_type:
             filters.append(SysJob.trigger_type == str(query.trigger_type))
         if query.enabled is not None:

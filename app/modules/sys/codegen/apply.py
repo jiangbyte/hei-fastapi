@@ -109,7 +109,11 @@ def apply_preview_files(
             result.skipped.append(rel)
             continue
 
-        path = root / rel
+        path = (root / rel).resolve()
+        try:
+            path.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(f"path escapes output root: {rel}") from exc
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(item.content, encoding="utf-8", newline="\n")
         result.written.append(rel)

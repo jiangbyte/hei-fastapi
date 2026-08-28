@@ -73,11 +73,11 @@ class CgTestCatalogRepository:
         count_stmt = select(func.count(CgTestCatalog.id))
         filters = []
         if query.code:
-            filters.append(ci_like(CgTestCatalog.code, f"%{query.code}%"))
+            filters.append(ci_like(CgTestCatalog.code, query.code))
         if query.name:
-            filters.append(ci_like(CgTestCatalog.name, f"%{query.name}%"))
+            filters.append(ci_like(CgTestCatalog.name, query.name))
         if query.category:
-            filters.append(ci_like(CgTestCatalog.category, f"%{query.category}%"))
+            filters.append(ci_like(CgTestCatalog.category, query.category))
         if query.status is not None:
             filters.append(CgTestCatalog.status == query.status)
         if data_scope_filter is not None:
@@ -110,7 +110,7 @@ class CgTestCatalogRepository:
         stmt = select(CgTestCatalog).order_by(CgTestCatalog.id.asc())
         filters = []
         if keyword:
-            filters.append(ci_like(CgTestCatalog.name, f"%{keyword}%"))
+            filters.append(ci_like(CgTestCatalog.name, keyword))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:

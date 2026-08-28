@@ -91,6 +91,9 @@ def set_session_cookie(
             key=settings.auth.session_cookie_name,
             path=legacy_path,
         )
+    from app.core.security.csrf import issue_csrf_cookie
+
+    issue_csrf_cookie(response, max_age=max_age)
 
 
 def clear_session_cookie(
@@ -110,3 +113,6 @@ def clear_session_cookie(
         key=settings.auth.session_cookie_name,
         path=settings.auth.session_cookie_path,
     )
+    from app.core.security.csrf import clear_csrf_cookie
+
+    clear_csrf_cookie(response)

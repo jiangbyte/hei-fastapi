@@ -78,9 +78,9 @@ class CodegenRepository:
         count_stmt = select(func.count(SysCodegenPlan.id))
         filters = []
         if query.name:
-            filters.append(ci_like(SysCodegenPlan.name, f"%{query.name}%"))
+            filters.append(ci_like(SysCodegenPlan.name, query.name))
         if query.table_name:
-            filters.append(ci_like(SysCodegenPlan.table_name, f"%{query.table_name}%"))
+            filters.append(ci_like(SysCodegenPlan.table_name, query.table_name))
         if query.gen_type:
             filters.append(SysCodegenPlan.gen_type == query.gen_type)
         if filters:

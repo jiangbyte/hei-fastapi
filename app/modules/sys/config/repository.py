@@ -150,7 +150,7 @@ class ConfigRepository:
         count_stmt = select(func.count(SysConfig.id))
         filters = []
         if query.config_key:
-            filters.append(ci_like(SysConfig.config_key, f"%{query.config_key}%"))
+            filters.append(ci_like(SysConfig.config_key, query.config_key))
         if query.category:
             filters.append(SysConfig.category == query.category)
         if filters:

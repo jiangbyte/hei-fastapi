@@ -147,6 +147,8 @@ class CorsSettings(BaseSettings):
         "X-Request-Id",
         "Accept",
         "Origin",
+        "X-Requested-With",
+        "X-HEI-CSRF",
     ]
 
 
@@ -206,6 +208,8 @@ class StorageSettings(BaseSettings):
         ".sh",
         ".js",
         ".html",
+        ".htm",
+        ".svg",
         ".php",
         ".py",
         ".jar",

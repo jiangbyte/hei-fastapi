@@ -77,15 +77,15 @@ class CgTestOrderRepository:
         count_stmt = select(func.count(CgTestOrder.id))
         filters = []
         if query.order_no:
-            filters.append(ci_like(CgTestOrder.order_no, f"%{query.order_no}%"))
+            filters.append(ci_like(CgTestOrder.order_no, query.order_no))
         if query.name:
-            filters.append(ci_like(CgTestOrder.name, f"%{query.name}%"))
+            filters.append(ci_like(CgTestOrder.name, query.name))
         if query.customer_name:
-            filters.append(ci_like(CgTestOrder.customer_name, f"%{query.customer_name}%"))
+            filters.append(ci_like(CgTestOrder.customer_name, query.customer_name))
         if query.status is not None:
             filters.append(CgTestOrder.status == query.status)
         if query.type:
-            filters.append(ci_like(CgTestOrder.type, f"%{query.type}%"))
+            filters.append(ci_like(CgTestOrder.type, query.type))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:
@@ -140,9 +140,9 @@ class CgTestOrderItemRepository:
         if query.order_id:
             filters.append(CgTestOrderItem.order_id == query.order_id)
         if query.name:
-            filters.append(ci_like(CgTestOrderItem.name, f"%{query.name}%"))
+            filters.append(ci_like(CgTestOrderItem.name, query.name))
         if query.sku_code:
-            filters.append(ci_like(CgTestOrderItem.sku_code, f"%{query.sku_code}%"))
+            filters.append(ci_like(CgTestOrderItem.sku_code, query.sku_code))
         if query.status is not None:
             filters.append(CgTestOrderItem.status == query.status)
         if filters:

@@ -31,6 +31,7 @@ from app.middleware.asgi_rest import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
 )
+from app.middleware.csrf import CsrfProtectMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(AuthWhitelistMiddleware)
     app.add_middleware(AuthContextMiddleware)
+    app.add_middleware(CsrfProtectMiddleware)
     # 最外层应用中间件（位于 CORS 之后）：保证 request_id 贯穿访问日志。
     app.add_middleware(TraceMiddleware)
     _add_cors(app)

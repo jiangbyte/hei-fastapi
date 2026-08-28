@@ -11,6 +11,7 @@ from app.core.config.enums import AccountType, StatusEnum
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema
 from app.core.schema.wire import WireInt
+from app.core.security.safe_link import UnsafeLinkError, validate_banner_link
 from app.modules.sys.banner.enums import BannerLinkType
 
 _ALLOWED_ACCOUNT_TYPES = {item.value for item in AccountType}
@@ -54,6 +55,15 @@ class BannerCreateRequest(ApiSchema):
         if invalid:
             raise ValueError(f"目标账户类型无效: {', '.join(invalid)}")
         self.target_account_types = types
+        try:
+            link_type = (
+                self.link_type.value
+                if isinstance(self.link_type, BannerLinkType)
+                else str(self.link_type or "URL")
+            )
+            validate_banner_link(link_type, self.url)
+        except UnsafeLinkError as exc:
+            raise ValueError(str(exc)) from exc
         return self
 
 

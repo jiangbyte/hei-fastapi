@@ -76,9 +76,16 @@ class ConfigService:
         await self._commit_and_reload("sys_config.delete")
 
     async def detail(self, query: IdQuery) -> SysConfigSchema:
-        """查询配置详情并解密敏感值。"""
-        schema = to_schema(SysConfigSchema, await self.repo.get_required(query.id))
-        schema.config_value = decrypt_config_value(schema.config_key, schema.config_value) or ""
+        """查询配置详情；敏感值不回显明文，仅标记 is_set。"""
+        entity = await self.repo.get_required(query.id)
+        schema = to_schema(SysConfigSchema, entity)
+        plain = decrypt_config_value(schema.config_key, entity.config_value) or ""
+        if is_sensitive(schema.config_key):
+            schema.config_value = ""
+            if entity.config_value:
+                schema.ext_json = {**(schema.ext_json or {}), "is_set": True}
+        else:
+            schema.config_value = plain
         return schema
 
     async def list_by_category(self, query: CategoryQuery) -> list[SysConfigSchema]:

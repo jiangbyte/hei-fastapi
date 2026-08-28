@@ -295,6 +295,18 @@ async def client(monkeypatch) -> AsyncIterator[AsyncClient]:
                 transport=ASGITransport(app=app, raise_app_exceptions=False),
                 base_url="http://testserver",
             ) as ac:
+
+                async def _inject_csrf(request):
+                    csrf = ac.cookies.get("HEI_CSRF")
+                    if csrf and request.method.upper() not in {
+                        "GET",
+                        "HEAD",
+                        "OPTIONS",
+                        "TRACE",
+                    }:
+                        request.headers["X-HEI-CSRF"] = csrf
+
+                ac.event_hooks["request"] = [_inject_csrf]
                 try:
                     yield ac
                 finally:

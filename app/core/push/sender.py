@@ -9,6 +9,7 @@ import logging
 from app.core.config.reader import config_reader
 from app.core.exceptions.business import BusinessError
 from app.core.http.client import get_http_client
+from app.core.security.safe_url import UnsafeUrlError, validate_outbound_url
 from app.core.security.signature import sign_dingtalk, sign_feishu
 
 logger = logging.getLogger(__name__)
@@ -74,10 +75,13 @@ async def _send_wecom(text: str) -> None:
 async def _post_json(url: str, payload: dict, label: str) -> None:
     """向 Webhook POST JSON，HTTP 异常统一转为业务错误。"""
     try:
+        validate_outbound_url(url)
         client = get_http_client()
         resp = await client.post(url, json=payload)
         if resp.status_code >= 400:
             raise BusinessError(f"{label}推送失败: HTTP {resp.status_code}")
+    except UnsafeUrlError as exc:
+        raise BusinessError(f"{label}推送失败: URL 不安全: {exc}") from exc
     except BusinessError:
         raise
     except Exception as exc:

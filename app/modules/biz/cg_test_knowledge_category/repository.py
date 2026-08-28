@@ -77,9 +77,9 @@ class CgTestKnowledgeCategoryRepository:
         count_stmt = select(func.count(CgTestKnowledgeCategory.id))
         filters = []
         if query.code:
-            filters.append(ci_like(CgTestKnowledgeCategory.code, f"%{query.code}%"))
+            filters.append(ci_like(CgTestKnowledgeCategory.code, query.code))
         if query.name:
-            filters.append(ci_like(CgTestKnowledgeCategory.name, f"%{query.name}%"))
+            filters.append(ci_like(CgTestKnowledgeCategory.name, query.name))
         if query.status is not None:
             filters.append(CgTestKnowledgeCategory.status == query.status)
         if data_scope_filter is not None:
@@ -110,7 +110,7 @@ class CgTestKnowledgeCategoryRepository:
         stmt = select(CgTestKnowledgeCategory).order_by(CgTestKnowledgeCategory.id.asc())
         filters = []
         if keyword:
-            filters.append(ci_like(CgTestKnowledgeCategory.name, f"%{keyword}%"))
+            filters.append(ci_like(CgTestKnowledgeCategory.name, keyword))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:
@@ -161,11 +161,11 @@ class CgTestKnowledgeDocRepository:
         if query.category_id:
             filters.append(CgTestKnowledgeDoc.category_id == query.category_id)
         if query.code:
-            filters.append(ci_like(CgTestKnowledgeDoc.code, f"%{query.code}%"))
+            filters.append(ci_like(CgTestKnowledgeDoc.code, query.code))
         if query.title:
-            filters.append(ci_like(CgTestKnowledgeDoc.title, f"%{query.title}%"))
+            filters.append(ci_like(CgTestKnowledgeDoc.title, query.title))
         if query.type:
-            filters.append(ci_like(CgTestKnowledgeDoc.type, f"%{query.type}%"))
+            filters.append(ci_like(CgTestKnowledgeDoc.type, query.type))
         if query.status is not None:
             filters.append(CgTestKnowledgeDoc.status == query.status)
         if filters:

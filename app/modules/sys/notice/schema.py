@@ -11,6 +11,7 @@ from pydantic import Field, model_validator
 from app.core.response.pagination import PageQuery
 from app.core.schema.base import ApiSchema, Id
 from app.core.schema.wire import WireBool, WireInt
+from app.core.security.html_sanitize import sanitize_html
 from app.modules.sys.notice.enums import NoticeKind
 from app.modules.sys.notice.target_scope import (
     has_enabled_publish_location,
@@ -69,6 +70,7 @@ class SysNoticeCreateRequest(ApiSchema):
             self.is_pinned = False
             self.pinned_until = None
             self.expire_at = None
+        self.content = sanitize_html(self.content_type, self.content) or self.content
         return self
 
 

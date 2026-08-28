@@ -65,9 +65,8 @@ class WeakPasswordRepository:
         count_stmt = select(func.count(SysWeakPassword.id))
         keyword = query.password or query.keyword
         if keyword:
-            like = f"%{keyword}%"
-            stmt = stmt.where(ci_like(SysWeakPassword.password, like))
-            count_stmt = count_stmt.where(ci_like(SysWeakPassword.password, like))
+            stmt = stmt.where(ci_like(SysWeakPassword.password, keyword))
+            count_stmt = count_stmt.where(ci_like(SysWeakPassword.password, keyword))
         stmt = (
             stmt.order_by(SysWeakPassword.id.desc())
             .offset(query.offset)
@@ -82,7 +81,7 @@ class WeakPasswordRepository:
         stmt = select(SysWeakPassword).order_by(SysWeakPassword.id.desc())
         keyword = query.password or query.keyword
         if keyword:
-            stmt = stmt.where(ci_like(SysWeakPassword.password, f"%{keyword}%"))
+            stmt = stmt.where(ci_like(SysWeakPassword.password, keyword))
         return list((await self.db.execute(stmt)).scalars().all())
 
     async def exists_password(self, password: str) -> bool:

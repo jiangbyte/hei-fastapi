@@ -80,13 +80,13 @@ class FileRepository:
         count_stmt = select(func.count(SysFile.id))
         filters = []
         if query.original_name:
-            filters.append(ci_like(SysFile.original_name, f"%{query.original_name}%"))
+            filters.append(ci_like(SysFile.original_name, query.original_name))
         if query.object_name:
-            filters.append(ci_like(SysFile.object_name, f"%{query.object_name}%"))
+            filters.append(ci_like(SysFile.object_name, query.object_name))
         if query.storage_provider:
             filters.append(SysFile.storage_provider == query.storage_provider)
         if query.content_type:
-            filters.append(ci_like(SysFile.content_type, f"%{query.content_type}%"))
+            filters.append(ci_like(SysFile.content_type, query.content_type))
         if data_scope_filter is not None:
             filters.append(data_scope_filter)
         if filters:

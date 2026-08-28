@@ -200,13 +200,9 @@ class RateLimitMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # e2e 全路由扫描会短时间打满通用 API 限额；仅测试进程开启。
+        # e2e 全路由扫描会短时间打满通用 API 限额；仅测试进程设置环境变量时可跳过。
+        # 不再接受客户端请求头绕过，防止生产环境被任意关闭限流。
         if os.environ.get("E2E_DISABLE_RATE_LIMIT") == "1":
-            await self.app(scope, receive, send)
-            return
-
-        headers = dict(scope.get("headers") or [])
-        if headers.get(b"x-e2e-disable-rate-limit") == b"1":
             await self.app(scope, receive, send)
             return
 

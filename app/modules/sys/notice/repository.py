@@ -177,7 +177,7 @@ class SysNoticeRepository:
         count_stmt = select(func.count(SysNotice.id))
         filters = []
         if query.title:
-            filters.append(ci_like(SysNotice.title, f"%{query.title}%"))
+            filters.append(ci_like(SysNotice.title, query.title))
         if query.status is not None:
             filters.append(SysNotice.status == query.status)
         if query.kind:

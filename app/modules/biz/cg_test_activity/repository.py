@@ -73,13 +73,13 @@ class CgTestActivityRepository:
         count_stmt = select(func.count(CgTestActivity.id))
         filters = []
         if query.code:
-            filters.append(ci_like(CgTestActivity.code, f"%{query.code}%"))
+            filters.append(ci_like(CgTestActivity.code, query.code))
         if query.name:
-            filters.append(ci_like(CgTestActivity.name, f"%{query.name}%"))
+            filters.append(ci_like(CgTestActivity.name, query.name))
         if query.category:
-            filters.append(ci_like(CgTestActivity.category, f"%{query.category}%"))
+            filters.append(ci_like(CgTestActivity.category, query.category))
         if query.type:
-            filters.append(ci_like(CgTestActivity.type, f"%{query.type}%"))
+            filters.append(ci_like(CgTestActivity.type, query.type))
         if query.status is not None:
             filters.append(CgTestActivity.status == query.status)
         if data_scope_filter is not None:

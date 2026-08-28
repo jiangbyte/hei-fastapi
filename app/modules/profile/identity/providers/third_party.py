@@ -12,6 +12,7 @@ import httpx
 
 from app.core.config.settings import settings
 from app.core.exceptions.business import BusinessError
+from app.core.security.safe_url import UnsafeUrlError, validate_outbound_url
 from app.modules.profile.identity.enums import VerifyChannel
 from app.modules.profile.identity.model import RealNameCase
 from app.modules.profile.identity.schema import (
@@ -53,10 +54,14 @@ class ThirdPartyIdentityVerifyProvider:
 
         timeout = settings.profile_identity.third_party_timeout_seconds
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            validate_outbound_url(init_url)
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
                 response = await client.post(init_url, json=payload, headers=headers)
                 response.raise_for_status()
                 data: dict[str, Any] = response.json()
+        except UnsafeUrlError as exc:
+            logger.warning("Third-party identity init blocked unsafe url: %s", exc)
+            raise BusinessError("Third-party identity provider is not configured") from exc
         except httpx.HTTPError as exc:
             logger.warning("Third-party identity init failed: %s", exc)
             raise BusinessError("Third-party identity provider is not configured") from exc
@@ -95,8 +100,11 @@ class ThirdPartyIdentityVerifyProvider:
 
         timeout = settings.profile_identity.third_party_timeout_seconds
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            validate_outbound_url(callback_url)
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
                 await client.post(callback_url, json=payload, headers=headers)
+        except UnsafeUrlError as exc:
+            logger.warning("Third-party identity callback blocked unsafe url: %s", exc)
         except httpx.HTTPError as exc:
             logger.warning("Third-party identity callback notify failed: %s", exc)
         return None
