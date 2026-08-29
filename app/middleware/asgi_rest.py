@@ -95,9 +95,9 @@ SECURITY_HEADERS = {
         b"script-src 'self'; "
         b"style-src 'self' 'unsafe-inline'; "
         b"object-src 'none'; "
-        b"img-src 'self' data: blob:; "
+        b"img-src 'self' data: blob: http: https:; "
         b"font-src 'self' data:; "
-        b"connect-src 'self'; "
+        b"connect-src 'self' blob:; "
         b"frame-ancestors 'none'"
     ),
     b"referrer-policy": b"strict-origin-when-cross-origin",
@@ -112,9 +112,9 @@ SWAGGER_SECURITY_HEADERS = {
         b"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         b"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
         b"object-src 'none'; "
-        b"img-src 'self' data: blob: https://cdn.jsdelivr.net; "
+        b"img-src 'self' data: blob: http: https: https://cdn.jsdelivr.net; "
         b"font-src 'self' data: https://cdn.jsdelivr.net; "
-        b"connect-src 'self'; "
+        b"connect-src 'self' blob:; "
         b"frame-ancestors 'none'"
     ),
 }
