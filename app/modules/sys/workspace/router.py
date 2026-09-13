@@ -13,18 +13,18 @@ from app.core.response.schema import ApiResponse, success
 from app.core.security.session import SessionPayload
 from app.deps.auth import get_current_session, require_account_type
 from app.deps.db import get_db_session
-from app.modules.workspace.schema import (
+from app.modules.sys.workspace.schema import (
     WorkspaceOverviewResponse,
     WorkspaceShortcutResult,
     WorkspaceShortcutSaveRequest,
 )
-from app.modules.workspace.service import WorkspaceService
+from app.modules.sys.workspace.service import WorkspaceService
 
 router = APIRouter()
 
 
 @router.get(
-    "/v1/admin/workspace/overview",
+    "/v1/admin/sys/workspace/overview",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[WorkspaceOverviewResponse],
 )
@@ -37,7 +37,7 @@ async def overview(
 
 
 @router.get(
-    "/v1/admin/workspace/shortcuts",
+    "/v1/admin/sys/workspace/shortcuts",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[list[WorkspaceShortcutResult]],
 )
@@ -50,7 +50,7 @@ async def list_shortcuts(
 
 
 @router.post(
-    "/v1/admin/workspace/shortcuts",
+    "/v1/admin/sys/workspace/shortcuts",
     dependencies=[Depends(require_account_type(AccountType.ADMIN))],
     response_model=ApiResponse[list[WorkspaceShortcutResult]],
 )

@@ -15,9 +15,9 @@ from app.modules.iam.resource.model import SysResource
 from app.modules.iam.role.constants import SUPER_ADMIN_ROLE_CODE
 from app.modules.iam.role.model import SysRole
 from app.modules.sys.audit.model import SysOperationAuditLog
-from app.modules.workspace.model import SysWorkspaceShortcut
-from app.modules.workspace.repository import WorkspaceShortcutRepository
-from app.modules.workspace.schema import (
+from app.modules.sys.workspace.model import SysWorkspaceShortcut
+from app.modules.sys.workspace.repository import WorkspaceShortcutRepository
+from app.modules.sys.workspace.schema import (
     WorkspaceActivityItem,
     WorkspaceOverviewResponse,
     WorkspaceShortcutResult,
@@ -25,7 +25,7 @@ from app.modules.workspace.schema import (
 )
 
 MAX_SHORTCUTS = 16
-HOME_CODE = "workspace"
+HOME_CODE = "sys-workspace"
 ACTIVITY_LIMIT = 10
 
 

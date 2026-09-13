@@ -6,7 +6,7 @@
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.workspace.model import SysWorkspaceShortcut
+from app.modules.sys.workspace.model import SysWorkspaceShortcut
 
 
 class WorkspaceShortcutRepository:

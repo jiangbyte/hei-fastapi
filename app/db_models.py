@@ -38,4 +38,4 @@ from app.modules.sys.feedback import model as feedback_model  # noqa: F401
 from app.modules.sys.file import model as file_model  # noqa: F401
 from app.modules.sys.job import model as job_model  # noqa: F401
 from app.modules.sys.notice import model as notice_model  # noqa: F401
-from app.modules.workspace import model as workspace_model  # noqa: F401
+from app.modules.sys.workspace import model as workspace_model  # noqa: F401

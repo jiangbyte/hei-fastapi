@@ -55,7 +55,7 @@ from app.modules.sys.notice.router import admin_router as notice_admin_router
 from app.modules.sys.notice.router import portal_router as notice_portal_router
 from app.modules.sys.public.router import router as sys_public_router
 from app.modules.sys.weak_password.router import router as weak_password_router
-from app.modules.workspace.router import router as workspace_router
+from app.modules.sys.workspace.router import router as workspace_router
 
 # (tags, router) 挂载清单，顺序与历史注册顺序一致。
 _ROUTERS: list[tuple[str, APIRouter]] = [

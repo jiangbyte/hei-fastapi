@@ -33,7 +33,7 @@ _MODULE_RESOURCE: dict[str, str] = {
     "profile": "profile_center",
     "auth/sessions": "auth_session",
     "logout": "auth",
-    "workspace/shortcuts": "workspace_shortcut",
+    "sys/workspace/shortcuts": "workspace_shortcut",
 }
 
 _ACTION_OVERRIDES: dict[tuple[str, str], str] = {
@@ -42,7 +42,7 @@ _ACTION_OVERRIDES: dict[tuple[str, str], str] = {
     ("profile/phone", "update"): "update_phone",
     ("profile/email", "update"): "update_email",
     ("profile/avatar", "upload"): "upload_avatar",
-    ("workspace/shortcuts", "post"): "update",
+    ("sys/workspace/shortcuts", "post"): "update",
     ("logout", "post"): "logout",
     ("forgot-password/phone", "post"): "forgot_password_phone",
     ("reset-password/phone", "post"): "reset_password_phone",
